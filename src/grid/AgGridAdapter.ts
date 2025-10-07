@@ -4,7 +4,15 @@
  * 使用 AG Grid Community 实现 GridAdapter 接口。
  */
 
-import { createGrid, GridApi, GridOptions, ColDef, CellEditingStoppedEvent } from 'ag-grid-community';
+import {
+	createGrid,
+	GridApi,
+	GridOptions,
+	ColDef,
+	CellEditingStoppedEvent,
+	ModuleRegistry,
+	AllCommunityModule
+} from 'ag-grid-community';
 import {
 	GridAdapter,
 	ColumnDef,
@@ -12,6 +20,9 @@ import {
 	CellEditEvent,
 	HeaderEditEvent
 } from './GridAdapter';
+
+// 注册 AG Grid Community 模块
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 export class AgGridAdapter implements GridAdapter {
 	private gridApi: GridApi | null = null;

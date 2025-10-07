@@ -4,11 +4,19 @@
   padding: 10px;
   height: 100%;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .tlb-table-container {
   width: 100%;
   overflow-x: auto;
+}
+
+/* AG Grid 容器需要明确的高度 */
+.tlb-table-container.ag-theme-alpine {
+  height: calc(100vh - 100px); /* 视口高度减去上下边距 */
+  min-height: 400px;
 }
 
 .tlb-table {

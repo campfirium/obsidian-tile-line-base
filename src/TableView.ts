@@ -21,6 +21,7 @@ export class TableView extends ItemView {
 	file: TFile | null = null;
 	private blocks: H2Block[] = [];
 	private schema: Schema | null = null;
+	private saveTimeout: NodeJS.Timeout | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -130,6 +131,60 @@ export class TableView extends ItemView {
 		}
 
 		return data;
+	}
+
+	/**
+	 * 将 blocks 数组转换回 Markdown 格式
+	 */
+	private blocksToMarkdown(): string {
+		const lines: string[] = [];
+
+		for (const block of this.blocks) {
+			// H2 标题
+			lines.push(`## ${block.title}`);
+
+			// 段落（非空才添加）
+			for (const paragraph of block.paragraphs) {
+				if (paragraph.trim()) {
+					lines.push(paragraph);
+				}
+			}
+
+			// H2 块之间空一行
+			lines.push('');
+		}
+
+		return lines.join('\n');
+	}
+
+	/**
+	 * 调度保存（500ms 防抖）
+	 */
+	private scheduleSave(): void {
+		// 清除之前的定时器
+		if (this.saveTimeout) {
+			clearTimeout(this.saveTimeout);
+		}
+
+		// 500ms 后保存
+		this.saveTimeout = setTimeout(() => {
+			this.saveToFile();
+		}, 500);
+	}
+
+	/**
+	 * 保存到文件
+	 */
+	private async saveToFile(): Promise<void> {
+		if (!this.file) return;
+
+		try {
+			const markdown = this.blocksToMarkdown();
+			await this.app.vault.modify(this.file, markdown);
+			console.log('✅ 文件已保存:', this.file.path);
+		} catch (error) {
+			console.error('❌ 保存失败:', error);
+		}
 	}
 
 	async onOpen(): Promise<void> {
@@ -247,6 +302,9 @@ export class TableView extends ItemView {
 
 		// 打印更新后的 blocks 数组
 		console.log('Updated blocks:', this.blocks);
+
+		// 触发保存
+		this.scheduleSave();
 	}
 
 	async onClose(): Promise<void> {

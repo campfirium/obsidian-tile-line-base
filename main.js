@@ -38,6 +38,7 @@ var TableView = class extends import_obsidian.ItemView {
     this.file = null;
     this.blocks = [];
     this.schema = null;
+    this.saveTimeout = null;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -124,6 +125,47 @@ var TableView = class extends import_obsidian.ItemView {
     }
     return data;
   }
+  /**
+   * 将 blocks 数组转换回 Markdown 格式
+   */
+  blocksToMarkdown() {
+    const lines = [];
+    for (const block of this.blocks) {
+      lines.push(`## ${block.title}`);
+      for (const paragraph of block.paragraphs) {
+        if (paragraph.trim()) {
+          lines.push(paragraph);
+        }
+      }
+      lines.push("");
+    }
+    return lines.join("\n");
+  }
+  /**
+   * 调度保存（500ms 防抖）
+   */
+  scheduleSave() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(() => {
+      this.saveToFile();
+    }, 500);
+  }
+  /**
+   * 保存到文件
+   */
+  async saveToFile() {
+    if (!this.file)
+      return;
+    try {
+      const markdown = this.blocksToMarkdown();
+      await this.app.vault.modify(this.file, markdown);
+      console.log("\u2705 \u6587\u4EF6\u5DF2\u4FDD\u5B58:", this.file.path);
+    } catch (error) {
+      console.error("\u274C \u4FDD\u5B58\u5931\u8D25:", error);
+    }
+  }
   async onOpen() {
     const container = this.containerEl.children[1];
     container.addClass("tile-line-base-view");
@@ -204,6 +246,7 @@ var TableView = class extends import_obsidian.ItemView {
       console.log(`\u66F4\u65B0\u6BB5\u843D [${blockIndex}][${paragraphIndex}]:`, newValue);
     }
     console.log("Updated blocks:", this.blocks);
+    this.scheduleSave();
   }
   async onClose() {
   }

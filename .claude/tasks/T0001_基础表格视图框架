@@ -1,0 +1,74 @@
+# T0001: Hello Table - 基础视图框架
+
+**状态：** 进行中
+**分支：** feat/T0001-basic-table-view
+**积木编号：** 积木 1
+
+## 学习目标
+
+- 理解 Obsidian 插件的基本结构
+- 学会注册命令和菜单项
+- 掌握自定义 View 的创建方法
+- 学习基础的 HTML/CSS 渲染
+
+## 功能描述
+
+创建一个最简单的插件原型：
+1. 注册一个命令："打开 TileLineBase 表格"
+2. 点击命令后打开一个新的侧边栏视图
+3. 视图中显示硬编码的假数据表格（3行2列）
+4. 使用基础 HTML/CSS 渲染
+
+## 完成标准
+
+- [ ] 插件可以在 Obsidian 中加载
+- [ ] 命令面板中可以找到"打开 TileLineBase 表格"命令
+- [ ] 点击命令后能打开一个新的侧边栏视图
+- [ ] 视图中显示一个简单的表格
+- [ ] 表格有表头（列1、列2）和 2 行数据
+
+## 技术要点
+
+### 文件结构
+```
+obsidian-tile-line-base/
+├── manifest.json          # 插件元信息
+├── package.json           # npm 配置
+├── tsconfig.json          # TypeScript 配置
+├── esbuild.config.mjs     # 构建配置
+├── src/
+│   ├── main.ts            # 插件主文件
+│   └── TableView.ts       # 表格视图组件
+└── styles.css             # 样式文件
+```
+
+### 核心代码结构
+
+**main.ts:**
+- 继承 `Plugin` 类
+- 在 `onload()` 中注册命令和视图类型
+- 提供打开视图的方法
+
+**TableView.ts:**
+- 继承 `ItemView` 类
+- 实现 `getViewType()` 返回视图类型标识
+- 实现 `getDisplayText()` 返回视图标题
+- 在 `onOpen()` 中渲染表格 HTML
+
+### 假数据示例
+
+```typescript
+const mockData = [
+  ["任务1", "进行中"],
+  ["任务2", "已完成"]
+];
+```
+
+## 参考资料
+
+- [Obsidian API 文档](https://docs.obsidian.md/Plugins/Getting+started/Build+a+plugin)
+- [Obsidian Sample Plugin](https://github.com/obsidianmd/obsidian-sample-plugin)
+
+## 下一步
+
+完成后继续 T0002：读取真实文件

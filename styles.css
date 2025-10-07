@@ -46,3 +46,18 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* 可编辑单元格样式 */
+.tlb-table td[contenteditable] {
+  cursor: text;
+}
+
+.tlb-table td[contenteditable]:hover {
+  background-color: var(--background-modifier-hover);
+  outline: 1px solid var(--interactive-accent);
+}
+
+.tlb-table td[contenteditable]:focus {
+  outline: 2px solid var(--interactive-accent);
+  background-color: var(--background-primary);
+}

@@ -19,6 +19,8 @@ interface Schema {
 
 export class TableView extends ItemView {
 	file: TFile | null = null;
+	private blocks: H2Block[] = [];
+	private schema: Schema | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -149,9 +151,9 @@ export class TableView extends ItemView {
 		const content = await this.app.vault.read(this.file);
 
 		// 解析 H2 块
-		const blocks = this.parseH2Blocks(content);
+		this.blocks = this.parseH2Blocks(content);
 
-		if (blocks.length === 0) {
+		if (this.blocks.length === 0) {
 			container.createDiv({
 				text: "此文件不包含 H2 块，无法显示为表格",
 				cls: "tlb-warning"
@@ -160,14 +162,14 @@ export class TableView extends ItemView {
 		}
 
 		// 提取 Schema
-		const schema = this.extractSchema(blocks);
-		if (!schema) {
+		this.schema = this.extractSchema(this.blocks);
+		if (!this.schema) {
 			container.createDiv({ text: "无法提取表格结构" });
 			return;
 		}
 
 		// 提取数据
-		const data = this.extractTableData(blocks, schema);
+		const data = this.extractTableData(this.blocks, this.schema);
 
 		// 创建表格容器
 		const tableContainer = container.createDiv({ cls: "tlb-table-container" });
@@ -176,22 +178,75 @@ export class TableView extends ItemView {
 		// 创建表头
 		const thead = table.createEl("thead");
 		const headerRow = thead.createEl("tr");
-		schema.columnNames.forEach(colName => {
+		this.schema.columnNames.forEach((colName: string) => {
 			headerRow.createEl("th", { text: colName });
 		});
 
 		// 创建表体
 		const tbody = table.createEl("tbody");
-		data.forEach(row => {
+		data.forEach((row, rowIndex) => {
 			const tr = tbody.createEl("tr");
-			row.forEach(cell => {
-				tr.createEl("td", { text: cell || "" });
+			row.forEach((cellValue, colIndex) => {
+				const td = tr.createEl("td");
+				td.textContent = cellValue || "";
+				td.setAttribute("contenteditable", "true");
+				td.setAttribute("data-row", String(rowIndex));
+				td.setAttribute("data-col", String(colIndex));
+
+				// 监听按键事件
+				td.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						td.blur(); // 失焦以触发保存
+					}
+				});
+
+				// 监听失焦事件 - 保存编辑
+				td.addEventListener("blur", () => {
+					const newValue = td.textContent || "";
+					this.onCellEdit(rowIndex, colIndex, newValue);
+				});
 			});
 		});
 
 		console.log(`TileLineBase 表格已渲染：${this.file.path}`);
-		console.log(`Schema:`, schema);
+		console.log(`Schema:`, this.schema);
 		console.log(`数据行数: ${data.length}`);
+	}
+
+	/**
+	 * 处理单元格编辑
+	 */
+	private onCellEdit(rowIndex: number, colIndex: number, newValue: string): void {
+		// rowIndex 是数据行索引，对应 blocks[rowIndex + 1]（因为 blocks[0] 是模板）
+		const blockIndex = rowIndex + 1;
+
+		if (blockIndex >= this.blocks.length) {
+			console.error('Invalid block index:', blockIndex);
+			return;
+		}
+
+		const block = this.blocks[blockIndex];
+
+		if (colIndex === 0) {
+			// 第一列：更新 H2 标题
+			block.title = newValue;
+			console.log(`更新 H2 标题 [${blockIndex}]:`, newValue);
+		} else {
+			// 其他列：更新段落
+			const paragraphIndex = colIndex - 1;
+
+			// 确保段落数组足够长
+			while (block.paragraphs.length <= paragraphIndex) {
+				block.paragraphs.push('');
+			}
+
+			block.paragraphs[paragraphIndex] = newValue;
+			console.log(`更新段落 [${blockIndex}][${paragraphIndex}]:`, newValue);
+		}
+
+		// 打印更新后的 blocks 数组
+		console.log('Updated blocks:', this.blocks);
 	}
 
 	async onClose(): Promise<void> {

@@ -8,7 +8,11 @@
       "Bash(npm install)",
       "Bash(npm run deploy:*)",
       "Bash(git merge:*)",
-      "Bash(git restore:*)"
+      "Bash(git reset:*)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(git restore:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

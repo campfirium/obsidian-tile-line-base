@@ -244,28 +244,6 @@ export class TableView extends ItemView {
 		const isDarkMode = document.body.classList.contains('theme-dark');
 		const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
 
-		// 创建工具栏
-		const toolbar = container.createDiv({ cls: "tlb-toolbar" });
-
-		// 添加行按钮
-		const addRowBtn = toolbar.createEl("button", {
-			text: "+ 添加行",
-			cls: "tlb-btn tlb-btn-primary"
-		});
-		addRowBtn.addEventListener("click", () => this.addRow());
-
-		// 删除行按钮
-		const deleteRowBtn = toolbar.createEl("button", {
-			text: "- 删除行",
-			cls: "tlb-btn tlb-btn-danger"
-		});
-		deleteRowBtn.addEventListener("click", () => {
-			const selectedRows = this.gridAdapter?.getSelectedRows();
-			if (selectedRows && selectedRows.length > 0) {
-				this.deleteRow(selectedRows[0]);
-			}
-		});
-
 		// 创建表格容器
 		const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
 
@@ -287,6 +265,15 @@ export class TableView extends ItemView {
 		this.gridAdapter.onHeaderEdit((event) => {
 			// TODO: 实现表头编辑
 			console.log('表头编辑:', event);
+		});
+
+		// 注册行操作回调（右键菜单）
+		this.gridAdapter.onAddRow(() => {
+			this.addRow();
+		});
+
+		this.gridAdapter.onDeleteRow((rowIndex) => {
+			this.deleteRow(rowIndex);
 		});
 
 		console.log(`TileLineBase 表格已渲染（AG Grid）：${this.file.path}`);

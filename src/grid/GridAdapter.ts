@@ -87,4 +87,16 @@ export interface GridAdapter {
 	 * @returns 选中行的索引数组，无选中时返回空数组
 	 */
 	getSelectedRows(): number[];
+
+	/**
+	 * 注册添加行操作的回调
+	 * @param callback 添加行时的回调函数
+	 */
+	onAddRow(callback: () => void): void;
+
+	/**
+	 * 注册删除行操作的回调
+	 * @param callback 删除行时的回调函数，参数为行索引
+	 */
+	onDeleteRow(callback: (rowIndex: number) => void): void;
 }

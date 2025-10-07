@@ -427,7 +427,11 @@ export class TableView extends ItemView {
 				if (this.schema?.columnConfigs) {
 					const config = this.schema.columnConfigs.find(c => c.name === name);
 					if (config) {
+						console.log(`🔧 配置列 ${name}:`, config);
 						this.applyWidthConfig(baseColDef, config);
+						console.log(`🔧 应用后的 colDef:`, baseColDef);
+					} else {
+						console.log(`⚠️ 列 ${name} 没有找到配置`);
 					}
 				}
 

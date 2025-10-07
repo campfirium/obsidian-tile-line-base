@@ -54,14 +54,15 @@ export class AgGridAdapter implements GridAdapter {
 				};
 			}
 
+			// 保留从 ColumnDef 传入的所有配置（包括 width、flex）
 			return {
 				field: col.field,
 				headerName: col.headerName,
 				editable: col.editable,
-				flex: 1, // 自动调整列宽
 				sortable: true, // 启用排序
 				filter: true, // 启用筛选
 				resizable: true, // 可调整列宽
+				...(col as any), // 保留所有额外属性（width, flex 等）
 			};
 		});
 
@@ -89,9 +90,6 @@ export class AgGridAdapter implements GridAdapter {
 				filter: true,
 				resizable: true,
 			},
-
-			// 启用范围选择（支持复制粘贴）
-			enableRangeSelection: true,
 
 			// 启用单元格复制粘贴
 			enableCellTextSelection: true,

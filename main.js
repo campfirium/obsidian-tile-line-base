@@ -55278,14 +55278,14 @@ var AgGridAdapter = class {
         field: col.field,
         headerName: col.headerName,
         editable: col.editable,
-        flex: 1,
-        // 自动调整列宽
         sortable: true,
         // 启用排序
         filter: true,
         // 启用筛选
-        resizable: true
+        resizable: true,
         // 可调整列宽
+        ...col
+        // 保留所有额外属性（width, flex 等）
       };
     });
     const gridOptions = {
@@ -55310,8 +55310,6 @@ var AgGridAdapter = class {
         filter: true,
         resizable: true
       },
-      // 启用范围选择（支持复制粘贴）
-      enableRangeSelection: true,
       // 启用单元格复制粘贴
       enableCellTextSelection: true
     };
@@ -55743,7 +55741,11 @@ var TableView = class extends import_obsidian.ItemView {
         if ((_a4 = this.schema) == null ? void 0 : _a4.columnConfigs) {
           const config = this.schema.columnConfigs.find((c) => c.name === name);
           if (config) {
+            console.log(`\u{1F527} \u914D\u7F6E\u5217 ${name}:`, config);
             this.applyWidthConfig(baseColDef, config);
+            console.log(`\u{1F527} \u5E94\u7528\u540E\u7684 colDef:`, baseColDef);
+          } else {
+            console.log(`\u26A0\uFE0F \u5217 ${name} \u6CA1\u6709\u627E\u5230\u914D\u7F6E`);
           }
         }
         return baseColDef;

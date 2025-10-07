@@ -26,6 +26,7 @@ export class TableView extends ItemView {
 	private schema: Schema | null = null;
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
+	private contextMenu: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -267,18 +268,86 @@ export class TableView extends ItemView {
 			console.log('表头编辑:', event);
 		});
 
-		// 注册行操作回调（右键菜单）
-		this.gridAdapter.onAddRow(() => {
-			this.addRow();
-		});
-
-		this.gridAdapter.onDeleteRow((rowIndex) => {
-			this.deleteRow(rowIndex);
-		});
+		// 添加右键菜单监听
+		this.setupContextMenu(tableContainer);
 
 		console.log(`TileLineBase 表格已渲染（AG Grid）：${this.file.path}`);
 		console.log(`Schema:`, this.schema);
 		console.log(`数据行数: ${data.length}`);
+	}
+
+	/**
+	 * 设置右键菜单
+	 */
+	private setupContextMenu(tableContainer: HTMLElement): void {
+		// 监听右键点击
+		tableContainer.addEventListener('contextmenu', (event) => {
+			event.preventDefault();
+
+			// 获取点击的行索引
+			const rowIndex = this.gridAdapter?.getRowIndexFromEvent(event);
+			if (rowIndex === null || rowIndex === undefined) return;
+
+			// 显示自定义菜单
+			this.showContextMenu(event, rowIndex);
+		});
+
+		// 点击其他地方隐藏菜单
+		document.addEventListener('click', () => {
+			this.hideContextMenu();
+		});
+	}
+
+	/**
+	 * 显示右键菜单
+	 */
+	private showContextMenu(event: MouseEvent, rowIndex: number): void {
+		// 移除旧菜单
+		this.hideContextMenu();
+
+		// 创建菜单容器
+		this.contextMenu = document.body.createDiv({ cls: 'tlb-context-menu' });
+
+		// 在上方插入行
+		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
+		insertAbove.createSpan({ text: '在上方插入行' });
+		insertAbove.addEventListener('click', () => {
+			this.addRow();
+			this.hideContextMenu();
+		});
+
+		// 在下方插入行
+		const insertBelow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
+		insertBelow.createSpan({ text: '在下方插入行' });
+		insertBelow.addEventListener('click', () => {
+			this.addRow();
+			this.hideContextMenu();
+		});
+
+		// 分隔线
+		this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
+
+		// 删除此行
+		const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
+		deleteRow.createSpan({ text: '删除此行' });
+		deleteRow.addEventListener('click', () => {
+			this.deleteRow(rowIndex);
+			this.hideContextMenu();
+		});
+
+		// 定位菜单
+		this.contextMenu.style.left = `${event.pageX}px`;
+		this.contextMenu.style.top = `${event.pageY}px`;
+	}
+
+	/**
+	 * 隐藏右键菜单
+	 */
+	private hideContextMenu(): void {
+		if (this.contextMenu) {
+			this.contextMenu.remove();
+			this.contextMenu = null;
+		}
 	}
 
 	/**

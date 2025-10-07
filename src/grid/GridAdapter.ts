@@ -89,14 +89,9 @@ export interface GridAdapter {
 	getSelectedRows(): number[];
 
 	/**
-	 * 注册添加行操作的回调
-	 * @param callback 添加行时的回调函数
+	 * 根据鼠标事件获取行索引
+	 * @param event 鼠标事件
+	 * @returns 行索引，如果未找到则返回 null
 	 */
-	onAddRow(callback: () => void): void;
-
-	/**
-	 * 注册删除行操作的回调
-	 * @param callback 删除行时的回调函数，参数为行索引
-	 */
-	onDeleteRow(callback: (rowIndex: number) => void): void;
+	getRowIndexFromEvent(event: MouseEvent): number | null;
 }

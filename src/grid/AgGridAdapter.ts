@@ -28,8 +28,6 @@ export class AgGridAdapter implements GridAdapter {
 	private gridApi: GridApi | null = null;
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
-	private addRowCallback?: () => void;
-	private deleteRowCallback?: (rowIndex: number) => void;
 
 	/**
 	 * 挂载表格到指定容器
@@ -66,52 +64,6 @@ export class AgGridAdapter implements GridAdapter {
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
-			},
-
-			// 自定义右键菜单
-			getContextMenuItems: (params) => {
-				const menuItems: any[] = [];
-
-				if (params.node) {
-					// 右键点击行
-					const rowIndex = params.node.rowIndex;
-
-					menuItems.push({
-						name: '在上方插入行',
-						action: () => {
-							if (this.addRowCallback && rowIndex !== null && rowIndex !== undefined) {
-								// 暂时在末尾添加，后续支持 afterIndex
-								this.addRowCallback();
-							}
-						},
-						icon: '<span class="ag-icon ag-icon-plus" unselectable="on" role="presentation"></span>'
-					});
-
-					menuItems.push({
-						name: '在下方插入行',
-						action: () => {
-							if (this.addRowCallback) {
-								this.addRowCallback();
-							}
-						},
-						icon: '<span class="ag-icon ag-icon-plus" unselectable="on" role="presentation"></span>'
-					});
-
-					menuItems.push('separator');
-
-					menuItems.push({
-						name: '删除此行',
-						action: () => {
-							if (this.deleteRowCallback && rowIndex !== null && rowIndex !== undefined) {
-								this.deleteRowCallback(rowIndex);
-							}
-						},
-						icon: '<span class="ag-icon ag-icon-cancel" unselectable="on" role="presentation"></span>',
-						cssClasses: ['ag-menu-option-danger']
-					});
-				}
-
-				return menuItems;
 			},
 
 			// 默认列配置
@@ -208,16 +160,19 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	/**
-	 * 注册添加行操作的回调
+	 * 根据鼠标事件获取行索引
+	 * @param event 鼠标事件
+	 * @returns 行索引，如果未找到则返回 null
 	 */
-	onAddRow(callback: () => void): void {
-		this.addRowCallback = callback;
-	}
+	getRowIndexFromEvent(event: MouseEvent): number | null {
+		if (!this.gridApi) return null;
 
-	/**
-	 * 注册删除行操作的回调
-	 */
-	onDeleteRow(callback: (rowIndex: number) => void): void {
-		this.deleteRowCallback = callback;
+		const target = event.target as HTMLElement;
+		const rowElement = target.closest('.ag-row');
+
+		if (!rowElement) return null;
+
+		const rowIndex = rowElement.getAttribute('row-index');
+		return rowIndex !== null ? parseInt(rowIndex, 10) : null;
 	}
 }

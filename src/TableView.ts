@@ -121,6 +121,9 @@ export class TableView extends ItemView {
 			const block = blocks[i];
 			const row: RowData = {};
 
+			// 序号列（显示在文件中的实际位置）
+			row['#'] = String(i);
+
 			// 第一列：H2 标题
 			row[schema.columnNames[0]] = block.title;
 
@@ -234,12 +237,19 @@ export class TableView extends ItemView {
 		// 提取数据
 		const data = this.extractTableData(this.blocks, this.schema);
 
-		// 准备列定义
-		const columns: ColumnDef[] = this.schema.columnNames.map(name => ({
-			field: name,
-			headerName: name,
-			editable: true
-		}));
+		// 准备列定义（添加序号列）
+		const columns: ColumnDef[] = [
+			{
+				field: '#',
+				headerName: '#',
+				editable: false  // 序号列只读
+			},
+			...this.schema.columnNames.map(name => ({
+				field: name,
+				headerName: name,
+				editable: true
+			}))
+		];
 
 		// 根据 Obsidian 主题选择 AG Grid 主题
 		const isDarkMode = document.body.classList.contains('theme-dark');
@@ -312,7 +322,7 @@ export class TableView extends ItemView {
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
 		insertAbove.createSpan({ text: '在上方插入行' });
 		insertAbove.addEventListener('click', () => {
-			this.addRow();
+			this.addRow(rowIndex);  // 在当前行之前插入
 			this.hideContextMenu();
 		});
 
@@ -320,7 +330,7 @@ export class TableView extends ItemView {
 		const insertBelow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
 		insertBelow.createSpan({ text: '在下方插入行' });
 		insertBelow.addEventListener('click', () => {
-			this.addRow();
+			this.addRow(rowIndex + 1);  // 在当前行之后插入
 			this.hideContextMenu();
 		});
 
@@ -354,6 +364,11 @@ export class TableView extends ItemView {
 	 * 处理单元格编辑
 	 */
 	private onCellEdit(rowIndex: number, field: string, newValue: string): void {
+		// 序号列不可编辑，直接返回
+		if (field === '#') {
+			return;
+		}
+
 		if (!this.schema) {
 			console.error('Schema not initialized');
 			return;
@@ -440,9 +455,9 @@ export class TableView extends ItemView {
 
 	/**
 	 * 添加新行
-	 * @param afterIndex 在指定索引后插入，undefined 表示末尾
+	 * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
 	 */
-	private addRow(afterIndex?: number): void {
+	private addRow(beforeRowIndex?: number): void {
 		if (!this.schema) {
 			console.error('Schema not initialized');
 			return;
@@ -457,8 +472,17 @@ export class TableView extends ItemView {
 			paragraphs: new Array(this.schema.columnNames.length - 1).fill('')
 		};
 
-		// 添加到 blocks（末尾）
-		this.blocks.push(newBlock);
+		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
+			// 在指定行之前插入
+			// rowIndex 对应 blocks[rowIndex + 1]
+			const blockIndex = beforeRowIndex + 1;
+			this.blocks.splice(blockIndex, 0, newBlock);
+			console.log(`✅ 在行 ${beforeRowIndex} 之前插入新行：${newBlock.title}`);
+		} else {
+			// 在末尾插入
+			this.blocks.push(newBlock);
+			console.log(`✅ 在末尾添加新行：${newBlock.title}`);
+		}
 
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
@@ -466,8 +490,6 @@ export class TableView extends ItemView {
 
 		// 触发保存
 		this.scheduleSave();
-
-		console.log(`✅ 添加新行：${newBlock.title}`);
 	}
 
 	/**

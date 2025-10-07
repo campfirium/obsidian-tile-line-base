@@ -38,15 +38,32 @@ export class AgGridAdapter implements GridAdapter {
 		rows: RowData[]
 	): void {
 		// 转换列定义为 AG Grid 格式
-		const colDefs: ColDef[] = columns.map(col => ({
-			field: col.field,
-			headerName: col.headerName,
-			editable: col.editable,
-			flex: 1, // 自动调整列宽
-			sortable: true, // 启用排序
-			filter: true, // 启用筛选
-			resizable: true, // 可调整列宽
-		}));
+		const colDefs: ColDef[] = columns.map(col => {
+			// 序号列特殊处理
+			if (col.field === '#') {
+				return {
+					field: col.field,
+					headerName: col.headerName,
+					editable: false,
+					width: 60,  // 固定宽度
+					maxWidth: 80,
+					sortable: true,
+					filter: false,
+					resizable: false,
+					cellStyle: { textAlign: 'center' }  // 居中显示
+				};
+			}
+
+			return {
+				field: col.field,
+				headerName: col.headerName,
+				editable: col.editable,
+				flex: 1, // 自动调整列宽
+				sortable: true, // 启用排序
+				filter: true, // 启用筛选
+				resizable: true, // 可调整列宽
+			};
+		});
 
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
@@ -97,14 +114,20 @@ export class AgGridAdapter implements GridAdapter {
 		const newValue = event.newValue;
 		const oldValue = event.oldValue;
 
-		// 只有当值真正改变时才触发回调
-		if (newValue !== oldValue && field && rowIndex !== null && rowIndex !== undefined) {
-			this.cellEditCallback({
-				rowIndex: rowIndex,
-				field: field,
-				newValue: String(newValue || ''),
-				oldValue: String(oldValue || '')
-			});
+		if (field && rowIndex !== null && rowIndex !== undefined) {
+			// 规范化值（undefined、null 都转为空字符串）
+			const newStr = String(newValue ?? '');
+			const oldStr = String(oldValue ?? '');
+
+			// 只有当值真正改变时才触发回调
+			if (newStr !== oldStr) {
+				this.cellEditCallback({
+					rowIndex: rowIndex,
+					field: field,
+					newValue: newStr,
+					oldValue: oldStr
+				});
+			}
 		}
 	}
 

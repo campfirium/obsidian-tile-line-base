@@ -17,6 +17,7 @@ interface H2Block {
 // Schema（表格结构）
 interface Schema {
 	columnNames: string[]; // 所有列名
+	columnIds?: string[];  // 预留：稳定 ID 系统（用于 SchemaStore）
 }
 
 export class TableView extends ItemView {
@@ -354,6 +355,64 @@ export class TableView extends ItemView {
 
 		// 触发保存
 		this.scheduleSave();
+	}
+
+	// ==================== 预留：CRUD 操作接口（SchemaStore 架构） ====================
+	// 这些方法签名为未来的 SchemaStore 集成预留接口，减少后续重构成本
+
+	/**
+	 * 添加新行
+	 * @param afterIndex 在指定索引后插入，undefined 表示末尾
+	 * TODO: T0009 - 实现添加行功能
+	 */
+	private addRow(afterIndex?: number): void {
+		console.warn('addRow not implemented yet. Coming in T0009.');
+	}
+
+	/**
+	 * 删除指定行
+	 * @param rowIndex 数据行索引（不包括模板行）
+	 * TODO: T0009 - 实现删除行功能
+	 */
+	private deleteRow(rowIndex: number): void {
+		console.warn('deleteRow not implemented yet. Coming in T0009.');
+	}
+
+	/**
+	 * 复制指定行
+	 * @param rowIndex 数据行索引
+	 * TODO: T0009+ - 实现复制行功能
+	 */
+	private duplicateRow(rowIndex: number): void {
+		console.warn('duplicateRow not implemented yet. Coming in T0009+.');
+	}
+
+	/**
+	 * 添加新列
+	 * @param afterColumnId 在指定列后插入
+	 * TODO: T0010+ - 实现添加列功能（需要 columnId 系统）
+	 */
+	private addColumn(afterColumnId?: string): void {
+		console.warn('addColumn not implemented yet. Coming in T0010+.');
+	}
+
+	/**
+	 * 删除指定列
+	 * @param columnId 列的稳定 ID
+	 * TODO: T0010+ - 实现删除列功能（需要 columnId 系统）
+	 */
+	private deleteColumn(columnId: string): void {
+		console.warn('deleteColumn not implemented yet. Coming in T0010+.');
+	}
+
+	/**
+	 * 重命名列（通过 columnId）
+	 * @param columnId 列的稳定 ID
+	 * @param newName 新的列名
+	 * TODO: T0010+ - 实现列重命名功能（需要 columnId 系统）
+	 */
+	private renameColumn(columnId: string, newName: string): void {
+		console.warn('renameColumn not implemented yet. Coming in T0010+.');
 	}
 
 	async onClose(): Promise<void> {

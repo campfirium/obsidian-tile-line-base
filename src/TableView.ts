@@ -1,4 +1,6 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
+import { GridAdapter, ColumnDef, RowData } from "./grid/GridAdapter";
+import { AgGridAdapter } from "./grid/AgGridAdapter";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -22,6 +24,7 @@ export class TableView extends ItemView {
 	private blocks: H2Block[] = [];
 	private schema: Schema | null = null;
 	private saveTimeout: NodeJS.Timeout | null = null;
+	private gridAdapter: GridAdapter | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -106,24 +109,27 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 从 H2 块提取表格数据
+	 * 从 H2 块提取表格数据（转换为 RowData 格式）
 	 */
-	private extractTableData(blocks: H2Block[], schema: Schema): string[][] {
-		const data: string[][] = [];
+	private extractTableData(blocks: H2Block[], schema: Schema): RowData[] {
+		const data: RowData[] = [];
 
 		// 从第二个块开始（第一个是模板）
 		for (let i = 1; i < blocks.length; i++) {
 			const block = blocks[i];
-			const row: string[] = [block.title]; // 第一列 = H2 标题
+			const row: RowData = {};
 
-			// 添加段落作为后续列
-			for (let j = 0; j < schema.columnNames.length - 1; j++) {
-				const paragraph = block.paragraphs[j];
+			// 第一列：H2 标题
+			row[schema.columnNames[0]] = block.title;
+
+			// 后续列：段落
+			for (let j = 1; j < schema.columnNames.length; j++) {
+				const paragraph = block.paragraphs[j - 1];
 				// 空段落或 "." 表示空值
 				if (!paragraph || paragraph.trim() === '.') {
-					row.push('');
+					row[schema.columnNames[j]] = '';
 				} else {
-					row.push(paragraph.trim());
+					row[schema.columnNames[j]] = paragraph.trim();
 				}
 			}
 
@@ -226,62 +232,37 @@ export class TableView extends ItemView {
 		// 提取数据
 		const data = this.extractTableData(this.blocks, this.schema);
 
+		// 准备列定义
+		const columns: ColumnDef[] = this.schema.columnNames.map(name => ({
+			field: name,
+			headerName: name,
+			editable: true
+		}));
+
 		// 创建表格容器
-		const tableContainer = container.createDiv({ cls: "tlb-table-container" });
-		const table = tableContainer.createEl("table", { cls: "tlb-table" });
+		const tableContainer = container.createDiv({ cls: "tlb-table-container ag-theme-alpine" });
 
-		// 创建表头
-		const thead = table.createEl("thead");
-		const headerRow = thead.createEl("tr");
-		this.schema.columnNames.forEach((colName: string, colIndex: number) => {
-			const th = headerRow.createEl("th");
-			th.textContent = colName;
-			th.setAttribute("contenteditable", "true");
-			th.setAttribute("data-col", String(colIndex));
+		// 销毁旧的表格实例（如果存在）
+		if (this.gridAdapter) {
+			this.gridAdapter.destroy();
+		}
 
-			// 监听按键事件
-			th.addEventListener("keydown", (e) => {
-				if (e.key === "Enter") {
-					e.preventDefault();
-					th.blur(); // 失焦以触发保存
-				}
-			});
+		// 创建并挂载新的表格
+		this.gridAdapter = new AgGridAdapter();
+		this.gridAdapter.mount(tableContainer, columns, data);
 
-			// 监听失焦事件 - 保存编辑
-			th.addEventListener("blur", () => {
-				const newValue = th.textContent || "";
-				this.onHeaderEdit(colIndex, newValue);
-			});
+		// 监听单元格编辑事件
+		this.gridAdapter.onCellEdit((event) => {
+			this.onCellEdit(event.rowIndex, event.field, event.newValue);
 		});
 
-		// 创建表体
-		const tbody = table.createEl("tbody");
-		data.forEach((row, rowIndex) => {
-			const tr = tbody.createEl("tr");
-			row.forEach((cellValue, colIndex) => {
-				const td = tr.createEl("td");
-				td.textContent = cellValue || "";
-				td.setAttribute("contenteditable", "true");
-				td.setAttribute("data-row", String(rowIndex));
-				td.setAttribute("data-col", String(colIndex));
-
-				// 监听按键事件
-				td.addEventListener("keydown", (e) => {
-					if (e.key === "Enter") {
-						e.preventDefault();
-						td.blur(); // 失焦以触发保存
-					}
-				});
-
-				// 监听失焦事件 - 保存编辑
-				td.addEventListener("blur", () => {
-					const newValue = td.textContent || "";
-					this.onCellEdit(rowIndex, colIndex, newValue);
-				});
-			});
+		// 监听表头编辑事件（暂未实现）
+		this.gridAdapter.onHeaderEdit((event) => {
+			// TODO: 实现表头编辑
+			console.log('表头编辑:', event);
 		});
 
-		console.log(`TileLineBase 表格已渲染：${this.file.path}`);
+		console.log(`TileLineBase 表格已渲染（AG Grid）：${this.file.path}`);
 		console.log(`Schema:`, this.schema);
 		console.log(`数据行数: ${data.length}`);
 	}
@@ -289,12 +270,24 @@ export class TableView extends ItemView {
 	/**
 	 * 处理单元格编辑
 	 */
-	private onCellEdit(rowIndex: number, colIndex: number, newValue: string): void {
+	private onCellEdit(rowIndex: number, field: string, newValue: string): void {
+		if (!this.schema) {
+			console.error('Schema not initialized');
+			return;
+		}
+
 		// rowIndex 是数据行索引，对应 blocks[rowIndex + 1]（因为 blocks[0] 是模板）
 		const blockIndex = rowIndex + 1;
 
 		if (blockIndex >= this.blocks.length) {
 			console.error('Invalid block index:', blockIndex);
+			return;
+		}
+
+		// 通过字段名找到列索引
+		const colIndex = this.schema.columnNames.indexOf(field);
+		if (colIndex === -1) {
+			console.error('Invalid field:', field);
 			return;
 		}
 
@@ -360,6 +353,16 @@ export class TableView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
-		// 清理工作
+		// 销毁表格实例
+		if (this.gridAdapter) {
+			this.gridAdapter.destroy();
+			this.gridAdapter = null;
+		}
+
+		// 清理保存定时器
+		if (this.saveTimeout) {
+			clearTimeout(this.saveTimeout);
+			this.saveTimeout = null;
+		}
 	}
 }

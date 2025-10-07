@@ -7,7 +7,8 @@
       "Bash(git commit:*)",
       "Bash(npm install)",
       "Bash(npm run deploy:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

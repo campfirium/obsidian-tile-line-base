@@ -55316,6 +55316,30 @@ var AgGridAdapter = class {
       enableCellTextSelection: true
     };
     this.gridApi = createGrid(container, gridOptions);
+    setTimeout(() => {
+      this.autoSizeColumns(colDefs);
+    }, 100);
+  }
+  /**
+   * 自动调整没有 width/flex 的列宽度
+   */
+  autoSizeColumns(colDefs) {
+    if (!this.gridApi)
+      return;
+    const autoSizeColumnIds = [];
+    for (const colDef of colDefs) {
+      if (colDef.field === "#")
+        continue;
+      const hasWidth = colDef.width !== void 0;
+      const hasFlex = colDef.flex !== void 0;
+      if (!hasWidth && !hasFlex && colDef.field) {
+        autoSizeColumnIds.push(colDef.field);
+      }
+    }
+    if (autoSizeColumnIds.length > 0) {
+      console.log("\u{1F527} Auto-sizing columns:", autoSizeColumnIds);
+      this.gridApi.autoSizeColumns(autoSizeColumnIds);
+    }
   }
   /**
    * 处理单元格编辑事件
@@ -55478,24 +55502,27 @@ var TableView = class extends import_obsidian.ItemView {
    * 应用宽度配置到列定义
    */
   applyWidthConfig(colDef, config) {
-    if (!config.width) {
-      colDef.flex = 1;
+    if (!config.width || config.width === "auto") {
       return;
     }
     const width = config.width;
-    if (width === "auto") {
-      colDef.flex = 1;
-    } else if (width.endsWith("%")) {
-      colDef.width = width;
+    if (width.endsWith("%")) {
+      const percentage = parseInt(width.replace("%", ""));
+      if (!isNaN(percentage)) {
+        colDef.flex = percentage;
+        console.log(`\u5217 ${config.name} \u4F7F\u7528 flex: ${percentage}`);
+      }
     } else if (width.endsWith("px")) {
       const pixels = parseInt(width.replace("px", ""));
-      colDef.width = pixels;
+      if (!isNaN(pixels)) {
+        colDef.width = pixels;
+        console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${pixels}px`);
+      }
     } else {
       const num = parseInt(width);
       if (!isNaN(num)) {
         colDef.width = num;
-      } else {
-        colDef.flex = 1;
+        console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${num}px`);
       }
     }
   }

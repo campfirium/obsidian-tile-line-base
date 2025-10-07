@@ -102,33 +102,35 @@ export class TableView extends ItemView {
 	 * 应用宽度配置到列定义
 	 */
 	private applyWidthConfig(colDef: ColumnDef, config: ColumnConfig): void {
-		if (!config.width) {
-			// 没有定义宽度，使用 flex: 1 自适应
-			(colDef as any).flex = 1;
+		if (!config.width || config.width === 'auto') {
+			// 没有定义宽度或明确指定 auto：根据内容自适应
+			// 不设置 width 和 flex，后续调用 autoSizeColumns
 			return;
 		}
 
 		const width = config.width;
 
-		if (width === 'auto') {
-			// 明确指定 auto，使用 flex: 1
-			(colDef as any).flex = 1;
-		} else if (width.endsWith('%')) {
-			// 百分比宽度：AG Grid 需要转换为实际像素或使用 flex
-			// 这里暂时使用 width 字段，AG Grid 会处理百分比
-			(colDef as any).width = width;
+		if (width.endsWith('%')) {
+			// 百分比宽度：使用 flex 按比例分配
+			// 例如 30% → flex: 30，40% → flex: 40
+			const percentage = parseInt(width.replace('%', ''));
+			if (!isNaN(percentage)) {
+				(colDef as any).flex = percentage;
+				console.log(`列 ${config.name} 使用 flex: ${percentage}`);
+			}
 		} else if (width.endsWith('px')) {
-			// 像素宽度：提取数字
+			// 像素宽度：固定宽度
 			const pixels = parseInt(width.replace('px', ''));
-			(colDef as any).width = pixels;
+			if (!isNaN(pixels)) {
+				(colDef as any).width = pixels;
+				console.log(`列 ${config.name} 使用固定宽度: ${pixels}px`);
+			}
 		} else {
-			// 其他格式，尝试作为数字处理
+			// 尝试作为数字处理（默认像素）
 			const num = parseInt(width);
 			if (!isNaN(num)) {
 				(colDef as any).width = num;
-			} else {
-				// 无法解析，使用 flex
-				(colDef as any).flex = 1;
+				console.log(`列 ${config.name} 使用固定宽度: ${num}px`);
 			}
 		}
 	}

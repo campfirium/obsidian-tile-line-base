@@ -99,6 +99,37 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
+
+		// 自动调整没有指定宽度的列（根据内容）
+		setTimeout(() => {
+			this.autoSizeColumns(colDefs);
+		}, 100);
+	}
+
+	/**
+	 * 自动调整没有 width/flex 的列宽度
+	 */
+	private autoSizeColumns(colDefs: ColDef[]): void {
+		if (!this.gridApi) return;
+
+		// 找出所有没有指定 width 或 flex 的列
+		const autoSizeColumnIds: string[] = [];
+		for (const colDef of colDefs) {
+			// 跳过序号列
+			if (colDef.field === '#') continue;
+
+			const hasWidth = (colDef as any).width !== undefined;
+			const hasFlex = (colDef as any).flex !== undefined;
+
+			if (!hasWidth && !hasFlex && colDef.field) {
+				autoSizeColumnIds.push(colDef.field);
+			}
+		}
+
+		if (autoSizeColumnIds.length > 0) {
+			console.log('🔧 Auto-sizing columns:', autoSizeColumnIds);
+			this.gridApi.autoSizeColumns(autoSizeColumnIds);
+		}
 	}
 
 	/**

@@ -55523,7 +55523,9 @@ var TableView = class extends import_obsidian.ItemView {
       headerName: name,
       editable: true
     }));
-    const tableContainer = container.createDiv({ cls: "tlb-table-container ag-theme-alpine" });
+    const isDarkMode = document.body.classList.contains("theme-dark");
+    const themeClass = isDarkMode ? "ag-theme-alpine-dark" : "ag-theme-alpine";
+    const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
     if (this.gridAdapter) {
       this.gridAdapter.destroy();
     }

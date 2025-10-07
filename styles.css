@@ -13,8 +13,9 @@
   overflow-x: auto;
 }
 
-/* AG Grid 容器需要明确的高度 */
-.tlb-table-container.ag-theme-alpine {
+/* AG Grid 容器需要明确的高度（浅色和深色主题） */
+.tlb-table-container.ag-theme-alpine,
+.tlb-table-container.ag-theme-alpine-dark {
   height: calc(100vh - 100px); /* 视口高度减去上下边距 */
   min-height: 400px;
 }

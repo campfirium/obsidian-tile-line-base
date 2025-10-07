@@ -239,8 +239,12 @@ export class TableView extends ItemView {
 			editable: true
 		}));
 
+		// 根据 Obsidian 主题选择 AG Grid 主题
+		const isDarkMode = document.body.classList.contains('theme-dark');
+		const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
+
 		// 创建表格容器
-		const tableContainer = container.createDiv({ cls: "tlb-table-container ag-theme-alpine" });
+		const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
 
 		// 销毁旧的表格实例（如果存在）
 		if (this.gridAdapter) {

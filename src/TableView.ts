@@ -364,8 +364,11 @@ export class TableView extends ItemView {
 	 * 处理单元格编辑
 	 */
 	private onCellEdit(rowIndex: number, field: string, newValue: string): void {
+		console.log('📝 TableView onCellEdit called:', { rowIndex, field, newValue });
+
 		// 序号列不可编辑，直接返回
 		if (field === '#') {
+			console.log('⚠️ Ignoring edit on order column');
 			return;
 		}
 

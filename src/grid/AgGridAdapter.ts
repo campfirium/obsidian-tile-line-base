@@ -70,8 +70,7 @@ export class AgGridAdapter implements GridAdapter {
 			columnDefs: colDefs,
 			rowData: rows,
 
-			// 编辑配置
-			editType: 'fullRow', // 整行编辑模式
+			// 编辑配置（使用单元格编辑模式而非整行编辑）
 			singleClickEdit: true, // 单击即可编辑
 			stopEditingWhenCellsLoseFocus: true, // 失焦时停止编辑
 
@@ -114,19 +113,38 @@ export class AgGridAdapter implements GridAdapter {
 		const newValue = event.newValue;
 		const oldValue = event.oldValue;
 
+		console.log('🔍 AG Grid Cell Edit Event:', {
+			field,
+			rowIndex,
+			oldValue,
+			oldValueType: typeof oldValue,
+			newValue,
+			newValueType: typeof newValue,
+			data: event.data
+		});
+
 		if (field && rowIndex !== null && rowIndex !== undefined) {
-			// 规范化值（undefined、null 都转为空字符串）
+			// 规范化值（undefined、null、空字符串 都转为空字符串）
 			const newStr = String(newValue ?? '');
 			const oldStr = String(oldValue ?? '');
 
+			console.log('🔍 Normalized values:', {
+				oldStr,
+				newStr,
+				changed: newStr !== oldStr
+			});
+
 			// 只有当值真正改变时才触发回调
 			if (newStr !== oldStr) {
+				console.log('✅ Triggering cell edit callback');
 				this.cellEditCallback({
 					rowIndex: rowIndex,
 					field: field,
 					newValue: newStr,
 					oldValue: oldStr
 				});
+			} else {
+				console.log('❌ No change detected, skipping callback');
 			}
 		}
 	}

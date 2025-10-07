@@ -1,0 +1,10 @@
+{
+  "id": "tile-line-base",
+  "name": "TileLineBase",
+  "version": "0.1.0",
+  "minAppVersion": "0.15.0",
+  "description": "A federated paragraph database system for Obsidian with row-based architecture",
+  "author": "Your Name",
+  "authorUrl": "https://github.com/yourusername/obsidian-tile-line-base",
+  "isDesktopOnly": false
+}

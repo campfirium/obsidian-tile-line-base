@@ -55284,6 +55284,10 @@ var AgGridAdapter = class {
         // 启用筛选
         resizable: true,
         // 可调整列宽
+        wrapText: true,
+        // 文本自动换行
+        autoHeight: true,
+        // 行高自动适应内容
         ...col
         // 保留所有额外属性（width, flex 等）
       };

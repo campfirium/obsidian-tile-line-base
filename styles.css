@@ -10,14 +10,16 @@
 
 .tlb-table-container {
   width: 100%;
-  overflow-x: auto;
+  height: 100%;
+  overflow: hidden; /* AG Grid 自己处理滚动 */
 }
 
 /* AG Grid 容器需要明确的高度（浅色和深色主题） */
 .tlb-table-container.ag-theme-alpine,
 .tlb-table-container.ag-theme-alpine-dark {
-  height: calc(100vh - 100px); /* 视口高度减去边距 */
+  flex: 1; /* 占满剩余空间 */
   min-height: 400px;
+  width: 100%;
 }
 
 /* 自定义右键菜单样式 */

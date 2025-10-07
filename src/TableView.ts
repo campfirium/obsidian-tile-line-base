@@ -8,10 +8,10 @@ interface TableViewState extends Record<string, unknown> {
 	filePath: string;
 }
 
-// H2 块数据结构
+// H2 块数据结构（Key:Value 格式）
 interface H2Block {
-	title: string;        // H2 标题（去掉 ## ）
-	paragraphs: string[]; // 段落数组
+	title: string;                 // H2 标题（去掉 ## ）
+	data: Record<string, string>;  // Key-Value 键值对
 }
 
 // Schema（表格结构）
@@ -56,7 +56,7 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 解析文件内容，提取所有 H2 块
+	 * 解析文件内容，提取所有 H2 块（Key:Value 格式）
 	 */
 	private parseH2Blocks(content: string): H2Block[] {
 		const lines = content.split('\n');
@@ -73,13 +73,19 @@ export class TableView extends ItemView {
 				// 开始新块
 				currentBlock = {
 					title: line.substring(3).trim(), // 去掉 "## "
-					paragraphs: []
+					data: {}
 				};
 			} else if (currentBlock) {
-				// 在 H2 块内部，收集非空行作为段落
+				// 在 H2 块内部，解析 Key:Value 格式
 				const trimmed = line.trim();
 				if (trimmed.length > 0) {
-					currentBlock.paragraphs.push(line);
+					// 查找第一个冒号
+					const colonIndex = trimmed.indexOf(':');
+					if (colonIndex > 0) {
+						const key = trimmed.substring(0, colonIndex).trim();
+						const value = trimmed.substring(colonIndex + 1).trim();
+						currentBlock.data[key] = value;
+					}
 				}
 			}
 			// 如果还没遇到 H2，忽略该行
@@ -94,18 +100,23 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 从第一个 H2 块提取 Schema
+	 * 动态扫描所有 H2 块，提取 Schema
 	 */
 	private extractSchema(blocks: H2Block[]): Schema | null {
 		if (blocks.length === 0) {
 			return null;
 		}
 
-		const firstBlock = blocks[0];
-		const columnNames = [
-			firstBlock.title,           // 第一列名 = H2 标题
-			...firstBlock.paragraphs    // 后续列名 = 段落
-		];
+		// 收集所有出现过的 key
+		const keySet = new Set<string>();
+		for (const block of blocks) {
+			for (const key of Object.keys(block.data)) {
+				keySet.add(key);
+			}
+		}
+
+		// 第一列是"任务"（H2 标题），后续列是所有 key
+		const columnNames = ['任务', ...Array.from(keySet)];
 
 		return { columnNames };
 	}
@@ -116,26 +127,21 @@ export class TableView extends ItemView {
 	private extractTableData(blocks: H2Block[], schema: Schema): RowData[] {
 		const data: RowData[] = [];
 
-		// 从第二个块开始（第一个是模板）
-		for (let i = 1; i < blocks.length; i++) {
+		// 所有块都是数据（没有模板H2）
+		for (let i = 0; i < blocks.length; i++) {
 			const block = blocks[i];
 			const row: RowData = {};
 
-			// 序号列（显示在文件中的实际位置）
-			row['#'] = String(i);
+			// 序号列（从 1 开始）
+			row['#'] = String(i + 1);
 
-			// 第一列：H2 标题
+			// 第一列："任务" = H2 标题
 			row[schema.columnNames[0]] = block.title;
 
-			// 后续列：段落
+			// 后续列：从 block.data 提取
 			for (let j = 1; j < schema.columnNames.length; j++) {
-				const paragraph = block.paragraphs[j - 1];
-				// 空段落或 "." 表示空值
-				if (!paragraph || paragraph.trim() === '.') {
-					row[schema.columnNames[j]] = '';
-				} else {
-					row[schema.columnNames[j]] = paragraph.trim();
-				}
+				const key = schema.columnNames[j];
+				row[key] = block.data[key] || '';
 			}
 
 			data.push(row);
@@ -145,7 +151,7 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 将 blocks 数组转换回 Markdown 格式
+	 * 将 blocks 数组转换回 Markdown 格式（Key:Value）
 	 */
 	private blocksToMarkdown(): string {
 		const lines: string[] = [];
@@ -154,10 +160,13 @@ export class TableView extends ItemView {
 			// H2 标题
 			lines.push(`## ${block.title}`);
 
-			// 段落（非空才添加）
-			for (const paragraph of block.paragraphs) {
-				if (paragraph.trim()) {
-					lines.push(paragraph);
+			// Key:Value 对
+			for (const [key, value] of Object.entries(block.data)) {
+				if (value.trim()) {
+					lines.push(`${key}: ${value}`);
+				} else {
+					// 空值也要保留，确保 Schema 完整性
+					lines.push(`${key}:`);
 				}
 			}
 
@@ -412,7 +421,7 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 处理单元格编辑
+	 * 处理单元格编辑（Key:Value 格式）
 	 */
 	private onCellEdit(rowIndex: number, field: string, newValue: string): void {
 		console.log('📝 TableView onCellEdit called:', { rowIndex, field, newValue });
@@ -428,38 +437,22 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		// rowIndex 是数据行索引，对应 blocks[rowIndex + 1]（因为 blocks[0] 是模板）
-		const blockIndex = rowIndex + 1;
-
-		if (blockIndex >= this.blocks.length) {
-			console.error('Invalid block index:', blockIndex);
+		// rowIndex 直接对应 blocks[rowIndex]（没有模板H2）
+		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
+			console.error('Invalid row index:', rowIndex);
 			return;
 		}
 
-		// 通过字段名找到列索引
-		const colIndex = this.schema.columnNames.indexOf(field);
-		if (colIndex === -1) {
-			console.error('Invalid field:', field);
-			return;
-		}
+		const block = this.blocks[rowIndex];
 
-		const block = this.blocks[blockIndex];
-
-		if (colIndex === 0) {
-			// 第一列：更新 H2 标题
+		// 第一列"任务"：更新 H2 标题
+		if (field === this.schema.columnNames[0]) {
 			block.title = newValue;
-			console.log(`更新 H2 标题 [${blockIndex}]:`, newValue);
+			console.log(`更新 H2 标题 [${rowIndex}]:`, newValue);
 		} else {
-			// 其他列：更新段落
-			const paragraphIndex = colIndex - 1;
-
-			// 确保段落数组足够长
-			while (block.paragraphs.length <= paragraphIndex) {
-				block.paragraphs.push('');
-			}
-
-			block.paragraphs[paragraphIndex] = newValue;
-			console.log(`更新段落 [${blockIndex}][${paragraphIndex}]:`, newValue);
+			// 其他列：更新 data[key]
+			block.data[field] = newValue;
+			console.log(`更新数据 [${rowIndex}][${field}]:`, newValue);
 		}
 
 		// 打印更新后的 blocks 数组
@@ -470,7 +463,8 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 处理表头编辑
+	 * 处理表头编辑（Key:Value 格式）
+	 * 重命名列名（key）
 	 */
 	private onHeaderEdit(colIndex: number, newValue: string): void {
 		if (!this.schema || this.blocks.length === 0) {
@@ -478,27 +472,27 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		const oldKey = this.schema.columnNames[colIndex];
+
+		// 第一列"任务"不可重命名
+		if (colIndex === 0) {
+			console.warn('Cannot rename the first column');
+			return;
+		}
+
 		// 更新 schema
 		this.schema.columnNames[colIndex] = newValue;
 
-		// 更新模板块（blocks[0]）
-		const templateBlock = this.blocks[0];
-		if (colIndex === 0) {
-			// 第一列：更新 H2 标题
-			templateBlock.title = newValue;
-			console.log(`更新表头（模板 H2 标题）[${colIndex}]:`, newValue);
-		} else {
-			// 其他列：更新段落
-			const paragraphIndex = colIndex - 1;
-
-			// 确保段落数组足够长
-			while (templateBlock.paragraphs.length <= paragraphIndex) {
-				templateBlock.paragraphs.push('');
+		// 遍历所有 blocks，重命名 key
+		for (const block of this.blocks) {
+			if (oldKey in block.data) {
+				const value = block.data[oldKey];
+				delete block.data[oldKey];
+				block.data[newValue] = value;
 			}
-
-			templateBlock.paragraphs[paragraphIndex] = newValue;
-			console.log(`更新表头（模板段落）[${paragraphIndex}]:`, newValue);
 		}
+
+		console.log(`✅ 列重命名: "${oldKey}" → "${newValue}"`);
 
 		// 触发保存
 		this.scheduleSave();
@@ -508,7 +502,7 @@ export class TableView extends ItemView {
 	// 这些方法签名为未来的 SchemaStore 集成预留接口，减少后续重构成本
 
 	/**
-	 * 添加新行
+	 * 添加新行（Key:Value 格式）
 	 * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
 	 */
 	private addRow(beforeRowIndex?: number): void {
@@ -518,19 +512,22 @@ export class TableView extends ItemView {
 		}
 
 		// 计算新条目编号
-		const entryNumber = this.blocks.length; // blocks[0] 是模板，所以长度即为下一个编号
+		const entryNumber = this.blocks.length + 1;
 
-		// 创建新 H2Block
+		// 创建新 H2Block（初始化所有 key 为空）
 		const newBlock: H2Block = {
 			title: `新条目 ${entryNumber}`,
-			paragraphs: new Array(this.schema.columnNames.length - 1).fill('')
+			data: {}
 		};
 
+		// 为所有列（除了第一列"任务"）初始化空值
+		for (let i = 1; i < this.schema.columnNames.length; i++) {
+			newBlock.data[this.schema.columnNames[i]] = '';
+		}
+
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
-			// 在指定行之前插入
-			// rowIndex 对应 blocks[rowIndex + 1]
-			const blockIndex = beforeRowIndex + 1;
-			this.blocks.splice(blockIndex, 0, newBlock);
+			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）
+			this.blocks.splice(beforeRowIndex, 0, newBlock);
 			console.log(`✅ 在行 ${beforeRowIndex} 之前插入新行：${newBlock.title}`);
 		} else {
 			// 在末尾插入
@@ -547,8 +544,8 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 删除指定行
-	 * @param rowIndex 数据行索引（不包括模板行）
+	 * 删除指定行（Key:Value 格式）
+	 * @param rowIndex 数据行索引
 	 */
 	private deleteRow(rowIndex: number): void {
 		if (!this.schema) {
@@ -556,16 +553,13 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		// 计算 blocks 数组索引
-		const blockIndex = rowIndex + 1;
-
-		// 边界检查
-		if (blockIndex <= 0 || blockIndex >= this.blocks.length) {
+		// 边界检查（rowIndex 直接对应 blocks 索引）
+		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
 			console.error('Invalid row index:', rowIndex);
 			return;
 		}
 
-		const targetBlock = this.blocks[blockIndex];
+		const targetBlock = this.blocks[rowIndex];
 
 		// 确认对话框
 		const confirmMessage = `确定要删除这一行吗？\n\n"${targetBlock.title}"`;
@@ -575,7 +569,7 @@ export class TableView extends ItemView {
 		}
 
 		// 删除块
-		const deletedBlock = this.blocks.splice(blockIndex, 1)[0];
+		const deletedBlock = this.blocks.splice(rowIndex, 1)[0];
 
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
@@ -588,7 +582,7 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 复制指定行
+	 * 复制指定行（Key:Value 格式）
 	 * @param rowIndex 数据行索引
 	 */
 	private duplicateRow(rowIndex: number): void {
@@ -597,24 +591,21 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		// 计算 blocks 数组索引
-		const blockIndex = rowIndex + 1;
-
-		// 边界检查
-		if (blockIndex <= 0 || blockIndex >= this.blocks.length) {
+		// 边界检查（rowIndex 直接对应 blocks 索引）
+		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
 			console.error('Invalid row index:', rowIndex);
 			return;
 		}
 
 		// 深拷贝目标块
-		const sourceBlock = this.blocks[blockIndex];
+		const sourceBlock = this.blocks[rowIndex];
 		const duplicatedBlock: H2Block = {
 			title: sourceBlock.title,
-			paragraphs: [...sourceBlock.paragraphs]
+			data: { ...sourceBlock.data }
 		};
 
 		// 在源块之后插入复制的块
-		this.blocks.splice(blockIndex + 1, 0, duplicatedBlock);
+		this.blocks.splice(rowIndex + 1, 0, duplicatedBlock);
 
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);

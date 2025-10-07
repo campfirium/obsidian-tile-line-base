@@ -55450,7 +55450,7 @@ var TableView = class extends import_obsidian.ItemView {
     };
   }
   /**
-   * 解析文件内容，提取所有 H2 块
+   * 解析文件内容，提取所有 H2 块（Key:Value 格式）
    */
   parseH2Blocks(content) {
     const lines = content.split("\n");
@@ -55464,12 +55464,17 @@ var TableView = class extends import_obsidian.ItemView {
         currentBlock = {
           title: line.substring(3).trim(),
           // 去掉 "## "
-          paragraphs: []
+          data: {}
         };
       } else if (currentBlock) {
         const trimmed = line.trim();
         if (trimmed.length > 0) {
-          currentBlock.paragraphs.push(line);
+          const colonIndex = trimmed.indexOf(":");
+          if (colonIndex > 0) {
+            const key = trimmed.substring(0, colonIndex).trim();
+            const value = trimmed.substring(colonIndex + 1).trim();
+            currentBlock.data[key] = value;
+          }
         }
       }
     }
@@ -55479,19 +55484,19 @@ var TableView = class extends import_obsidian.ItemView {
     return blocks;
   }
   /**
-   * 从第一个 H2 块提取 Schema
+   * 动态扫描所有 H2 块，提取 Schema
    */
   extractSchema(blocks) {
     if (blocks.length === 0) {
       return null;
     }
-    const firstBlock = blocks[0];
-    const columnNames = [
-      firstBlock.title,
-      // 第一列名 = H2 标题
-      ...firstBlock.paragraphs
-      // 后续列名 = 段落
-    ];
+    const keySet = /* @__PURE__ */ new Set();
+    for (const block of blocks) {
+      for (const key of Object.keys(block.data)) {
+        keySet.add(key);
+      }
+    }
+    const columnNames = ["\u4EFB\u52A1", ...Array.from(keySet)];
     return { columnNames };
   }
   /**
@@ -55499,33 +55504,31 @@ var TableView = class extends import_obsidian.ItemView {
    */
   extractTableData(blocks, schema) {
     const data = [];
-    for (let i = 1; i < blocks.length; i++) {
+    for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
       const row = {};
-      row["#"] = String(i);
+      row["#"] = String(i + 1);
       row[schema.columnNames[0]] = block.title;
       for (let j = 1; j < schema.columnNames.length; j++) {
-        const paragraph = block.paragraphs[j - 1];
-        if (!paragraph || paragraph.trim() === ".") {
-          row[schema.columnNames[j]] = "";
-        } else {
-          row[schema.columnNames[j]] = paragraph.trim();
-        }
+        const key = schema.columnNames[j];
+        row[key] = block.data[key] || "";
       }
       data.push(row);
     }
     return data;
   }
   /**
-   * 将 blocks 数组转换回 Markdown 格式
+   * 将 blocks 数组转换回 Markdown 格式（Key:Value）
    */
   blocksToMarkdown() {
     const lines = [];
     for (const block of this.blocks) {
       lines.push(`## ${block.title}`);
-      for (const paragraph of block.paragraphs) {
-        if (paragraph.trim()) {
-          lines.push(paragraph);
+      for (const [key, value] of Object.entries(block.data)) {
+        if (value.trim()) {
+          lines.push(`${key}: ${value}`);
+        } else {
+          lines.push(`${key}:`);
         }
       }
       lines.push("");
@@ -55708,7 +55711,7 @@ var TableView = class extends import_obsidian.ItemView {
     }
   }
   /**
-   * 处理单元格编辑
+   * 处理单元格编辑（Key:Value 格式）
    */
   onCellEdit(rowIndex, field, newValue) {
     console.log("\u{1F4DD} TableView onCellEdit called:", { rowIndex, field, newValue });
@@ -55720,58 +55723,50 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Schema not initialized");
       return;
     }
-    const blockIndex = rowIndex + 1;
-    if (blockIndex >= this.blocks.length) {
-      console.error("Invalid block index:", blockIndex);
+    if (rowIndex < 0 || rowIndex >= this.blocks.length) {
+      console.error("Invalid row index:", rowIndex);
       return;
     }
-    const colIndex = this.schema.columnNames.indexOf(field);
-    if (colIndex === -1) {
-      console.error("Invalid field:", field);
-      return;
-    }
-    const block = this.blocks[blockIndex];
-    if (colIndex === 0) {
+    const block = this.blocks[rowIndex];
+    if (field === this.schema.columnNames[0]) {
       block.title = newValue;
-      console.log(`\u66F4\u65B0 H2 \u6807\u9898 [${blockIndex}]:`, newValue);
+      console.log(`\u66F4\u65B0 H2 \u6807\u9898 [${rowIndex}]:`, newValue);
     } else {
-      const paragraphIndex = colIndex - 1;
-      while (block.paragraphs.length <= paragraphIndex) {
-        block.paragraphs.push("");
-      }
-      block.paragraphs[paragraphIndex] = newValue;
-      console.log(`\u66F4\u65B0\u6BB5\u843D [${blockIndex}][${paragraphIndex}]:`, newValue);
+      block.data[field] = newValue;
+      console.log(`\u66F4\u65B0\u6570\u636E [${rowIndex}][${field}]:`, newValue);
     }
     console.log("Updated blocks:", this.blocks);
     this.scheduleSave();
   }
   /**
-   * 处理表头编辑
+   * 处理表头编辑（Key:Value 格式）
+   * 重命名列名（key）
    */
   onHeaderEdit(colIndex, newValue) {
     if (!this.schema || this.blocks.length === 0) {
       console.error("Invalid schema or blocks");
       return;
     }
-    this.schema.columnNames[colIndex] = newValue;
-    const templateBlock = this.blocks[0];
+    const oldKey = this.schema.columnNames[colIndex];
     if (colIndex === 0) {
-      templateBlock.title = newValue;
-      console.log(`\u66F4\u65B0\u8868\u5934\uFF08\u6A21\u677F H2 \u6807\u9898\uFF09[${colIndex}]:`, newValue);
-    } else {
-      const paragraphIndex = colIndex - 1;
-      while (templateBlock.paragraphs.length <= paragraphIndex) {
-        templateBlock.paragraphs.push("");
-      }
-      templateBlock.paragraphs[paragraphIndex] = newValue;
-      console.log(`\u66F4\u65B0\u8868\u5934\uFF08\u6A21\u677F\u6BB5\u843D\uFF09[${paragraphIndex}]:`, newValue);
+      console.warn("Cannot rename the first column");
+      return;
     }
+    this.schema.columnNames[colIndex] = newValue;
+    for (const block of this.blocks) {
+      if (oldKey in block.data) {
+        const value = block.data[oldKey];
+        delete block.data[oldKey];
+        block.data[newValue] = value;
+      }
+    }
+    console.log(`\u2705 \u5217\u91CD\u547D\u540D: "${oldKey}" \u2192 "${newValue}"`);
     this.scheduleSave();
   }
   // ==================== 预留：CRUD 操作接口（SchemaStore 架构） ====================
   // 这些方法签名为未来的 SchemaStore 集成预留接口，减少后续重构成本
   /**
-   * 添加新行
+   * 添加新行（Key:Value 格式）
    * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
    */
   addRow(beforeRowIndex) {
@@ -55780,14 +55775,16 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Schema not initialized");
       return;
     }
-    const entryNumber = this.blocks.length;
+    const entryNumber = this.blocks.length + 1;
     const newBlock = {
       title: `\u65B0\u6761\u76EE ${entryNumber}`,
-      paragraphs: new Array(this.schema.columnNames.length - 1).fill("")
+      data: {}
     };
+    for (let i = 1; i < this.schema.columnNames.length; i++) {
+      newBlock.data[this.schema.columnNames[i]] = "";
+    }
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
-      const blockIndex = beforeRowIndex + 1;
-      this.blocks.splice(blockIndex, 0, newBlock);
+      this.blocks.splice(beforeRowIndex, 0, newBlock);
       console.log(`\u2705 \u5728\u884C ${beforeRowIndex} \u4E4B\u524D\u63D2\u5165\u65B0\u884C\uFF1A${newBlock.title}`);
     } else {
       this.blocks.push(newBlock);
@@ -55798,8 +55795,8 @@ var TableView = class extends import_obsidian.ItemView {
     this.scheduleSave();
   }
   /**
-   * 删除指定行
-   * @param rowIndex 数据行索引（不包括模板行）
+   * 删除指定行（Key:Value 格式）
+   * @param rowIndex 数据行索引
    */
   deleteRow(rowIndex) {
     var _a4;
@@ -55807,12 +55804,11 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Schema not initialized");
       return;
     }
-    const blockIndex = rowIndex + 1;
-    if (blockIndex <= 0 || blockIndex >= this.blocks.length) {
+    if (rowIndex < 0 || rowIndex >= this.blocks.length) {
       console.error("Invalid row index:", rowIndex);
       return;
     }
-    const targetBlock = this.blocks[blockIndex];
+    const targetBlock = this.blocks[rowIndex];
     const confirmMessage = `\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E00\u884C\u5417\uFF1F
 
 "${targetBlock.title}"`;
@@ -55820,14 +55816,14 @@ var TableView = class extends import_obsidian.ItemView {
       console.log("\u274C \u7528\u6237\u53D6\u6D88\u5220\u9664");
       return;
     }
-    const deletedBlock = this.blocks.splice(blockIndex, 1)[0];
+    const deletedBlock = this.blocks.splice(rowIndex, 1)[0];
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
     this.scheduleSave();
     console.log(`\u2705 \u5220\u9664\u884C\uFF1A${deletedBlock.title}`);
   }
   /**
-   * 复制指定行
+   * 复制指定行（Key:Value 格式）
    * @param rowIndex 数据行索引
    */
   duplicateRow(rowIndex) {
@@ -55836,17 +55832,16 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Schema not initialized");
       return;
     }
-    const blockIndex = rowIndex + 1;
-    if (blockIndex <= 0 || blockIndex >= this.blocks.length) {
+    if (rowIndex < 0 || rowIndex >= this.blocks.length) {
       console.error("Invalid row index:", rowIndex);
       return;
     }
-    const sourceBlock = this.blocks[blockIndex];
+    const sourceBlock = this.blocks[rowIndex];
     const duplicatedBlock = {
       title: sourceBlock.title,
-      paragraphs: [...sourceBlock.paragraphs]
+      data: { ...sourceBlock.data }
     };
-    this.blocks.splice(blockIndex + 1, 0, duplicatedBlock);
+    this.blocks.splice(rowIndex + 1, 0, duplicatedBlock);
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
     this.scheduleSave();

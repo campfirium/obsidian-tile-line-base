@@ -57,6 +57,71 @@ var TableView = class extends import_obsidian.ItemView {
       filePath: ((_a = this.file) == null ? void 0 : _a.path) || ""
     };
   }
+  /**
+   * 解析文件内容，提取所有 H2 块
+   */
+  parseH2Blocks(content) {
+    const lines = content.split("\n");
+    const blocks = [];
+    let currentBlock = null;
+    for (const line of lines) {
+      if (line.startsWith("## ")) {
+        if (currentBlock) {
+          blocks.push(currentBlock);
+        }
+        currentBlock = {
+          title: line.substring(3).trim(),
+          // 去掉 "## "
+          paragraphs: []
+        };
+      } else if (currentBlock) {
+        const trimmed = line.trim();
+        if (trimmed.length > 0) {
+          currentBlock.paragraphs.push(line);
+        }
+      }
+    }
+    if (currentBlock) {
+      blocks.push(currentBlock);
+    }
+    return blocks;
+  }
+  /**
+   * 从第一个 H2 块提取 Schema
+   */
+  extractSchema(blocks) {
+    if (blocks.length === 0) {
+      return null;
+    }
+    const firstBlock = blocks[0];
+    const columnNames = [
+      firstBlock.title,
+      // 第一列名 = H2 标题
+      ...firstBlock.paragraphs
+      // 后续列名 = 段落
+    ];
+    return { columnNames };
+  }
+  /**
+   * 从 H2 块提取表格数据
+   */
+  extractTableData(blocks, schema) {
+    const data = [];
+    for (let i = 1; i < blocks.length; i++) {
+      const block = blocks[i];
+      const row = [block.title];
+      for (let j = 0; j < schema.columnNames.length - 1; j++) {
+        const paragraph = block.paragraphs[j];
+        if (!paragraph || paragraph.trim() === ".") {
+          row.push("");
+        } else {
+          row.push(paragraph.trim());
+        }
+      }
+      data.push(row);
+    }
+    return data;
+  }
   async onOpen() {
     const container = this.containerEl.children[1];
     container.addClass("tile-line-base-view");
@@ -68,21 +133,38 @@ var TableView = class extends import_obsidian.ItemView {
       container.createDiv({ text: "\u672A\u9009\u62E9\u6587\u4EF6" });
       return;
     }
-    const tableContainer = container.createDiv({ cls: "tlb-table-container" });
     const content = await this.app.vault.read(this.file);
-    const lines = content.split("\n");
+    const blocks = this.parseH2Blocks(content);
+    if (blocks.length === 0) {
+      container.createDiv({
+        text: "\u6B64\u6587\u4EF6\u4E0D\u5305\u542B H2 \u5757\uFF0C\u65E0\u6CD5\u663E\u793A\u4E3A\u8868\u683C",
+        cls: "tlb-warning"
+      });
+      return;
+    }
+    const schema = this.extractSchema(blocks);
+    if (!schema) {
+      container.createDiv({ text: "\u65E0\u6CD5\u63D0\u53D6\u8868\u683C\u7ED3\u6784" });
+      return;
+    }
+    const data = this.extractTableData(blocks, schema);
+    const tableContainer = container.createDiv({ cls: "tlb-table-container" });
     const table = tableContainer.createEl("table", { cls: "tlb-table" });
     const thead = table.createEl("thead");
     const headerRow = thead.createEl("tr");
-    headerRow.createEl("th", { text: "\u884C\u53F7" });
-    headerRow.createEl("th", { text: "\u5185\u5BB9" });
-    const tbody = table.createEl("tbody");
-    lines.forEach((line, index) => {
-      const tr = tbody.createEl("tr");
-      tr.createEl("td", { text: String(index + 1) });
-      tr.createEl("td", { text: line || "(\u7A7A\u884C)" });
+    schema.columnNames.forEach((colName) => {
+      headerRow.createEl("th", { text: colName });
     });
-    console.log(`TileLineBase \u8868\u683C\u89C6\u56FE\u5DF2\u52A0\u8F7D\uFF1A${this.file.path}`);
+    const tbody = table.createEl("tbody");
+    data.forEach((row) => {
+      const tr = tbody.createEl("tr");
+      row.forEach((cell) => {
+        tr.createEl("td", { text: cell || "" });
+      });
+    });
+    console.log(`TileLineBase \u8868\u683C\u5DF2\u6E32\u67D3\uFF1A${this.file.path}`);
+    console.log(`Schema:`, schema);
+    console.log(`\u6570\u636E\u884C\u6570: ${data.length}`);
   }
   async onClose() {
   }

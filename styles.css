@@ -39,3 +39,10 @@
 .tlb-table tbody tr:nth-child(even) {
   background-color: var(--background-secondary-alt);
 }
+
+.tlb-warning {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}

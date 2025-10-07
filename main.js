@@ -106,17 +106,16 @@ var TileLineBasePlugin = class extends import_obsidian2.Plugin {
       })
     );
     this.addCommand({
-      id: "open-current-file-as-table",
-      name: "\u4EE5 TileLineBase \u8868\u683C\u6253\u5F00\u5F53\u524D\u6587\u4EF6",
+      id: "toggle-table-view",
+      name: "\u5207\u6362 TileLineBase \u8868\u683C\u89C6\u56FE",
       checkCallback: (checking) => {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (activeFile) {
-          if (!checking) {
-            this.openTableView(activeFile);
-          }
-          return true;
+        const activeLeaf = this.app.workspace.activeLeaf;
+        if (!activeLeaf)
+          return false;
+        if (!checking) {
+          this.toggleTableView(activeLeaf);
         }
-        return false;
+        return true;
       }
     });
   }
@@ -135,5 +134,31 @@ var TileLineBasePlugin = class extends import_obsidian2.Plugin {
       }
     });
     workspace.revealLeaf(leaf);
+  }
+  async toggleTableView(leaf) {
+    const currentView = leaf.view;
+    if (currentView.getViewType() === TABLE_VIEW_TYPE) {
+      const tableView = currentView;
+      const file = tableView.file;
+      if (file) {
+        await leaf.setViewState({
+          type: "markdown",
+          state: {
+            file: file.path
+          }
+        });
+      }
+    } else {
+      const activeFile = this.app.workspace.getActiveFile();
+      if (activeFile) {
+        await leaf.setViewState({
+          type: TABLE_VIEW_TYPE,
+          active: true,
+          state: {
+            filePath: activeFile.path
+          }
+        });
+      }
+    }
   }
 };

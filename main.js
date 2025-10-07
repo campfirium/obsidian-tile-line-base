@@ -55450,10 +55450,10 @@ var TableView = class extends import_obsidian.ItemView {
     };
   }
   /**
-   * 解析头部配置块（```tilelinebase）
+   * 解析头部配置块（```tlb）
    */
   parseHeaderConfigBlock(content) {
-    const configBlockRegex = /```tilelinebase\s*\n([\s\S]*?)\n```/;
+    const configBlockRegex = /```tlb\s*\n([\s\S]*?)\n```/;
     const match = content.match(configBlockRegex);
     if (!match) {
       return null;

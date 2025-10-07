@@ -66,11 +66,11 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 解析头部配置块（```tilelinebase）
+	 * 解析头部配置块（```tlb）
 	 */
 	private parseHeaderConfigBlock(content: string): ColumnConfig[] | null {
-		// 匹配 ```tilelinebase ... ``` 代码块
-		const configBlockRegex = /```tilelinebase\s*\n([\s\S]*?)\n```/;
+		// 匹配 ```tlb ... ``` 代码块
+		const configBlockRegex = /```tlb\s*\n([\s\S]*?)\n```/;
 		const match = content.match(configBlockRegex);
 
 		if (!match) {

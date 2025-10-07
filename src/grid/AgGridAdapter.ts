@@ -58,6 +58,9 @@ export class AgGridAdapter implements GridAdapter {
 			singleClickEdit: true, // 单击即可编辑
 			stopEditingWhenCellsLoseFocus: true, // 失焦时停止编辑
 
+			// 行选择配置
+			rowSelection: 'single', // 单行选择
+
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
@@ -142,5 +145,17 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.destroy();
 			this.gridApi = null;
 		}
+	}
+
+	/**
+	 * 获取当前选中的行索引
+	 */
+	getSelectedRows(): number[] {
+		if (!this.gridApi) return [];
+
+		const selectedNodes = this.gridApi.getSelectedNodes();
+		return selectedNodes
+			.map(node => node.rowIndex)
+			.filter(idx => idx !== null && idx !== undefined) as number[];
 	}
 }

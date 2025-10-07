@@ -244,6 +244,28 @@ export class TableView extends ItemView {
 		const isDarkMode = document.body.classList.contains('theme-dark');
 		const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
 
+		// 创建工具栏
+		const toolbar = container.createDiv({ cls: "tlb-toolbar" });
+
+		// 添加行按钮
+		const addRowBtn = toolbar.createEl("button", {
+			text: "+ 添加行",
+			cls: "tlb-btn tlb-btn-primary"
+		});
+		addRowBtn.addEventListener("click", () => this.addRow());
+
+		// 删除行按钮
+		const deleteRowBtn = toolbar.createEl("button", {
+			text: "- 删除行",
+			cls: "tlb-btn tlb-btn-danger"
+		});
+		deleteRowBtn.addEventListener("click", () => {
+			const selectedRows = this.gridAdapter?.getSelectedRows();
+			if (selectedRows && selectedRows.length > 0) {
+				this.deleteRow(selectedRows[0]);
+			}
+		});
+
 		// 创建表格容器
 		const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
 
@@ -363,19 +385,65 @@ export class TableView extends ItemView {
 	/**
 	 * 添加新行
 	 * @param afterIndex 在指定索引后插入，undefined 表示末尾
-	 * TODO: T0009 - 实现添加行功能
 	 */
 	private addRow(afterIndex?: number): void {
-		console.warn('addRow not implemented yet. Coming in T0009.');
+		if (!this.schema) {
+			console.error('Schema not initialized');
+			return;
+		}
+
+		// 计算新条目编号
+		const entryNumber = this.blocks.length; // blocks[0] 是模板，所以长度即为下一个编号
+
+		// 创建新 H2Block
+		const newBlock: H2Block = {
+			title: `新条目 ${entryNumber}`,
+			paragraphs: new Array(this.schema.columnNames.length - 1).fill('')
+		};
+
+		// 添加到 blocks（末尾）
+		this.blocks.push(newBlock);
+
+		// 更新 AG Grid 显示
+		const data = this.extractTableData(this.blocks, this.schema);
+		this.gridAdapter?.updateData(data);
+
+		// 触发保存
+		this.scheduleSave();
+
+		console.log(`✅ 添加新行：${newBlock.title}`);
 	}
 
 	/**
 	 * 删除指定行
 	 * @param rowIndex 数据行索引（不包括模板行）
-	 * TODO: T0009 - 实现删除行功能
 	 */
 	private deleteRow(rowIndex: number): void {
-		console.warn('deleteRow not implemented yet. Coming in T0009.');
+		if (!this.schema) {
+			console.error('Schema not initialized');
+			return;
+		}
+
+		// 计算 blocks 数组索引
+		const blockIndex = rowIndex + 1;
+
+		// 边界检查
+		if (blockIndex <= 0 || blockIndex >= this.blocks.length) {
+			console.error('Invalid row index:', rowIndex);
+			return;
+		}
+
+		// 删除块
+		const deletedBlock = this.blocks.splice(blockIndex, 1)[0];
+
+		// 更新 AG Grid 显示
+		const data = this.extractTableData(this.blocks, this.schema);
+		this.gridAdapter?.updateData(data);
+
+		// 触发保存
+		this.scheduleSave();
+
+		console.log(`✅ 删除行：${deletedBlock.title}`);
 	}
 
 	/**

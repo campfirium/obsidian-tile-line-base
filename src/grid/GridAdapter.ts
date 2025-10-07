@@ -81,4 +81,10 @@ export interface GridAdapter {
 	 * 销毁表格实例，释放资源
 	 */
 	destroy(): void;
+
+	/**
+	 * 获取当前选中的行索引
+	 * @returns 选中行的索引数组，无选中时返回空数组
+	 */
+	getSelectedRows(): number[];
 }

@@ -233,8 +233,25 @@ export class TableView extends ItemView {
 		// 创建表头
 		const thead = table.createEl("thead");
 		const headerRow = thead.createEl("tr");
-		this.schema.columnNames.forEach((colName: string) => {
-			headerRow.createEl("th", { text: colName });
+		this.schema.columnNames.forEach((colName: string, colIndex: number) => {
+			const th = headerRow.createEl("th");
+			th.textContent = colName;
+			th.setAttribute("contenteditable", "true");
+			th.setAttribute("data-col", String(colIndex));
+
+			// 监听按键事件
+			th.addEventListener("keydown", (e) => {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					th.blur(); // 失焦以触发保存
+				}
+			});
+
+			// 监听失焦事件 - 保存编辑
+			th.addEventListener("blur", () => {
+				const newValue = th.textContent || "";
+				this.onHeaderEdit(colIndex, newValue);
+			});
 		});
 
 		// 创建表体
@@ -302,6 +319,41 @@ export class TableView extends ItemView {
 
 		// 打印更新后的 blocks 数组
 		console.log('Updated blocks:', this.blocks);
+
+		// 触发保存
+		this.scheduleSave();
+	}
+
+	/**
+	 * 处理表头编辑
+	 */
+	private onHeaderEdit(colIndex: number, newValue: string): void {
+		if (!this.schema || this.blocks.length === 0) {
+			console.error('Invalid schema or blocks');
+			return;
+		}
+
+		// 更新 schema
+		this.schema.columnNames[colIndex] = newValue;
+
+		// 更新模板块（blocks[0]）
+		const templateBlock = this.blocks[0];
+		if (colIndex === 0) {
+			// 第一列：更新 H2 标题
+			templateBlock.title = newValue;
+			console.log(`更新表头（模板 H2 标题）[${colIndex}]:`, newValue);
+		} else {
+			// 其他列：更新段落
+			const paragraphIndex = colIndex - 1;
+
+			// 确保段落数组足够长
+			while (templateBlock.paragraphs.length <= paragraphIndex) {
+				templateBlock.paragraphs.push('');
+			}
+
+			templateBlock.paragraphs[paragraphIndex] = newValue;
+			console.log(`更新表头（模板段落）[${paragraphIndex}]:`, newValue);
+		}
 
 		// 触发保存
 		this.scheduleSave();

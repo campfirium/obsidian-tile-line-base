@@ -196,8 +196,21 @@ var TableView = class extends import_obsidian.ItemView {
     const table = tableContainer.createEl("table", { cls: "tlb-table" });
     const thead = table.createEl("thead");
     const headerRow = thead.createEl("tr");
-    this.schema.columnNames.forEach((colName) => {
-      headerRow.createEl("th", { text: colName });
+    this.schema.columnNames.forEach((colName, colIndex) => {
+      const th = headerRow.createEl("th");
+      th.textContent = colName;
+      th.setAttribute("contenteditable", "true");
+      th.setAttribute("data-col", String(colIndex));
+      th.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          th.blur();
+        }
+      });
+      th.addEventListener("blur", () => {
+        const newValue = th.textContent || "";
+        this.onHeaderEdit(colIndex, newValue);
+      });
     });
     const tbody = table.createEl("tbody");
     data.forEach((row, rowIndex) => {
@@ -246,6 +259,29 @@ var TableView = class extends import_obsidian.ItemView {
       console.log(`\u66F4\u65B0\u6BB5\u843D [${blockIndex}][${paragraphIndex}]:`, newValue);
     }
     console.log("Updated blocks:", this.blocks);
+    this.scheduleSave();
+  }
+  /**
+   * 处理表头编辑
+   */
+  onHeaderEdit(colIndex, newValue) {
+    if (!this.schema || this.blocks.length === 0) {
+      console.error("Invalid schema or blocks");
+      return;
+    }
+    this.schema.columnNames[colIndex] = newValue;
+    const templateBlock = this.blocks[0];
+    if (colIndex === 0) {
+      templateBlock.title = newValue;
+      console.log(`\u66F4\u65B0\u8868\u5934\uFF08\u6A21\u677F H2 \u6807\u9898\uFF09[${colIndex}]:`, newValue);
+    } else {
+      const paragraphIndex = colIndex - 1;
+      while (templateBlock.paragraphs.length <= paragraphIndex) {
+        templateBlock.paragraphs.push("");
+      }
+      templateBlock.paragraphs[paragraphIndex] = newValue;
+      console.log(`\u66F4\u65B0\u8868\u5934\uFF08\u6A21\u677F\u6BB5\u843D\uFF09[${paragraphIndex}]:`, newValue);
+    }
     this.scheduleSave();
   }
   async onClose() {

@@ -38,7 +38,11 @@ export default class TileLineBasePlugin extends Plugin {
 
 		if (!leaf) {
 			// 在右侧边栏打开
-			leaf = workspace.getRightLeaf(false);
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (!rightLeaf) {
+				return;
+			}
+			leaf = rightLeaf;
 			await leaf.setViewState({
 				type: TABLE_VIEW_TYPE,
 				active: true,

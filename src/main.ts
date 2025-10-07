@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, TFile, Menu } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 
 export default class TileLineBasePlugin extends Plugin {
@@ -11,18 +11,34 @@ export default class TileLineBasePlugin extends Plugin {
 			(leaf) => new TableView(leaf)
 		);
 
-		// 注册命令：打开表格视图
-		this.addCommand({
-			id: 'open-table-view',
-			name: '打开 TileLineBase 表格',
-			callback: () => {
-				this.activateView();
-			}
-		});
+		// 添加文件菜单项：右键点击文件时显示
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu: Menu, file: TFile) => {
+				menu.addItem((item) => {
+					item
+						.setTitle('以 TileLineBase 表格打开')
+						.setIcon('table')
+						.onClick(async () => {
+							await this.openTableView(file);
+						});
+				});
+			})
+		);
 
-		// 添加功能区图标
-		this.addRibbonIcon('table', 'TileLineBase 表格', () => {
-			this.activateView();
+		// 添加命令：对当前活动文件打开表格视图
+		this.addCommand({
+			id: 'open-current-file-as-table',
+			name: '以 TileLineBase 表格打开当前文件',
+			checkCallback: (checking: boolean) => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (activeFile) {
+					if (!checking) {
+						this.openTableView(activeFile);
+					}
+					return true;
+				}
+				return false;
+			}
 		});
 	}
 
@@ -33,24 +49,19 @@ export default class TileLineBasePlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 	}
 
-	async activateView() {
+	async openTableView(file: TFile) {
 		const { workspace } = this.app;
 
-		// 检查是否已经打开
-		let leaf = workspace.getLeavesOfType(TABLE_VIEW_TYPE)[0];
+		// 在当前活动的 leaf 打开（主编辑区）
+		const leaf = workspace.getLeaf(false);
 
-		if (!leaf) {
-			// 在右侧边栏打开
-			const rightLeaf = workspace.getRightLeaf(false);
-			if (!rightLeaf) {
-				return;
+		await leaf.setViewState({
+			type: TABLE_VIEW_TYPE,
+			active: true,
+			state: {
+				filePath: file.path
 			}
-			leaf = rightLeaf;
-			await leaf.setViewState({
-				type: TABLE_VIEW_TYPE,
-				active: true,
-			});
-		}
+		});
 
 		// 激活视图
 		workspace.revealLeaf(leaf);

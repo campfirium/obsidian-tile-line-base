@@ -1,0 +1,165 @@
+# T0007: 写回文件
+
+**状态：** 进行中
+**分支：** feat/T0007-write-back
+**积木编号：** 积木 7
+
+## 学习目标
+
+- 理解数据→文本的转换逻辑
+- 掌握文件写入 API
+- 学习 Debounce 防抖技术
+- 处理文件写入错误
+
+## 功能描述
+
+将编辑后的 blocks 数组转换回 Markdown H2 块格式，并写回文件。
+
+### 核心功能
+
+1. **数据转文本**
+   - 将 blocks 数组转换为 Markdown 字符串
+   - 保持 H2 块结构
+   - 空段落处理
+
+2. **防抖写入**
+   - 500ms debounce（编辑停止后 500ms 才保存）
+   - 避免频繁写文件
+
+3. **错误处理**
+   - 文件写入失败时提示
+   - 控制台日志
+
+## 完成标准
+
+- [ ] 将 blocks 数组转换为 Markdown 格式
+- [ ] 实现 debounce 防抖保存
+- [ ] 编辑后 500ms 自动保存
+- [ ] 写入成功后控制台提示
+- [ ] 写入失败时错误提示
+- [ ] 切换到 Markdown 视图后能看到修改
+
+## 技术要点
+
+### Blocks → Markdown 转换
+
+```typescript
+private blocksToMarkdown(): string {
+  const lines: string[] = [];
+
+  for (const block of this.blocks) {
+    // H2 标题
+    lines.push(`## ${block.title}`);
+
+    // 段落（非空才添加）
+    for (const paragraph of block.paragraphs) {
+      if (paragraph.trim()) {
+        lines.push(paragraph);
+      }
+    }
+
+    // H2 块之间空一行
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+```
+
+### Debounce 实现
+
+```typescript
+private saveTimeout: NodeJS.Timeout | null = null;
+
+private scheduleSave(): void {
+  // 清除之前的定时器
+  if (this.saveTimeout) {
+    clearTimeout(this.saveTimeout);
+  }
+
+  // 500ms 后保存
+  this.saveTimeout = setTimeout(() => {
+    this.saveToFile();
+  }, 500);
+}
+
+private async saveToFile(): Promise<void> {
+  if (!this.file) return;
+
+  try {
+    const markdown = this.blocksToMarkdown();
+    await this.app.vault.modify(this.file, markdown);
+    console.log('✅ 文件已保存:', this.file.path);
+  } catch (error) {
+    console.error('❌ 保存失败:', error);
+    // 可以添加 Notice 提示用户
+  }
+}
+```
+
+### 调用时机
+
+在 `onCellEdit()` 中编辑完成后调用：
+
+```typescript
+private onCellEdit(rowIndex: number, colIndex: number, newValue: string): void {
+  // ... 更新 blocks 数组 ...
+
+  // 触发保存
+  this.scheduleSave();
+}
+```
+
+## 边界情况
+
+1. **空段落处理**
+   - blocks 中的空段落不写入（保持 Markdown 整洁）
+   - 或者写入 `.` 占位符（可选）
+
+2. **文件被外部修改**
+   - 当前版本直接覆盖（简单）
+   - 后续可考虑冲突检测（高级）
+
+3. **快速连续编辑**
+   - debounce 确保只有最后一次编辑会触发保存
+   - 不会产生多次写入
+
+## 测试步骤
+
+1. 打开包含 H2 块的文件
+2. 切换到表格视图
+3. 编辑多个单元格（快速连续编辑）
+4. 等待 500ms
+5. 查看控制台：应该只有一次 "✅ 文件已保存" 日志
+6. 切换回 Markdown 视图
+7. 验证内容已更新
+8. 重新打开文件，验证持久化
+
+## 样式增强（可选）
+
+添加保存状态指示器：
+
+```css
+.tlb-save-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 8px 12px;
+  background-color: var(--interactive-accent);
+  color: white;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tlb-save-indicator.show {
+  opacity: 1;
+}
+```
+
+## 下一步
+
+完成后可以继续：
+- 积木 8：添加/删除行功能
+- 积木 9：基础筛选功能
+- 积木 10：基础排序功能

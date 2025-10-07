@@ -28,6 +28,9 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async onunload() {
 		console.log('卸载 TileLineBase 插件');
+
+		// 关闭所有该类型的视图
+		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 	}
 
 	async activateView() {

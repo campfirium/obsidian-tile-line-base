@@ -36,6 +36,8 @@ var TableView = class extends import_obsidian.ItemView {
   constructor(leaf) {
     super(leaf);
     this.file = null;
+    this.blocks = [];
+    this.schema = null;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -134,37 +136,74 @@ var TableView = class extends import_obsidian.ItemView {
       return;
     }
     const content = await this.app.vault.read(this.file);
-    const blocks = this.parseH2Blocks(content);
-    if (blocks.length === 0) {
+    this.blocks = this.parseH2Blocks(content);
+    if (this.blocks.length === 0) {
       container.createDiv({
         text: "\u6B64\u6587\u4EF6\u4E0D\u5305\u542B H2 \u5757\uFF0C\u65E0\u6CD5\u663E\u793A\u4E3A\u8868\u683C",
         cls: "tlb-warning"
       });
       return;
     }
-    const schema = this.extractSchema(blocks);
-    if (!schema) {
+    this.schema = this.extractSchema(this.blocks);
+    if (!this.schema) {
       container.createDiv({ text: "\u65E0\u6CD5\u63D0\u53D6\u8868\u683C\u7ED3\u6784" });
       return;
     }
-    const data = this.extractTableData(blocks, schema);
+    const data = this.extractTableData(this.blocks, this.schema);
     const tableContainer = container.createDiv({ cls: "tlb-table-container" });
     const table = tableContainer.createEl("table", { cls: "tlb-table" });
     const thead = table.createEl("thead");
     const headerRow = thead.createEl("tr");
-    schema.columnNames.forEach((colName) => {
+    this.schema.columnNames.forEach((colName) => {
       headerRow.createEl("th", { text: colName });
     });
     const tbody = table.createEl("tbody");
-    data.forEach((row) => {
+    data.forEach((row, rowIndex) => {
       const tr = tbody.createEl("tr");
-      row.forEach((cell) => {
-        tr.createEl("td", { text: cell || "" });
+      row.forEach((cellValue, colIndex) => {
+        const td = tr.createEl("td");
+        td.textContent = cellValue || "";
+        td.setAttribute("contenteditable", "true");
+        td.setAttribute("data-row", String(rowIndex));
+        td.setAttribute("data-col", String(colIndex));
+        td.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            td.blur();
+          }
+        });
+        td.addEventListener("blur", () => {
+          const newValue = td.textContent || "";
+          this.onCellEdit(rowIndex, colIndex, newValue);
+        });
       });
     });
     console.log(`TileLineBase \u8868\u683C\u5DF2\u6E32\u67D3\uFF1A${this.file.path}`);
-    console.log(`Schema:`, schema);
+    console.log(`Schema:`, this.schema);
     console.log(`\u6570\u636E\u884C\u6570: ${data.length}`);
+  }
+  /**
+   * 处理单元格编辑
+   */
+  onCellEdit(rowIndex, colIndex, newValue) {
+    const blockIndex = rowIndex + 1;
+    if (blockIndex >= this.blocks.length) {
+      console.error("Invalid block index:", blockIndex);
+      return;
+    }
+    const block = this.blocks[blockIndex];
+    if (colIndex === 0) {
+      block.title = newValue;
+      console.log(`\u66F4\u65B0 H2 \u6807\u9898 [${blockIndex}]:`, newValue);
+    } else {
+      const paragraphIndex = colIndex - 1;
+      while (block.paragraphs.length <= paragraphIndex) {
+        block.paragraphs.push("");
+      }
+      block.paragraphs[paragraphIndex] = newValue;
+      console.log(`\u66F4\u65B0\u6BB5\u843D [${blockIndex}][${paragraphIndex}]:`, newValue);
+    }
+    console.log("Updated blocks:", this.blocks);
   }
   async onClose() {
   }

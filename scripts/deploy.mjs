@@ -51,8 +51,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   // 启动 Obsidian
-  // 注意：你可能需要修改这个路径为你的 Obsidian 安装路径
-  const obsidianPath = 'C:\\Users\\' + process.env.USERNAME + '\\AppData\\Local\\Obsidian\\Obsidian.exe';
+  const obsidianPath = 'C:\\Program Files\\Obsidian\\Obsidian.exe';
 
   if (fs.existsSync(obsidianPath)) {
     execSync(`start "" "${obsidianPath}"`, { stdio: 'ignore' });

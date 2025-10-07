@@ -14,10 +14,20 @@ interface H2Block {
 	data: Record<string, string>;  // Key-Value 键值对
 }
 
+// 列配置（头部配置块）
+interface ColumnConfig {
+	name: string;           // 列名
+	width?: string;         // 宽度："30%", "150px", "auto"
+	unit?: string;          // 单位："分钟"
+	formula?: string;       // 公式："= {价值}/{成本}"
+	hide?: boolean;         // 是否隐藏
+}
+
 // Schema（表格结构）
 interface Schema {
-	columnNames: string[]; // 所有列名
-	columnIds?: string[];  // 预留：稳定 ID 系统（用于 SchemaStore）
+	columnNames: string[];            // 所有列名
+	columnConfigs?: ColumnConfig[];   // 列配置（来自头部配置块）
+	columnIds?: string[];             // 预留：稳定 ID 系统（用于 SchemaStore）
 }
 
 export class TableView extends ItemView {
@@ -53,6 +63,121 @@ export class TableView extends ItemView {
 		return {
 			filePath: this.file?.path || ""
 		};
+	}
+
+	/**
+	 * 解析头部配置块（```tilelinebase）
+	 */
+	private parseHeaderConfigBlock(content: string): ColumnConfig[] | null {
+		// 匹配 ```tilelinebase ... ``` 代码块
+		const configBlockRegex = /```tilelinebase\s*\n([\s\S]*?)\n```/;
+		const match = content.match(configBlockRegex);
+
+		if (!match) {
+			return null; // 没有头部配置块
+		}
+
+		const configContent = match[1];
+		const lines = configContent.split('\n');
+		const columnConfigs: ColumnConfig[] = [];
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (trimmed.length === 0 || trimmed.startsWith('#')) {
+				continue; // 跳过空行和注释
+			}
+
+			// 解析列定义：列名 (配置1) (配置2: 值)
+			const config = this.parseColumnDefinition(trimmed);
+			if (config) {
+				columnConfigs.push(config);
+			}
+		}
+
+		console.log('📋 解析头部配置块:', columnConfigs);
+		return columnConfigs;
+	}
+
+	/**
+	 * 应用宽度配置到列定义
+	 */
+	private applyWidthConfig(colDef: ColumnDef, config: ColumnConfig): void {
+		if (!config.width) {
+			// 没有定义宽度，使用 flex: 1 自适应
+			(colDef as any).flex = 1;
+			return;
+		}
+
+		const width = config.width;
+
+		if (width === 'auto') {
+			// 明确指定 auto，使用 flex: 1
+			(colDef as any).flex = 1;
+		} else if (width.endsWith('%')) {
+			// 百分比宽度：AG Grid 需要转换为实际像素或使用 flex
+			// 这里暂时使用 width 字段，AG Grid 会处理百分比
+			(colDef as any).width = width;
+		} else if (width.endsWith('px')) {
+			// 像素宽度：提取数字
+			const pixels = parseInt(width.replace('px', ''));
+			(colDef as any).width = pixels;
+		} else {
+			// 其他格式，尝试作为数字处理
+			const num = parseInt(width);
+			if (!isNaN(num)) {
+				(colDef as any).width = num;
+			} else {
+				// 无法解析，使用 flex
+				(colDef as any).flex = 1;
+			}
+		}
+	}
+
+	/**
+	 * 解析单行列定义
+	 * 格式：列名 (width: 30%) (unit: 分钟) (hide)
+	 */
+	private parseColumnDefinition(line: string): ColumnConfig | null {
+		// 提取列名（第一个左括号之前的部分）
+		const nameMatch = line.match(/^([^(]+)/);
+		if (!nameMatch) return null;
+
+		const name = nameMatch[1].trim();
+		const config: ColumnConfig = { name };
+
+		// 提取所有括号中的配置项
+		const configRegex = /\(([^)]+)\)/g;
+		let match;
+
+		while ((match = configRegex.exec(line)) !== null) {
+			const configStr = match[1].trim();
+
+			// 判断是键值对还是布尔开关
+			if (configStr.includes(':')) {
+				// 键值对：width: 30%
+				const [key, ...valueParts] = configStr.split(':');
+				const value = valueParts.join(':').trim();
+
+				switch (key.trim()) {
+					case 'width':
+						config.width = value;
+						break;
+					case 'unit':
+						config.unit = value;
+						break;
+					case 'formula':
+						config.formula = value;
+						break;
+				}
+			} else {
+				// 布尔开关：hide
+				if (configStr === 'hide') {
+					config.hide = true;
+				}
+			}
+		}
+
+		return config;
 	}
 
 	/**
@@ -114,28 +239,37 @@ export class TableView extends ItemView {
 
 	/**
 	 * 动态扫描所有 H2 块，提取 Schema
-	 * 保留键的顺序：按照第一次出现的顺序排列
+	 * 如果有头部配置块，优先使用配置块定义的列顺序
 	 */
-	private extractSchema(blocks: H2Block[]): Schema | null {
+	private extractSchema(blocks: H2Block[], columnConfigs: ColumnConfig[] | null): Schema | null {
 		if (blocks.length === 0) {
 			return null;
 		}
 
-		// 使用数组保持顺序，同时用 Set 去重
-		const columnNames: string[] = [];
-		const seenKeys = new Set<string>();
+		let columnNames: string[];
 
-		// 遍历所有块，按顺序收集 key
-		for (const block of blocks) {
-			for (const key of Object.keys(block.data)) {
-				if (!seenKeys.has(key)) {
-					columnNames.push(key);
-					seenKeys.add(key);
+		if (columnConfigs && columnConfigs.length > 0) {
+			// 使用头部配置块定义的列顺序
+			columnNames = columnConfigs.map(config => config.name);
+		} else {
+			// 没有配置块，动态扫描所有 key
+			columnNames = [];
+			const seenKeys = new Set<string>();
+
+			for (const block of blocks) {
+				for (const key of Object.keys(block.data)) {
+					if (!seenKeys.has(key)) {
+						columnNames.push(key);
+						seenKeys.add(key);
+					}
 				}
 			}
 		}
 
-		return { columnNames };
+		return {
+			columnNames,
+			columnConfigs: columnConfigs || undefined
+		};
 	}
 
 	/**
@@ -249,6 +383,9 @@ export class TableView extends ItemView {
 		// 读取文件内容
 		const content = await this.app.vault.read(this.file);
 
+		// 解析头部配置块
+		const columnConfigs = this.parseHeaderConfigBlock(content);
+
 		// 解析 H2 块
 		this.blocks = this.parseH2Blocks(content);
 
@@ -261,7 +398,7 @@ export class TableView extends ItemView {
 		}
 
 		// 提取 Schema
-		this.schema = this.extractSchema(this.blocks);
+		this.schema = this.extractSchema(this.blocks, columnConfigs);
 		if (!this.schema) {
 			container.createDiv({ text: "无法提取表格结构" });
 			return;
@@ -277,11 +414,23 @@ export class TableView extends ItemView {
 				headerName: '#',
 				editable: false  // 序号列只读
 			},
-			...this.schema.columnNames.map(name => ({
-				field: name,
-				headerName: name,
-				editable: true
-			}))
+			...this.schema.columnNames.map(name => {
+				const baseColDef: ColumnDef = {
+					field: name,
+					headerName: name,
+					editable: true
+				};
+
+				// 应用头部配置块中的宽度配置
+				if (this.schema?.columnConfigs) {
+					const config = this.schema.columnConfigs.find(c => c.name === name);
+					if (config) {
+						this.applyWidthConfig(baseColDef, config);
+					}
+				}
+
+				return baseColDef;
+			})
 		];
 
 		// 根据 Obsidian 主题选择 AG Grid 主题

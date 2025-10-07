@@ -55450,6 +55450,92 @@ var TableView = class extends import_obsidian.ItemView {
     };
   }
   /**
+   * 解析头部配置块（```tilelinebase）
+   */
+  parseHeaderConfigBlock(content) {
+    const configBlockRegex = /```tilelinebase\s*\n([\s\S]*?)\n```/;
+    const match = content.match(configBlockRegex);
+    if (!match) {
+      return null;
+    }
+    const configContent = match[1];
+    const lines = configContent.split("\n");
+    const columnConfigs = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0 || trimmed.startsWith("#")) {
+        continue;
+      }
+      const config = this.parseColumnDefinition(trimmed);
+      if (config) {
+        columnConfigs.push(config);
+      }
+    }
+    console.log("\u{1F4CB} \u89E3\u6790\u5934\u90E8\u914D\u7F6E\u5757:", columnConfigs);
+    return columnConfigs;
+  }
+  /**
+   * 应用宽度配置到列定义
+   */
+  applyWidthConfig(colDef, config) {
+    if (!config.width) {
+      colDef.flex = 1;
+      return;
+    }
+    const width = config.width;
+    if (width === "auto") {
+      colDef.flex = 1;
+    } else if (width.endsWith("%")) {
+      colDef.width = width;
+    } else if (width.endsWith("px")) {
+      const pixels = parseInt(width.replace("px", ""));
+      colDef.width = pixels;
+    } else {
+      const num = parseInt(width);
+      if (!isNaN(num)) {
+        colDef.width = num;
+      } else {
+        colDef.flex = 1;
+      }
+    }
+  }
+  /**
+   * 解析单行列定义
+   * 格式：列名 (width: 30%) (unit: 分钟) (hide)
+   */
+  parseColumnDefinition(line) {
+    const nameMatch = line.match(/^([^(]+)/);
+    if (!nameMatch)
+      return null;
+    const name = nameMatch[1].trim();
+    const config = { name };
+    const configRegex = /\(([^)]+)\)/g;
+    let match;
+    while ((match = configRegex.exec(line)) !== null) {
+      const configStr = match[1].trim();
+      if (configStr.includes(":")) {
+        const [key, ...valueParts] = configStr.split(":");
+        const value = valueParts.join(":").trim();
+        switch (key.trim()) {
+          case "width":
+            config.width = value;
+            break;
+          case "unit":
+            config.unit = value;
+            break;
+          case "formula":
+            config.formula = value;
+            break;
+        }
+      } else {
+        if (configStr === "hide") {
+          config.hide = true;
+        }
+      }
+    }
+    return config;
+  }
+  /**
    * 解析文件内容，提取所有 H2 块（Key:Value 格式）
    * H2 标题本身也可能是 Key:Value 格式
    */
@@ -55492,23 +55578,31 @@ var TableView = class extends import_obsidian.ItemView {
   }
   /**
    * 动态扫描所有 H2 块，提取 Schema
-   * 保留键的顺序：按照第一次出现的顺序排列
+   * 如果有头部配置块，优先使用配置块定义的列顺序
    */
-  extractSchema(blocks) {
+  extractSchema(blocks, columnConfigs) {
     if (blocks.length === 0) {
       return null;
     }
-    const columnNames = [];
-    const seenKeys = /* @__PURE__ */ new Set();
-    for (const block of blocks) {
-      for (const key of Object.keys(block.data)) {
-        if (!seenKeys.has(key)) {
-          columnNames.push(key);
-          seenKeys.add(key);
+    let columnNames;
+    if (columnConfigs && columnConfigs.length > 0) {
+      columnNames = columnConfigs.map((config) => config.name);
+    } else {
+      columnNames = [];
+      const seenKeys = /* @__PURE__ */ new Set();
+      for (const block of blocks) {
+        for (const key of Object.keys(block.data)) {
+          if (!seenKeys.has(key)) {
+            columnNames.push(key);
+            seenKeys.add(key);
+          }
         }
       }
     }
-    return { columnNames };
+    return {
+      columnNames,
+      columnConfigs: columnConfigs || void 0
+    };
   }
   /**
    * 从 H2 块提取表格数据（转换为 RowData 格式）
@@ -55590,6 +55684,7 @@ var TableView = class extends import_obsidian.ItemView {
       return;
     }
     const content = await this.app.vault.read(this.file);
+    const columnConfigs = this.parseHeaderConfigBlock(content);
     this.blocks = this.parseH2Blocks(content);
     if (this.blocks.length === 0) {
       container.createDiv({
@@ -55598,7 +55693,7 @@ var TableView = class extends import_obsidian.ItemView {
       });
       return;
     }
-    this.schema = this.extractSchema(this.blocks);
+    this.schema = this.extractSchema(this.blocks, columnConfigs);
     if (!this.schema) {
       container.createDiv({ text: "\u65E0\u6CD5\u63D0\u53D6\u8868\u683C\u7ED3\u6784" });
       return;
@@ -55611,11 +55706,21 @@ var TableView = class extends import_obsidian.ItemView {
         editable: false
         // 序号列只读
       },
-      ...this.schema.columnNames.map((name) => ({
-        field: name,
-        headerName: name,
-        editable: true
-      }))
+      ...this.schema.columnNames.map((name) => {
+        var _a4;
+        const baseColDef = {
+          field: name,
+          headerName: name,
+          editable: true
+        };
+        if ((_a4 = this.schema) == null ? void 0 : _a4.columnConfigs) {
+          const config = this.schema.columnConfigs.find((c) => c.name === name);
+          if (config) {
+            this.applyWidthConfig(baseColDef, config);
+          }
+        }
+        return baseColDef;
+      })
     ];
     const isDarkMode = document.body.classList.contains("theme-dark");
     const themeClass = isDarkMode ? "ag-theme-alpine-dark" : "ag-theme-alpine";

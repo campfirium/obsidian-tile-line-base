@@ -1,0 +1,41 @@
+/* TileLineBase 插件样式 */
+
+.tile-line-base-view {
+  padding: 10px;
+  height: 100%;
+  overflow: auto;
+}
+
+.tlb-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tlb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tlb-table th {
+  background-color: var(--background-modifier-border);
+  color: var(--text-normal);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.tlb-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.tlb-table tbody tr:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.tlb-table tbody tr:nth-child(even) {
+  background-color: var(--background-secondary-alt);
+}

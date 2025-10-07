@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 
 // 目标插件目录
 const PLUGIN_DIR = 'D:\\X\\Dropbox\\obs\\.obsidian\\plugins\\tile-line-base';
@@ -36,34 +35,4 @@ for (const file of FILES_TO_COPY) {
 
 console.log('\n✅ 文件复制完成！');
 
-// 3. 重启 Obsidian
-console.log('\n🔄 正在重启 Obsidian...');
-try {
-  // 关闭 Obsidian
-  try {
-    execSync('taskkill /F /IM Obsidian.exe', { stdio: 'ignore' });
-    console.log('  ✓ 已关闭 Obsidian');
-  } catch (e) {
-    console.log('  ℹ Obsidian 未运行');
-  }
-
-  // 等待一下
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // 启动 Obsidian
-  const obsidianPath = 'C:\\Program Files\\Obsidian\\Obsidian.exe';
-
-  if (fs.existsSync(obsidianPath)) {
-    execSync(`start "" "${obsidianPath}"`, { stdio: 'ignore' });
-    console.log('  ✓ 已启动 Obsidian');
-  } else {
-    console.log('  ⚠ 找不到 Obsidian.exe，请手动启动');
-    console.log(`  预期路径: ${obsidianPath}`);
-  }
-
-} catch (error) {
-  console.log('  ⚠ 重启失败，请手动重启 Obsidian');
-  console.log('  错误信息:', error.message);
-}
-
-console.log('\n🎉 部署完成！');
+console.log('\n🎉 部署完成！请使用 Ctrl+R 在 Obsidian 中重载插件。');

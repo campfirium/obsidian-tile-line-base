@@ -57,6 +57,7 @@ export class TableView extends ItemView {
 
 	/**
 	 * 解析文件内容，提取所有 H2 块（Key:Value 格式）
+	 * H2 标题本身也可能是 Key:Value 格式
 	 */
 	private parseH2Blocks(content: string): H2Block[] {
 		const lines = content.split('\n');
@@ -70,17 +71,29 @@ export class TableView extends ItemView {
 				if (currentBlock) {
 					blocks.push(currentBlock);
 				}
+
+				// 解析 H2 标题（去掉 "## "）
+				const titleText = line.substring(3).trim();
+
 				// 开始新块
 				currentBlock = {
-					title: line.substring(3).trim(), // 去掉 "## "
+					title: titleText,
 					data: {}
 				};
+
+				// 如果 H2 标题包含冒号，解析为第一个键值对
+				const colonIndex = titleText.indexOf('：') >= 0 ? titleText.indexOf('：') : titleText.indexOf(':');
+				if (colonIndex > 0) {
+					const key = titleText.substring(0, colonIndex).trim();
+					const value = titleText.substring(colonIndex + 1).trim();
+					currentBlock.data[key] = value;
+				}
 			} else if (currentBlock) {
 				// 在 H2 块内部，解析 Key:Value 格式
 				const trimmed = line.trim();
 				if (trimmed.length > 0) {
-					// 查找第一个冒号
-					const colonIndex = trimmed.indexOf(':');
+					// 查找第一个冒号（支持中文冒号和英文冒号）
+					const colonIndex = trimmed.indexOf('：') >= 0 ? trimmed.indexOf('：') : trimmed.indexOf(':');
 					if (colonIndex > 0) {
 						const key = trimmed.substring(0, colonIndex).trim();
 						const value = trimmed.substring(colonIndex + 1).trim();
@@ -101,22 +114,26 @@ export class TableView extends ItemView {
 
 	/**
 	 * 动态扫描所有 H2 块，提取 Schema
+	 * 保留键的顺序：按照第一次出现的顺序排列
 	 */
 	private extractSchema(blocks: H2Block[]): Schema | null {
 		if (blocks.length === 0) {
 			return null;
 		}
 
-		// 收集所有出现过的 key
-		const keySet = new Set<string>();
+		// 使用数组保持顺序，同时用 Set 去重
+		const columnNames: string[] = [];
+		const seenKeys = new Set<string>();
+
+		// 遍历所有块，按顺序收集 key
 		for (const block of blocks) {
 			for (const key of Object.keys(block.data)) {
-				keySet.add(key);
+				if (!seenKeys.has(key)) {
+					columnNames.push(key);
+					seenKeys.add(key);
+				}
 			}
 		}
-
-		// 第一列是"任务"（H2 标题），后续列是所有 key
-		const columnNames = ['任务', ...Array.from(keySet)];
 
 		return { columnNames };
 	}
@@ -135,12 +152,8 @@ export class TableView extends ItemView {
 			// 序号列（从 1 开始）
 			row['#'] = String(i + 1);
 
-			// 第一列："任务" = H2 标题
-			row[schema.columnNames[0]] = block.title;
-
-			// 后续列：从 block.data 提取
-			for (let j = 1; j < schema.columnNames.length; j++) {
-				const key = schema.columnNames[j];
+			// 所有列都从 block.data 提取
+			for (const key of schema.columnNames) {
 				row[key] = block.data[key] || '';
 			}
 
@@ -152,21 +165,32 @@ export class TableView extends ItemView {
 
 	/**
 	 * 将 blocks 数组转换回 Markdown 格式（Key:Value）
+	 * 第一个 key:value 作为 H2 标题，其余作为正文
 	 */
 	private blocksToMarkdown(): string {
+		if (!this.schema) return '';
+
 		const lines: string[] = [];
 
 		for (const block of this.blocks) {
-			// H2 标题
-			lines.push(`## ${block.title}`);
+			// 按照 schema 顺序输出
+			let isFirstKey = true;
 
-			// Key:Value 对
-			for (const [key, value] of Object.entries(block.data)) {
-				if (value.trim()) {
-					lines.push(`${key}: ${value}`);
+			for (const key of this.schema.columnNames) {
+				const value = block.data[key] || '';
+
+				if (isFirstKey) {
+					// 第一个 key:value 作为 H2 标题
+					lines.push(`## ${key}：${value}`);
+					isFirstKey = false;
 				} else {
-					// 空值也要保留，确保 Schema 完整性
-					lines.push(`${key}:`);
+					// 其他 key:value 作为正文
+					if (value.trim()) {
+						lines.push(`${key}：${value}`);
+					} else {
+						// 空值也要保留，确保 Schema 完整性
+						lines.push(`${key}：`);
+					}
 				}
 			}
 
@@ -445,15 +469,9 @@ export class TableView extends ItemView {
 
 		const block = this.blocks[rowIndex];
 
-		// 第一列"任务"：更新 H2 标题
-		if (field === this.schema.columnNames[0]) {
-			block.title = newValue;
-			console.log(`更新 H2 标题 [${rowIndex}]:`, newValue);
-		} else {
-			// 其他列：更新 data[key]
-			block.data[field] = newValue;
-			console.log(`更新数据 [${rowIndex}][${field}]:`, newValue);
-		}
+		// 所有列都更新 data[key]
+		block.data[field] = newValue;
+		console.log(`更新数据 [${rowIndex}][${field}]:`, newValue);
 
 		// 打印更新后的 blocks 数组
 		console.log('Updated blocks:', this.blocks);
@@ -473,12 +491,6 @@ export class TableView extends ItemView {
 		}
 
 		const oldKey = this.schema.columnNames[colIndex];
-
-		// 第一列"任务"不可重命名
-		if (colIndex === 0) {
-			console.warn('Cannot rename the first column');
-			return;
-		}
 
 		// 更新 schema
 		this.schema.columnNames[colIndex] = newValue;
@@ -514,25 +526,27 @@ export class TableView extends ItemView {
 		// 计算新条目编号
 		const entryNumber = this.blocks.length + 1;
 
-		// 创建新 H2Block（初始化所有 key 为空）
+		// 创建新 H2Block（初始化所有 key）
 		const newBlock: H2Block = {
-			title: `新条目 ${entryNumber}`,
+			title: '',  // title 会在 blocksToMarkdown 时重新生成
 			data: {}
 		};
 
-		// 为所有列（除了第一列"任务"）初始化空值
-		for (let i = 1; i < this.schema.columnNames.length; i++) {
-			newBlock.data[this.schema.columnNames[i]] = '';
+		// 为所有列初始化值
+		for (let i = 0; i < this.schema.columnNames.length; i++) {
+			const key = this.schema.columnNames[i];
+			// 第一列使用"新条目 X"，其他列为空
+			newBlock.data[key] = (i === 0) ? `新条目 ${entryNumber}` : '';
 		}
 
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）
 			this.blocks.splice(beforeRowIndex, 0, newBlock);
-			console.log(`✅ 在行 ${beforeRowIndex} 之前插入新行：${newBlock.title}`);
+			console.log(`✅ 在行 ${beforeRowIndex} 之前插入新行`);
 		} else {
 			// 在末尾插入
 			this.blocks.push(newBlock);
-			console.log(`✅ 在末尾添加新行：${newBlock.title}`);
+			console.log(`✅ 在末尾添加新行`);
 		}
 
 		// 更新 AG Grid 显示

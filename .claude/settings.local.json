@@ -12,7 +12,8 @@
       "Bash(npm install:*)",
       "Bash(cat:*)",
       "Bash(git restore:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

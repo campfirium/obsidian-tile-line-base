@@ -281,6 +281,9 @@ export class TableView extends ItemView {
 		// 添加右键菜单监听
 		this.setupContextMenu(tableContainer);
 
+		// 添加键盘快捷键
+		this.setupKeyboardShortcuts(tableContainer);
+
 		console.log(`TileLineBase 表格已渲染（AG Grid）：${this.file.path}`);
 		console.log(`Schema:`, this.schema);
 		console.log(`数据行数: ${data.length}`);
@@ -305,6 +308,54 @@ export class TableView extends ItemView {
 		// 点击其他地方隐藏菜单
 		document.addEventListener('click', () => {
 			this.hideContextMenu();
+		});
+	}
+
+	/**
+	 * 设置键盘快捷键
+	 */
+	private setupKeyboardShortcuts(tableContainer: HTMLElement): void {
+		tableContainer.addEventListener('keydown', (event) => {
+			// 如果正在编辑单元格，不触发快捷键
+			const activeElement = document.activeElement;
+			if (activeElement?.classList.contains('ag-cell-edit-input')) {
+				return;
+			}
+
+			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
+			const hasSelection = selectedRows.length > 0;
+			const firstSelectedRow = hasSelection ? selectedRows[0] : null;
+
+			// Enter: 添加新行
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				if (hasSelection && firstSelectedRow !== null) {
+					// 在选中行之后添加
+					this.addRow(firstSelectedRow + 1);
+				} else {
+					// 在末尾添加
+					this.addRow();
+				}
+				return;
+			}
+
+			// Cmd+D / Ctrl+D: 复制行
+			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
+				event.preventDefault();
+				if (hasSelection && firstSelectedRow !== null) {
+					this.duplicateRow(firstSelectedRow);
+				}
+				return;
+			}
+
+			// Delete / Backspace: 删除行
+			if (event.key === 'Delete' || event.key === 'Backspace') {
+				event.preventDefault();
+				if (hasSelection && firstSelectedRow !== null) {
+					this.deleteRow(firstSelectedRow);
+				}
+				return;
+			}
 		});
 	}
 
@@ -514,6 +565,15 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		const targetBlock = this.blocks[blockIndex];
+
+		// 确认对话框
+		const confirmMessage = `确定要删除这一行吗？\n\n"${targetBlock.title}"`;
+		if (!confirm(confirmMessage)) {
+			console.log('❌ 用户取消删除');
+			return;
+		}
+
 		// 删除块
 		const deletedBlock = this.blocks.splice(blockIndex, 1)[0];
 
@@ -530,10 +590,40 @@ export class TableView extends ItemView {
 	/**
 	 * 复制指定行
 	 * @param rowIndex 数据行索引
-	 * TODO: T0009+ - 实现复制行功能
 	 */
 	private duplicateRow(rowIndex: number): void {
-		console.warn('duplicateRow not implemented yet. Coming in T0009+.');
+		if (!this.schema) {
+			console.error('Schema not initialized');
+			return;
+		}
+
+		// 计算 blocks 数组索引
+		const blockIndex = rowIndex + 1;
+
+		// 边界检查
+		if (blockIndex <= 0 || blockIndex >= this.blocks.length) {
+			console.error('Invalid row index:', rowIndex);
+			return;
+		}
+
+		// 深拷贝目标块
+		const sourceBlock = this.blocks[blockIndex];
+		const duplicatedBlock: H2Block = {
+			title: sourceBlock.title,
+			paragraphs: [...sourceBlock.paragraphs]
+		};
+
+		// 在源块之后插入复制的块
+		this.blocks.splice(blockIndex + 1, 0, duplicatedBlock);
+
+		// 更新 AG Grid 显示
+		const data = this.extractTableData(this.blocks, this.schema);
+		this.gridAdapter?.updateData(data);
+
+		// 触发保存
+		this.scheduleSave();
+
+		console.log(`✅ 复制行：${duplicatedBlock.title}`);
 	}
 
 	/**

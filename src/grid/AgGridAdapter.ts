@@ -50,12 +50,13 @@ export class AgGridAdapter implements GridAdapter {
 					sortable: true,
 					filter: false,
 					resizable: false,
+					suppressSizeToFit: true,  // 不参与自动调整
 					cellStyle: { textAlign: 'center' }  // 居中显示
 				};
 			}
 
-			// 保留从 ColumnDef 传入的所有配置（包括 width、flex）
-			return {
+			// 构建基础列定义
+			const baseColDef: ColDef = {
 				field: col.field,
 				headerName: col.headerName,
 				editable: col.editable,
@@ -64,8 +65,32 @@ export class AgGridAdapter implements GridAdapter {
 				resizable: true, // 可调整列宽
 				wrapText: true, // 文本自动换行
 				autoHeight: true, // 行高自动适应内容
-				...(col as any), // 保留所有额外属性（width, flex 等）
 			};
+
+			// 合并用户配置（width, flex 等）
+			const mergedColDef = { ...baseColDef, ...(col as any) };
+
+			// 检查用户是否配置了宽度
+			const hasWidth = (col as any).width !== undefined;
+			const hasFlex = (col as any).flex !== undefined;
+
+			if (!hasWidth && !hasFlex) {
+				// 没有用户配置，使用智能策略：
+				// 根据内容长度判断是短文本列还是长文本列
+				const isLongTextColumn = this.isLongTextColumn(col.field!, rows);
+
+				if (isLongTextColumn) {
+					// 长文本列：使用 flex 分配剩余空间
+					mergedColDef.flex = 1;
+					mergedColDef.minWidth = 200;
+				} else {
+					// 短文本列：不设置 width/flex，后续通过 autoSize 一次性计算
+					// 设置最大宽度避免过宽
+					mergedColDef.maxWidth = 300;
+				}
+			}
+
+			return mergedColDef;
 		});
 
 		// 创建 AG Grid 配置
@@ -95,25 +120,46 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 启用单元格复制粘贴
 			enableCellTextSelection: true,
+
+			// 性能优化：减少不必要的重绘
+			suppressAnimationFrame: false,  // 保留动画帧以提升流畅度
+			suppressColumnVirtualisation: false,  // 保留列虚拟化以提升性能
 		};
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
 
-		// 自动调整没有指定宽度的列（根据内容）
+		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
 		setTimeout(() => {
-			this.autoSizeColumns(colDefs);
+			this.autoSizeShortTextColumns(colDefs);
 		}, 100);
 	}
 
 	/**
-	 * 自动调整没有 width/flex 的列宽度
+	 * 判断是否为长文本列
+	 * 策略：扫描该列所有数据，计算最大内容长度
 	 */
-	private autoSizeColumns(colDefs: ColDef[]): void {
+	private isLongTextColumn(field: string, rows: RowData[]): boolean {
+		const LONG_TEXT_THRESHOLD = 30; // 字符数阈值
+
+		// 计算该列所有行的最大内容长度
+		let maxLength = 0;
+		for (const row of rows) {
+			const value = String(row[field] || '');
+			maxLength = Math.max(maxLength, value.length);
+		}
+
+		return maxLength > LONG_TEXT_THRESHOLD;
+	}
+
+	/**
+	 * 对短文本列执行一次性 autoSize
+	 */
+	private autoSizeShortTextColumns(colDefs: ColDef[]): void {
 		if (!this.gridApi) return;
 
-		// 找出所有没有指定 width 或 flex 的列
-		const autoSizeColumnIds: string[] = [];
+		// 找出所有短文本列（没有 width/flex 的列）
+		const shortTextColumnIds: string[] = [];
 		for (const colDef of colDefs) {
 			// 跳过序号列
 			if (colDef.field === '#') continue;
@@ -122,13 +168,21 @@ export class AgGridAdapter implements GridAdapter {
 			const hasFlex = (colDef as any).flex !== undefined;
 
 			if (!hasWidth && !hasFlex && colDef.field) {
-				autoSizeColumnIds.push(colDef.field);
+				shortTextColumnIds.push(colDef.field);
 			}
 		}
 
-		if (autoSizeColumnIds.length > 0) {
-			console.log('🔧 Auto-sizing columns:', autoSizeColumnIds);
-			this.gridApi.autoSizeColumns(autoSizeColumnIds);
+		if (shortTextColumnIds.length > 0) {
+			console.log('🔧 Auto-sizing short text columns:', shortTextColumnIds);
+			this.gridApi.autoSizeColumns(shortTextColumnIds, false); // false = 不跳过 header
+
+			// 边界检查：如果短文本列总宽度过大，可能需要水平滚动
+			// AG Grid 会自动处理，这里只记录日志
+			setTimeout(() => {
+				const allColumns = this.gridApi?.getAllDisplayedColumns() || [];
+				const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
+				console.log(`📊 表格总宽度: ${totalWidth}px`);
+			}, 200);
 		}
 	}
 

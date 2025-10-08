@@ -104,34 +104,45 @@ export class TableView extends ItemView {
 	private applyWidthConfig(colDef: ColumnDef, config: ColumnConfig): void {
 		if (!config.width || config.width === 'auto') {
 			// 没有定义宽度或明确指定 auto：根据内容自适应
-			// 不设置 width 和 flex，后续调用 autoSizeColumns
+			// 不设置 width 和 flex，AgGridAdapter 会智能判断
 			return;
 		}
 
-		const width = config.width;
+		const width = config.width.trim();
 
+		// 特殊关键字：flex（分配剩余空间）
+		if (width === 'flex') {
+			(colDef as any).flex = 1;
+			(colDef as any).minWidth = 200;
+			console.log(`列 ${config.name} 使用 flex: 1（分配剩余空间）`);
+			return;
+		}
+
+		// 百分比宽度：使用 flex 按比例分配
 		if (width.endsWith('%')) {
-			// 百分比宽度：使用 flex 按比例分配
-			// 例如 30% → flex: 30，40% → flex: 40
 			const percentage = parseInt(width.replace('%', ''));
 			if (!isNaN(percentage)) {
 				(colDef as any).flex = percentage;
 				console.log(`列 ${config.name} 使用 flex: ${percentage}`);
 			}
-		} else if (width.endsWith('px')) {
-			// 像素宽度：固定宽度
+			return;
+		}
+
+		// 像素宽度：固定宽度
+		if (width.endsWith('px')) {
 			const pixels = parseInt(width.replace('px', ''));
 			if (!isNaN(pixels)) {
 				(colDef as any).width = pixels;
 				console.log(`列 ${config.name} 使用固定宽度: ${pixels}px`);
 			}
-		} else {
-			// 尝试作为数字处理（默认像素）
-			const num = parseInt(width);
-			if (!isNaN(num)) {
-				(colDef as any).width = num;
-				console.log(`列 ${config.name} 使用固定宽度: ${num}px`);
-			}
+			return;
+		}
+
+		// 尝试作为数字处理（默认像素）
+		const num = parseInt(width);
+		if (!isNaN(num)) {
+			(colDef as any).width = num;
+			console.log(`列 ${config.name} 使用固定宽度: ${num}px`);
 		}
 	}
 

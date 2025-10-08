@@ -9,17 +9,18 @@
 }
 
 .tlb-table-container {
-  width: 100%;
-  height: 100%;
+  width: 100%; /* 适应窗口宽度 */
+  height: 100%; /* 占满父容器高度 */
   overflow: hidden; /* AG Grid 自己处理滚动 */
 }
 
 /* AG Grid 容器需要明确的高度（浅色和深色主题） */
 .tlb-table-container.ag-theme-alpine,
 .tlb-table-container.ag-theme-alpine-dark {
-  flex: 1; /* 占满剩余空间 */
-  min-height: 400px;
   width: 100%;
+  min-height: 400px;
+  /* 移除 flex: 1，避免与 autoHeight 冲突导致循环重绘 */
+  /* 使用父容器的 height: 100% 来占满空间 */
 }
 
 /* 自定义右键菜单样式 */

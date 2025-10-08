@@ -55270,11 +55270,13 @@ var AgGridAdapter = class {
           sortable: true,
           filter: false,
           resizable: false,
+          suppressSizeToFit: true,
+          // 不参与自动调整
           cellStyle: { textAlign: "center" }
           // 居中显示
         };
       }
-      return {
+      const baseColDef = {
         field: col.field,
         headerName: col.headerName,
         editable: col.editable,
@@ -55286,11 +55288,22 @@ var AgGridAdapter = class {
         // 可调整列宽
         wrapText: true,
         // 文本自动换行
-        autoHeight: true,
+        autoHeight: true
         // 行高自动适应内容
-        ...col
-        // 保留所有额外属性（width, flex 等）
       };
+      const mergedColDef = { ...baseColDef, ...col };
+      const hasWidth = col.width !== void 0;
+      const hasFlex = col.flex !== void 0;
+      if (!hasWidth && !hasFlex) {
+        const isLongTextColumn = this.isLongTextColumn(col.field, rows);
+        if (isLongTextColumn) {
+          mergedColDef.flex = 1;
+          mergedColDef.minWidth = 200;
+        } else {
+          mergedColDef.maxWidth = 300;
+        }
+      }
+      return mergedColDef;
     });
     const gridOptions = {
       columnDefs: colDefs,
@@ -55315,32 +55328,56 @@ var AgGridAdapter = class {
         resizable: true
       },
       // 启用单元格复制粘贴
-      enableCellTextSelection: true
+      enableCellTextSelection: true,
+      // 性能优化：减少不必要的重绘
+      suppressAnimationFrame: false,
+      // 保留动画帧以提升流畅度
+      suppressColumnVirtualisation: false
+      // 保留列虚拟化以提升性能
     };
     this.gridApi = createGrid(container, gridOptions);
     setTimeout(() => {
-      this.autoSizeColumns(colDefs);
+      this.autoSizeShortTextColumns(colDefs);
     }, 100);
   }
   /**
-   * 自动调整没有 width/flex 的列宽度
+   * 判断是否为长文本列
+   * 策略：扫描该列所有数据，计算最大内容长度
    */
-  autoSizeColumns(colDefs) {
+  isLongTextColumn(field, rows) {
+    const LONG_TEXT_THRESHOLD = 30;
+    let maxLength = 0;
+    for (const row of rows) {
+      const value = String(row[field] || "");
+      maxLength = Math.max(maxLength, value.length);
+    }
+    return maxLength > LONG_TEXT_THRESHOLD;
+  }
+  /**
+   * 对短文本列执行一次性 autoSize
+   */
+  autoSizeShortTextColumns(colDefs) {
     if (!this.gridApi)
       return;
-    const autoSizeColumnIds = [];
+    const shortTextColumnIds = [];
     for (const colDef of colDefs) {
       if (colDef.field === "#")
         continue;
       const hasWidth = colDef.width !== void 0;
       const hasFlex = colDef.flex !== void 0;
       if (!hasWidth && !hasFlex && colDef.field) {
-        autoSizeColumnIds.push(colDef.field);
+        shortTextColumnIds.push(colDef.field);
       }
     }
-    if (autoSizeColumnIds.length > 0) {
-      console.log("\u{1F527} Auto-sizing columns:", autoSizeColumnIds);
-      this.gridApi.autoSizeColumns(autoSizeColumnIds);
+    if (shortTextColumnIds.length > 0) {
+      console.log("\u{1F527} Auto-sizing short text columns:", shortTextColumnIds);
+      this.gridApi.autoSizeColumns(shortTextColumnIds, false);
+      setTimeout(() => {
+        var _a4;
+        const allColumns = ((_a4 = this.gridApi) == null ? void 0 : _a4.getAllDisplayedColumns()) || [];
+        const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
+        console.log(`\u{1F4CA} \u8868\u683C\u603B\u5BBD\u5EA6: ${totalWidth}px`);
+      }, 200);
     }
   }
   /**
@@ -55507,25 +55544,33 @@ var TableView = class extends import_obsidian.ItemView {
     if (!config.width || config.width === "auto") {
       return;
     }
-    const width = config.width;
+    const width = config.width.trim();
+    if (width === "flex") {
+      colDef.flex = 1;
+      colDef.minWidth = 200;
+      console.log(`\u5217 ${config.name} \u4F7F\u7528 flex: 1\uFF08\u5206\u914D\u5269\u4F59\u7A7A\u95F4\uFF09`);
+      return;
+    }
     if (width.endsWith("%")) {
       const percentage = parseInt(width.replace("%", ""));
       if (!isNaN(percentage)) {
         colDef.flex = percentage;
         console.log(`\u5217 ${config.name} \u4F7F\u7528 flex: ${percentage}`);
       }
-    } else if (width.endsWith("px")) {
+      return;
+    }
+    if (width.endsWith("px")) {
       const pixels = parseInt(width.replace("px", ""));
       if (!isNaN(pixels)) {
         colDef.width = pixels;
         console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${pixels}px`);
       }
-    } else {
-      const num = parseInt(width);
-      if (!isNaN(num)) {
-        colDef.width = num;
-        console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${num}px`);
-      }
+      return;
+    }
+    const num = parseInt(width);
+    if (!isNaN(num)) {
+      colDef.width = num;
+      console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${num}px`);
     }
   }
   /**

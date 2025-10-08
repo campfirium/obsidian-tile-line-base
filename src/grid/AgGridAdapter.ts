@@ -301,4 +301,64 @@ export class AgGridAdapter implements GridAdapter {
 		const rowIndex = rowElement.getAttribute('row-index');
 		return rowIndex !== null ? parseInt(rowIndex, 10) : null;
 	}
+
+	/**
+	 * 手动触发列宽调整
+	 * 用于处理容器尺寸变化或新窗口初始化的情况
+	 */
+	resizeColumns(): void {
+		if (!this.gridApi) {
+			console.warn('⚠️ gridApi 不存在，跳过列宽调整');
+			return;
+		}
+
+		console.log('🔄 开始列宽调整...');
+
+		// 获取当前容器信息
+		const allColumns = this.gridApi.getAllDisplayedColumns() || [];
+		console.log(`📊 当前列数: ${allColumns.length}`);
+
+		// 分类列：flex 列、固定宽度列、短文本列
+		const flexColumnIds: string[] = [];
+		const fixedWidthColumnIds: string[] = [];
+		const shortTextColumnIds: string[] = [];
+
+		for (const col of allColumns) {
+			const colDef = col.getColDef();
+			const field = colDef.field;
+
+			// 跳过序号列
+			if (field === '#') continue;
+
+			const hasWidth = (colDef as any).width !== undefined;
+			const hasFlex = (colDef as any).flex !== undefined;
+
+			if (hasFlex) {
+				flexColumnIds.push(field!);
+			} else if (hasWidth) {
+				fixedWidthColumnIds.push(field!);
+			} else {
+				shortTextColumnIds.push(field!);
+			}
+		}
+
+		console.log(`📊 列分类: flex列=${flexColumnIds.length}, 固定宽度列=${fixedWidthColumnIds.length}, 短文本列=${shortTextColumnIds.length}`);
+
+		// 1. 先对短文本列执行 autoSize（计算内容宽度）
+		if (shortTextColumnIds.length > 0) {
+			console.log('🔧 调整短文本列:', shortTextColumnIds);
+			this.gridApi.autoSizeColumns(shortTextColumnIds, false);
+		}
+
+		// 2. 再对所有列（包括 flex 列）执行 sizeColumnsToFit
+		// 这会让 flex 列分配剩余空间
+		console.log('🔧 执行 sizeColumnsToFit（分配剩余空间给 flex 列）');
+		this.gridApi.sizeColumnsToFit();
+
+		// 3. 记录最终宽度
+		setTimeout(() => {
+			const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
+			console.log(`✅ 列宽调整完成，总宽度: ${totalWidth}px`);
+		}, 50);
+	}
 }

@@ -55478,6 +55478,48 @@ var AgGridAdapter = class {
     const rowIndex = rowElement.getAttribute("row-index");
     return rowIndex !== null ? parseInt(rowIndex, 10) : null;
   }
+  /**
+   * 手动触发列宽调整
+   * 用于处理容器尺寸变化或新窗口初始化的情况
+   */
+  resizeColumns() {
+    if (!this.gridApi) {
+      console.warn("\u26A0\uFE0F gridApi \u4E0D\u5B58\u5728\uFF0C\u8DF3\u8FC7\u5217\u5BBD\u8C03\u6574");
+      return;
+    }
+    console.log("\u{1F504} \u5F00\u59CB\u5217\u5BBD\u8C03\u6574...");
+    const allColumns = this.gridApi.getAllDisplayedColumns() || [];
+    console.log(`\u{1F4CA} \u5F53\u524D\u5217\u6570: ${allColumns.length}`);
+    const flexColumnIds = [];
+    const fixedWidthColumnIds = [];
+    const shortTextColumnIds = [];
+    for (const col of allColumns) {
+      const colDef = col.getColDef();
+      const field = colDef.field;
+      if (field === "#")
+        continue;
+      const hasWidth = colDef.width !== void 0;
+      const hasFlex = colDef.flex !== void 0;
+      if (hasFlex) {
+        flexColumnIds.push(field);
+      } else if (hasWidth) {
+        fixedWidthColumnIds.push(field);
+      } else {
+        shortTextColumnIds.push(field);
+      }
+    }
+    console.log(`\u{1F4CA} \u5217\u5206\u7C7B: flex\u5217=${flexColumnIds.length}, \u56FA\u5B9A\u5BBD\u5EA6\u5217=${fixedWidthColumnIds.length}, \u77ED\u6587\u672C\u5217=${shortTextColumnIds.length}`);
+    if (shortTextColumnIds.length > 0) {
+      console.log("\u{1F527} \u8C03\u6574\u77ED\u6587\u672C\u5217:", shortTextColumnIds);
+      this.gridApi.autoSizeColumns(shortTextColumnIds, false);
+    }
+    console.log("\u{1F527} \u6267\u884C sizeColumnsToFit\uFF08\u5206\u914D\u5269\u4F59\u7A7A\u95F4\u7ED9 flex \u5217\uFF09");
+    this.gridApi.sizeColumnsToFit();
+    setTimeout(() => {
+      const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
+      console.log(`\u2705 \u5217\u5BBD\u8C03\u6574\u5B8C\u6210\uFF0C\u603B\u5BBD\u5EA6: ${totalWidth}px`);
+    }, 50);
+  }
 };
 
 // src/TableView.ts
@@ -55491,6 +55533,14 @@ var TableView = class extends import_obsidian.ItemView {
     this.saveTimeout = null;
     this.gridAdapter = null;
     this.contextMenu = null;
+    // 事件监听器引用（用于清理）
+    this.contextMenuHandler = null;
+    this.documentClickHandler = null;
+    this.keydownHandler = null;
+    this.windowResizeHandler = null;
+    this.tableContainer = null;
+    this.resizeObserver = null;
+    this.resizeTimeout = null;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -55816,31 +55866,162 @@ var TableView = class extends import_obsidian.ItemView {
     });
     this.setupContextMenu(tableContainer);
     this.setupKeyboardShortcuts(tableContainer);
+    console.log("\u{1F680} === \u5F00\u59CB\u8BBE\u7F6E ResizeObserver ===");
+    this.setupResizeObserver(tableContainer);
+    console.log("\u{1F680} === ResizeObserver \u8BBE\u7F6E\u5B8C\u6210 ===");
+    console.log("\u{1F680} \u5B89\u6392\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08100ms, 300ms, 800ms\uFF09");
+    setTimeout(() => {
+      var _a4, _b2;
+      console.log("\u23F0 \u6267\u884C\u7B2C1\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08100ms\uFF09");
+      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+    }, 100);
+    setTimeout(() => {
+      var _a4, _b2;
+      console.log("\u23F0 \u6267\u884C\u7B2C2\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08300ms\uFF09");
+      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+    }, 300);
+    setTimeout(() => {
+      var _a4, _b2;
+      console.log("\u23F0 \u6267\u884C\u7B2C3\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08800ms\uFF09");
+      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+    }, 800);
     console.log(`TileLineBase \u8868\u683C\u5DF2\u6E32\u67D3\uFF08AG Grid\uFF09\uFF1A${this.file.path}`);
     console.log(`Schema:`, this.schema);
     console.log(`\u6570\u636E\u884C\u6570: ${data.length}`);
   }
   /**
+   * 清理事件监听器（防止内存泄漏）
+   */
+  cleanupEventListeners() {
+    if (this.tableContainer && this.contextMenuHandler) {
+      this.tableContainer.removeEventListener("contextmenu", this.contextMenuHandler);
+      this.contextMenuHandler = null;
+    }
+    if (this.tableContainer && this.documentClickHandler) {
+      const ownerDoc = this.tableContainer.ownerDocument;
+      ownerDoc.removeEventListener("click", this.documentClickHandler);
+      this.documentClickHandler = null;
+    }
+    if (this.tableContainer && this.keydownHandler) {
+      this.tableContainer.removeEventListener("keydown", this.keydownHandler);
+      this.keydownHandler = null;
+    }
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (this.tableContainer && this.windowResizeHandler) {
+      const ownerWindow = this.tableContainer.ownerDocument.defaultView;
+      if (ownerWindow) {
+        ownerWindow.removeEventListener("resize", this.windowResizeHandler);
+      }
+      this.windowResizeHandler = null;
+    }
+  }
+  /**
+   * 设置容器尺寸监听器（包括窗口 resize）
+   */
+  setupResizeObserver(tableContainer) {
+    console.log("\u{1F527} setupResizeObserver \u5F00\u59CB\u6267\u884C");
+    if (this.resizeObserver) {
+      console.log("\u{1F9F9} \u6E05\u7406\u65E7\u7684 ResizeObserver");
+      this.resizeObserver.disconnect();
+    }
+    console.log("\u{1F527} \u521B\u5EFA ResizeObserver");
+    this.resizeObserver = new ResizeObserver((entries) => {
+      console.log("\u{1F514} ResizeObserver \u56DE\u8C03\u88AB\u89E6\u53D1\uFF0Centries \u6570\u91CF:", entries.length);
+      for (const entry of entries) {
+        if (entry.target === tableContainer) {
+          console.log("\u{1F4D0} \u5BB9\u5668\u5C3A\u5BF8\u53D8\u5316 (ResizeObserver):", {
+            width: entry.contentRect.width,
+            height: entry.contentRect.height
+          });
+          this.scheduleColumnResize("ResizeObserver");
+        }
+      }
+    });
+    console.log("\u{1F527} \u5F00\u59CB\u76D1\u542C\u5BB9\u5668\uFF0C\u5BB9\u5668\u5143\u7D20:", tableContainer);
+    this.resizeObserver.observe(tableContainer);
+    console.log("\u2705 ResizeObserver \u5DF2\u5F00\u59CB\u76D1\u542C");
+    console.log("\u{1F527} \u521B\u5EFA\u7A97\u53E3 resize \u76D1\u542C\u5668");
+    this.windowResizeHandler = () => {
+      console.log("\u{1F514} \u7A97\u53E3 resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01");
+      const ownerWindow2 = tableContainer.ownerDocument.defaultView;
+      if (ownerWindow2) {
+        console.log("\u{1F4D0} \u7A97\u53E3\u5C3A\u5BF8\u53D8\u5316 (window resize):", {
+          innerWidth: ownerWindow2.innerWidth,
+          innerHeight: ownerWindow2.innerHeight,
+          containerWidth: tableContainer.offsetWidth,
+          containerHeight: tableContainer.offsetHeight
+        });
+      }
+      this.scheduleColumnResize("window resize");
+    };
+    const ownerWindow = tableContainer.ownerDocument.defaultView;
+    console.log("\u{1F527} \u83B7\u53D6\u7A97\u53E3\u5BF9\u8C61:", ownerWindow);
+    if (ownerWindow) {
+      ownerWindow.addEventListener("resize", this.windowResizeHandler);
+      console.log("\u2705 \u5DF2\u6DFB\u52A0\u7A97\u53E3 resize \u76D1\u542C\u5668\u5230\u7A97\u53E3");
+      console.log("\u{1F4CA} \u5F53\u524D\u7A97\u53E3\u5C3A\u5BF8:", {
+        innerWidth: ownerWindow.innerWidth,
+        innerHeight: ownerWindow.innerHeight
+      });
+    } else {
+      console.error("\u274C \u65E0\u6CD5\u83B7\u53D6\u7A97\u53E3\u5BF9\u8C61\uFF01");
+    }
+  }
+  /**
+   * 调度列宽调整（带防抖和延迟重试）
+   */
+  scheduleColumnResize(source) {
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+    }
+    this.resizeTimeout = setTimeout(() => {
+      var _a4, _b2;
+      console.log(`\u{1F504} \u89E6\u53D1\u5217\u5BBD\u8C03\u6574 (${source})`);
+      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+      if (source === "window resize") {
+        setTimeout(() => {
+          var _a5, _b3;
+          console.log(`\u{1F504} \u5EF6\u8FDF\u91CD\u8BD5\u5217\u5BBD\u8C03\u6574 (${source} + 200ms)`);
+          (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
+        }, 200);
+        setTimeout(() => {
+          var _a5, _b3;
+          console.log(`\u{1F504} \u5EF6\u8FDF\u91CD\u8BD5\u5217\u5BBD\u8C03\u6574 (${source} + 500ms)`);
+          (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
+        }, 500);
+      }
+      this.resizeTimeout = null;
+    }, 150);
+  }
+  /**
    * 设置右键菜单
    */
   setupContextMenu(tableContainer) {
-    tableContainer.addEventListener("contextmenu", (event) => {
+    this.cleanupEventListeners();
+    this.tableContainer = tableContainer;
+    this.contextMenuHandler = (event) => {
       var _a4;
       event.preventDefault();
       const rowIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (rowIndex === null || rowIndex === void 0)
         return;
       this.showContextMenu(event, rowIndex);
-    });
-    document.addEventListener("click", () => {
+    };
+    this.documentClickHandler = () => {
       this.hideContextMenu();
-    });
+    };
+    tableContainer.addEventListener("contextmenu", this.contextMenuHandler);
+    const ownerDoc = tableContainer.ownerDocument;
+    ownerDoc.addEventListener("click", this.documentClickHandler);
   }
   /**
    * 设置键盘快捷键
    */
   setupKeyboardShortcuts(tableContainer) {
-    tableContainer.addEventListener("keydown", (event) => {
+    this.keydownHandler = (event) => {
       var _a4;
       const activeElement = document.activeElement;
       if (activeElement == null ? void 0 : activeElement.classList.contains("ag-cell-edit-input")) {
@@ -55872,14 +56053,17 @@ var TableView = class extends import_obsidian.ItemView {
         }
         return;
       }
-    });
+    };
+    tableContainer.addEventListener("keydown", this.keydownHandler);
   }
   /**
    * 显示右键菜单
    */
   showContextMenu(event, rowIndex) {
+    var _a4;
     this.hideContextMenu();
-    this.contextMenu = document.body.createDiv({ cls: "tlb-context-menu" });
+    const ownerDoc = ((_a4 = this.tableContainer) == null ? void 0 : _a4.ownerDocument) || document;
+    this.contextMenu = ownerDoc.body.createDiv({ cls: "tlb-context-menu" });
     const insertAbove = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
     insertAbove.createSpan({ text: "\u5728\u4E0A\u65B9\u63D2\u5165\u884C" });
     insertAbove.addEventListener("click", () => {
@@ -56067,6 +56251,8 @@ var TableView = class extends import_obsidian.ItemView {
     console.warn("renameColumn not implemented yet. Coming in T0010+.");
   }
   async onClose() {
+    this.cleanupEventListeners();
+    this.hideContextMenu();
     if (this.gridAdapter) {
       this.gridAdapter.destroy();
       this.gridAdapter = null;
@@ -56075,6 +56261,11 @@ var TableView = class extends import_obsidian.ItemView {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+      this.resizeTimeout = null;
+    }
+    this.tableContainer = null;
   }
 };
 

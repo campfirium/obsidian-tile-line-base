@@ -38,6 +38,18 @@ export class TableView extends ItemView {
 	private gridAdapter: GridAdapter | null = null;
 	private contextMenu: HTMLElement | null = null;
 
+	// 事件监听器引用（用于清理）
+	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
+	private documentClickHandler: (() => void) | null = null;
+	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
+	private windowResizeHandler: (() => void) | null = null;
+	private tableContainer: HTMLElement | null = null;
+	private resizeObserver: ResizeObserver | null = null;
+	private resizeTimeout: NodeJS.Timeout | null = null;
+	private sizeCheckInterval: NodeJS.Timeout | null = null;
+	private lastContainerWidth: number = 0;
+	private lastContainerHeight: number = 0;
+
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 	}
@@ -483,17 +495,184 @@ export class TableView extends ItemView {
 		// 添加键盘快捷键
 		this.setupKeyboardShortcuts(tableContainer);
 
+		// 设置容器尺寸监听（处理新窗口和窗口调整大小）
+		console.log('🚀 === 开始设置 ResizeObserver ===');
+		this.setupResizeObserver(tableContainer);
+		console.log('🚀 === ResizeObserver 设置完成 ===');
+
+		// 多次尝试调整列宽，确保在新窗口中也能正确初始化
+		console.log('🚀 安排初始化列宽调整（100ms, 300ms, 800ms）');
+
+		// 第一次：立即尝试（可能容器尺寸还未确定）
+		setTimeout(() => {
+			console.log('⏰ 执行第1次初始化列宽调整（100ms）');
+			this.gridAdapter?.resizeColumns?.();
+		}, 100);
+
+		// 第二次：延迟尝试（容器尺寸应该已确定）
+		setTimeout(() => {
+			console.log('⏰ 执行第2次初始化列宽调整（300ms）');
+			this.gridAdapter?.resizeColumns?.();
+		}, 300);
+
+		// 第三次：最后一次尝试（确保在所有布局完成后）
+		setTimeout(() => {
+			console.log('⏰ 执行第3次初始化列宽调整（800ms）');
+			this.gridAdapter?.resizeColumns?.();
+		}, 800);
+
 		console.log(`TileLineBase 表格已渲染（AG Grid）：${this.file.path}`);
 		console.log(`Schema:`, this.schema);
 		console.log(`数据行数: ${data.length}`);
 	}
 
 	/**
+	 * 清理事件监听器（防止内存泄漏）
+	 */
+	private cleanupEventListeners(): void {
+		// 移除右键菜单监听器
+		if (this.tableContainer && this.contextMenuHandler) {
+			this.tableContainer.removeEventListener('contextmenu', this.contextMenuHandler);
+			this.contextMenuHandler = null;
+		}
+
+		// 移除 document 点击监听器
+		if (this.tableContainer && this.documentClickHandler) {
+			const ownerDoc = this.tableContainer.ownerDocument;
+			ownerDoc.removeEventListener('click', this.documentClickHandler);
+			this.documentClickHandler = null;
+		}
+
+		// 移除键盘监听器
+		if (this.tableContainer && this.keydownHandler) {
+			this.tableContainer.removeEventListener('keydown', this.keydownHandler);
+			this.keydownHandler = null;
+		}
+
+		// 移除 ResizeObserver
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+			this.resizeObserver = null;
+		}
+
+		// 移除窗口 resize 监听器
+		if (this.tableContainer && this.windowResizeHandler) {
+			const ownerWindow = this.tableContainer.ownerDocument.defaultView;
+			if (ownerWindow) {
+				ownerWindow.removeEventListener('resize', this.windowResizeHandler);
+			}
+			this.windowResizeHandler = null;
+		}
+	}
+
+	/**
+	 * 设置容器尺寸监听器（包括窗口 resize）
+	 */
+	private setupResizeObserver(tableContainer: HTMLElement): void {
+		console.log('🔧 setupResizeObserver 开始执行');
+
+		// 清理旧的 observer
+		if (this.resizeObserver) {
+			console.log('🧹 清理旧的 ResizeObserver');
+			this.resizeObserver.disconnect();
+		}
+
+		// 创建新的 ResizeObserver（监听容器尺寸变化）
+		console.log('🔧 创建 ResizeObserver');
+		this.resizeObserver = new ResizeObserver((entries) => {
+			console.log('🔔 ResizeObserver 回调被触发，entries 数量:', entries.length);
+			for (const entry of entries) {
+				if (entry.target === tableContainer) {
+					// 容器尺寸变化时，调整列宽
+					console.log('📐 容器尺寸变化 (ResizeObserver):', {
+						width: entry.contentRect.width,
+						height: entry.contentRect.height
+					});
+
+					this.scheduleColumnResize('ResizeObserver');
+				}
+			}
+		});
+
+		// 开始监听容器
+		console.log('🔧 开始监听容器，容器元素:', tableContainer);
+		this.resizeObserver.observe(tableContainer);
+		console.log('✅ ResizeObserver 已开始监听');
+
+		// 创建窗口 resize 监听器（监听窗口尺寸变化）
+		console.log('🔧 创建窗口 resize 监听器');
+		this.windowResizeHandler = () => {
+			console.log('🔔 窗口 resize 事件被触发！');
+			const ownerWindow = tableContainer.ownerDocument.defaultView;
+			if (ownerWindow) {
+				console.log('📐 窗口尺寸变化 (window resize):', {
+					innerWidth: ownerWindow.innerWidth,
+					innerHeight: ownerWindow.innerHeight,
+					containerWidth: tableContainer.offsetWidth,
+					containerHeight: tableContainer.offsetHeight
+				});
+			}
+			this.scheduleColumnResize('window resize');
+		};
+
+		// 获取容器所在的窗口（支持新窗口）
+		const ownerWindow = tableContainer.ownerDocument.defaultView;
+		console.log('🔧 获取窗口对象:', ownerWindow);
+		if (ownerWindow) {
+			ownerWindow.addEventListener('resize', this.windowResizeHandler);
+			console.log('✅ 已添加窗口 resize 监听器到窗口');
+			console.log('📊 当前窗口尺寸:', {
+				innerWidth: ownerWindow.innerWidth,
+				innerHeight: ownerWindow.innerHeight
+			});
+		} else {
+			console.error('❌ 无法获取窗口对象！');
+		}
+	}
+
+	/**
+	 * 调度列宽调整（带防抖和延迟重试）
+	 */
+	private scheduleColumnResize(source: string): void {
+		// 使用防抖，避免频繁调用
+		if (this.resizeTimeout) {
+			clearTimeout(this.resizeTimeout);
+		}
+
+		this.resizeTimeout = setTimeout(() => {
+			console.log(`🔄 触发列宽调整 (${source})`);
+			this.gridAdapter?.resizeColumns?.();
+
+			// 对于窗口 resize（可能是最大化），延迟再次尝试
+			// 确保布局完全稳定后再调整
+			if (source === 'window resize') {
+				setTimeout(() => {
+					console.log(`🔄 延迟重试列宽调整 (${source} + 200ms)`);
+					this.gridAdapter?.resizeColumns?.();
+				}, 200);
+
+				setTimeout(() => {
+					console.log(`🔄 延迟重试列宽调整 (${source} + 500ms)`);
+					this.gridAdapter?.resizeColumns?.();
+				}, 500);
+			}
+
+			this.resizeTimeout = null;
+		}, 150);
+	}
+
+	/**
 	 * 设置右键菜单
 	 */
 	private setupContextMenu(tableContainer: HTMLElement): void {
-		// 监听右键点击
-		tableContainer.addEventListener('contextmenu', (event) => {
+		// 清理旧的事件监听器
+		this.cleanupEventListeners();
+
+		// 保存容器引用
+		this.tableContainer = tableContainer;
+
+		// 创建并保存右键菜单处理器
+		this.contextMenuHandler = (event: MouseEvent) => {
 			event.preventDefault();
 
 			// 获取点击的行索引
@@ -502,19 +681,27 @@ export class TableView extends ItemView {
 
 			// 显示自定义菜单
 			this.showContextMenu(event, rowIndex);
-		});
+		};
 
-		// 点击其他地方隐藏菜单
-		document.addEventListener('click', () => {
+		// 创建并保存点击处理器（点击其他地方隐藏菜单）
+		this.documentClickHandler = () => {
 			this.hideContextMenu();
-		});
+		};
+
+		// 绑定事件监听器
+		tableContainer.addEventListener('contextmenu', this.contextMenuHandler);
+
+		// 使用容器所在的 document（支持新窗口）
+		const ownerDoc = tableContainer.ownerDocument;
+		ownerDoc.addEventListener('click', this.documentClickHandler);
 	}
 
 	/**
 	 * 设置键盘快捷键
 	 */
 	private setupKeyboardShortcuts(tableContainer: HTMLElement): void {
-		tableContainer.addEventListener('keydown', (event) => {
+		// 创建并保存键盘事件处理器
+		this.keydownHandler = (event: KeyboardEvent) => {
 			// 如果正在编辑单元格，不触发快捷键
 			const activeElement = document.activeElement;
 			if (activeElement?.classList.contains('ag-cell-edit-input')) {
@@ -555,7 +742,10 @@ export class TableView extends ItemView {
 				}
 				return;
 			}
-		});
+		};
+
+		// 绑定事件监听器
+		tableContainer.addEventListener('keydown', this.keydownHandler);
 	}
 
 	/**
@@ -565,8 +755,9 @@ export class TableView extends ItemView {
 		// 移除旧菜单
 		this.hideContextMenu();
 
-		// 创建菜单容器
-		this.contextMenu = document.body.createDiv({ cls: 'tlb-context-menu' });
+		// 使用容器所在的 document（支持新窗口）
+		const ownerDoc = this.tableContainer?.ownerDocument || document;
+		this.contextMenu = ownerDoc.body.createDiv({ cls: 'tlb-context-menu' });
 
 		// 在上方插入行
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
@@ -826,6 +1017,12 @@ export class TableView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		// 清理事件监听器
+		this.cleanupEventListeners();
+
+		// 隐藏右键菜单
+		this.hideContextMenu();
+
 		// 销毁表格实例
 		if (this.gridAdapter) {
 			this.gridAdapter.destroy();
@@ -837,5 +1034,14 @@ export class TableView extends ItemView {
 			clearTimeout(this.saveTimeout);
 			this.saveTimeout = null;
 		}
+
+		// 清理 resize 定时器
+		if (this.resizeTimeout) {
+			clearTimeout(this.resizeTimeout);
+			this.resizeTimeout = null;
+		}
+
+		// 清理容器引用
+		this.tableContainer = null;
 	}
 }

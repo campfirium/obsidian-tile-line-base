@@ -39,6 +39,8 @@
 \`\`\`
 ```
 
+251008 自动宽度看上去足够使用，宽度参数暂时搁置
+
 ### 列配置数据结构
 ```typescript
 interface ColumnConfig {

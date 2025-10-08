@@ -94,4 +94,10 @@ export interface GridAdapter {
 	 * @returns 行索引，如果未找到则返回 null
 	 */
 	getRowIndexFromEvent(event: MouseEvent): number | null;
+
+	/**
+	 * 手动触发列宽调整
+	 * 用于处理容器尺寸变化或新窗口初始化的情况
+	 */
+	resizeColumns?(): void;
 }

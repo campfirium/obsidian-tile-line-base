@@ -55541,6 +55541,12 @@ var TableView = class extends import_obsidian.ItemView {
     this.tableContainer = null;
     this.resizeObserver = null;
     this.resizeTimeout = null;
+    this.sizeCheckInterval = null;
+    this.visualViewportResizeHandler = null;
+    this.visualViewportTarget = null;
+    this.workspaceResizeRef = null;
+    this.lastContainerWidth = 0;
+    this.lastContainerHeight = 0;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -55917,15 +55923,51 @@ var TableView = class extends import_obsidian.ItemView {
       }
       this.windowResizeHandler = null;
     }
+    if (this.visualViewportTarget && this.visualViewportResizeHandler) {
+      this.visualViewportTarget.removeEventListener("resize", this.visualViewportResizeHandler);
+    }
+    this.visualViewportTarget = null;
+    this.visualViewportResizeHandler = null;
+    if (this.workspaceResizeRef) {
+      this.app.workspace.offref(this.workspaceResizeRef);
+      this.workspaceResizeRef = null;
+    }
+    if (this.sizeCheckInterval) {
+      clearInterval(this.sizeCheckInterval);
+      this.sizeCheckInterval = null;
+    }
+    this.lastContainerWidth = 0;
+    this.lastContainerHeight = 0;
   }
   /**
    * 设置容器尺寸监听器（包括窗口 resize）
    */
   setupResizeObserver(tableContainer) {
+    var _a4;
     console.log("\u{1F527} setupResizeObserver \u5F00\u59CB\u6267\u884C");
     if (this.resizeObserver) {
       console.log("\u{1F9F9} \u6E05\u7406\u65E7\u7684 ResizeObserver");
       this.resizeObserver.disconnect();
+    }
+    if (this.windowResizeHandler) {
+      const previousWindow = (_a4 = this.tableContainer) == null ? void 0 : _a4.ownerDocument.defaultView;
+      if (previousWindow) {
+        previousWindow.removeEventListener("resize", this.windowResizeHandler);
+      }
+    }
+    this.windowResizeHandler = null;
+    if (this.visualViewportTarget && this.visualViewportResizeHandler) {
+      this.visualViewportTarget.removeEventListener("resize", this.visualViewportResizeHandler);
+    }
+    this.visualViewportTarget = null;
+    this.visualViewportResizeHandler = null;
+    if (this.workspaceResizeRef) {
+      this.app.workspace.offref(this.workspaceResizeRef);
+      this.workspaceResizeRef = null;
+    }
+    if (this.sizeCheckInterval) {
+      clearInterval(this.sizeCheckInterval);
+      this.sizeCheckInterval = null;
     }
     console.log("\u{1F527} \u521B\u5EFA ResizeObserver");
     this.resizeObserver = new ResizeObserver((entries) => {
@@ -55946,11 +55988,11 @@ var TableView = class extends import_obsidian.ItemView {
     console.log("\u{1F527} \u521B\u5EFA\u7A97\u53E3 resize \u76D1\u542C\u5668");
     this.windowResizeHandler = () => {
       console.log("\u{1F514} \u7A97\u53E3 resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01");
-      const ownerWindow2 = tableContainer.ownerDocument.defaultView;
-      if (ownerWindow2) {
+      const ownerWindowCurrent = tableContainer.ownerDocument.defaultView;
+      if (ownerWindowCurrent) {
         console.log("\u{1F4D0} \u7A97\u53E3\u5C3A\u5BF8\u53D8\u5316 (window resize):", {
-          innerWidth: ownerWindow2.innerWidth,
-          innerHeight: ownerWindow2.innerHeight,
+          innerWidth: ownerWindowCurrent.innerWidth,
+          innerHeight: ownerWindowCurrent.innerHeight,
           containerWidth: tableContainer.offsetWidth,
           containerHeight: tableContainer.offsetHeight
         });
@@ -55966,9 +56008,36 @@ var TableView = class extends import_obsidian.ItemView {
         innerWidth: ownerWindow.innerWidth,
         innerHeight: ownerWindow.innerHeight
       });
+      if ("visualViewport" in ownerWindow && ownerWindow.visualViewport) {
+        this.visualViewportTarget = ownerWindow.visualViewport;
+        this.visualViewportResizeHandler = () => {
+          const viewport = ownerWindow.visualViewport;
+          console.log("\u{1F514} visualViewport resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01", {
+            width: viewport == null ? void 0 : viewport.width,
+            height: viewport == null ? void 0 : viewport.height,
+            scale: viewport == null ? void 0 : viewport.scale
+          });
+          this.scheduleColumnResize("visualViewport resize");
+        };
+        this.visualViewportTarget.addEventListener("resize", this.visualViewportResizeHandler);
+        console.log("\u2705 \u5DF2\u6DFB\u52A0 visualViewport resize \u76D1\u542C\u5668");
+      } else {
+        console.log("\u26A0\uFE0F \u5F53\u524D\u7A97\u53E3\u4E0D\u652F\u6301 visualViewport \u76D1\u542C");
+      }
     } else {
       console.error("\u274C \u65E0\u6CD5\u83B7\u53D6\u7A97\u53E3\u5BF9\u8C61\uFF01");
     }
+    this.workspaceResizeRef = this.app.workspace.on("resize", () => {
+      console.log("\u{1F514} workspace.resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01");
+      if (tableContainer.isConnected) {
+        console.log("\u{1F4CF} workspace.resize -> \u5BB9\u5668\u5C3A\u5BF8:", {
+          width: tableContainer.offsetWidth,
+          height: tableContainer.offsetHeight
+        });
+      }
+      this.scheduleColumnResize("workspace resize");
+    });
+    this.startSizePolling(tableContainer);
   }
   /**
    * 调度列宽调整（带防抖和延迟重试）
@@ -55981,7 +56050,7 @@ var TableView = class extends import_obsidian.ItemView {
       var _a4, _b2;
       console.log(`\u{1F504} \u89E6\u53D1\u5217\u5BBD\u8C03\u6574 (${source})`);
       (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
-      if (source === "window resize") {
+      if (source === "window resize" || source === "visualViewport resize" || source === "workspace resize") {
         setTimeout(() => {
           var _a5, _b3;
           console.log(`\u{1F504} \u5EF6\u8FDF\u91CD\u8BD5\u5217\u5BBD\u8C03\u6574 (${source} + 200ms)`);
@@ -55995,6 +56064,38 @@ var TableView = class extends import_obsidian.ItemView {
       }
       this.resizeTimeout = null;
     }, 150);
+  }
+  /**
+   * 启动尺寸轮询（兜底最大化/特殊窗口场景）
+   */
+  startSizePolling(tableContainer) {
+    if (this.sizeCheckInterval) {
+      clearInterval(this.sizeCheckInterval);
+    }
+    this.lastContainerWidth = tableContainer.offsetWidth;
+    this.lastContainerHeight = tableContainer.offsetHeight;
+    console.log("\u{1F501} \u5F00\u59CB\u5C3A\u5BF8\u8F6E\u8BE2:", {
+      width: this.lastContainerWidth,
+      height: this.lastContainerHeight
+    });
+    this.sizeCheckInterval = setInterval(() => {
+      if (!tableContainer.isConnected) {
+        return;
+      }
+      const currentWidth = tableContainer.offsetWidth;
+      const currentHeight = tableContainer.offsetHeight;
+      if (currentWidth !== this.lastContainerWidth || currentHeight !== this.lastContainerHeight) {
+        console.log("\u{1F501} \u5C3A\u5BF8\u8F6E\u8BE2\u68C0\u6D4B\u5230\u53D8\u5316:", {
+          width: currentWidth,
+          height: currentHeight,
+          previousWidth: this.lastContainerWidth,
+          previousHeight: this.lastContainerHeight
+        });
+        this.lastContainerWidth = currentWidth;
+        this.lastContainerHeight = currentHeight;
+        this.scheduleColumnResize("size polling");
+      }
+    }, 400);
   }
   /**
    * 设置右键菜单

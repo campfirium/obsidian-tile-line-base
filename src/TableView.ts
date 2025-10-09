@@ -52,6 +52,7 @@ export class TableView extends ItemView {
 	private workspaceResizeRef: EventRef | null = null;
 	private lastContainerWidth: number = 0;
 	private lastContainerHeight: number = 0;
+	private pendingSizeUpdateHandle: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -555,6 +556,11 @@ export class TableView extends ItemView {
 			this.keydownHandler = null;
 		}
 
+		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
+			cancelAnimationFrame(this.pendingSizeUpdateHandle);
+		}
+		this.pendingSizeUpdateHandle = null;
+
 		// 移除 ResizeObserver
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
@@ -728,6 +734,7 @@ export class TableView extends ItemView {
 
 		this.resizeTimeout = setTimeout(() => {
 			console.log(`🔄 触发列宽调整 (${source})`);
+			this.gridAdapter?.markLayoutDirty?.();
 			this.gridAdapter?.resizeColumns?.();
 
 			// 对于窗口/viewport/workspace 等事件，延迟再次尝试，确保布局稳定
@@ -794,34 +801,33 @@ export class TableView extends ItemView {
 	private updateTableContainerSize(): void {
 		if (!this.tableContainer) return;
 
-		const container = this.tableContainer;
-		const parent = container.parentElement as HTMLElement | null;
-		const target = parent ?? container;
-
-		const rect = target.getBoundingClientRect();
-
-		if (rect.width > 0) {
-			const widthPx = `${rect.width}px`;
-			if (container.style.width !== widthPx) {
-				container.style.width = widthPx;
-			}
-		} else {
-			container.style.width = '100%';
+		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
+			cancelAnimationFrame(this.pendingSizeUpdateHandle);
+			this.pendingSizeUpdateHandle = null;
 		}
 
-		if (rect.height > 0) {
-			const heightPx = `${rect.height}px`;
+		const container = this.tableContainer;
+		const parent = container.parentElement as HTMLElement | null;
+
+		// 始终允许宽度随父容器自适应
+		container.style.removeProperty('width');
+		container.style.maxWidth = '100%';
+		container.style.width = '100%';
+
+		let targetHeight = 0;
+		if (parent) {
+			const rect = parent.getBoundingClientRect();
+			targetHeight = rect.height || parent.clientHeight || parent.offsetHeight;
+		}
+
+		if (targetHeight > 0) {
+			const heightPx = `${targetHeight}px`;
 			if (container.style.height !== heightPx) {
 				container.style.height = heightPx;
 			}
-		} else if (parent) {
-			const fallbackHeight = parent.offsetHeight || parent.clientHeight;
-			if (fallbackHeight > 0) {
-				const heightPx = `${fallbackHeight}px`;
-				if (container.style.height !== heightPx) {
-					container.style.height = heightPx;
-				}
-			}
+		} else {
+			container.style.removeProperty('height');
+			container.style.height = '100%';
 		}
 	}
 

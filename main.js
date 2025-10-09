@@ -55258,6 +55258,7 @@ var _AgGridAdapter = class {
     this.gridApi = null;
     this.lastAutoSizeTimestamp = 0;
     this.shouldAutoSizeOnNextResize = false;
+    this.rowHeightResetHandle = null;
   }
   /**
    * 挂载表格到指定容器
@@ -55348,6 +55349,7 @@ var _AgGridAdapter = class {
     this.gridApi = createGrid(container, gridOptions);
     this.lastAutoSizeTimestamp = 0;
     this.shouldAutoSizeOnNextResize = false;
+    this.clearRowHeightResetHandle();
     setTimeout(() => {
       this.autoSizeShortTextColumns(colDefs);
       this.shouldAutoSizeOnNextResize = false;
@@ -55445,6 +55447,10 @@ var _AgGridAdapter = class {
       this.queueRowHeightSync();
     }
   }
+  markLayoutDirty() {
+    this.shouldAutoSizeOnNextResize = true;
+    this.queueRowHeightSync();
+  }
   /**
    * 监听单元格编辑事件
    */
@@ -55466,6 +55472,7 @@ var _AgGridAdapter = class {
    * 销毁表格实例
    */
   destroy() {
+    this.clearRowHeightResetHandle();
     if (this.gridApi) {
       this.gridApi.destroy();
       this.gridApi = null;
@@ -55580,26 +55587,51 @@ var _AgGridAdapter = class {
   queueRowHeightSync() {
     if (!this.gridApi)
       return;
+    this.clearRowHeightResetHandle();
+    const api = this.gridApi;
+    const resetNodeHeights = () => {
+      if (!this.gridApi)
+        return;
+      this.gridApi.forEachNode((node) => node.setRowHeight(void 0));
+    };
     const runReset = (label) => {
+      var _a4;
       if (!this.gridApi)
         return;
       console.log(label);
-      this.gridApi.resetRowHeights();
-      this.gridApi.onRowHeightChanged();
-      this.gridApi.refreshCells({ force: true });
+      resetNodeHeights();
+      api.stopEditing();
+      api.resetRowHeights();
+      api.onRowHeightChanged();
+      api.refreshCells({ force: true });
+      (_a4 = api.refreshClientSideRowModel) == null ? void 0 : _a4.call(api, "nothing");
+      api.redrawRows();
     };
     const first = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #1\uFF09");
     const second = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #2\uFF09");
     const third = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #3\uFF09");
     const fourth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #4\uFF09");
+    const fifth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #5\uFF09");
     if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(first);
+      this.rowHeightResetHandle = requestAnimationFrame(() => {
+        this.rowHeightResetHandle = null;
+        first();
+      });
     } else {
       setTimeout(first, 0);
     }
     setTimeout(second, 120);
     setTimeout(third, 300);
     setTimeout(fourth, 600);
+    setTimeout(fifth, 900);
+  }
+  clearRowHeightResetHandle() {
+    if (this.rowHeightResetHandle !== null) {
+      if (typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this.rowHeightResetHandle);
+      }
+      this.rowHeightResetHandle = null;
+    }
   }
 };
 var AgGridAdapter = _AgGridAdapter;
@@ -55630,6 +55662,7 @@ var TableView = class extends import_obsidian.ItemView {
     this.workspaceResizeRef = null;
     this.lastContainerWidth = 0;
     this.lastContainerHeight = 0;
+    this.pendingSizeUpdateHandle = null;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -55998,6 +56031,10 @@ var TableView = class extends import_obsidian.ItemView {
       this.tableContainer.removeEventListener("keydown", this.keydownHandler);
       this.keydownHandler = null;
     }
+    if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.pendingSizeUpdateHandle);
+    }
+    this.pendingSizeUpdateHandle = null;
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -56137,9 +56174,10 @@ var TableView = class extends import_obsidian.ItemView {
       clearTimeout(this.resizeTimeout);
     }
     this.resizeTimeout = setTimeout(() => {
-      var _a4, _b2;
+      var _a4, _b2, _c, _d;
       console.log(`\u{1F504} \u89E6\u53D1\u5217\u5BBD\u8C03\u6574 (${source})`);
-      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.markLayoutDirty) == null ? void 0 : _b2.call(_a4);
+      (_d = (_c = this.gridAdapter) == null ? void 0 : _c.resizeColumns) == null ? void 0 : _d.call(_c);
       if (source === "window resize" || source === "visualViewport resize" || source === "workspace resize") {
         setTimeout(() => {
           var _a5, _b3;
@@ -56191,31 +56229,47 @@ var TableView = class extends import_obsidian.ItemView {
   updateTableContainerSize() {
     if (!this.tableContainer)
       return;
-    const container = this.tableContainer;
-    const parent = container.parentElement;
-    const target = parent != null ? parent : container;
-    const rect = target.getBoundingClientRect();
-    if (rect.width > 0) {
-      const widthPx = `${rect.width}px`;
-      if (container.style.width !== widthPx) {
-        container.style.width = widthPx;
-      }
-    } else {
-      container.style.width = "100%";
+    if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.pendingSizeUpdateHandle);
+      this.pendingSizeUpdateHandle = null;
     }
-    if (rect.height > 0) {
-      const heightPx = `${rect.height}px`;
-      if (container.style.height !== heightPx) {
-        container.style.height = heightPx;
+    const measure = () => {
+      if (!this.tableContainer)
+        return;
+      const container = this.tableContainer;
+      const parent = container.parentElement;
+      const target = parent != null ? parent : container;
+      const rect = target.getBoundingClientRect();
+      if (rect.width > 0) {
+        const widthPx = `${rect.width}px`;
+        if (container.style.width !== widthPx) {
+          container.style.width = widthPx;
+        }
+      } else {
+        container.style.width = "100%";
       }
-    } else if (parent) {
-      const fallbackHeight = parent.offsetHeight || parent.clientHeight;
-      if (fallbackHeight > 0) {
-        const heightPx = `${fallbackHeight}px`;
+      if (rect.height > 0) {
+        const heightPx = `${rect.height}px`;
         if (container.style.height !== heightPx) {
           container.style.height = heightPx;
         }
+      } else if (parent) {
+        const fallbackHeight = parent.offsetHeight || parent.clientHeight;
+        if (fallbackHeight > 0) {
+          const heightPx = `${fallbackHeight}px`;
+          if (container.style.height !== heightPx) {
+            container.style.height = heightPx;
+          }
+        }
       }
+    };
+    if (typeof requestAnimationFrame === "function") {
+      this.pendingSizeUpdateHandle = requestAnimationFrame(() => {
+        this.pendingSizeUpdateHandle = null;
+        measure();
+      });
+    } else {
+      measure();
     }
   }
   /**

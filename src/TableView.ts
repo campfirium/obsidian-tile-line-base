@@ -834,18 +834,7 @@ export class TableView extends ItemView {
 			const hasSelection = selectedRows.length > 0;
 			const firstSelectedRow = hasSelection ? selectedRows[0] : null;
 
-			// Enter: 添加新行
-			if (event.key === 'Enter') {
-				event.preventDefault();
-				if (hasSelection && firstSelectedRow !== null) {
-					// 在选中行之后添加
-					this.addRow(firstSelectedRow + 1);
-				} else {
-					// 在末尾添加
-					this.addRow();
-				}
-				return;
-			}
+			// Enter 快捷键禁用：避免误触自动插入新行
 
 			// Cmd+D / Ctrl+D: 复制行
 			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
@@ -856,14 +845,7 @@ export class TableView extends ItemView {
 				return;
 			}
 
-			// Delete / Backspace: 删除行
-			if (event.key === 'Delete' || event.key === 'Backspace') {
-				event.preventDefault();
-				if (hasSelection && firstSelectedRow !== null) {
-					this.deleteRow(firstSelectedRow);
-				}
-				return;
-			}
+			// Delete / Backspace 快捷键禁用：保留原生删除行为，通过上下文菜单删除整行
 		};
 
 		// 绑定事件监听器
@@ -1053,13 +1035,6 @@ export class TableView extends ItemView {
 		}
 
 		const targetBlock = this.blocks[rowIndex];
-
-		// 确认对话框
-		const confirmMessage = `确定要删除这一行吗？\n\n"${targetBlock.title}"`;
-		if (!confirm(confirmMessage)) {
-			console.log('❌ 用户取消删除');
-			return;
-		}
 
 		// 删除块
 		const deletedBlock = this.blocks.splice(rowIndex, 1)[0];

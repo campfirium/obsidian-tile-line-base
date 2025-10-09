@@ -55451,6 +55451,42 @@ var _AgGridAdapter = class {
     this.shouldAutoSizeOnNextResize = true;
     this.queueRowHeightSync();
   }
+  selectRow(blockIndex, options) {
+    var _a4;
+    if (!this.gridApi)
+      return;
+    const node = this.findRowNodeByBlockIndex(blockIndex);
+    if (!node)
+      return;
+    this.gridApi.deselectAll();
+    node.setSelected(true);
+    if (options == null ? void 0 : options.ensureVisible) {
+      const rowIndex = (_a4 = node.rowIndex) != null ? _a4 : null;
+      if (rowIndex !== null) {
+        this.gridApi.ensureIndexVisible(rowIndex, "middle");
+      }
+    }
+  }
+  clearSelection() {
+    var _a4;
+    (_a4 = this.gridApi) == null ? void 0 : _a4.deselectAll();
+  }
+  startEditingCell(blockIndex, field) {
+    var _a4;
+    if (!this.gridApi)
+      return;
+    const node = this.findRowNodeByBlockIndex(blockIndex);
+    if (!node)
+      return;
+    const rowIndex = (_a4 = node.rowIndex) != null ? _a4 : null;
+    if (rowIndex === null)
+      return;
+    if (!field || field === "#")
+      return;
+    this.gridApi.ensureIndexVisible(rowIndex, "middle");
+    this.gridApi.setFocusedCell(rowIndex, field);
+    this.gridApi.startEditingCell({ rowIndex, colKey: field });
+  }
   /**
    * 监听单元格编辑事件
    */
@@ -55633,6 +55669,24 @@ var _AgGridAdapter = class {
       this.rowHeightResetHandle = null;
     }
   }
+  findRowNodeByBlockIndex(blockIndex) {
+    if (!this.gridApi)
+      return null;
+    let match = null;
+    this.gridApi.forEachNode((node) => {
+      if (match)
+        return;
+      const data = node.data;
+      if (!data)
+        return;
+      const raw = data[ROW_ID_FIELD];
+      const parsed = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+      if (!Number.isNaN(parsed) && parsed === blockIndex) {
+        match = node;
+      }
+    });
+    return match;
+  }
 };
 var AgGridAdapter = _AgGridAdapter;
 AgGridAdapter.AUTO_SIZE_COOLDOWN_MS = 800;
@@ -55662,7 +55716,6 @@ var TableView = class extends import_obsidian.ItemView {
     this.workspaceResizeRef = null;
     this.lastContainerWidth = 0;
     this.lastContainerHeight = 0;
-    this.pendingSizeUpdateHandle = null;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -56031,10 +56084,6 @@ var TableView = class extends import_obsidian.ItemView {
       this.tableContainer.removeEventListener("keydown", this.keydownHandler);
       this.keydownHandler = null;
     }
-    if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
-      cancelAnimationFrame(this.pendingSizeUpdateHandle);
-    }
-    this.pendingSizeUpdateHandle = null;
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -56229,10 +56278,6 @@ var TableView = class extends import_obsidian.ItemView {
   updateTableContainerSize() {
     if (!this.tableContainer)
       return;
-    if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
-      cancelAnimationFrame(this.pendingSizeUpdateHandle);
-      this.pendingSizeUpdateHandle = null;
-    }
     const container = this.tableContainer;
     const parent = container.parentElement;
     container.style.removeProperty("width");
@@ -56253,6 +56298,34 @@ var TableView = class extends import_obsidian.ItemView {
       container.style.height = "100%";
     }
   }
+  focusRow(blockIndex, options) {
+    var _a4, _b2;
+    if (blockIndex === null || blockIndex === void 0 || blockIndex < 0)
+      return;
+    (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.selectRow) == null ? void 0 : _b2.call(_a4, blockIndex, {
+      ensureVisible: (options == null ? void 0 : options.ensureVisible) !== false
+    });
+    if (options == null ? void 0 : options.editFirstCell) {
+      const field = this.getFirstEditableField();
+      if (!field)
+        return;
+      const startEdit = () => {
+        var _a5, _b3;
+        (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.startEditingCell) == null ? void 0 : _b3.call(_a5, blockIndex, field);
+      };
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(startEdit);
+      } else {
+        setTimeout(startEdit, 0);
+      }
+    }
+  }
+  getFirstEditableField() {
+    if (!this.schema || this.schema.columnNames.length === 0) {
+      return null;
+    }
+    return this.schema.columnNames[0];
+  }
   /**
    * 设置右键菜单
    */
@@ -56265,6 +56338,7 @@ var TableView = class extends import_obsidian.ItemView {
       const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (blockIndex === null || blockIndex === void 0)
         return;
+      this.focusRow(blockIndex, { ensureVisible: true });
       this.showContextMenu(event, blockIndex);
     };
     this.documentClickHandler = () => {
@@ -56427,15 +56501,19 @@ var TableView = class extends import_obsidian.ItemView {
       const key = this.schema.columnNames[i];
       newBlock.data[key] = i === 0 ? `\u65B0\u6761\u76EE ${entryNumber}` : "";
     }
+    let targetIndex;
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
       this.blocks.splice(beforeRowIndex, 0, newBlock);
       console.log(`\u2705 \u5728\u884C ${beforeRowIndex} \u4E4B\u524D\u63D2\u5165\u65B0\u884C`);
+      targetIndex = beforeRowIndex;
     } else {
       this.blocks.push(newBlock);
       console.log(`\u2705 \u5728\u672B\u5C3E\u6DFB\u52A0\u65B0\u884C`);
+      targetIndex = this.blocks.length - 1;
     }
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    this.focusRow(targetIndex, { ensureVisible: true, editFirstCell: true });
     this.scheduleSave();
   }
   /**
@@ -56443,7 +56521,7 @@ var TableView = class extends import_obsidian.ItemView {
    * @param rowIndex 数据行索引
    */
   deleteRow(rowIndex) {
-    var _a4;
+    var _a4, _b2, _c;
     if (!this.schema) {
       console.error("Schema not initialized");
       return;
@@ -56456,6 +56534,12 @@ var TableView = class extends import_obsidian.ItemView {
     const deletedBlock = this.blocks.splice(rowIndex, 1)[0];
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    if (this.blocks.length === 0) {
+      (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.clearSelection) == null ? void 0 : _c.call(_b2);
+    } else {
+      const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
+      this.focusRow(nextIndex, { ensureVisible: true });
+    }
     this.scheduleSave();
     console.log(`\u2705 \u5220\u9664\u884C\uFF1A${deletedBlock.title}`);
   }
@@ -56481,6 +56565,7 @@ var TableView = class extends import_obsidian.ItemView {
     this.blocks.splice(rowIndex + 1, 0, duplicatedBlock);
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    this.focusRow(rowIndex + 1, { ensureVisible: true, editFirstCell: true });
     this.scheduleSave();
     console.log(`\u2705 \u590D\u5236\u884C\uFF1A${duplicatedBlock.title}`);
   }

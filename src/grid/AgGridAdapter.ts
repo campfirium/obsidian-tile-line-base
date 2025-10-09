@@ -11,8 +11,7 @@ import {
 	ColDef,
 	CellEditingStoppedEvent,
 	ModuleRegistry,
-	AllCommunityModule,
-	IRowNode
+	AllCommunityModule
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -270,37 +269,6 @@ export class AgGridAdapter implements GridAdapter {
 		this.queueRowHeightSync();
 	}
 
-	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {
-		if (!this.gridApi) return;
-		const node = this.findRowNodeByBlockIndex(blockIndex);
-		if (!node) return;
-		this.gridApi.deselectAll();
-		node.setSelected(true);
-		if (options?.ensureVisible) {
-			const rowIndex = node.rowIndex ?? null;
-			if (rowIndex !== null) {
-				this.gridApi.ensureIndexVisible(rowIndex, 'middle');
-			}
-		}
-	}
-
-	clearSelection(): void {
-		this.gridApi?.deselectAll();
-	}
-
-	startEditingCell(blockIndex: number, field: string): void {
-		if (!this.gridApi) return;
-		const node = this.findRowNodeByBlockIndex(blockIndex);
-		if (!node) return;
-		const rowIndex = node.rowIndex ?? null;
-		if (rowIndex === null) return;
-		if (!field || field === '#') return;
-		// 聚焦并启动编辑
-		this.gridApi.ensureIndexVisible(rowIndex, 'middle');
-		this.gridApi.setFocusedCell(rowIndex, field);
-		this.gridApi.startEditingCell({ rowIndex, colKey: field });
-	}
-
 	/**
 	 * 监听单元格编辑事件
 	 */
@@ -517,22 +485,6 @@ export class AgGridAdapter implements GridAdapter {
 			}
 			this.rowHeightResetHandle = null;
 		}
-	}
-
-	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
-		if (!this.gridApi) return null;
-		let match: IRowNode<RowData> | null = null;
-		this.gridApi.forEachNode(node => {
-			if (match) return;
-			const data = node.data as RowData | undefined;
-			if (!data) return;
-			const raw = data[ROW_ID_FIELD];
-			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
-			if (!Number.isNaN(parsed) && parsed === blockIndex) {
-				match = node as IRowNode<RowData>;
-			}
-		});
-		return match;
 	}
 
 }

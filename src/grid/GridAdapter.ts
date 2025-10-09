@@ -108,19 +108,4 @@ export interface GridAdapter {
 	 * 通知适配器网格布局即将发生变化，做预处理
 	 */
 	markLayoutDirty?(): void;
-
-	/**
-	 * 选中指定块索引对应的行
-	 */
-	selectRow?(blockIndex: number, options?: { ensureVisible?: boolean }): void;
-
-	/**
-	 * 清空当前选中状态
-	 */
-	clearSelection?(): void;
-
-	/**
-	 * 聚焦并启动指定行列的编辑模式
-	 */
-	startEditingCell?(blockIndex: number, field: string): void;
 }

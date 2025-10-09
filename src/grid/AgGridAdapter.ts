@@ -73,6 +73,12 @@ export class AgGridAdapter implements GridAdapter {
 			// 检查用户是否配置了宽度
 			const hasWidth = (col as any).width !== undefined;
 			const hasFlex = (col as any).flex !== undefined;
+			const hasExplicitWidth = hasWidth && !hasFlex;
+
+			// 保留显式宽度配置（像素值）
+			if (hasExplicitWidth) {
+				mergedColDef.suppressSizeToFit = true;
+			}
 
 			if (!hasWidth && !hasFlex) {
 				// 没有用户配置，使用智能策略：
@@ -87,6 +93,7 @@ export class AgGridAdapter implements GridAdapter {
 					// 短文本列：不设置 width/flex，后续通过 autoSize 一次性计算
 					// 设置最大宽度避免过宽
 					mergedColDef.maxWidth = 300;
+					mergedColDef.suppressSizeToFit = true; // 避免 sizeColumnsToFit 拉伸短文本列
 				}
 			}
 
@@ -350,10 +357,13 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.autoSizeColumns(shortTextColumnIds, false);
 		}
 
-		// 2. 再对所有列（包括 flex 列）执行 sizeColumnsToFit
-		// 这会让 flex 列分配剩余空间
-		console.log('🔧 执行 sizeColumnsToFit（分配剩余空间给 flex 列）');
-		this.gridApi.sizeColumnsToFit();
+		// 2. 如果存在 flex 列，让它们分配剩余空间
+		if (flexColumnIds.length > 0) {
+			console.log('🔧 执行 sizeColumnsToFit（分配剩余空间给 flex 列）');
+			this.gridApi.sizeColumnsToFit();
+		} else {
+			console.log('ℹ️ 没有 flex 列，跳过 sizeColumnsToFit');
+		}
 
 		// 3. 记录最终宽度
 		setTimeout(() => {

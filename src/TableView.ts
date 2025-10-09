@@ -481,6 +481,8 @@ export class TableView extends ItemView {
 		// 创建并挂载新的表格
 		this.gridAdapter = new AgGridAdapter();
 		this.gridAdapter.mount(tableContainer, columns, data);
+		this.tableContainer = tableContainer;
+		this.updateTableContainerSize();
 
 		// 监听单元格编辑事件
 		this.gridAdapter.onCellEdit((event) => {
@@ -638,6 +640,7 @@ export class TableView extends ItemView {
 						height: entry.contentRect.height
 					});
 
+					this.updateTableContainerSize();
 					this.scheduleColumnResize('ResizeObserver');
 				}
 			}
@@ -661,6 +664,7 @@ export class TableView extends ItemView {
 					containerHeight: tableContainer.offsetHeight
 				});
 			}
+			this.updateTableContainerSize();
 			this.scheduleColumnResize('window resize');
 		};
 
@@ -684,6 +688,7 @@ export class TableView extends ItemView {
 						height: viewport?.height,
 						scale: viewport?.scale
 					});
+					this.updateTableContainerSize();
 					this.scheduleColumnResize('visualViewport resize');
 				};
 				this.visualViewportTarget.addEventListener('resize', this.visualViewportResizeHandler);
@@ -704,6 +709,7 @@ export class TableView extends ItemView {
 					height: tableContainer.offsetHeight
 				});
 			}
+			this.updateTableContainerSize();
 			this.scheduleColumnResize('workspace resize');
 		});
 
@@ -779,9 +785,44 @@ export class TableView extends ItemView {
 
 				this.lastContainerWidth = currentWidth;
 				this.lastContainerHeight = currentHeight;
+				this.updateTableContainerSize();
 				this.scheduleColumnResize('size polling');
 			}
 		}, 400);
+	}
+
+	private updateTableContainerSize(): void {
+		if (!this.tableContainer) return;
+
+		const container = this.tableContainer;
+		const parent = container.parentElement as HTMLElement | null;
+		const target = parent ?? container;
+
+		const rect = target.getBoundingClientRect();
+
+		if (rect.width > 0) {
+			const widthPx = `${rect.width}px`;
+			if (container.style.width !== widthPx) {
+				container.style.width = widthPx;
+			}
+		} else {
+			container.style.width = '100%';
+		}
+
+		if (rect.height > 0) {
+			const heightPx = `${rect.height}px`;
+			if (container.style.height !== heightPx) {
+				container.style.height = heightPx;
+			}
+		} else if (parent) {
+			const fallbackHeight = parent.offsetHeight || parent.clientHeight;
+			if (fallbackHeight > 0) {
+				const heightPx = `${fallbackHeight}px`;
+				if (container.style.height !== heightPx) {
+					container.style.height = heightPx;
+				}
+			}
+		}
 	}
 
 	/**

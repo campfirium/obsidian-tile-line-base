@@ -56233,43 +56233,24 @@ var TableView = class extends import_obsidian.ItemView {
       cancelAnimationFrame(this.pendingSizeUpdateHandle);
       this.pendingSizeUpdateHandle = null;
     }
-    const measure = () => {
-      if (!this.tableContainer)
-        return;
-      const container = this.tableContainer;
-      const parent = container.parentElement;
-      const target = parent != null ? parent : container;
-      const rect = target.getBoundingClientRect();
-      if (rect.width > 0) {
-        const widthPx = `${rect.width}px`;
-        if (container.style.width !== widthPx) {
-          container.style.width = widthPx;
-        }
-      } else {
-        container.style.width = "100%";
+    const container = this.tableContainer;
+    const parent = container.parentElement;
+    container.style.removeProperty("width");
+    container.style.maxWidth = "100%";
+    container.style.width = "100%";
+    let targetHeight = 0;
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      targetHeight = rect.height || parent.clientHeight || parent.offsetHeight;
+    }
+    if (targetHeight > 0) {
+      const heightPx = `${targetHeight}px`;
+      if (container.style.height !== heightPx) {
+        container.style.height = heightPx;
       }
-      if (rect.height > 0) {
-        const heightPx = `${rect.height}px`;
-        if (container.style.height !== heightPx) {
-          container.style.height = heightPx;
-        }
-      } else if (parent) {
-        const fallbackHeight = parent.offsetHeight || parent.clientHeight;
-        if (fallbackHeight > 0) {
-          const heightPx = `${fallbackHeight}px`;
-          if (container.style.height !== heightPx) {
-            container.style.height = heightPx;
-          }
-        }
-      }
-    };
-    if (typeof requestAnimationFrame === "function") {
-      this.pendingSizeUpdateHandle = requestAnimationFrame(() => {
-        this.pendingSizeUpdateHandle = null;
-        measure();
-      });
     } else {
-      measure();
+      container.style.removeProperty("height");
+      container.style.height = "100%";
     }
   }
   /**

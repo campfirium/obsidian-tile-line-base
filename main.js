@@ -55948,6 +55948,8 @@ var TableView = class extends import_obsidian.ItemView {
     }
     this.gridAdapter = new AgGridAdapter();
     this.gridAdapter.mount(tableContainer, columns, data);
+    this.tableContainer = tableContainer;
+    this.updateTableContainerSize();
     this.gridAdapter.onCellEdit((event) => {
       this.onCellEdit(event);
     });
@@ -56062,6 +56064,7 @@ var TableView = class extends import_obsidian.ItemView {
             width: entry.contentRect.width,
             height: entry.contentRect.height
           });
+          this.updateTableContainerSize();
           this.scheduleColumnResize("ResizeObserver");
         }
       }
@@ -56081,6 +56084,7 @@ var TableView = class extends import_obsidian.ItemView {
           containerHeight: tableContainer.offsetHeight
         });
       }
+      this.updateTableContainerSize();
       this.scheduleColumnResize("window resize");
     };
     const ownerWindow = tableContainer.ownerDocument.defaultView;
@@ -56101,6 +56105,7 @@ var TableView = class extends import_obsidian.ItemView {
             height: viewport == null ? void 0 : viewport.height,
             scale: viewport == null ? void 0 : viewport.scale
           });
+          this.updateTableContainerSize();
           this.scheduleColumnResize("visualViewport resize");
         };
         this.visualViewportTarget.addEventListener("resize", this.visualViewportResizeHandler);
@@ -56119,6 +56124,7 @@ var TableView = class extends import_obsidian.ItemView {
           height: tableContainer.offsetHeight
         });
       }
+      this.updateTableContainerSize();
       this.scheduleColumnResize("workspace resize");
     });
     this.startSizePolling(tableContainer);
@@ -56177,9 +56183,40 @@ var TableView = class extends import_obsidian.ItemView {
         });
         this.lastContainerWidth = currentWidth;
         this.lastContainerHeight = currentHeight;
+        this.updateTableContainerSize();
         this.scheduleColumnResize("size polling");
       }
     }, 400);
+  }
+  updateTableContainerSize() {
+    if (!this.tableContainer)
+      return;
+    const container = this.tableContainer;
+    const parent = container.parentElement;
+    const target = parent != null ? parent : container;
+    const rect = target.getBoundingClientRect();
+    if (rect.width > 0) {
+      const widthPx = `${rect.width}px`;
+      if (container.style.width !== widthPx) {
+        container.style.width = widthPx;
+      }
+    } else {
+      container.style.width = "100%";
+    }
+    if (rect.height > 0) {
+      const heightPx = `${rect.height}px`;
+      if (container.style.height !== heightPx) {
+        container.style.height = heightPx;
+      }
+    } else if (parent) {
+      const fallbackHeight = parent.offsetHeight || parent.clientHeight;
+      if (fallbackHeight > 0) {
+        const heightPx = `${fallbackHeight}px`;
+        if (container.style.height !== heightPx) {
+          container.style.height = heightPx;
+        }
+      }
+    }
   }
   /**
    * 设置右键菜单

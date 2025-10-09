@@ -31,6 +31,7 @@ export class AgGridAdapter implements GridAdapter {
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
 	private lastAutoSizeTimestamp = 0;
 	private shouldAutoSizeOnNextResize = false;
+	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
 	/**
@@ -141,6 +142,7 @@ export class AgGridAdapter implements GridAdapter {
 		this.gridApi = createGrid(container, gridOptions);
 		this.lastAutoSizeTimestamp = 0;
 		this.shouldAutoSizeOnNextResize = false;
+		this.clearRowHeightResetHandle();
 
 		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
 		setTimeout(() => {
@@ -262,6 +264,11 @@ export class AgGridAdapter implements GridAdapter {
 		}
 	}
 
+	markLayoutDirty(): void {
+		this.shouldAutoSizeOnNextResize = true;
+		this.queueRowHeightSync();
+	}
+
 	/**
 	 * 监听单元格编辑事件
 	 */
@@ -286,6 +293,7 @@ export class AgGridAdapter implements GridAdapter {
 	 * 销毁表格实例
 	 */
 	destroy(): void {
+		this.clearRowHeightResetHandle();
 		if (this.gridApi) {
 			this.gridApi.destroy();
 			this.gridApi = null;
@@ -428,21 +436,38 @@ export class AgGridAdapter implements GridAdapter {
 	private queueRowHeightSync(): void {
 		if (!this.gridApi) return;
 
+		this.clearRowHeightResetHandle();
+
+		const api = this.gridApi;
+
+		const resetNodeHeights = () => {
+			if (!this.gridApi) return;
+			this.gridApi.forEachNode(node => node.setRowHeight(undefined));
+		};
+
 		const runReset = (label: string) => {
 			if (!this.gridApi) return;
 			console.log(label);
-			this.gridApi.resetRowHeights();
-			this.gridApi.onRowHeightChanged();
-			this.gridApi.refreshCells({ force: true });
+			resetNodeHeights();
+			api.stopEditing();
+			api.resetRowHeights();
+			api.onRowHeightChanged();
+			api.refreshCells({ force: true });
+			api.refreshClientSideRowModel?.('nothing');
+			api.redrawRows();
 		};
 
 		const first = () => runReset('📏 同步行高（resetRowHeights #1）');
 		const second = () => runReset('📏 同步行高（resetRowHeights #2）');
 		const third = () => runReset('📏 同步行高（resetRowHeights #3）');
 		const fourth = () => runReset('📏 同步行高（resetRowHeights #4）');
+		const fifth = () => runReset('📏 同步行高（resetRowHeights #5）');
 
 		if (typeof requestAnimationFrame === 'function') {
-			requestAnimationFrame(first);
+			this.rowHeightResetHandle = requestAnimationFrame(() => {
+				this.rowHeightResetHandle = null;
+				first();
+			});
 		} else {
 			setTimeout(first, 0);
 		}
@@ -450,5 +475,16 @@ export class AgGridAdapter implements GridAdapter {
 		setTimeout(second, 120);
 		setTimeout(third, 300);
 		setTimeout(fourth, 600);
+		setTimeout(fifth, 900);
 	}
+
+	private clearRowHeightResetHandle(): void {
+		if (this.rowHeightResetHandle !== null) {
+			if (typeof cancelAnimationFrame === 'function') {
+				cancelAnimationFrame(this.rowHeightResetHandle);
+			}
+			this.rowHeightResetHandle = null;
+		}
+	}
+
 }

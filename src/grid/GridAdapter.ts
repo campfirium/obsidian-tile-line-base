@@ -103,4 +103,9 @@ export interface GridAdapter {
 	 * 用于处理容器尺寸变化或新窗口初始化的情况
 	 */
 	resizeColumns?(): void;
+
+	/**
+	 * 通知适配器网格布局即将发生变化，做预处理
+	 */
+	markLayoutDirty?(): void;
 }

@@ -848,6 +848,7 @@ export class TableView extends ItemView {
 			// 获取点击行对应的块索引
 			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
 			if (blockIndex === null || blockIndex === undefined) return;
+			this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
 
 			// 显示自定义菜单
 			this.showContextMenu(event, blockIndex);

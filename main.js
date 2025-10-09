@@ -55522,11 +55522,15 @@ var _AgGridAdapter = class {
    * 用于处理容器尺寸变化或新窗口初始化的情况
    */
   resizeColumns() {
+    var _a4, _b2;
     if (!this.gridApi) {
       console.warn("\u26A0\uFE0F gridApi \u4E0D\u5B58\u5728\uFF0C\u8DF3\u8FC7\u5217\u5BBD\u8C03\u6574");
       return;
     }
     console.log("\u{1F504} \u5F00\u59CB\u5217\u5BBD\u8C03\u6574...");
+    const gridApiAny = this.gridApi;
+    (_a4 = gridApiAny == null ? void 0 : gridApiAny.doLayout) == null ? void 0 : _a4.call(gridApiAny);
+    (_b2 = gridApiAny == null ? void 0 : gridApiAny.checkGridSize) == null ? void 0 : _b2.call(gridApiAny);
     const allColumns = this.gridApi.getAllDisplayedColumns() || [];
     console.log(`\u{1F4CA} \u5F53\u524D\u5217\u6570: ${allColumns.length}`);
     const flexColumnIds = [];
@@ -55567,6 +55571,7 @@ var _AgGridAdapter = class {
       console.log("\u2139\uFE0F \u6CA1\u6709 flex \u5217\uFF0C\u8DF3\u8FC7 sizeColumnsToFit");
     }
     this.queueRowHeightSync();
+    this.gridApi.refreshCells({ force: true });
     setTimeout(() => {
       const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
       console.log(`\u2705 \u5217\u5BBD\u8C03\u6574\u5B8C\u6210\uFF0C\u603B\u5BBD\u5EA6: ${totalWidth}px`);
@@ -55580,10 +55585,13 @@ var _AgGridAdapter = class {
         return;
       console.log(label);
       this.gridApi.resetRowHeights();
+      this.gridApi.onRowHeightChanged();
+      this.gridApi.refreshCells({ force: true });
     };
     const first = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #1\uFF09");
     const second = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #2\uFF09");
     const third = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #3\uFF09");
+    const fourth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #4\uFF09");
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(first);
     } else {
@@ -55591,6 +55599,7 @@ var _AgGridAdapter = class {
     }
     setTimeout(second, 120);
     setTimeout(third, 300);
+    setTimeout(fourth, 600);
   }
 };
 var AgGridAdapter = _AgGridAdapter;

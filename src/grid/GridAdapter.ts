@@ -6,6 +6,8 @@
  * 而不需要修改业务逻辑代码。
  */
 
+export const ROW_ID_FIELD = '__tlb_row_id';
+
 /**
  * 列定义
  */
@@ -31,6 +33,7 @@ export interface CellEditEvent {
 	field: string;      // 字段名
 	newValue: string;   // 新值
 	oldValue: string;   // 旧值
+	rowData: RowData;   // 当前行数据
 }
 
 /**
@@ -84,14 +87,14 @@ export interface GridAdapter {
 
 	/**
 	 * 获取当前选中的行索引
-	 * @returns 选中行的索引数组，无选中时返回空数组
+	 * @returns 选中行对应的块索引数组，无选中时返回空数组
 	 */
 	getSelectedRows(): number[];
 
 	/**
-	 * 根据鼠标事件获取行索引
+	 * 根据鼠标事件获取块索引
 	 * @param event 鼠标事件
-	 * @returns 行索引，如果未找到则返回 null
+	 * @returns 块索引，如果未找到则返回 null
 	 */
 	getRowIndexFromEvent(event: MouseEvent): number | null;
 

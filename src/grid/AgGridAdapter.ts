@@ -18,7 +18,8 @@ import {
 	ColumnDef,
 	RowData,
 	CellEditEvent,
-	HeaderEditEvent
+	HeaderEditEvent,
+	ROW_ID_FIELD
 } from './GridAdapter';
 
 // 注册 AG Grid Community 模块
@@ -239,7 +240,8 @@ export class AgGridAdapter implements GridAdapter {
 					rowIndex: rowIndex,
 					field: field,
 					newValue: newStr,
-					oldValue: oldStr
+					oldValue: oldStr,
+					rowData: event.data as RowData
 				});
 			} else {
 				console.log('❌ No change detected, skipping callback');
@@ -291,21 +293,31 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	/**
-	 * 获取当前选中的行索引
+	 * 获取当前选中的块索引
 	 */
 	getSelectedRows(): number[] {
 		if (!this.gridApi) return [];
 
 		const selectedNodes = this.gridApi.getSelectedNodes();
-		return selectedNodes
-			.map(node => node.rowIndex)
-			.filter(idx => idx !== null && idx !== undefined) as number[];
+		const blockIndexes: number[] = [];
+
+		for (const node of selectedNodes) {
+			const data = node.data as RowData | undefined;
+			if (!data) continue;
+			const raw = data[ROW_ID_FIELD];
+			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+			if (!Number.isNaN(parsed)) {
+				blockIndexes.push(parsed);
+			}
+		}
+
+		return blockIndexes;
 	}
 
 	/**
-	 * 根据鼠标事件获取行索引
+	 * 根据鼠标事件获取块索引
 	 * @param event 鼠标事件
-	 * @returns 行索引，如果未找到则返回 null
+	 * @returns 块索引，如果未找到则返回 null
 	 */
 	getRowIndexFromEvent(event: MouseEvent): number | null {
 		if (!this.gridApi) return null;
@@ -315,8 +327,19 @@ export class AgGridAdapter implements GridAdapter {
 
 		if (!rowElement) return null;
 
-		const rowIndex = rowElement.getAttribute('row-index');
-		return rowIndex !== null ? parseInt(rowIndex, 10) : null;
+		const rowIndexAttr = rowElement.getAttribute('row-index');
+		if (rowIndexAttr === null) return null;
+
+		const displayIndex = parseInt(rowIndexAttr, 10);
+		if (Number.isNaN(displayIndex)) return null;
+
+		const rowNode = this.gridApi.getDisplayedRowAtIndex(displayIndex);
+		const data = rowNode?.data as RowData | undefined;
+		if (!data) return null;
+
+		const raw = data[ROW_ID_FIELD];
+		const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+		return Number.isNaN(parsed) ? null : parsed;
 	}
 
 	/**

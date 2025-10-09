@@ -354,6 +354,11 @@ export class AgGridAdapter implements GridAdapter {
 
 		console.log('🔄 开始列宽调整...');
 
+		// 先触发一次布局刷新，确保网格识别最新容器尺寸（不同版本API兼容）
+		const gridApiAny = this.gridApi as any;
+		gridApiAny?.doLayout?.();
+		gridApiAny?.checkGridSize?.();
+
 		// 获取当前容器信息
 		const allColumns = this.gridApi.getAllDisplayedColumns() || [];
 		console.log(`📊 当前列数: ${allColumns.length}`);
@@ -410,6 +415,9 @@ export class AgGridAdapter implements GridAdapter {
 		// 3. 在下一帧重算行高，确保 wrapText + autoHeight 及时响应宽度变化
 		this.queueRowHeightSync();
 
+		// 额外刷新单元格，帮助立即应用新宽度
+		this.gridApi.refreshCells({ force: true });
+
 		// 4. 记录最终宽度
 		setTimeout(() => {
 			const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
@@ -424,11 +432,14 @@ export class AgGridAdapter implements GridAdapter {
 			if (!this.gridApi) return;
 			console.log(label);
 			this.gridApi.resetRowHeights();
+			this.gridApi.onRowHeightChanged();
+			this.gridApi.refreshCells({ force: true });
 		};
 
 		const first = () => runReset('📏 同步行高（resetRowHeights #1）');
 		const second = () => runReset('📏 同步行高（resetRowHeights #2）');
 		const third = () => runReset('📏 同步行高（resetRowHeights #3）');
+		const fourth = () => runReset('📏 同步行高（resetRowHeights #4）');
 
 		if (typeof requestAnimationFrame === 'function') {
 			requestAnimationFrame(first);
@@ -438,5 +449,6 @@ export class AgGridAdapter implements GridAdapter {
 
 		setTimeout(second, 120);
 		setTimeout(third, 300);
+		setTimeout(fourth, 600);
 	}
 }

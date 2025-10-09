@@ -28,6 +28,9 @@ export class AgGridAdapter implements GridAdapter {
 	private gridApi: GridApi | null = null;
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
+	private lastAutoSizeTimestamp = 0;
+	private shouldAutoSizeOnNextResize = false;
+	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
 	/**
 	 * 挂载表格到指定容器
@@ -135,10 +138,13 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
+		this.lastAutoSizeTimestamp = 0;
+		this.shouldAutoSizeOnNextResize = false;
 
 		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
 		setTimeout(() => {
 			this.autoSizeShortTextColumns(colDefs);
+			this.shouldAutoSizeOnNextResize = false;
 		}, 100);
 	}
 
@@ -247,6 +253,10 @@ export class AgGridAdapter implements GridAdapter {
 	updateData(rows: RowData[]): void {
 		if (this.gridApi) {
 			this.gridApi.setGridOption('rowData', rows);
+			// 允许下一次 resizeColumns 重启 autoSize，确保新数据也能触发宽度调整
+			this.lastAutoSizeTimestamp = 0;
+			this.shouldAutoSizeOnNextResize = true;
+			this.queueRowHeightSync();
 		}
 	}
 
@@ -352,9 +362,18 @@ export class AgGridAdapter implements GridAdapter {
 		console.log(`📊 列分类: flex列=${flexColumnIds.length}, 固定宽度列=${fixedWidthColumnIds.length}, 短文本列=${shortTextColumnIds.length}`);
 
 		// 1. 先对短文本列执行 autoSize（计算内容宽度）
-		if (shortTextColumnIds.length > 0) {
+		const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+		const shouldAutoSize = now - this.lastAutoSizeTimestamp >= AgGridAdapter.AUTO_SIZE_COOLDOWN_MS;
+
+		if (shortTextColumnIds.length > 0 && shouldAutoSize && this.shouldAutoSizeOnNextResize) {
 			console.log('🔧 调整短文本列:', shortTextColumnIds);
 			this.gridApi.autoSizeColumns(shortTextColumnIds, false);
+			this.lastAutoSizeTimestamp = now;
+			this.shouldAutoSizeOnNextResize = false;
+		} else if (shortTextColumnIds.length > 0 && this.shouldAutoSizeOnNextResize) {
+			console.log('⏭️ 跳过 autoSize（冷却中）');
+		} else if (shortTextColumnIds.length > 0) {
+			console.log('⏭️ 跳过 autoSize（未标记需要）');
 		}
 
 		// 2. 如果存在 flex 列，让它们分配剩余空间
@@ -365,10 +384,36 @@ export class AgGridAdapter implements GridAdapter {
 			console.log('ℹ️ 没有 flex 列，跳过 sizeColumnsToFit');
 		}
 
-		// 3. 记录最终宽度
+		// 3. 在下一帧重算行高，确保 wrapText + autoHeight 及时响应宽度变化
+		this.queueRowHeightSync();
+
+		// 4. 记录最终宽度
 		setTimeout(() => {
 			const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
 			console.log(`✅ 列宽调整完成，总宽度: ${totalWidth}px`);
 		}, 50);
+	}
+
+	private queueRowHeightSync(): void {
+		if (!this.gridApi) return;
+
+		const runReset = (label: string) => {
+			if (!this.gridApi) return;
+			console.log(label);
+			this.gridApi.resetRowHeights();
+		};
+
+		const first = () => runReset('📏 同步行高（resetRowHeights #1）');
+		const second = () => runReset('📏 同步行高（resetRowHeights #2）');
+		const third = () => runReset('📏 同步行高（resetRowHeights #3）');
+
+		if (typeof requestAnimationFrame === 'function') {
+			requestAnimationFrame(first);
+		} else {
+			setTimeout(first, 0);
+		}
+
+		setTimeout(second, 120);
+		setTimeout(third, 300);
 	}
 }

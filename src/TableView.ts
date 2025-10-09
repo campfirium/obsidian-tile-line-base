@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf, TFile, EventRef } from "obsidian";
-import { GridAdapter, ColumnDef, RowData } from "./grid/GridAdapter";
+import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
@@ -313,6 +313,7 @@ export class TableView extends ItemView {
 
 			// 序号列（从 1 开始）
 			row['#'] = String(i + 1);
+			row[ROW_ID_FIELD] = String(i);
 
 			// 所有列都从 block.data 提取
 			for (const key of schema.columnNames) {
@@ -483,7 +484,7 @@ export class TableView extends ItemView {
 
 		// 监听单元格编辑事件
 		this.gridAdapter.onCellEdit((event) => {
-			this.onCellEdit(event.rowIndex, event.field, event.newValue);
+			this.onCellEdit(event);
 		});
 
 		// 监听表头编辑事件（暂未实现）
@@ -797,12 +798,12 @@ export class TableView extends ItemView {
 		this.contextMenuHandler = (event: MouseEvent) => {
 			event.preventDefault();
 
-			// 获取点击的行索引
-			const rowIndex = this.gridAdapter?.getRowIndexFromEvent(event);
-			if (rowIndex === null || rowIndex === undefined) return;
+			// 获取点击行对应的块索引
+			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
+			if (blockIndex === null || blockIndex === undefined) return;
 
 			// 显示自定义菜单
-			this.showContextMenu(event, rowIndex);
+			this.showContextMenu(event, blockIndex);
 		};
 
 		// 创建并保存点击处理器（点击其他地方隐藏菜单）
@@ -855,7 +856,7 @@ export class TableView extends ItemView {
 	/**
 	 * 显示右键菜单
 	 */
-	private showContextMenu(event: MouseEvent, rowIndex: number): void {
+	private showContextMenu(event: MouseEvent, blockIndex: number): void {
 		// 移除旧菜单
 		this.hideContextMenu();
 
@@ -867,7 +868,7 @@ export class TableView extends ItemView {
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
 		insertAbove.createSpan({ text: '在上方插入行' });
 		insertAbove.addEventListener('click', () => {
-			this.addRow(rowIndex);  // 在当前行之前插入
+			this.addRow(blockIndex);  // 在当前行之前插入
 			this.hideContextMenu();
 		});
 
@@ -875,7 +876,7 @@ export class TableView extends ItemView {
 		const insertBelow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
 		insertBelow.createSpan({ text: '在下方插入行' });
 		insertBelow.addEventListener('click', () => {
-			this.addRow(rowIndex + 1);  // 在当前行之后插入
+			this.addRow(blockIndex + 1);  // 在当前行之后插入
 			this.hideContextMenu();
 		});
 
@@ -886,7 +887,7 @@ export class TableView extends ItemView {
 		const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
 		deleteRow.createSpan({ text: '删除此行' });
 		deleteRow.addEventListener('click', () => {
-			this.deleteRow(rowIndex);
+			this.deleteRow(blockIndex);
 			this.hideContextMenu();
 		});
 
@@ -908,8 +909,9 @@ export class TableView extends ItemView {
 	/**
 	 * 处理单元格编辑（Key:Value 格式）
 	 */
-	private onCellEdit(rowIndex: number, field: string, newValue: string): void {
-		console.log('📝 TableView onCellEdit called:', { rowIndex, field, newValue });
+	private onCellEdit(event: CellEditEvent): void {
+		const { rowData, field, newValue, rowIndex } = event;
+		console.log('📝 TableView onCellEdit called:', { rowIndex, field, newValue, rowData });
 
 		// 序号列不可编辑，直接返回
 		if (field === '#') {
@@ -922,23 +924,51 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		// rowIndex 直接对应 blocks[rowIndex]（没有模板H2）
-		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-			console.error('Invalid row index:', rowIndex);
+		const blockIndex = this.getBlockIndexFromRowData(rowData);
+		if (blockIndex === null) {
+			console.error('无法解析行对应的块索引', { rowData });
 			return;
 		}
 
-		const block = this.blocks[rowIndex];
+		// blockIndex 直接对应 blocks[blockIndex]（没有模板H2）
+		if (blockIndex < 0 || blockIndex >= this.blocks.length) {
+			console.error('Invalid block index:', blockIndex);
+			return;
+		}
+
+		const block = this.blocks[blockIndex];
 
 		// 所有列都更新 data[key]
 		block.data[field] = newValue;
-		console.log(`更新数据 [${rowIndex}][${field}]:`, newValue);
+		console.log(`更新数据 [${blockIndex}][${field}]:`, newValue);
 
 		// 打印更新后的 blocks 数组
 		console.log('Updated blocks:', this.blocks);
 
 		// 触发保存
 		this.scheduleSave();
+	}
+
+	private getBlockIndexFromRowData(rowData: RowData | undefined): number | null {
+		if (!rowData) return null;
+
+		const direct = rowData[ROW_ID_FIELD];
+		if (direct !== undefined) {
+			const parsed = parseInt(String(direct), 10);
+			if (!Number.isNaN(parsed)) {
+				return parsed;
+			}
+		}
+
+		const fallback = rowData['#'];
+		if (fallback !== undefined) {
+			const parsedFallback = parseInt(String(fallback), 10) - 1;
+			if (!Number.isNaN(parsedFallback)) {
+				return parsedFallback;
+			}
+		}
+
+		return null;
 	}
 
 	/**

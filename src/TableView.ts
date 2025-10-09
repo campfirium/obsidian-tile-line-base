@@ -52,6 +52,7 @@ export class TableView extends ItemView {
 	private workspaceResizeRef: EventRef | null = null;
 	private lastContainerWidth: number = 0;
 	private lastContainerHeight: number = 0;
+	private pendingSizeUpdateHandle: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -555,6 +556,11 @@ export class TableView extends ItemView {
 			this.keydownHandler = null;
 		}
 
+		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
+			cancelAnimationFrame(this.pendingSizeUpdateHandle);
+		}
+		this.pendingSizeUpdateHandle = null;
+
 		// 移除 ResizeObserver
 		if (this.resizeObserver) {
 			this.resizeObserver.disconnect();
@@ -795,6 +801,11 @@ export class TableView extends ItemView {
 	private updateTableContainerSize(): void {
 		if (!this.tableContainer) return;
 
+		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
+			cancelAnimationFrame(this.pendingSizeUpdateHandle);
+			this.pendingSizeUpdateHandle = null;
+		}
+
 		const container = this.tableContainer;
 		const parent = container.parentElement as HTMLElement | null;
 
@@ -820,33 +831,6 @@ export class TableView extends ItemView {
 		}
 	}
 
-	private focusRow(blockIndex: number, options?: { ensureVisible?: boolean; editFirstCell?: boolean }): void {
-		if (blockIndex === null || blockIndex === undefined || blockIndex < 0) return;
-		this.gridAdapter?.selectRow?.(blockIndex, {
-			ensureVisible: options?.ensureVisible !== false
-		});
-
-		if (options?.editFirstCell) {
-			const field = this.getFirstEditableField();
-			if (!field) return;
-			const startEdit = () => {
-				this.gridAdapter?.startEditingCell?.(blockIndex, field);
-			};
-			if (typeof requestAnimationFrame === 'function') {
-				requestAnimationFrame(startEdit);
-			} else {
-				setTimeout(startEdit, 0);
-			}
-		}
-	}
-
-	private getFirstEditableField(): string | null {
-		if (!this.schema || this.schema.columnNames.length === 0) {
-			return null;
-		}
-		return this.schema.columnNames[0];
-	}
-
 	/**
 	 * 设置右键菜单
 	 */
@@ -864,7 +848,6 @@ export class TableView extends ItemView {
 			// 获取点击行对应的块索引
 			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
 			if (blockIndex === null || blockIndex === undefined) return;
-			this.focusRow(blockIndex, { ensureVisible: true });
 
 			// 显示自定义菜单
 			this.showContextMenu(event, blockIndex);
@@ -1094,23 +1077,19 @@ export class TableView extends ItemView {
 			newBlock.data[key] = (i === 0) ? `新条目 ${entryNumber}` : '';
 		}
 
-		let targetIndex: number;
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）
 			this.blocks.splice(beforeRowIndex, 0, newBlock);
 			console.log(`✅ 在行 ${beforeRowIndex} 之前插入新行`);
-			targetIndex = beforeRowIndex;
 		} else {
 			// 在末尾插入
 			this.blocks.push(newBlock);
 			console.log(`✅ 在末尾添加新行`);
-			targetIndex = this.blocks.length - 1;
 		}
 
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
-		this.focusRow(targetIndex, { ensureVisible: true, editFirstCell: true });
 
 		// 触发保存
 		this.scheduleSave();
@@ -1140,13 +1119,6 @@ export class TableView extends ItemView {
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
-
-		if (this.blocks.length === 0) {
-			this.gridAdapter?.clearSelection?.();
-		} else {
-			const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
-			this.focusRow(nextIndex, { ensureVisible: true });
-		}
 
 		// 触发保存
 		this.scheduleSave();
@@ -1183,7 +1155,6 @@ export class TableView extends ItemView {
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
-		this.focusRow(rowIndex + 1, { ensureVisible: true, editFirstCell: true });
 
 		// 触发保存
 		this.scheduleSave();

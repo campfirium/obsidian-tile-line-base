@@ -108,4 +108,11 @@ export interface GridAdapter {
 	 * 通知适配器网格布局即将发生变化，做预处理
 	 */
 	markLayoutDirty?(): void;
+
+	/**
+	 * 选中指定块索引对应的行
+	 * @param blockIndex 块索引
+	 * @param options 选项：是否确保在视口内
+	 */
+	selectRow?(blockIndex: number, options?: { ensureVisible?: boolean }): void;
 }

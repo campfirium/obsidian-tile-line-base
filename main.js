@@ -55451,6 +55451,22 @@ var _AgGridAdapter = class {
     this.shouldAutoSizeOnNextResize = true;
     this.queueRowHeightSync();
   }
+  selectRow(blockIndex, options) {
+    var _a4;
+    if (!this.gridApi)
+      return;
+    const node = this.findRowNodeByBlockIndex(blockIndex);
+    if (!node)
+      return;
+    this.gridApi.deselectAll();
+    node.setSelected(true, true);
+    if ((options == null ? void 0 : options.ensureVisible) !== false) {
+      const rowIndex = (_a4 = node.rowIndex) != null ? _a4 : null;
+      if (rowIndex !== null) {
+        this.gridApi.ensureIndexVisible(rowIndex, "middle");
+      }
+    }
+  }
   /**
    * 监听单元格编辑事件
    */
@@ -55632,6 +55648,24 @@ var _AgGridAdapter = class {
       }
       this.rowHeightResetHandle = null;
     }
+  }
+  findRowNodeByBlockIndex(blockIndex) {
+    if (!this.gridApi)
+      return null;
+    let match = null;
+    this.gridApi.forEachNode((node) => {
+      if (match)
+        return;
+      const data = node.data;
+      if (!data)
+        return;
+      const raw = data[ROW_ID_FIELD];
+      const parsed = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+      if (!Number.isNaN(parsed) && parsed === blockIndex) {
+        match = node;
+      }
+    });
+    return match;
   }
 };
 var AgGridAdapter = _AgGridAdapter;
@@ -56260,11 +56294,12 @@ var TableView = class extends import_obsidian.ItemView {
     this.cleanupEventListeners();
     this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
-      var _a4;
+      var _a4, _b2, _c;
       event.preventDefault();
       const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (blockIndex === null || blockIndex === void 0)
         return;
+      (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.selectRow) == null ? void 0 : _c.call(_b2, blockIndex, { ensureVisible: true });
       this.showContextMenu(event, blockIndex);
     };
     this.documentClickHandler = () => {

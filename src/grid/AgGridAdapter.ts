@@ -11,7 +11,8 @@ import {
 	ColDef,
 	CellEditingStoppedEvent,
 	ModuleRegistry,
-	AllCommunityModule
+	AllCommunityModule,
+	IRowNode
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -269,6 +270,22 @@ export class AgGridAdapter implements GridAdapter {
 		this.queueRowHeightSync();
 	}
 
+	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {
+		if (!this.gridApi) return;
+		const node = this.findRowNodeByBlockIndex(blockIndex);
+		if (!node) return;
+
+		this.gridApi.deselectAll();
+		node.setSelected(true, true);
+
+		if (options?.ensureVisible !== false) {
+			const rowIndex = node.rowIndex ?? null;
+			if (rowIndex !== null) {
+				this.gridApi.ensureIndexVisible(rowIndex, 'middle');
+			}
+		}
+	}
+
 	/**
 	 * 监听单元格编辑事件
 	 */
@@ -485,6 +502,24 @@ export class AgGridAdapter implements GridAdapter {
 			}
 			this.rowHeightResetHandle = null;
 		}
+	}
+
+	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
+		if (!this.gridApi) return null;
+
+		let match: IRowNode<RowData> | null = null;
+		this.gridApi.forEachNode(node => {
+			if (match) return;
+			const data = node.data as RowData | undefined;
+			if (!data) return;
+			const raw = data[ROW_ID_FIELD];
+			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+			if (!Number.isNaN(parsed) && parsed === blockIndex) {
+				match = node as IRowNode<RowData>;
+			}
+		});
+
+		return match;
 	}
 
 }

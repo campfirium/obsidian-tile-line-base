@@ -55320,16 +55320,38 @@ var _AgGridAdapter = class {
       columnDefs: colDefs,
       rowData: rows,
       // 编辑配置（使用单元格编辑模式而非整行编辑）
-      singleClickEdit: true,
-      // 单击即可编辑
+      singleClickEdit: false,
+      // 禁用单击编辑，需要双击或 F2
       stopEditingWhenCellsLoseFocus: true,
       // 失焦时停止编辑
+      // Enter 键导航配置（Excel 风格）
+      enterNavigatesVertically: true,
+      // Enter 键垂直导航
+      enterNavigatesVerticallyAfterEdit: true,
+      // 编辑后 Enter 垂直导航
       // 行选择配置
       rowSelection: "single",
       // 单行选择
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
+      },
+      onCellKeyDown: (event) => {
+        const keyEvent = event.event;
+        if ((keyEvent == null ? void 0 : keyEvent.key) === "Enter") {
+          const api = event.api;
+          const rowIndex = event.rowIndex;
+          if (!("column" in event) || !event.column)
+            return;
+          const colId = event.column.getColId();
+          const totalRows = api.getDisplayedRowCount();
+          if (rowIndex === totalRows - 1 && colId && this.enterAtLastRowCallback) {
+            setTimeout(() => {
+              var _a4;
+              (_a4 = this.enterAtLastRowCallback) == null ? void 0 : _a4.call(this, colId);
+            }, 50);
+          }
+        }
       },
       // 默认列配置
       defaultColDef: {
@@ -55667,6 +55689,48 @@ var _AgGridAdapter = class {
     });
     return match;
   }
+  /**
+   * 开始编辑当前聚焦的单元格
+   */
+  startEditingFocusedCell() {
+    if (!this.gridApi)
+      return;
+    const focusedCell = this.gridApi.getFocusedCell();
+    if (!focusedCell)
+      return;
+    this.gridApi.startEditingCell({
+      rowIndex: focusedCell.rowIndex,
+      colKey: focusedCell.column.getColId()
+    });
+  }
+  /**
+   * 获取当前聚焦的单元格信息
+   */
+  getFocusedCell() {
+    if (!this.gridApi)
+      return null;
+    const focusedCell = this.gridApi.getFocusedCell();
+    if (!focusedCell)
+      return null;
+    const rowNode = this.gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
+    const data = rowNode == null ? void 0 : rowNode.data;
+    if (!data)
+      return null;
+    const raw = data[ROW_ID_FIELD];
+    const blockIndex = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+    if (Number.isNaN(blockIndex))
+      return null;
+    return {
+      rowIndex: blockIndex,
+      field: focusedCell.column.getColId()
+    };
+  }
+  /**
+   * 监听 Enter 键在最后一行按下的事件
+   */
+  onEnterAtLastRow(callback) {
+    this.enterAtLastRowCallback = callback;
+  }
 };
 var AgGridAdapter = _AgGridAdapter;
 AgGridAdapter.AUTO_SIZE_COOLDOWN_MS = 800;
@@ -55958,6 +56022,7 @@ var TableView = class extends import_obsidian.ItemView {
     container.addClass("tile-line-base-view");
   }
   async render() {
+    var _a4, _b2;
     const container = this.containerEl.children[1];
     container.empty();
     if (!this.file) {
@@ -55988,13 +56053,13 @@ var TableView = class extends import_obsidian.ItemView {
         // 序号列只读
       },
       ...this.schema.columnNames.map((name) => {
-        var _a4;
+        var _a5;
         const baseColDef = {
           field: name,
           headerName: name,
           editable: true
         };
-        if ((_a4 = this.schema) == null ? void 0 : _a4.columnConfigs) {
+        if ((_a5 = this.schema) == null ? void 0 : _a5.columnConfigs) {
           const config = this.schema.columnConfigs.find((c) => c.name === name);
           if (config) {
             console.log(`\u{1F527} \u914D\u7F6E\u5217 ${name}:`, config);
@@ -56023,6 +56088,19 @@ var TableView = class extends import_obsidian.ItemView {
     this.gridAdapter.onHeaderEdit((event) => {
       console.log("\u8868\u5934\u7F16\u8F91:", event);
     });
+    (_b2 = (_a4 = this.gridAdapter).onEnterAtLastRow) == null ? void 0 : _b2.call(_a4, (field) => {
+      const totalRows = this.blocks.length;
+      this.addRow(totalRows);
+      setTimeout(() => {
+        var _a5;
+        if (this.gridAdapter) {
+          (_a5 = this.gridAdapter.gridApi) == null ? void 0 : _a5.startEditingCell({
+            rowIndex: totalRows,
+            colKey: field
+          });
+        }
+      }, 100);
+    });
     this.setupContextMenu(tableContainer);
     this.setupKeyboardShortcuts(tableContainer);
     console.log("\u{1F680} === \u5F00\u59CB\u8BBE\u7F6E ResizeObserver ===");
@@ -56030,19 +56108,19 @@ var TableView = class extends import_obsidian.ItemView {
     console.log("\u{1F680} === ResizeObserver \u8BBE\u7F6E\u5B8C\u6210 ===");
     console.log("\u{1F680} \u5B89\u6392\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08100ms, 300ms, 800ms\uFF09");
     setTimeout(() => {
-      var _a4, _b2;
+      var _a5, _b3;
       console.log("\u23F0 \u6267\u884C\u7B2C1\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08100ms\uFF09");
-      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+      (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
     }, 100);
     setTimeout(() => {
-      var _a4, _b2;
+      var _a5, _b3;
       console.log("\u23F0 \u6267\u884C\u7B2C2\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08300ms\uFF09");
-      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+      (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
     }, 300);
     setTimeout(() => {
-      var _a4, _b2;
+      var _a5, _b3;
       console.log("\u23F0 \u6267\u884C\u7B2C3\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08800ms\uFF09");
-      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+      (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
     }, 800);
     console.log(`TileLineBase \u8868\u683C\u5DF2\u6E32\u67D3\uFF08AG Grid\uFF09\uFF1A${this.file.path}`);
     console.log(`Schema:`, this.schema);
@@ -56314,14 +56392,20 @@ var TableView = class extends import_obsidian.ItemView {
    */
   setupKeyboardShortcuts(tableContainer) {
     this.keydownHandler = (event) => {
-      var _a4;
+      var _a4, _b2, _c;
       const activeElement = document.activeElement;
-      if (activeElement == null ? void 0 : activeElement.classList.contains("ag-cell-edit-input")) {
-        return;
-      }
+      const isEditing2 = activeElement == null ? void 0 : activeElement.classList.contains("ag-cell-edit-input");
       const selectedRows = ((_a4 = this.gridAdapter) == null ? void 0 : _a4.getSelectedRows()) || [];
       const hasSelection = selectedRows.length > 0;
       const firstSelectedRow = hasSelection ? selectedRows[0] : null;
+      if (event.key === "F2" && !isEditing2) {
+        event.preventDefault();
+        (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.startEditingFocusedCell) == null ? void 0 : _c.call(_b2);
+        return;
+      }
+      if (isEditing2) {
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && event.key === "d") {
         event.preventDefault();
         if (hasSelection && firstSelectedRow !== null) {

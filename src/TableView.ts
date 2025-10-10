@@ -496,6 +496,22 @@ export class TableView extends ItemView {
 			console.log('表头编辑:', event);
 		});
 
+		// 监听最后一行 Enter 事件（自动新增行）
+		this.gridAdapter.onEnterAtLastRow?.((field) => {
+			const totalRows = this.blocks.length;
+			this.addRow(totalRows); // 在最后添加新行
+
+			// 延迟聚焦到新行的同一列并进入编辑
+			setTimeout(() => {
+				if (this.gridAdapter) {
+					(this.gridAdapter as any).gridApi?.startEditingCell({
+						rowIndex: totalRows,
+						colKey: field
+					});
+				}
+			}, 100);
+		});
+
 		// 添加右键菜单监听
 		this.setupContextMenu(tableContainer);
 
@@ -873,17 +889,24 @@ export class TableView extends ItemView {
 	private setupKeyboardShortcuts(tableContainer: HTMLElement): void {
 		// 创建并保存键盘事件处理器
 		this.keydownHandler = (event: KeyboardEvent) => {
-			// 如果正在编辑单元格，不触发快捷键
 			const activeElement = document.activeElement;
-			if (activeElement?.classList.contains('ag-cell-edit-input')) {
-				return;
-			}
+			const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
 
 			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
 			const hasSelection = selectedRows.length > 0;
 			const firstSelectedRow = hasSelection ? selectedRows[0] : null;
 
-			// Enter 快捷键禁用：避免误触自动插入新行
+			// F2: 进入编辑模式（Excel 风格）
+			if (event.key === 'F2' && !isEditing) {
+				event.preventDefault();
+				this.gridAdapter?.startEditingFocusedCell?.();
+				return;
+			}
+
+			// 如果正在编辑单元格，不触发其他快捷键
+			if (isEditing) {
+				return;
+			}
 
 			// Cmd+D / Ctrl+D: 复制行
 			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {

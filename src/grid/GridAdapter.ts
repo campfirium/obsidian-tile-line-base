@@ -115,4 +115,21 @@ export interface GridAdapter {
 	 * @param options 选项：是否确保在视口内
 	 */
 	selectRow?(blockIndex: number, options?: { ensureVisible?: boolean }): void;
+
+	/**
+	 * 开始编辑当前聚焦的单元格
+	 */
+	startEditingFocusedCell?(): void;
+
+	/**
+	 * 获取当前聚焦的单元格信息
+	 * @returns 聚焦单元格的行索引和列字段名，如果没有聚焦则返回 null
+	 */
+	getFocusedCell?(): { rowIndex: number; field: string } | null;
+
+	/**
+	 * 监听 Enter 键在最后一行按下的事件
+	 * @param callback 回调函数，参数为当前列字段名
+	 */
+	onEnterAtLastRow?(callback: (field: string) => void): void;
 }

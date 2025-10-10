@@ -11,14 +11,16 @@ import {
 	ColDef,
 	CellEditingStoppedEvent,
 	ModuleRegistry,
-	AllCommunityModule
+	AllCommunityModule,
+	IRowNode
 } from 'ag-grid-community';
 import {
 	GridAdapter,
 	ColumnDef,
 	RowData,
 	CellEditEvent,
-	HeaderEditEvent
+	HeaderEditEvent,
+	ROW_ID_FIELD
 } from './GridAdapter';
 
 // 注册 AG Grid Community 模块
@@ -30,6 +32,7 @@ export class AgGridAdapter implements GridAdapter {
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
 	private lastAutoSizeTimestamp = 0;
 	private shouldAutoSizeOnNextResize = false;
+	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
 	/**
@@ -140,6 +143,7 @@ export class AgGridAdapter implements GridAdapter {
 		this.gridApi = createGrid(container, gridOptions);
 		this.lastAutoSizeTimestamp = 0;
 		this.shouldAutoSizeOnNextResize = false;
+		this.clearRowHeightResetHandle();
 
 		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
 		setTimeout(() => {
@@ -239,7 +243,8 @@ export class AgGridAdapter implements GridAdapter {
 					rowIndex: rowIndex,
 					field: field,
 					newValue: newStr,
-					oldValue: oldStr
+					oldValue: oldStr,
+					rowData: event.data as RowData
 				});
 			} else {
 				console.log('❌ No change detected, skipping callback');
@@ -257,6 +262,27 @@ export class AgGridAdapter implements GridAdapter {
 			this.lastAutoSizeTimestamp = 0;
 			this.shouldAutoSizeOnNextResize = true;
 			this.queueRowHeightSync();
+		}
+	}
+
+	markLayoutDirty(): void {
+		this.shouldAutoSizeOnNextResize = true;
+		this.queueRowHeightSync();
+	}
+
+	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {
+		if (!this.gridApi) return;
+		const node = this.findRowNodeByBlockIndex(blockIndex);
+		if (!node) return;
+
+		this.gridApi.deselectAll();
+		node.setSelected(true, true);
+
+		if (options?.ensureVisible !== false) {
+			const rowIndex = node.rowIndex ?? null;
+			if (rowIndex !== null) {
+				this.gridApi.ensureIndexVisible(rowIndex, 'middle');
+			}
 		}
 	}
 
@@ -284,6 +310,7 @@ export class AgGridAdapter implements GridAdapter {
 	 * 销毁表格实例
 	 */
 	destroy(): void {
+		this.clearRowHeightResetHandle();
 		if (this.gridApi) {
 			this.gridApi.destroy();
 			this.gridApi = null;
@@ -291,21 +318,31 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	/**
-	 * 获取当前选中的行索引
+	 * 获取当前选中的块索引
 	 */
 	getSelectedRows(): number[] {
 		if (!this.gridApi) return [];
 
 		const selectedNodes = this.gridApi.getSelectedNodes();
-		return selectedNodes
-			.map(node => node.rowIndex)
-			.filter(idx => idx !== null && idx !== undefined) as number[];
+		const blockIndexes: number[] = [];
+
+		for (const node of selectedNodes) {
+			const data = node.data as RowData | undefined;
+			if (!data) continue;
+			const raw = data[ROW_ID_FIELD];
+			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+			if (!Number.isNaN(parsed)) {
+				blockIndexes.push(parsed);
+			}
+		}
+
+		return blockIndexes;
 	}
 
 	/**
-	 * 根据鼠标事件获取行索引
+	 * 根据鼠标事件获取块索引
 	 * @param event 鼠标事件
-	 * @returns 行索引，如果未找到则返回 null
+	 * @returns 块索引，如果未找到则返回 null
 	 */
 	getRowIndexFromEvent(event: MouseEvent): number | null {
 		if (!this.gridApi) return null;
@@ -315,8 +352,19 @@ export class AgGridAdapter implements GridAdapter {
 
 		if (!rowElement) return null;
 
-		const rowIndex = rowElement.getAttribute('row-index');
-		return rowIndex !== null ? parseInt(rowIndex, 10) : null;
+		const rowIndexAttr = rowElement.getAttribute('row-index');
+		if (rowIndexAttr === null) return null;
+
+		const displayIndex = parseInt(rowIndexAttr, 10);
+		if (Number.isNaN(displayIndex)) return null;
+
+		const rowNode = this.gridApi.getDisplayedRowAtIndex(displayIndex);
+		const data = rowNode?.data as RowData | undefined;
+		if (!data) return null;
+
+		const raw = data[ROW_ID_FIELD];
+		const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+		return Number.isNaN(parsed) ? null : parsed;
 	}
 
 	/**
@@ -330,6 +378,11 @@ export class AgGridAdapter implements GridAdapter {
 		}
 
 		console.log('🔄 开始列宽调整...');
+
+		// 先触发一次布局刷新，确保网格识别最新容器尺寸（不同版本API兼容）
+		const gridApiAny = this.gridApi as any;
+		gridApiAny?.doLayout?.();
+		gridApiAny?.checkGridSize?.();
 
 		// 获取当前容器信息
 		const allColumns = this.gridApi.getAllDisplayedColumns() || [];
@@ -387,6 +440,9 @@ export class AgGridAdapter implements GridAdapter {
 		// 3. 在下一帧重算行高，确保 wrapText + autoHeight 及时响应宽度变化
 		this.queueRowHeightSync();
 
+		// 额外刷新单元格，帮助立即应用新宽度
+		this.gridApi.refreshCells({ force: true });
+
 		// 4. 记录最终宽度
 		setTimeout(() => {
 			const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
@@ -397,23 +453,73 @@ export class AgGridAdapter implements GridAdapter {
 	private queueRowHeightSync(): void {
 		if (!this.gridApi) return;
 
+		this.clearRowHeightResetHandle();
+
+		const api = this.gridApi;
+
+		const resetNodeHeights = () => {
+			if (!this.gridApi) return;
+			this.gridApi.forEachNode(node => node.setRowHeight(undefined));
+		};
+
 		const runReset = (label: string) => {
 			if (!this.gridApi) return;
 			console.log(label);
-			this.gridApi.resetRowHeights();
+			resetNodeHeights();
+			api.stopEditing();
+			api.resetRowHeights();
+			api.onRowHeightChanged();
+			api.refreshCells({ force: true });
+			api.refreshClientSideRowModel?.('nothing');
+			api.redrawRows();
 		};
 
 		const first = () => runReset('📏 同步行高（resetRowHeights #1）');
 		const second = () => runReset('📏 同步行高（resetRowHeights #2）');
 		const third = () => runReset('📏 同步行高（resetRowHeights #3）');
+		const fourth = () => runReset('📏 同步行高（resetRowHeights #4）');
+		const fifth = () => runReset('📏 同步行高（resetRowHeights #5）');
 
 		if (typeof requestAnimationFrame === 'function') {
-			requestAnimationFrame(first);
+			this.rowHeightResetHandle = requestAnimationFrame(() => {
+				this.rowHeightResetHandle = null;
+				first();
+			});
 		} else {
 			setTimeout(first, 0);
 		}
 
 		setTimeout(second, 120);
 		setTimeout(third, 300);
+		setTimeout(fourth, 600);
+		setTimeout(fifth, 900);
 	}
+
+	private clearRowHeightResetHandle(): void {
+		if (this.rowHeightResetHandle !== null) {
+			if (typeof cancelAnimationFrame === 'function') {
+				cancelAnimationFrame(this.rowHeightResetHandle);
+			}
+			this.rowHeightResetHandle = null;
+		}
+	}
+
+	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
+		if (!this.gridApi) return null;
+
+		let match: IRowNode<RowData> | null = null;
+		this.gridApi.forEachNode(node => {
+			if (match) return;
+			const data = node.data as RowData | undefined;
+			if (!data) return;
+			const raw = data[ROW_ID_FIELD];
+			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+			if (!Number.isNaN(parsed) && parsed === blockIndex) {
+				match = node as IRowNode<RowData>;
+			}
+		});
+
+		return match;
+	}
+
 }

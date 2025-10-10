@@ -20,7 +20,8 @@
       "Bash(git fetch:*)",
       "Bash(git branch:*)",
       "Bash(cd:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

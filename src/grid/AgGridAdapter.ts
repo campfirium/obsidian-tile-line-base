@@ -120,10 +120,8 @@ export class AgGridAdapter implements GridAdapter {
 			enterNavigatesVertically: true, // Enter 键垂直导航
 			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
-			// 行选择配置（对象格式，避免废弃警告）
-			rowSelection: {
-				mode: 'singleRow'
-			},
+			// 行选择配置
+			rowSelection: 'single',
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
@@ -137,29 +135,62 @@ export class AgGridAdapter implements GridAdapter {
 				filter: true,
 				resizable: true,
 				suppressKeyboardEvent: (params: any) => {
-					// 拦截 Enter 键，在最后一行时新增行
 					const keyEvent = params.event as KeyboardEvent;
-					if (keyEvent.key === 'Enter') {
-						const rowIndex = params.node.rowIndex;
-						const totalRows = params.api.getDisplayedRowCount();
-
-						// 如果在最后一行（无论编辑还是选中），拦截 Enter 并触发新增行
-						if (rowIndex === totalRows - 1 && this.enterAtLastRowCallback) {
-							const colId = params.column.getColId();
-
-							// 拦截按键事件
-							setTimeout(() => {
-								params.api.stopEditing();
-								setTimeout(() => {
-									this.enterAtLastRowCallback?.(colId);
-								}, 10);
-							}, 0);
-
-							return true; // 拦截事件
-						}
+					if (keyEvent.key !== 'Enter') {
+						return false;
 					}
 
-					return false; // 不拦截
+					const api = params.api;
+					const rowIndex = params.node.rowIndex;
+					const totalRows = api.getDisplayedRowCount();
+					const colId = params.column.getColId();
+					const isLastRow = rowIndex === totalRows - 1;
+
+					// 未进入编辑时，Enter 只导航行
+					if (!params.editing) {
+						if (isLastRow) {
+							// 最后一行：触发新增行逻辑（交由上层处理）
+							if (this.enterAtLastRowCallback) {
+								keyEvent.preventDefault();
+								setTimeout(() => {
+									this.enterAtLastRowCallback?.(colId);
+								}, 0);
+								return true;
+							}
+
+							return false;
+						}
+
+						// 普通行：移动到下一行同一列
+						keyEvent.preventDefault();
+						setTimeout(() => {
+							const nextIndex = Math.min(rowIndex + 1, totalRows - 1);
+							if (nextIndex !== rowIndex) {
+								api.ensureIndexVisible(nextIndex);
+							}
+							api.setFocusedCell(nextIndex, colId);
+							const nextNode = api.getDisplayedRowAtIndex(nextIndex);
+							nextNode?.setSelected(true, true);
+						}, 0);
+
+						return true;
+					}
+
+					// 编辑状态下的最后一行：提交并新增行
+					if (isLastRow && this.enterAtLastRowCallback) {
+						keyEvent.preventDefault();
+						setTimeout(() => {
+							api.stopEditing();
+							setTimeout(() => {
+								this.enterAtLastRowCallback?.(colId);
+							}, 10);
+						}, 0);
+
+						return true;
+					}
+
+					// 交由 AG Grid 默认处理（例如继续向下导航）
+					return false;
 				}
 			},
 

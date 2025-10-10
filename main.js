@@ -55329,10 +55329,8 @@ var _AgGridAdapter = class {
       // Enter 键垂直导航
       enterNavigatesVerticallyAfterEdit: true,
       // 编辑后 Enter 垂直导航
-      // 行选择配置（对象格式，避免废弃警告）
-      rowSelection: {
-        mode: "singleRow"
-      },
+      // 行选择配置
+      rowSelection: "single",
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
@@ -55345,20 +55343,48 @@ var _AgGridAdapter = class {
         resizable: true,
         suppressKeyboardEvent: (params) => {
           const keyEvent = params.event;
-          if (keyEvent.key === "Enter") {
-            const rowIndex = params.node.rowIndex;
-            const totalRows = params.api.getDisplayedRowCount();
-            if (rowIndex === totalRows - 1 && this.enterAtLastRowCallback) {
-              const colId = params.column.getColId();
-              setTimeout(() => {
-                params.api.stopEditing();
+          if (keyEvent.key !== "Enter") {
+            return false;
+          }
+          const api = params.api;
+          const rowIndex = params.node.rowIndex;
+          const totalRows = api.getDisplayedRowCount();
+          const colId = params.column.getColId();
+          const isLastRow = rowIndex === totalRows - 1;
+          if (!params.editing) {
+            if (isLastRow) {
+              if (this.enterAtLastRowCallback) {
+                keyEvent.preventDefault();
                 setTimeout(() => {
                   var _a4;
                   (_a4 = this.enterAtLastRowCallback) == null ? void 0 : _a4.call(this, colId);
-                }, 10);
-              }, 0);
-              return true;
+                }, 0);
+                return true;
+              }
+              return false;
             }
+            keyEvent.preventDefault();
+            setTimeout(() => {
+              const nextIndex = Math.min(rowIndex + 1, totalRows - 1);
+              if (nextIndex !== rowIndex) {
+                api.ensureIndexVisible(nextIndex);
+              }
+              api.setFocusedCell(nextIndex, colId);
+              const nextNode = api.getDisplayedRowAtIndex(nextIndex);
+              nextNode == null ? void 0 : nextNode.setSelected(true, true);
+            }, 0);
+            return true;
+          }
+          if (isLastRow && this.enterAtLastRowCallback) {
+            keyEvent.preventDefault();
+            setTimeout(() => {
+              api.stopEditing();
+              setTimeout(() => {
+                var _a4;
+                (_a4 = this.enterAtLastRowCallback) == null ? void 0 : _a4.call(this, colId);
+              }, 10);
+            }, 0);
+            return true;
           }
           return false;
         }
@@ -56046,7 +56072,10 @@ var TableView = class extends import_obsidian.ItemView {
         const api = this.gridAdapter.gridApi;
         if (!api)
           return;
-        api.ensureIndexVisible(oldRowCount, "bottom");
+        api.ensureIndexVisible(oldRowCount);
+        const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
+        newRowNode == null ? void 0 : newRowNode.setSelected(true, true);
+        api.setFocusedCell(oldRowCount, field);
         api.startEditingCell({
           rowIndex: oldRowCount,
           colKey: field
@@ -56415,11 +56444,12 @@ var TableView = class extends import_obsidian.ItemView {
    * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
    */
   addRow(beforeRowIndex) {
-    var _a4;
+    var _a4, _b2, _c;
     if (!this.schema) {
       console.error("Schema not initialized");
       return;
     }
+    const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
     const entryNumber = this.blocks.length + 1;
     const newBlock = {
       title: "",
@@ -56436,15 +56466,41 @@ var TableView = class extends import_obsidian.ItemView {
       this.blocks.push(newBlock);
     }
     const data = this.extractTableData(this.blocks, this.schema);
-    (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    (_c = this.gridAdapter) == null ? void 0 : _c.updateData(data);
+    const insertIndex = beforeRowIndex !== void 0 && beforeRowIndex !== null ? beforeRowIndex : this.blocks.length - 1;
+    this.focusRow(insertIndex, focusedCell == null ? void 0 : focusedCell.field);
     this.scheduleSave();
+  }
+  /**
+   * 聚焦并选中指定行，保持视图位置
+   */
+  focusRow(rowIndex, field) {
+    var _a4;
+    if (!this.gridAdapter || !this.schema) {
+      return;
+    }
+    if (rowIndex < 0 || rowIndex >= this.blocks.length) {
+      return;
+    }
+    const fallbackField = (_a4 = this.schema.columnNames[0]) != null ? _a4 : null;
+    const targetField = field && field !== ROW_ID_FIELD ? field : fallbackField;
+    setTimeout(() => {
+      var _a5, _b2;
+      if (!this.gridAdapter)
+        return;
+      (_b2 = (_a5 = this.gridAdapter).selectRow) == null ? void 0 : _b2.call(_a5, rowIndex, { ensureVisible: true });
+      if (!targetField)
+        return;
+      const api = this.gridAdapter.gridApi;
+      api == null ? void 0 : api.setFocusedCell(rowIndex, targetField);
+    }, 0);
   }
   /**
    * 删除指定行（Key:Value 格式）
    * @param rowIndex 数据行索引
    */
   deleteRow(rowIndex) {
-    var _a4;
+    var _a4, _b2, _c;
     if (!this.schema) {
       console.error("Schema not initialized");
       return;
@@ -56453,10 +56509,14 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Invalid row index:", rowIndex);
       return;
     }
-    const targetBlock = this.blocks[rowIndex];
-    const deletedBlock = this.blocks.splice(rowIndex, 1)[0];
+    const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
+    this.blocks.splice(rowIndex, 1);
     const data = this.extractTableData(this.blocks, this.schema);
-    (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    (_c = this.gridAdapter) == null ? void 0 : _c.updateData(data);
+    const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
+    if (nextIndex >= 0) {
+      this.focusRow(nextIndex, focusedCell == null ? void 0 : focusedCell.field);
+    }
     this.scheduleSave();
   }
   /**
@@ -56464,7 +56524,7 @@ var TableView = class extends import_obsidian.ItemView {
    * @param rowIndex 数据行索引
    */
   duplicateRow(rowIndex) {
-    var _a4;
+    var _a4, _b2, _c;
     if (!this.schema) {
       console.error("Schema not initialized");
       return;
@@ -56473,6 +56533,7 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Invalid row index:", rowIndex);
       return;
     }
+    const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
     const sourceBlock = this.blocks[rowIndex];
     const duplicatedBlock = {
       title: sourceBlock.title,
@@ -56480,7 +56541,9 @@ var TableView = class extends import_obsidian.ItemView {
     };
     this.blocks.splice(rowIndex + 1, 0, duplicatedBlock);
     const data = this.extractTableData(this.blocks, this.schema);
-    (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    (_c = this.gridAdapter) == null ? void 0 : _c.updateData(data);
+    const newIndex = rowIndex + 1;
+    this.focusRow(newIndex, focusedCell == null ? void 0 : focusedCell.field);
     this.scheduleSave();
   }
   /**

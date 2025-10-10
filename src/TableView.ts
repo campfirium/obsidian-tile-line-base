@@ -498,7 +498,10 @@ export class TableView extends ItemView {
 				if (!api) return;
 
 				// 确保新行可见
-				api.ensureIndexVisible(oldRowCount, 'bottom');
+				api.ensureIndexVisible(oldRowCount);
+				const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
+				newRowNode?.setSelected(true, true);
+				api.setFocusedCell(oldRowCount, field);
 
 				// 开始编辑新行的同一列
 				api.startEditingCell({
@@ -1006,6 +1009,7 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 		// 计算新条目编号
 		const entryNumber = this.blocks.length + 1;
 
@@ -1034,8 +1038,39 @@ export class TableView extends ItemView {
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
 
+		const insertIndex = (beforeRowIndex !== undefined && beforeRowIndex !== null)
+			? beforeRowIndex
+			: this.blocks.length - 1;
+		this.focusRow(insertIndex, focusedCell?.field);
+
 		// 触发保存
 		this.scheduleSave();
+	}
+
+	/**
+	 * 聚焦并选中指定行，保持视图位置
+	 */
+	private focusRow(rowIndex: number, field?: string): void {
+		if (!this.gridAdapter || !this.schema) {
+			return;
+		}
+
+		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
+			return;
+		}
+
+		const fallbackField = this.schema.columnNames[0] ?? null;
+		const targetField = (field && field !== ROW_ID_FIELD) ? field : fallbackField;
+
+		setTimeout(() => {
+			if (!this.gridAdapter) return;
+			this.gridAdapter.selectRow?.(rowIndex, { ensureVisible: true });
+
+			if (!targetField) return;
+
+			const api = (this.gridAdapter as any).gridApi;
+			api?.setFocusedCell(rowIndex, targetField);
+		}, 0);
 	}
 
 	/**
@@ -1054,14 +1089,19 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		const targetBlock = this.blocks[rowIndex];
+		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 
 		// 删除块
-		const deletedBlock = this.blocks.splice(rowIndex, 1)[0];
+		this.blocks.splice(rowIndex, 1);
 
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
+
+		const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
+		if (nextIndex >= 0) {
+			this.focusRow(nextIndex, focusedCell?.field);
+		}
 
 		// 触发保存
 		this.scheduleSave();
@@ -1083,6 +1123,8 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		const focusedCell = this.gridAdapter?.getFocusedCell?.();
+
 		// 深拷贝目标块
 		const sourceBlock = this.blocks[rowIndex];
 		const duplicatedBlock: H2Block = {
@@ -1096,6 +1138,9 @@ export class TableView extends ItemView {
 		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
+
+		const newIndex = rowIndex + 1;
+		this.focusRow(newIndex, focusedCell?.field);
 
 		// 触发保存
 		this.scheduleSave();

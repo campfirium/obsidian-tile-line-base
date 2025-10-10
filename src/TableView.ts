@@ -110,7 +110,6 @@ export class TableView extends ItemView {
 			}
 		}
 
-		console.log('📋 解析头部配置块:', columnConfigs);
 		return columnConfigs;
 	}
 
@@ -130,7 +129,6 @@ export class TableView extends ItemView {
 		if (width === 'flex') {
 			(colDef as any).flex = 1;
 			(colDef as any).minWidth = 200;
-			console.log(`列 ${config.name} 使用 flex: 1（分配剩余空间）`);
 			return;
 		}
 
@@ -139,7 +137,6 @@ export class TableView extends ItemView {
 			const percentage = parseInt(width.replace('%', ''));
 			if (!isNaN(percentage)) {
 				(colDef as any).flex = percentage;
-				console.log(`列 ${config.name} 使用 flex: ${percentage}`);
 			}
 			return;
 		}
@@ -149,7 +146,6 @@ export class TableView extends ItemView {
 			const pixels = parseInt(width.replace('px', ''));
 			if (!isNaN(pixels)) {
 				(colDef as any).width = pixels;
-				console.log(`列 ${config.name} 使用固定宽度: ${pixels}px`);
 			}
 			return;
 		}
@@ -158,7 +154,6 @@ export class TableView extends ItemView {
 		const num = parseInt(width);
 		if (!isNaN(num)) {
 			(colDef as any).width = num;
-			console.log(`列 ${config.name} 使用固定宽度: ${num}px`);
 		}
 	}
 
@@ -389,7 +384,6 @@ export class TableView extends ItemView {
 		try {
 			const markdown = this.blocksToMarkdown();
 			await this.app.vault.modify(this.file, markdown);
-			console.log('✅ 文件已保存:', this.file.path);
 		} catch (error) {
 			console.error('❌ 保存失败:', error);
 		}
@@ -455,11 +449,7 @@ export class TableView extends ItemView {
 				if (this.schema?.columnConfigs) {
 					const config = this.schema.columnConfigs.find(c => c.name === name);
 					if (config) {
-						console.log(`🔧 配置列 ${name}:`, config);
 						this.applyWidthConfig(baseColDef, config);
-						console.log(`🔧 应用后的 colDef:`, baseColDef);
-					} else {
-						console.log(`⚠️ 列 ${name} 没有找到配置`);
 					}
 				}
 
@@ -493,23 +483,40 @@ export class TableView extends ItemView {
 		// 监听表头编辑事件（暂未实现）
 		this.gridAdapter.onHeaderEdit((event) => {
 			// TODO: 实现表头编辑
-			console.log('表头编辑:', event);
 		});
 
 		// 监听最后一行 Enter 事件（自动新增行）
 		this.gridAdapter.onEnterAtLastRow?.((field) => {
-			const totalRows = this.blocks.length;
-			this.addRow(totalRows); // 在最后添加新行
+			const oldRowCount = this.blocks.length;
+			this.addRow(oldRowCount); // 在最后添加新行（oldRowCount 就是新行的索引）
 
-			// 延迟聚焦到新行的同一列并进入编辑
-			setTimeout(() => {
-				if (this.gridAdapter) {
-					(this.gridAdapter as any).gridApi?.startEditingCell({
-						rowIndex: totalRows,
-						colKey: field
-					});
-				}
-			}, 100);
+			// 多次尝试聚焦和编辑，确保成功
+			const tryEdit = (attempt: number = 0) => {
+				if (!this.gridAdapter || attempt > 5) return;
+
+				const api = (this.gridAdapter as any).gridApi;
+				if (!api) return;
+
+				// 确保新行可见
+				api.ensureIndexVisible(oldRowCount, 'bottom');
+
+				// 开始编辑新行的同一列
+				api.startEditingCell({
+					rowIndex: oldRowCount,
+					colKey: field
+				});
+
+				// 如果没有成功进入编辑，延迟重试
+				setTimeout(() => {
+					const editingCells = api.getEditingCells();
+					if (editingCells.length === 0) {
+						tryEdit(attempt + 1);
+					}
+				}, 50);
+			};
+
+			// 延迟执行，等待 updateData 完成
+			setTimeout(() => tryEdit(), 50);
 		});
 
 		// 添加右键菜单监听
@@ -519,34 +526,23 @@ export class TableView extends ItemView {
 		this.setupKeyboardShortcuts(tableContainer);
 
 		// 设置容器尺寸监听（处理新窗口和窗口调整大小）
-		console.log('🚀 === 开始设置 ResizeObserver ===');
 		this.setupResizeObserver(tableContainer);
-		console.log('🚀 === ResizeObserver 设置完成 ===');
 
 		// 多次尝试调整列宽，确保在新窗口中也能正确初始化
-		console.log('🚀 安排初始化列宽调整（100ms, 300ms, 800ms）');
-
 		// 第一次：立即尝试（可能容器尺寸还未确定）
 		setTimeout(() => {
-			console.log('⏰ 执行第1次初始化列宽调整（100ms）');
 			this.gridAdapter?.resizeColumns?.();
 		}, 100);
 
 		// 第二次：延迟尝试（容器尺寸应该已确定）
 		setTimeout(() => {
-			console.log('⏰ 执行第2次初始化列宽调整（300ms）');
 			this.gridAdapter?.resizeColumns?.();
 		}, 300);
 
 		// 第三次：最后一次尝试（确保在所有布局完成后）
 		setTimeout(() => {
-			console.log('⏰ 执行第3次初始化列宽调整（800ms）');
 			this.gridAdapter?.resizeColumns?.();
 		}, 800);
-
-		console.log(`TileLineBase 表格已渲染（AG Grid）：${this.file.path}`);
-		console.log(`Schema:`, this.schema);
-		console.log(`数据行数: ${data.length}`);
 	}
 
 	/**
@@ -618,11 +614,8 @@ export class TableView extends ItemView {
 	 * 设置容器尺寸监听器（包括窗口 resize）
 	 */
 	private setupResizeObserver(tableContainer: HTMLElement): void {
-		console.log('🔧 setupResizeObserver 开始执行');
-
 		// 清理旧的 observer
 		if (this.resizeObserver) {
-			console.log('🧹 清理旧的 ResizeObserver');
 			this.resizeObserver.disconnect();
 		}
 
@@ -652,16 +645,9 @@ export class TableView extends ItemView {
 		}
 
 		// 创建新的 ResizeObserver（监听容器尺寸变化）
-		console.log('🔧 创建 ResizeObserver');
 		this.resizeObserver = new ResizeObserver((entries) => {
-			console.log('🔔 ResizeObserver 回调被触发，entries 数量:', entries.length);
 			for (const entry of entries) {
 				if (entry.target === tableContainer) {
-					console.log('📐 容器尺寸变化 (ResizeObserver):', {
-						width: entry.contentRect.width,
-						height: entry.contentRect.height
-					});
-
 					this.updateTableContainerSize();
 					this.scheduleColumnResize('ResizeObserver');
 				}
@@ -669,54 +655,26 @@ export class TableView extends ItemView {
 		});
 
 		// 开始监听容器
-		console.log('🔧 开始监听容器，容器元素:', tableContainer);
 		this.resizeObserver.observe(tableContainer);
-		console.log('✅ ResizeObserver 已开始监听');
 
 		// 创建窗口 resize 监听器（监听窗口尺寸变化）
-		console.log('🔧 创建窗口 resize 监听器');
 		this.windowResizeHandler = () => {
-			console.log('🔔 窗口 resize 事件被触发！');
-			const ownerWindowCurrent = tableContainer.ownerDocument.defaultView;
-			if (ownerWindowCurrent) {
-				console.log('📐 窗口尺寸变化 (window resize):', {
-					innerWidth: ownerWindowCurrent.innerWidth,
-					innerHeight: ownerWindowCurrent.innerHeight,
-					containerWidth: tableContainer.offsetWidth,
-					containerHeight: tableContainer.offsetHeight
-				});
-			}
 			this.updateTableContainerSize();
 			this.scheduleColumnResize('window resize');
 		};
 
 		// 获取容器所在的窗口（支持新窗口）
 		const ownerWindow = tableContainer.ownerDocument.defaultView;
-		console.log('🔧 获取窗口对象:', ownerWindow);
 		if (ownerWindow) {
 			ownerWindow.addEventListener('resize', this.windowResizeHandler);
-			console.log('✅ 已添加窗口 resize 监听器到窗口');
-			console.log('📊 当前窗口尺寸:', {
-				innerWidth: ownerWindow.innerWidth,
-				innerHeight: ownerWindow.innerHeight
-			});
 
 			if ('visualViewport' in ownerWindow && ownerWindow.visualViewport) {
 				this.visualViewportTarget = ownerWindow.visualViewport;
 				this.visualViewportResizeHandler = () => {
-					const viewport = ownerWindow.visualViewport;
-					console.log('🔔 visualViewport resize 事件被触发！', {
-						width: viewport?.width,
-						height: viewport?.height,
-						scale: viewport?.scale
-					});
 					this.updateTableContainerSize();
 					this.scheduleColumnResize('visualViewport resize');
 				};
 				this.visualViewportTarget.addEventListener('resize', this.visualViewportResizeHandler);
-				console.log('✅ 已添加 visualViewport resize 监听器');
-			} else {
-				console.log('⚠️ 当前窗口不支持 visualViewport 监听');
 			}
 		} else {
 			console.error('❌ 无法获取窗口对象！');
@@ -724,13 +682,6 @@ export class TableView extends ItemView {
 
 		// 监听 Obsidian workspace resize（覆盖跨窗口场景）
 		this.workspaceResizeRef = this.app.workspace.on('resize', () => {
-			console.log('🔔 workspace.resize 事件被触发！');
-			if (tableContainer.isConnected) {
-				console.log('📏 workspace.resize -> 容器尺寸:', {
-					width: tableContainer.offsetWidth,
-					height: tableContainer.offsetHeight
-				});
-			}
 			this.updateTableContainerSize();
 			this.scheduleColumnResize('workspace resize');
 		});
@@ -749,7 +700,6 @@ export class TableView extends ItemView {
 		}
 
 		this.resizeTimeout = setTimeout(() => {
-			console.log(`🔄 触发列宽调整 (${source})`);
 			this.gridAdapter?.markLayoutDirty?.();
 			this.gridAdapter?.resizeColumns?.();
 
@@ -760,12 +710,10 @@ export class TableView extends ItemView {
 				source === 'workspace resize'
 			) {
 				setTimeout(() => {
-					console.log(`🔄 延迟重试列宽调整 (${source} + 200ms)`);
 					this.gridAdapter?.resizeColumns?.();
 				}, 200);
 
 				setTimeout(() => {
-					console.log(`🔄 延迟重试列宽调整 (${source} + 500ms)`);
 					this.gridAdapter?.resizeColumns?.();
 				}, 500);
 			}
@@ -785,11 +733,6 @@ export class TableView extends ItemView {
 		this.lastContainerWidth = tableContainer.offsetWidth;
 		this.lastContainerHeight = tableContainer.offsetHeight;
 
-		console.log('🔁 开始尺寸轮询:', {
-			width: this.lastContainerWidth,
-			height: this.lastContainerHeight
-		});
-
 		this.sizeCheckInterval = setInterval(() => {
 			if (!tableContainer.isConnected) {
 				return;
@@ -799,13 +742,6 @@ export class TableView extends ItemView {
 			const currentHeight = tableContainer.offsetHeight;
 
 			if (currentWidth !== this.lastContainerWidth || currentHeight !== this.lastContainerHeight) {
-				console.log('🔁 尺寸轮询检测到变化:', {
-					width: currentWidth,
-					height: currentHeight,
-					previousWidth: this.lastContainerWidth,
-					previousHeight: this.lastContainerHeight
-				});
-
 				this.lastContainerWidth = currentWidth;
 				this.lastContainerHeight = currentHeight;
 				this.updateTableContainerSize();
@@ -892,21 +828,14 @@ export class TableView extends ItemView {
 			const activeElement = document.activeElement;
 			const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
 
-			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
-			const hasSelection = selectedRows.length > 0;
-			const firstSelectedRow = hasSelection ? selectedRows[0] : null;
-
-			// F2: 进入编辑模式（Excel 风格）
-			if (event.key === 'F2' && !isEditing) {
-				event.preventDefault();
-				this.gridAdapter?.startEditingFocusedCell?.();
-				return;
-			}
-
 			// 如果正在编辑单元格，不触发其他快捷键
 			if (isEditing) {
 				return;
 			}
+
+			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
+			const hasSelection = selectedRows.length > 0;
+			const firstSelectedRow = hasSelection ? selectedRows[0] : null;
 
 			// Cmd+D / Ctrl+D: 复制行
 			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
@@ -982,11 +911,9 @@ export class TableView extends ItemView {
 	 */
 	private onCellEdit(event: CellEditEvent): void {
 		const { rowData, field, newValue, rowIndex } = event;
-		console.log('📝 TableView onCellEdit called:', { rowIndex, field, newValue, rowData });
 
 		// 序号列不可编辑，直接返回
 		if (field === '#') {
-			console.log('⚠️ Ignoring edit on order column');
 			return;
 		}
 
@@ -1011,10 +938,6 @@ export class TableView extends ItemView {
 
 		// 所有列都更新 data[key]
 		block.data[field] = newValue;
-		console.log(`更新数据 [${blockIndex}][${field}]:`, newValue);
-
-		// 打印更新后的 blocks 数组
-		console.log('Updated blocks:', this.blocks);
 
 		// 触发保存
 		this.scheduleSave();
@@ -1066,8 +989,6 @@ export class TableView extends ItemView {
 			}
 		}
 
-		console.log(`✅ 列重命名: "${oldKey}" → "${newValue}"`);
-
 		// 触发保存
 		this.scheduleSave();
 	}
@@ -1104,11 +1025,9 @@ export class TableView extends ItemView {
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）
 			this.blocks.splice(beforeRowIndex, 0, newBlock);
-			console.log(`✅ 在行 ${beforeRowIndex} 之前插入新行`);
 		} else {
 			// 在末尾插入
 			this.blocks.push(newBlock);
-			console.log(`✅ 在末尾添加新行`);
 		}
 
 		// 更新 AG Grid 显示
@@ -1146,8 +1065,6 @@ export class TableView extends ItemView {
 
 		// 触发保存
 		this.scheduleSave();
-
-		console.log(`✅ 删除行：${deletedBlock.title}`);
 	}
 
 	/**
@@ -1182,8 +1099,6 @@ export class TableView extends ItemView {
 
 		// 触发保存
 		this.scheduleSave();
-
-		console.log(`✅ 复制行：${duplicatedBlock.title}`);
 	}
 
 	/**

@@ -55329,36 +55329,39 @@ var _AgGridAdapter = class {
       // Enter 键垂直导航
       enterNavigatesVerticallyAfterEdit: true,
       // 编辑后 Enter 垂直导航
-      // 行选择配置
-      rowSelection: "single",
-      // 单行选择
+      // 行选择配置（对象格式，避免废弃警告）
+      rowSelection: {
+        mode: "singleRow"
+      },
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
-      },
-      onCellKeyDown: (event) => {
-        const keyEvent = event.event;
-        if ((keyEvent == null ? void 0 : keyEvent.key) === "Enter") {
-          const api = event.api;
-          const rowIndex = event.rowIndex;
-          if (!("column" in event) || !event.column)
-            return;
-          const colId = event.column.getColId();
-          const totalRows = api.getDisplayedRowCount();
-          if (rowIndex === totalRows - 1 && colId && this.enterAtLastRowCallback) {
-            setTimeout(() => {
-              var _a4;
-              (_a4 = this.enterAtLastRowCallback) == null ? void 0 : _a4.call(this, colId);
-            }, 50);
-          }
-        }
       },
       // 默认列配置
       defaultColDef: {
         editable: true,
         sortable: true,
         filter: true,
-        resizable: true
+        resizable: true,
+        suppressKeyboardEvent: (params) => {
+          const keyEvent = params.event;
+          if (keyEvent.key === "Enter") {
+            const rowIndex = params.node.rowIndex;
+            const totalRows = params.api.getDisplayedRowCount();
+            if (rowIndex === totalRows - 1 && this.enterAtLastRowCallback) {
+              const colId = params.column.getColId();
+              setTimeout(() => {
+                params.api.stopEditing();
+                setTimeout(() => {
+                  var _a4;
+                  (_a4 = this.enterAtLastRowCallback) == null ? void 0 : _a4.call(this, colId);
+                }, 10);
+              }, 0);
+              return true;
+            }
+          }
+          return false;
+        }
       },
       // 启用单元格复制粘贴
       enableCellTextSelection: true,
@@ -55407,14 +55410,7 @@ var _AgGridAdapter = class {
       }
     }
     if (shortTextColumnIds.length > 0) {
-      console.log("\u{1F527} Auto-sizing short text columns:", shortTextColumnIds);
       this.gridApi.autoSizeColumns(shortTextColumnIds, false);
-      setTimeout(() => {
-        var _a4;
-        const allColumns = ((_a4 = this.gridApi) == null ? void 0 : _a4.getAllDisplayedColumns()) || [];
-        const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
-        console.log(`\u{1F4CA} \u8868\u683C\u603B\u5BBD\u5EA6: ${totalWidth}px`);
-      }, 200);
     }
   }
   /**
@@ -55427,25 +55423,10 @@ var _AgGridAdapter = class {
     const rowIndex = event.node.rowIndex;
     const newValue = event.newValue;
     const oldValue = event.oldValue;
-    console.log("\u{1F50D} AG Grid Cell Edit Event:", {
-      field,
-      rowIndex,
-      oldValue,
-      oldValueType: typeof oldValue,
-      newValue,
-      newValueType: typeof newValue,
-      data: event.data
-    });
     if (field && rowIndex !== null && rowIndex !== void 0) {
       const newStr = String(newValue != null ? newValue : "");
       const oldStr = String(oldValue != null ? oldValue : "");
-      console.log("\u{1F50D} Normalized values:", {
-        oldStr,
-        newStr,
-        changed: newStr !== oldStr
-      });
       if (newStr !== oldStr) {
-        console.log("\u2705 Triggering cell edit callback");
         this.cellEditCallback({
           rowIndex,
           field,
@@ -55453,8 +55434,6 @@ var _AgGridAdapter = class {
           oldValue: oldStr,
           rowData: event.data
         });
-      } else {
-        console.log("\u274C No change detected, skipping callback");
       }
     }
   }
@@ -55504,7 +55483,6 @@ var _AgGridAdapter = class {
    */
   onHeaderEdit(callback) {
     this.headerEditCallback = callback;
-    console.warn("AgGridAdapter: \u8868\u5934\u7F16\u8F91\u529F\u80FD\u6682\u672A\u5B9E\u73B0");
   }
   /**
    * 销毁表格实例
@@ -55569,15 +55547,12 @@ var _AgGridAdapter = class {
   resizeColumns() {
     var _a4, _b2;
     if (!this.gridApi) {
-      console.warn("\u26A0\uFE0F gridApi \u4E0D\u5B58\u5728\uFF0C\u8DF3\u8FC7\u5217\u5BBD\u8C03\u6574");
       return;
     }
-    console.log("\u{1F504} \u5F00\u59CB\u5217\u5BBD\u8C03\u6574...");
     const gridApiAny = this.gridApi;
     (_a4 = gridApiAny == null ? void 0 : gridApiAny.doLayout) == null ? void 0 : _a4.call(gridApiAny);
     (_b2 = gridApiAny == null ? void 0 : gridApiAny.checkGridSize) == null ? void 0 : _b2.call(gridApiAny);
     const allColumns = this.gridApi.getAllDisplayedColumns() || [];
-    console.log(`\u{1F4CA} \u5F53\u524D\u5217\u6570: ${allColumns.length}`);
     const flexColumnIds = [];
     const fixedWidthColumnIds = [];
     const shortTextColumnIds = [];
@@ -55596,31 +55571,18 @@ var _AgGridAdapter = class {
         shortTextColumnIds.push(field);
       }
     }
-    console.log(`\u{1F4CA} \u5217\u5206\u7C7B: flex\u5217=${flexColumnIds.length}, \u56FA\u5B9A\u5BBD\u5EA6\u5217=${fixedWidthColumnIds.length}, \u77ED\u6587\u672C\u5217=${shortTextColumnIds.length}`);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const shouldAutoSize = now - this.lastAutoSizeTimestamp >= _AgGridAdapter.AUTO_SIZE_COOLDOWN_MS;
     if (shortTextColumnIds.length > 0 && shouldAutoSize && this.shouldAutoSizeOnNextResize) {
-      console.log("\u{1F527} \u8C03\u6574\u77ED\u6587\u672C\u5217:", shortTextColumnIds);
       this.gridApi.autoSizeColumns(shortTextColumnIds, false);
       this.lastAutoSizeTimestamp = now;
       this.shouldAutoSizeOnNextResize = false;
-    } else if (shortTextColumnIds.length > 0 && this.shouldAutoSizeOnNextResize) {
-      console.log("\u23ED\uFE0F \u8DF3\u8FC7 autoSize\uFF08\u51B7\u5374\u4E2D\uFF09");
-    } else if (shortTextColumnIds.length > 0) {
-      console.log("\u23ED\uFE0F \u8DF3\u8FC7 autoSize\uFF08\u672A\u6807\u8BB0\u9700\u8981\uFF09");
     }
     if (flexColumnIds.length > 0) {
-      console.log("\u{1F527} \u6267\u884C sizeColumnsToFit\uFF08\u5206\u914D\u5269\u4F59\u7A7A\u95F4\u7ED9 flex \u5217\uFF09");
       this.gridApi.sizeColumnsToFit();
-    } else {
-      console.log("\u2139\uFE0F \u6CA1\u6709 flex \u5217\uFF0C\u8DF3\u8FC7 sizeColumnsToFit");
     }
     this.queueRowHeightSync();
     this.gridApi.refreshCells({ force: true });
-    setTimeout(() => {
-      const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
-      console.log(`\u2705 \u5217\u5BBD\u8C03\u6574\u5B8C\u6210\uFF0C\u603B\u5BBD\u5EA6: ${totalWidth}px`);
-    }, 50);
   }
   queueRowHeightSync() {
     if (!this.gridApi)
@@ -55632,24 +55594,22 @@ var _AgGridAdapter = class {
         return;
       this.gridApi.forEachNode((node) => node.setRowHeight(void 0));
     };
-    const runReset = (label) => {
+    const runReset = () => {
       var _a4;
       if (!this.gridApi)
         return;
-      console.log(label);
       resetNodeHeights();
       api.stopEditing();
-      api.resetRowHeights();
       api.onRowHeightChanged();
       api.refreshCells({ force: true });
       (_a4 = api.refreshClientSideRowModel) == null ? void 0 : _a4.call(api, "nothing");
       api.redrawRows();
     };
-    const first = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #1\uFF09");
-    const second = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #2\uFF09");
-    const third = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #3\uFF09");
-    const fourth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #4\uFF09");
-    const fifth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #5\uFF09");
+    const first = () => runReset();
+    const second = () => runReset();
+    const third = () => runReset();
+    const fourth = () => runReset();
+    const fifth = () => runReset();
     if (typeof requestAnimationFrame === "function") {
       this.rowHeightResetHandle = requestAnimationFrame(() => {
         this.rowHeightResetHandle = null;
@@ -55804,7 +55764,6 @@ var TableView = class extends import_obsidian.ItemView {
         columnConfigs.push(config);
       }
     }
-    console.log("\u{1F4CB} \u89E3\u6790\u5934\u90E8\u914D\u7F6E\u5757:", columnConfigs);
     return columnConfigs;
   }
   /**
@@ -55818,14 +55777,12 @@ var TableView = class extends import_obsidian.ItemView {
     if (width === "flex") {
       colDef.flex = 1;
       colDef.minWidth = 200;
-      console.log(`\u5217 ${config.name} \u4F7F\u7528 flex: 1\uFF08\u5206\u914D\u5269\u4F59\u7A7A\u95F4\uFF09`);
       return;
     }
     if (width.endsWith("%")) {
       const percentage = parseInt(width.replace("%", ""));
       if (!isNaN(percentage)) {
         colDef.flex = percentage;
-        console.log(`\u5217 ${config.name} \u4F7F\u7528 flex: ${percentage}`);
       }
       return;
     }
@@ -55833,14 +55790,12 @@ var TableView = class extends import_obsidian.ItemView {
       const pixels = parseInt(width.replace("px", ""));
       if (!isNaN(pixels)) {
         colDef.width = pixels;
-        console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${pixels}px`);
       }
       return;
     }
     const num = parseInt(width);
     if (!isNaN(num)) {
       colDef.width = num;
-      console.log(`\u5217 ${config.name} \u4F7F\u7528\u56FA\u5B9A\u5BBD\u5EA6: ${num}px`);
     }
   }
   /**
@@ -56012,7 +55967,6 @@ var TableView = class extends import_obsidian.ItemView {
     try {
       const markdown = this.blocksToMarkdown();
       await this.app.vault.modify(this.file, markdown);
-      console.log("\u2705 \u6587\u4EF6\u5DF2\u4FDD\u5B58:", this.file.path);
     } catch (error) {
       console.error("\u274C \u4FDD\u5B58\u5931\u8D25:", error);
     }
@@ -56062,11 +56016,7 @@ var TableView = class extends import_obsidian.ItemView {
         if ((_a5 = this.schema) == null ? void 0 : _a5.columnConfigs) {
           const config = this.schema.columnConfigs.find((c) => c.name === name);
           if (config) {
-            console.log(`\u{1F527} \u914D\u7F6E\u5217 ${name}:`, config);
             this.applyWidthConfig(baseColDef, config);
-            console.log(`\u{1F527} \u5E94\u7528\u540E\u7684 colDef:`, baseColDef);
-          } else {
-            console.log(`\u26A0\uFE0F \u5217 ${name} \u6CA1\u6709\u627E\u5230\u914D\u7F6E`);
           }
         }
         return baseColDef;
@@ -56086,45 +56036,45 @@ var TableView = class extends import_obsidian.ItemView {
       this.onCellEdit(event);
     });
     this.gridAdapter.onHeaderEdit((event) => {
-      console.log("\u8868\u5934\u7F16\u8F91:", event);
     });
     (_b2 = (_a4 = this.gridAdapter).onEnterAtLastRow) == null ? void 0 : _b2.call(_a4, (field) => {
-      const totalRows = this.blocks.length;
-      this.addRow(totalRows);
-      setTimeout(() => {
-        var _a5;
-        if (this.gridAdapter) {
-          (_a5 = this.gridAdapter.gridApi) == null ? void 0 : _a5.startEditingCell({
-            rowIndex: totalRows,
-            colKey: field
-          });
-        }
-      }, 100);
+      const oldRowCount = this.blocks.length;
+      this.addRow(oldRowCount);
+      const tryEdit = (attempt = 0) => {
+        if (!this.gridAdapter || attempt > 5)
+          return;
+        const api = this.gridAdapter.gridApi;
+        if (!api)
+          return;
+        api.ensureIndexVisible(oldRowCount, "bottom");
+        api.startEditingCell({
+          rowIndex: oldRowCount,
+          colKey: field
+        });
+        setTimeout(() => {
+          const editingCells = api.getEditingCells();
+          if (editingCells.length === 0) {
+            tryEdit(attempt + 1);
+          }
+        }, 50);
+      };
+      setTimeout(() => tryEdit(), 50);
     });
     this.setupContextMenu(tableContainer);
     this.setupKeyboardShortcuts(tableContainer);
-    console.log("\u{1F680} === \u5F00\u59CB\u8BBE\u7F6E ResizeObserver ===");
     this.setupResizeObserver(tableContainer);
-    console.log("\u{1F680} === ResizeObserver \u8BBE\u7F6E\u5B8C\u6210 ===");
-    console.log("\u{1F680} \u5B89\u6392\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08100ms, 300ms, 800ms\uFF09");
     setTimeout(() => {
       var _a5, _b3;
-      console.log("\u23F0 \u6267\u884C\u7B2C1\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08100ms\uFF09");
       (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
     }, 100);
     setTimeout(() => {
       var _a5, _b3;
-      console.log("\u23F0 \u6267\u884C\u7B2C2\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08300ms\uFF09");
       (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
     }, 300);
     setTimeout(() => {
       var _a5, _b3;
-      console.log("\u23F0 \u6267\u884C\u7B2C3\u6B21\u521D\u59CB\u5316\u5217\u5BBD\u8C03\u6574\uFF08800ms\uFF09");
       (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
     }, 800);
-    console.log(`TileLineBase \u8868\u683C\u5DF2\u6E32\u67D3\uFF08AG Grid\uFF09\uFF1A${this.file.path}`);
-    console.log(`Schema:`, this.schema);
-    console.log(`\u6570\u636E\u884C\u6570: ${data.length}`);
   }
   /**
    * 清理事件监听器（防止内存泄漏）
@@ -56179,9 +56129,7 @@ var TableView = class extends import_obsidian.ItemView {
    */
   setupResizeObserver(tableContainer) {
     var _a4;
-    console.log("\u{1F527} setupResizeObserver \u5F00\u59CB\u6267\u884C");
     if (this.resizeObserver) {
-      console.log("\u{1F9F9} \u6E05\u7406\u65E7\u7684 ResizeObserver");
       this.resizeObserver.disconnect();
     }
     if (this.windowResizeHandler) {
@@ -56204,75 +56152,34 @@ var TableView = class extends import_obsidian.ItemView {
       clearInterval(this.sizeCheckInterval);
       this.sizeCheckInterval = null;
     }
-    console.log("\u{1F527} \u521B\u5EFA ResizeObserver");
     this.resizeObserver = new ResizeObserver((entries) => {
-      console.log("\u{1F514} ResizeObserver \u56DE\u8C03\u88AB\u89E6\u53D1\uFF0Centries \u6570\u91CF:", entries.length);
       for (const entry of entries) {
         if (entry.target === tableContainer) {
-          console.log("\u{1F4D0} \u5BB9\u5668\u5C3A\u5BF8\u53D8\u5316 (ResizeObserver):", {
-            width: entry.contentRect.width,
-            height: entry.contentRect.height
-          });
           this.updateTableContainerSize();
           this.scheduleColumnResize("ResizeObserver");
         }
       }
     });
-    console.log("\u{1F527} \u5F00\u59CB\u76D1\u542C\u5BB9\u5668\uFF0C\u5BB9\u5668\u5143\u7D20:", tableContainer);
     this.resizeObserver.observe(tableContainer);
-    console.log("\u2705 ResizeObserver \u5DF2\u5F00\u59CB\u76D1\u542C");
-    console.log("\u{1F527} \u521B\u5EFA\u7A97\u53E3 resize \u76D1\u542C\u5668");
     this.windowResizeHandler = () => {
-      console.log("\u{1F514} \u7A97\u53E3 resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01");
-      const ownerWindowCurrent = tableContainer.ownerDocument.defaultView;
-      if (ownerWindowCurrent) {
-        console.log("\u{1F4D0} \u7A97\u53E3\u5C3A\u5BF8\u53D8\u5316 (window resize):", {
-          innerWidth: ownerWindowCurrent.innerWidth,
-          innerHeight: ownerWindowCurrent.innerHeight,
-          containerWidth: tableContainer.offsetWidth,
-          containerHeight: tableContainer.offsetHeight
-        });
-      }
       this.updateTableContainerSize();
       this.scheduleColumnResize("window resize");
     };
     const ownerWindow = tableContainer.ownerDocument.defaultView;
-    console.log("\u{1F527} \u83B7\u53D6\u7A97\u53E3\u5BF9\u8C61:", ownerWindow);
     if (ownerWindow) {
       ownerWindow.addEventListener("resize", this.windowResizeHandler);
-      console.log("\u2705 \u5DF2\u6DFB\u52A0\u7A97\u53E3 resize \u76D1\u542C\u5668\u5230\u7A97\u53E3");
-      console.log("\u{1F4CA} \u5F53\u524D\u7A97\u53E3\u5C3A\u5BF8:", {
-        innerWidth: ownerWindow.innerWidth,
-        innerHeight: ownerWindow.innerHeight
-      });
       if ("visualViewport" in ownerWindow && ownerWindow.visualViewport) {
         this.visualViewportTarget = ownerWindow.visualViewport;
         this.visualViewportResizeHandler = () => {
-          const viewport = ownerWindow.visualViewport;
-          console.log("\u{1F514} visualViewport resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01", {
-            width: viewport == null ? void 0 : viewport.width,
-            height: viewport == null ? void 0 : viewport.height,
-            scale: viewport == null ? void 0 : viewport.scale
-          });
           this.updateTableContainerSize();
           this.scheduleColumnResize("visualViewport resize");
         };
         this.visualViewportTarget.addEventListener("resize", this.visualViewportResizeHandler);
-        console.log("\u2705 \u5DF2\u6DFB\u52A0 visualViewport resize \u76D1\u542C\u5668");
-      } else {
-        console.log("\u26A0\uFE0F \u5F53\u524D\u7A97\u53E3\u4E0D\u652F\u6301 visualViewport \u76D1\u542C");
       }
     } else {
       console.error("\u274C \u65E0\u6CD5\u83B7\u53D6\u7A97\u53E3\u5BF9\u8C61\uFF01");
     }
     this.workspaceResizeRef = this.app.workspace.on("resize", () => {
-      console.log("\u{1F514} workspace.resize \u4E8B\u4EF6\u88AB\u89E6\u53D1\uFF01");
-      if (tableContainer.isConnected) {
-        console.log("\u{1F4CF} workspace.resize -> \u5BB9\u5668\u5C3A\u5BF8:", {
-          width: tableContainer.offsetWidth,
-          height: tableContainer.offsetHeight
-        });
-      }
       this.updateTableContainerSize();
       this.scheduleColumnResize("workspace resize");
     });
@@ -56287,18 +56194,15 @@ var TableView = class extends import_obsidian.ItemView {
     }
     this.resizeTimeout = setTimeout(() => {
       var _a4, _b2, _c, _d;
-      console.log(`\u{1F504} \u89E6\u53D1\u5217\u5BBD\u8C03\u6574 (${source})`);
       (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.markLayoutDirty) == null ? void 0 : _b2.call(_a4);
       (_d = (_c = this.gridAdapter) == null ? void 0 : _c.resizeColumns) == null ? void 0 : _d.call(_c);
       if (source === "window resize" || source === "visualViewport resize" || source === "workspace resize") {
         setTimeout(() => {
           var _a5, _b3;
-          console.log(`\u{1F504} \u5EF6\u8FDF\u91CD\u8BD5\u5217\u5BBD\u8C03\u6574 (${source} + 200ms)`);
           (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
         }, 200);
         setTimeout(() => {
           var _a5, _b3;
-          console.log(`\u{1F504} \u5EF6\u8FDF\u91CD\u8BD5\u5217\u5BBD\u8C03\u6574 (${source} + 500ms)`);
           (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
         }, 500);
       }
@@ -56314,10 +56218,6 @@ var TableView = class extends import_obsidian.ItemView {
     }
     this.lastContainerWidth = tableContainer.offsetWidth;
     this.lastContainerHeight = tableContainer.offsetHeight;
-    console.log("\u{1F501} \u5F00\u59CB\u5C3A\u5BF8\u8F6E\u8BE2:", {
-      width: this.lastContainerWidth,
-      height: this.lastContainerHeight
-    });
     this.sizeCheckInterval = setInterval(() => {
       if (!tableContainer.isConnected) {
         return;
@@ -56325,12 +56225,6 @@ var TableView = class extends import_obsidian.ItemView {
       const currentWidth = tableContainer.offsetWidth;
       const currentHeight = tableContainer.offsetHeight;
       if (currentWidth !== this.lastContainerWidth || currentHeight !== this.lastContainerHeight) {
-        console.log("\u{1F501} \u5C3A\u5BF8\u8F6E\u8BE2\u68C0\u6D4B\u5230\u53D8\u5316:", {
-          width: currentWidth,
-          height: currentHeight,
-          previousWidth: this.lastContainerWidth,
-          previousHeight: this.lastContainerHeight
-        });
         this.lastContainerWidth = currentWidth;
         this.lastContainerHeight = currentHeight;
         this.updateTableContainerSize();
@@ -56392,20 +56286,15 @@ var TableView = class extends import_obsidian.ItemView {
    */
   setupKeyboardShortcuts(tableContainer) {
     this.keydownHandler = (event) => {
-      var _a4, _b2, _c;
+      var _a4;
       const activeElement = document.activeElement;
       const isEditing2 = activeElement == null ? void 0 : activeElement.classList.contains("ag-cell-edit-input");
-      const selectedRows = ((_a4 = this.gridAdapter) == null ? void 0 : _a4.getSelectedRows()) || [];
-      const hasSelection = selectedRows.length > 0;
-      const firstSelectedRow = hasSelection ? selectedRows[0] : null;
-      if (event.key === "F2" && !isEditing2) {
-        event.preventDefault();
-        (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.startEditingFocusedCell) == null ? void 0 : _c.call(_b2);
-        return;
-      }
       if (isEditing2) {
         return;
       }
+      const selectedRows = ((_a4 = this.gridAdapter) == null ? void 0 : _a4.getSelectedRows()) || [];
+      const hasSelection = selectedRows.length > 0;
+      const firstSelectedRow = hasSelection ? selectedRows[0] : null;
       if ((event.metaKey || event.ctrlKey) && event.key === "d") {
         event.preventDefault();
         if (hasSelection && firstSelectedRow !== null) {
@@ -56460,9 +56349,7 @@ var TableView = class extends import_obsidian.ItemView {
    */
   onCellEdit(event) {
     const { rowData, field, newValue, rowIndex } = event;
-    console.log("\u{1F4DD} TableView onCellEdit called:", { rowIndex, field, newValue, rowData });
     if (field === "#") {
-      console.log("\u26A0\uFE0F Ignoring edit on order column");
       return;
     }
     if (!this.schema) {
@@ -56480,8 +56367,6 @@ var TableView = class extends import_obsidian.ItemView {
     }
     const block = this.blocks[blockIndex];
     block.data[field] = newValue;
-    console.log(`\u66F4\u65B0\u6570\u636E [${blockIndex}][${field}]:`, newValue);
-    console.log("Updated blocks:", this.blocks);
     this.scheduleSave();
   }
   getBlockIndexFromRowData(rowData) {
@@ -56521,7 +56406,6 @@ var TableView = class extends import_obsidian.ItemView {
         block.data[newValue] = value;
       }
     }
-    console.log(`\u2705 \u5217\u91CD\u547D\u540D: "${oldKey}" \u2192 "${newValue}"`);
     this.scheduleSave();
   }
   // ==================== 预留：CRUD 操作接口（SchemaStore 架构） ====================
@@ -56548,10 +56432,8 @@ var TableView = class extends import_obsidian.ItemView {
     }
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
       this.blocks.splice(beforeRowIndex, 0, newBlock);
-      console.log(`\u2705 \u5728\u884C ${beforeRowIndex} \u4E4B\u524D\u63D2\u5165\u65B0\u884C`);
     } else {
       this.blocks.push(newBlock);
-      console.log(`\u2705 \u5728\u672B\u5C3E\u6DFB\u52A0\u65B0\u884C`);
     }
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
@@ -56576,7 +56458,6 @@ var TableView = class extends import_obsidian.ItemView {
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
     this.scheduleSave();
-    console.log(`\u2705 \u5220\u9664\u884C\uFF1A${deletedBlock.title}`);
   }
   /**
    * 复制指定行（Key:Value 格式）
@@ -56601,7 +56482,6 @@ var TableView = class extends import_obsidian.ItemView {
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
     this.scheduleSave();
-    console.log(`\u2705 \u590D\u5236\u884C\uFF1A${duplicatedBlock.title}`);
   }
   /**
    * 添加新列
@@ -56650,7 +56530,6 @@ var TableView = class extends import_obsidian.ItemView {
 // src/main.ts
 var TileLineBasePlugin = class extends import_obsidian2.Plugin {
   async onload() {
-    console.log("\u52A0\u8F7D TileLineBase \u63D2\u4EF6");
     this.registerView(
       TABLE_VIEW_TYPE,
       (leaf) => new TableView(leaf)
@@ -56679,7 +56558,6 @@ var TileLineBasePlugin = class extends import_obsidian2.Plugin {
     });
   }
   async onunload() {
-    console.log("\u5378\u8F7D TileLineBase \u63D2\u4EF6");
     this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
   }
   async openTableView(file) {

@@ -3,8 +3,6 @@ import { TableView, TABLE_VIEW_TYPE } from './TableView';
 
 export default class TileLineBasePlugin extends Plugin {
 	async onload() {
-		console.log('加载 TileLineBase 插件');
-
 		// 注册表格视图
 		this.registerView(
 			TABLE_VIEW_TYPE,
@@ -42,8 +40,6 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	async onunload() {
-		console.log('卸载 TileLineBase 插件');
-
 		// 关闭所有该类型的视图
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 	}

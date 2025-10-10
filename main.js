@@ -56338,10 +56338,13 @@ var TableView = class extends import_obsidian.ItemView {
    * 显示右键菜单
    */
   showContextMenu(event, blockIndex) {
-    var _a4;
+    var _a4, _b2, _c, _d, _e;
     this.hideContextMenu();
     const ownerDoc = ((_a4 = this.tableContainer) == null ? void 0 : _a4.ownerDocument) || document;
     this.contextMenu = ownerDoc.body.createDiv({ cls: "tlb-context-menu" });
+    this.contextMenu.style.visibility = "hidden";
+    this.contextMenu.style.left = "0px";
+    this.contextMenu.style.top = "0px";
     const insertAbove = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
     insertAbove.createSpan({ text: "\u5728\u4E0A\u65B9\u63D2\u5165\u884C" });
     insertAbove.addEventListener("click", () => {
@@ -56361,8 +56364,29 @@ var TableView = class extends import_obsidian.ItemView {
       this.deleteRow(blockIndex);
       this.hideContextMenu();
     });
-    this.contextMenu.style.left = `${event.pageX}px`;
-    this.contextMenu.style.top = `${event.pageY}px`;
+    const defaultView = ownerDoc.defaultView || window;
+    const docElement = ownerDoc.documentElement;
+    const viewportWidth = (_c = (_b2 = defaultView.innerWidth) != null ? _b2 : docElement == null ? void 0 : docElement.clientWidth) != null ? _c : 0;
+    const viewportHeight = (_e = (_d = defaultView.innerHeight) != null ? _d : docElement == null ? void 0 : docElement.clientHeight) != null ? _e : 0;
+    const menuRect = this.contextMenu.getBoundingClientRect();
+    const margin = 8;
+    let left = event.clientX;
+    let top = event.clientY;
+    if (left + menuRect.width > viewportWidth - margin) {
+      left = Math.max(margin, viewportWidth - menuRect.width - margin);
+    }
+    if (top + menuRect.height > viewportHeight - margin) {
+      top = Math.max(margin, viewportHeight - menuRect.height - margin);
+    }
+    if (left < margin) {
+      left = margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+    this.contextMenu.style.left = `${left}px`;
+    this.contextMenu.style.top = `${top}px`;
+    this.contextMenu.style.visibility = "visible";
   }
   /**
    * 隐藏右键菜单

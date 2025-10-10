@@ -32,6 +32,9 @@ var import_obsidian2 = require("obsidian");
 // src/TableView.ts
 var import_obsidian = require("obsidian");
 
+// src/grid/GridAdapter.ts
+var ROW_ID_FIELD = "__tlb_row_id";
+
 // node_modules/ag-grid-community/dist/package/main.esm.mjs
 var LocalEventService = class {
   constructor() {
@@ -55250,9 +55253,12 @@ var AllCommunityModule = {
 
 // src/grid/AgGridAdapter.ts
 ModuleRegistry.registerModules([AllCommunityModule]);
-var AgGridAdapter = class {
+var _AgGridAdapter = class {
   constructor() {
     this.gridApi = null;
+    this.lastAutoSizeTimestamp = 0;
+    this.shouldAutoSizeOnNextResize = false;
+    this.rowHeightResetHandle = null;
   }
   /**
    * 挂载表格到指定容器
@@ -55294,6 +55300,10 @@ var AgGridAdapter = class {
       const mergedColDef = { ...baseColDef, ...col };
       const hasWidth = col.width !== void 0;
       const hasFlex = col.flex !== void 0;
+      const hasExplicitWidth = hasWidth && !hasFlex;
+      if (hasExplicitWidth) {
+        mergedColDef.suppressSizeToFit = true;
+      }
       if (!hasWidth && !hasFlex) {
         const isLongTextColumn = this.isLongTextColumn(col.field, rows);
         if (isLongTextColumn) {
@@ -55301,6 +55311,7 @@ var AgGridAdapter = class {
           mergedColDef.minWidth = 200;
         } else {
           mergedColDef.maxWidth = 300;
+          mergedColDef.suppressSizeToFit = true;
         }
       }
       return mergedColDef;
@@ -55336,8 +55347,12 @@ var AgGridAdapter = class {
       // 保留列虚拟化以提升性能
     };
     this.gridApi = createGrid(container, gridOptions);
+    this.lastAutoSizeTimestamp = 0;
+    this.shouldAutoSizeOnNextResize = false;
+    this.clearRowHeightResetHandle();
     setTimeout(() => {
       this.autoSizeShortTextColumns(colDefs);
+      this.shouldAutoSizeOnNextResize = false;
     }, 100);
   }
   /**
@@ -55413,7 +55428,8 @@ var AgGridAdapter = class {
           rowIndex,
           field,
           newValue: newStr,
-          oldValue: oldStr
+          oldValue: oldStr,
+          rowData: event.data
         });
       } else {
         console.log("\u274C No change detected, skipping callback");
@@ -55426,6 +55442,29 @@ var AgGridAdapter = class {
   updateData(rows) {
     if (this.gridApi) {
       this.gridApi.setGridOption("rowData", rows);
+      this.lastAutoSizeTimestamp = 0;
+      this.shouldAutoSizeOnNextResize = true;
+      this.queueRowHeightSync();
+    }
+  }
+  markLayoutDirty() {
+    this.shouldAutoSizeOnNextResize = true;
+    this.queueRowHeightSync();
+  }
+  selectRow(blockIndex, options) {
+    var _a4;
+    if (!this.gridApi)
+      return;
+    const node = this.findRowNodeByBlockIndex(blockIndex);
+    if (!node)
+      return;
+    this.gridApi.deselectAll();
+    node.setSelected(true, true);
+    if ((options == null ? void 0 : options.ensureVisible) !== false) {
+      const rowIndex = (_a4 = node.rowIndex) != null ? _a4 : null;
+      if (rowIndex !== null) {
+        this.gridApi.ensureIndexVisible(rowIndex, "middle");
+      }
     }
   }
   /**
@@ -55449,24 +55488,36 @@ var AgGridAdapter = class {
    * 销毁表格实例
    */
   destroy() {
+    this.clearRowHeightResetHandle();
     if (this.gridApi) {
       this.gridApi.destroy();
       this.gridApi = null;
     }
   }
   /**
-   * 获取当前选中的行索引
+   * 获取当前选中的块索引
    */
   getSelectedRows() {
     if (!this.gridApi)
       return [];
     const selectedNodes = this.gridApi.getSelectedNodes();
-    return selectedNodes.map((node) => node.rowIndex).filter((idx) => idx !== null && idx !== void 0);
+    const blockIndexes = [];
+    for (const node of selectedNodes) {
+      const data = node.data;
+      if (!data)
+        continue;
+      const raw = data[ROW_ID_FIELD];
+      const parsed = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+      if (!Number.isNaN(parsed)) {
+        blockIndexes.push(parsed);
+      }
+    }
+    return blockIndexes;
   }
   /**
-   * 根据鼠标事件获取行索引
+   * 根据鼠标事件获取块索引
    * @param event 鼠标事件
-   * @returns 行索引，如果未找到则返回 null
+   * @returns 块索引，如果未找到则返回 null
    */
   getRowIndexFromEvent(event) {
     if (!this.gridApi)
@@ -55475,19 +55526,34 @@ var AgGridAdapter = class {
     const rowElement = target.closest(".ag-row");
     if (!rowElement)
       return null;
-    const rowIndex = rowElement.getAttribute("row-index");
-    return rowIndex !== null ? parseInt(rowIndex, 10) : null;
+    const rowIndexAttr = rowElement.getAttribute("row-index");
+    if (rowIndexAttr === null)
+      return null;
+    const displayIndex = parseInt(rowIndexAttr, 10);
+    if (Number.isNaN(displayIndex))
+      return null;
+    const rowNode = this.gridApi.getDisplayedRowAtIndex(displayIndex);
+    const data = rowNode == null ? void 0 : rowNode.data;
+    if (!data)
+      return null;
+    const raw = data[ROW_ID_FIELD];
+    const parsed = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+    return Number.isNaN(parsed) ? null : parsed;
   }
   /**
    * 手动触发列宽调整
    * 用于处理容器尺寸变化或新窗口初始化的情况
    */
   resizeColumns() {
+    var _a4, _b2;
     if (!this.gridApi) {
       console.warn("\u26A0\uFE0F gridApi \u4E0D\u5B58\u5728\uFF0C\u8DF3\u8FC7\u5217\u5BBD\u8C03\u6574");
       return;
     }
     console.log("\u{1F504} \u5F00\u59CB\u5217\u5BBD\u8C03\u6574...");
+    const gridApiAny = this.gridApi;
+    (_a4 = gridApiAny == null ? void 0 : gridApiAny.doLayout) == null ? void 0 : _a4.call(gridApiAny);
+    (_b2 = gridApiAny == null ? void 0 : gridApiAny.checkGridSize) == null ? void 0 : _b2.call(gridApiAny);
     const allColumns = this.gridApi.getAllDisplayedColumns() || [];
     console.log(`\u{1F4CA} \u5F53\u524D\u5217\u6570: ${allColumns.length}`);
     const flexColumnIds = [];
@@ -55509,18 +55575,101 @@ var AgGridAdapter = class {
       }
     }
     console.log(`\u{1F4CA} \u5217\u5206\u7C7B: flex\u5217=${flexColumnIds.length}, \u56FA\u5B9A\u5BBD\u5EA6\u5217=${fixedWidthColumnIds.length}, \u77ED\u6587\u672C\u5217=${shortTextColumnIds.length}`);
-    if (shortTextColumnIds.length > 0) {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const shouldAutoSize = now - this.lastAutoSizeTimestamp >= _AgGridAdapter.AUTO_SIZE_COOLDOWN_MS;
+    if (shortTextColumnIds.length > 0 && shouldAutoSize && this.shouldAutoSizeOnNextResize) {
       console.log("\u{1F527} \u8C03\u6574\u77ED\u6587\u672C\u5217:", shortTextColumnIds);
       this.gridApi.autoSizeColumns(shortTextColumnIds, false);
+      this.lastAutoSizeTimestamp = now;
+      this.shouldAutoSizeOnNextResize = false;
+    } else if (shortTextColumnIds.length > 0 && this.shouldAutoSizeOnNextResize) {
+      console.log("\u23ED\uFE0F \u8DF3\u8FC7 autoSize\uFF08\u51B7\u5374\u4E2D\uFF09");
+    } else if (shortTextColumnIds.length > 0) {
+      console.log("\u23ED\uFE0F \u8DF3\u8FC7 autoSize\uFF08\u672A\u6807\u8BB0\u9700\u8981\uFF09");
     }
-    console.log("\u{1F527} \u6267\u884C sizeColumnsToFit\uFF08\u5206\u914D\u5269\u4F59\u7A7A\u95F4\u7ED9 flex \u5217\uFF09");
-    this.gridApi.sizeColumnsToFit();
+    if (flexColumnIds.length > 0) {
+      console.log("\u{1F527} \u6267\u884C sizeColumnsToFit\uFF08\u5206\u914D\u5269\u4F59\u7A7A\u95F4\u7ED9 flex \u5217\uFF09");
+      this.gridApi.sizeColumnsToFit();
+    } else {
+      console.log("\u2139\uFE0F \u6CA1\u6709 flex \u5217\uFF0C\u8DF3\u8FC7 sizeColumnsToFit");
+    }
+    this.queueRowHeightSync();
+    this.gridApi.refreshCells({ force: true });
     setTimeout(() => {
       const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
       console.log(`\u2705 \u5217\u5BBD\u8C03\u6574\u5B8C\u6210\uFF0C\u603B\u5BBD\u5EA6: ${totalWidth}px`);
     }, 50);
   }
+  queueRowHeightSync() {
+    if (!this.gridApi)
+      return;
+    this.clearRowHeightResetHandle();
+    const api = this.gridApi;
+    const resetNodeHeights = () => {
+      if (!this.gridApi)
+        return;
+      this.gridApi.forEachNode((node) => node.setRowHeight(void 0));
+    };
+    const runReset = (label) => {
+      var _a4;
+      if (!this.gridApi)
+        return;
+      console.log(label);
+      resetNodeHeights();
+      api.stopEditing();
+      api.resetRowHeights();
+      api.onRowHeightChanged();
+      api.refreshCells({ force: true });
+      (_a4 = api.refreshClientSideRowModel) == null ? void 0 : _a4.call(api, "nothing");
+      api.redrawRows();
+    };
+    const first = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #1\uFF09");
+    const second = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #2\uFF09");
+    const third = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #3\uFF09");
+    const fourth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #4\uFF09");
+    const fifth = () => runReset("\u{1F4CF} \u540C\u6B65\u884C\u9AD8\uFF08resetRowHeights #5\uFF09");
+    if (typeof requestAnimationFrame === "function") {
+      this.rowHeightResetHandle = requestAnimationFrame(() => {
+        this.rowHeightResetHandle = null;
+        first();
+      });
+    } else {
+      setTimeout(first, 0);
+    }
+    setTimeout(second, 120);
+    setTimeout(third, 300);
+    setTimeout(fourth, 600);
+    setTimeout(fifth, 900);
+  }
+  clearRowHeightResetHandle() {
+    if (this.rowHeightResetHandle !== null) {
+      if (typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this.rowHeightResetHandle);
+      }
+      this.rowHeightResetHandle = null;
+    }
+  }
+  findRowNodeByBlockIndex(blockIndex) {
+    if (!this.gridApi)
+      return null;
+    let match = null;
+    this.gridApi.forEachNode((node) => {
+      if (match)
+        return;
+      const data = node.data;
+      if (!data)
+        return;
+      const raw = data[ROW_ID_FIELD];
+      const parsed = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+      if (!Number.isNaN(parsed) && parsed === blockIndex) {
+        match = node;
+      }
+    });
+    return match;
+  }
 };
+var AgGridAdapter = _AgGridAdapter;
+AgGridAdapter.AUTO_SIZE_COOLDOWN_MS = 800;
 
 // src/TableView.ts
 var TABLE_VIEW_TYPE = "tile-line-base-table";
@@ -55547,6 +55696,7 @@ var TableView = class extends import_obsidian.ItemView {
     this.workspaceResizeRef = null;
     this.lastContainerWidth = 0;
     this.lastContainerHeight = 0;
+    this.pendingSizeUpdateHandle = null;
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -55743,6 +55893,7 @@ var TableView = class extends import_obsidian.ItemView {
       const block = blocks[i];
       const row = {};
       row["#"] = String(i + 1);
+      row[ROW_ID_FIELD] = String(i);
       for (const key of schema.columnNames) {
         row[key] = block.data[key] || "";
       }
@@ -55864,8 +56015,10 @@ var TableView = class extends import_obsidian.ItemView {
     }
     this.gridAdapter = new AgGridAdapter();
     this.gridAdapter.mount(tableContainer, columns, data);
+    this.tableContainer = tableContainer;
+    this.updateTableContainerSize();
     this.gridAdapter.onCellEdit((event) => {
-      this.onCellEdit(event.rowIndex, event.field, event.newValue);
+      this.onCellEdit(event);
     });
     this.gridAdapter.onHeaderEdit((event) => {
       console.log("\u8868\u5934\u7F16\u8F91:", event);
@@ -55912,6 +56065,10 @@ var TableView = class extends import_obsidian.ItemView {
       this.tableContainer.removeEventListener("keydown", this.keydownHandler);
       this.keydownHandler = null;
     }
+    if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.pendingSizeUpdateHandle);
+    }
+    this.pendingSizeUpdateHandle = null;
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -55978,6 +56135,7 @@ var TableView = class extends import_obsidian.ItemView {
             width: entry.contentRect.width,
             height: entry.contentRect.height
           });
+          this.updateTableContainerSize();
           this.scheduleColumnResize("ResizeObserver");
         }
       }
@@ -55997,6 +56155,7 @@ var TableView = class extends import_obsidian.ItemView {
           containerHeight: tableContainer.offsetHeight
         });
       }
+      this.updateTableContainerSize();
       this.scheduleColumnResize("window resize");
     };
     const ownerWindow = tableContainer.ownerDocument.defaultView;
@@ -56017,6 +56176,7 @@ var TableView = class extends import_obsidian.ItemView {
             height: viewport == null ? void 0 : viewport.height,
             scale: viewport == null ? void 0 : viewport.scale
           });
+          this.updateTableContainerSize();
           this.scheduleColumnResize("visualViewport resize");
         };
         this.visualViewportTarget.addEventListener("resize", this.visualViewportResizeHandler);
@@ -56035,6 +56195,7 @@ var TableView = class extends import_obsidian.ItemView {
           height: tableContainer.offsetHeight
         });
       }
+      this.updateTableContainerSize();
       this.scheduleColumnResize("workspace resize");
     });
     this.startSizePolling(tableContainer);
@@ -56047,9 +56208,10 @@ var TableView = class extends import_obsidian.ItemView {
       clearTimeout(this.resizeTimeout);
     }
     this.resizeTimeout = setTimeout(() => {
-      var _a4, _b2;
+      var _a4, _b2, _c, _d;
       console.log(`\u{1F504} \u89E6\u53D1\u5217\u5BBD\u8C03\u6574 (${source})`);
-      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.resizeColumns) == null ? void 0 : _b2.call(_a4);
+      (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.markLayoutDirty) == null ? void 0 : _b2.call(_a4);
+      (_d = (_c = this.gridAdapter) == null ? void 0 : _c.resizeColumns) == null ? void 0 : _d.call(_c);
       if (source === "window resize" || source === "visualViewport resize" || source === "workspace resize") {
         setTimeout(() => {
           var _a5, _b3;
@@ -56093,9 +56255,37 @@ var TableView = class extends import_obsidian.ItemView {
         });
         this.lastContainerWidth = currentWidth;
         this.lastContainerHeight = currentHeight;
+        this.updateTableContainerSize();
         this.scheduleColumnResize("size polling");
       }
     }, 400);
+  }
+  updateTableContainerSize() {
+    if (!this.tableContainer)
+      return;
+    if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.pendingSizeUpdateHandle);
+      this.pendingSizeUpdateHandle = null;
+    }
+    const container = this.tableContainer;
+    const parent = container.parentElement;
+    container.style.removeProperty("width");
+    container.style.maxWidth = "100%";
+    container.style.width = "100%";
+    let targetHeight = 0;
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      targetHeight = rect.height || parent.clientHeight || parent.offsetHeight;
+    }
+    if (targetHeight > 0) {
+      const heightPx = `${targetHeight}px`;
+      if (container.style.height !== heightPx) {
+        container.style.height = heightPx;
+      }
+    } else {
+      container.style.removeProperty("height");
+      container.style.height = "100%";
+    }
   }
   /**
    * 设置右键菜单
@@ -56104,12 +56294,13 @@ var TableView = class extends import_obsidian.ItemView {
     this.cleanupEventListeners();
     this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
-      var _a4;
+      var _a4, _b2, _c;
       event.preventDefault();
-      const rowIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
-      if (rowIndex === null || rowIndex === void 0)
+      const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
+      if (blockIndex === null || blockIndex === void 0)
         return;
-      this.showContextMenu(event, rowIndex);
+      (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.selectRow) == null ? void 0 : _c.call(_b2, blockIndex, { ensureVisible: true });
+      this.showContextMenu(event, blockIndex);
     };
     this.documentClickHandler = () => {
       this.hideContextMenu();
@@ -56131,26 +56322,10 @@ var TableView = class extends import_obsidian.ItemView {
       const selectedRows = ((_a4 = this.gridAdapter) == null ? void 0 : _a4.getSelectedRows()) || [];
       const hasSelection = selectedRows.length > 0;
       const firstSelectedRow = hasSelection ? selectedRows[0] : null;
-      if (event.key === "Enter") {
-        event.preventDefault();
-        if (hasSelection && firstSelectedRow !== null) {
-          this.addRow(firstSelectedRow + 1);
-        } else {
-          this.addRow();
-        }
-        return;
-      }
       if ((event.metaKey || event.ctrlKey) && event.key === "d") {
         event.preventDefault();
         if (hasSelection && firstSelectedRow !== null) {
           this.duplicateRow(firstSelectedRow);
-        }
-        return;
-      }
-      if (event.key === "Delete" || event.key === "Backspace") {
-        event.preventDefault();
-        if (hasSelection && firstSelectedRow !== null) {
-          this.deleteRow(firstSelectedRow);
         }
         return;
       }
@@ -56160,7 +56335,7 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 显示右键菜单
    */
-  showContextMenu(event, rowIndex) {
+  showContextMenu(event, blockIndex) {
     var _a4;
     this.hideContextMenu();
     const ownerDoc = ((_a4 = this.tableContainer) == null ? void 0 : _a4.ownerDocument) || document;
@@ -56168,20 +56343,20 @@ var TableView = class extends import_obsidian.ItemView {
     const insertAbove = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
     insertAbove.createSpan({ text: "\u5728\u4E0A\u65B9\u63D2\u5165\u884C" });
     insertAbove.addEventListener("click", () => {
-      this.addRow(rowIndex);
+      this.addRow(blockIndex);
       this.hideContextMenu();
     });
     const insertBelow = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
     insertBelow.createSpan({ text: "\u5728\u4E0B\u65B9\u63D2\u5165\u884C" });
     insertBelow.addEventListener("click", () => {
-      this.addRow(rowIndex + 1);
+      this.addRow(blockIndex + 1);
       this.hideContextMenu();
     });
     this.contextMenu.createDiv({ cls: "tlb-context-menu-separator" });
     const deleteRow = this.contextMenu.createDiv({ cls: "tlb-context-menu-item tlb-context-menu-item-danger" });
     deleteRow.createSpan({ text: "\u5220\u9664\u6B64\u884C" });
     deleteRow.addEventListener("click", () => {
-      this.deleteRow(rowIndex);
+      this.deleteRow(blockIndex);
       this.hideContextMenu();
     });
     this.contextMenu.style.left = `${event.pageX}px`;
@@ -56199,8 +56374,9 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 处理单元格编辑（Key:Value 格式）
    */
-  onCellEdit(rowIndex, field, newValue) {
-    console.log("\u{1F4DD} TableView onCellEdit called:", { rowIndex, field, newValue });
+  onCellEdit(event) {
+    const { rowData, field, newValue, rowIndex } = event;
+    console.log("\u{1F4DD} TableView onCellEdit called:", { rowIndex, field, newValue, rowData });
     if (field === "#") {
       console.log("\u26A0\uFE0F Ignoring edit on order column");
       return;
@@ -56209,15 +56385,39 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Schema not initialized");
       return;
     }
-    if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-      console.error("Invalid row index:", rowIndex);
+    const blockIndex = this.getBlockIndexFromRowData(rowData);
+    if (blockIndex === null) {
+      console.error("\u65E0\u6CD5\u89E3\u6790\u884C\u5BF9\u5E94\u7684\u5757\u7D22\u5F15", { rowData });
       return;
     }
-    const block = this.blocks[rowIndex];
+    if (blockIndex < 0 || blockIndex >= this.blocks.length) {
+      console.error("Invalid block index:", blockIndex);
+      return;
+    }
+    const block = this.blocks[blockIndex];
     block.data[field] = newValue;
-    console.log(`\u66F4\u65B0\u6570\u636E [${rowIndex}][${field}]:`, newValue);
+    console.log(`\u66F4\u65B0\u6570\u636E [${blockIndex}][${field}]:`, newValue);
     console.log("Updated blocks:", this.blocks);
     this.scheduleSave();
+  }
+  getBlockIndexFromRowData(rowData) {
+    if (!rowData)
+      return null;
+    const direct = rowData[ROW_ID_FIELD];
+    if (direct !== void 0) {
+      const parsed = parseInt(String(direct), 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    const fallback = rowData["#"];
+    if (fallback !== void 0) {
+      const parsedFallback = parseInt(String(fallback), 10) - 1;
+      if (!Number.isNaN(parsedFallback)) {
+        return parsedFallback;
+      }
+    }
+    return null;
   }
   /**
    * 处理表头编辑（Key:Value 格式）
@@ -56288,13 +56488,6 @@ var TableView = class extends import_obsidian.ItemView {
       return;
     }
     const targetBlock = this.blocks[rowIndex];
-    const confirmMessage = `\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E00\u884C\u5417\uFF1F
-
-"${targetBlock.title}"`;
-    if (!confirm(confirmMessage)) {
-      console.log("\u274C \u7528\u6237\u53D6\u6D88\u5220\u9664");
-      return;
-    }
     const deletedBlock = this.blocks.splice(rowIndex, 1)[0];
     const data = this.extractTableData(this.blocks, this.schema);
     (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);

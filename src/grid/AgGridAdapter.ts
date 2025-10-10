@@ -120,34 +120,14 @@ export class AgGridAdapter implements GridAdapter {
 			enterNavigatesVertically: true, // Enter 键垂直导航
 			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
-			// 行选择配置
-			rowSelection: 'single', // 单行选择
+			// 行选择配置（对象格式，避免废弃警告）
+			rowSelection: {
+				mode: 'singleRow'
+			},
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
-			},
-
-			onCellKeyDown: (event) => {
-				// 检测 Enter 键在编辑状态下按下
-				const keyEvent = event.event as KeyboardEvent | undefined;
-				if (keyEvent?.key === 'Enter') {
-					const api = event.api;
-					const rowIndex = event.rowIndex;
-
-					// 检查是否为 CellKeyDownEvent（而非 FullWidthCellKeyDownEvent）
-					if (!('column' in event) || !event.column) return;
-					const colId = event.column.getColId();
-
-					// 检查是否在最后一行
-					const totalRows = api.getDisplayedRowCount();
-					if (rowIndex === totalRows - 1 && colId && this.enterAtLastRowCallback) {
-						// 延迟执行回调，让 AG Grid 先完成编辑和导航
-						setTimeout(() => {
-							this.enterAtLastRowCallback?.(colId);
-						}, 50);
-					}
-				}
 			},
 
 			// 默认列配置
@@ -156,6 +136,31 @@ export class AgGridAdapter implements GridAdapter {
 				sortable: true,
 				filter: true,
 				resizable: true,
+				suppressKeyboardEvent: (params: any) => {
+					// 拦截 Enter 键，在最后一行时新增行
+					const keyEvent = params.event as KeyboardEvent;
+					if (keyEvent.key === 'Enter') {
+						const rowIndex = params.node.rowIndex;
+						const totalRows = params.api.getDisplayedRowCount();
+
+						// 如果在最后一行（无论编辑还是选中），拦截 Enter 并触发新增行
+						if (rowIndex === totalRows - 1 && this.enterAtLastRowCallback) {
+							const colId = params.column.getColId();
+
+							// 拦截按键事件
+							setTimeout(() => {
+								params.api.stopEditing();
+								setTimeout(() => {
+									this.enterAtLastRowCallback?.(colId);
+								}, 10);
+							}, 0);
+
+							return true; // 拦截事件
+						}
+					}
+
+					return false; // 不拦截
+				}
 			},
 
 			// 启用单元格复制粘贴
@@ -217,16 +222,7 @@ export class AgGridAdapter implements GridAdapter {
 		}
 
 		if (shortTextColumnIds.length > 0) {
-			console.log('🔧 Auto-sizing short text columns:', shortTextColumnIds);
 			this.gridApi.autoSizeColumns(shortTextColumnIds, false); // false = 不跳过 header
-
-			// 边界检查：如果短文本列总宽度过大，可能需要水平滚动
-			// AG Grid 会自动处理，这里只记录日志
-			setTimeout(() => {
-				const allColumns = this.gridApi?.getAllDisplayedColumns() || [];
-				const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
-				console.log(`📊 表格总宽度: ${totalWidth}px`);
-			}, 200);
 		}
 	}
 
@@ -242,30 +238,13 @@ export class AgGridAdapter implements GridAdapter {
 		const newValue = event.newValue;
 		const oldValue = event.oldValue;
 
-		console.log('🔍 AG Grid Cell Edit Event:', {
-			field,
-			rowIndex,
-			oldValue,
-			oldValueType: typeof oldValue,
-			newValue,
-			newValueType: typeof newValue,
-			data: event.data
-		});
-
 		if (field && rowIndex !== null && rowIndex !== undefined) {
 			// 规范化值（undefined、null、空字符串 都转为空字符串）
 			const newStr = String(newValue ?? '');
 			const oldStr = String(oldValue ?? '');
 
-			console.log('🔍 Normalized values:', {
-				oldStr,
-				newStr,
-				changed: newStr !== oldStr
-			});
-
 			// 只有当值真正改变时才触发回调
 			if (newStr !== oldStr) {
-				console.log('✅ Triggering cell edit callback');
 				this.cellEditCallback({
 					rowIndex: rowIndex,
 					field: field,
@@ -273,8 +252,6 @@ export class AgGridAdapter implements GridAdapter {
 					oldValue: oldStr,
 					rowData: event.data as RowData
 				});
-			} else {
-				console.log('❌ No change detected, skipping callback');
 			}
 		}
 	}
@@ -330,7 +307,6 @@ export class AgGridAdapter implements GridAdapter {
 	onHeaderEdit(callback: (event: HeaderEditEvent) => void): void {
 		this.headerEditCallback = callback;
 		// TODO: 实现表头编辑（需要自定义 Header Component）
-		console.warn('AgGridAdapter: 表头编辑功能暂未实现');
 	}
 
 	/**
@@ -400,11 +376,8 @@ export class AgGridAdapter implements GridAdapter {
 	 */
 	resizeColumns(): void {
 		if (!this.gridApi) {
-			console.warn('⚠️ gridApi 不存在，跳过列宽调整');
 			return;
 		}
-
-		console.log('🔄 开始列宽调整...');
 
 		// 先触发一次布局刷新，确保网格识别最新容器尺寸（不同版本API兼容）
 		const gridApiAny = this.gridApi as any;
@@ -413,7 +386,6 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 获取当前容器信息
 		const allColumns = this.gridApi.getAllDisplayedColumns() || [];
-		console.log(`📊 当前列数: ${allColumns.length}`);
 
 		// 分类列：flex 列、固定宽度列、短文本列
 		const flexColumnIds: string[] = [];
@@ -439,29 +411,19 @@ export class AgGridAdapter implements GridAdapter {
 			}
 		}
 
-		console.log(`📊 列分类: flex列=${flexColumnIds.length}, 固定宽度列=${fixedWidthColumnIds.length}, 短文本列=${shortTextColumnIds.length}`);
-
 		// 1. 先对短文本列执行 autoSize（计算内容宽度）
 		const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 		const shouldAutoSize = now - this.lastAutoSizeTimestamp >= AgGridAdapter.AUTO_SIZE_COOLDOWN_MS;
 
 		if (shortTextColumnIds.length > 0 && shouldAutoSize && this.shouldAutoSizeOnNextResize) {
-			console.log('🔧 调整短文本列:', shortTextColumnIds);
 			this.gridApi.autoSizeColumns(shortTextColumnIds, false);
 			this.lastAutoSizeTimestamp = now;
 			this.shouldAutoSizeOnNextResize = false;
-		} else if (shortTextColumnIds.length > 0 && this.shouldAutoSizeOnNextResize) {
-			console.log('⏭️ 跳过 autoSize（冷却中）');
-		} else if (shortTextColumnIds.length > 0) {
-			console.log('⏭️ 跳过 autoSize（未标记需要）');
 		}
 
 		// 2. 如果存在 flex 列，让它们分配剩余空间
 		if (flexColumnIds.length > 0) {
-			console.log('🔧 执行 sizeColumnsToFit（分配剩余空间给 flex 列）');
 			this.gridApi.sizeColumnsToFit();
-		} else {
-			console.log('ℹ️ 没有 flex 列，跳过 sizeColumnsToFit');
 		}
 
 		// 3. 在下一帧重算行高，确保 wrapText + autoHeight 及时响应宽度变化
@@ -469,12 +431,6 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 额外刷新单元格，帮助立即应用新宽度
 		this.gridApi.refreshCells({ force: true });
-
-		// 4. 记录最终宽度
-		setTimeout(() => {
-			const totalWidth = allColumns.reduce((sum, col) => sum + (col.getActualWidth() || 0), 0);
-			console.log(`✅ 列宽调整完成，总宽度: ${totalWidth}px`);
-		}, 50);
 	}
 
 	private queueRowHeightSync(): void {
@@ -489,23 +445,22 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.forEachNode(node => node.setRowHeight(undefined));
 		};
 
-		const runReset = (label: string) => {
+		const runReset = () => {
 			if (!this.gridApi) return;
-			console.log(label);
 			resetNodeHeights();
 			api.stopEditing();
-			api.resetRowHeights();
+			// 注意：autoHeight 模式下不需要调用 resetRowHeights()
 			api.onRowHeightChanged();
 			api.refreshCells({ force: true });
 			api.refreshClientSideRowModel?.('nothing');
 			api.redrawRows();
 		};
 
-		const first = () => runReset('📏 同步行高（resetRowHeights #1）');
-		const second = () => runReset('📏 同步行高（resetRowHeights #2）');
-		const third = () => runReset('📏 同步行高（resetRowHeights #3）');
-		const fourth = () => runReset('📏 同步行高（resetRowHeights #4）');
-		const fifth = () => runReset('📏 同步行高（resetRowHeights #5）');
+		const first = () => runReset();
+		const second = () => runReset();
+		const third = () => runReset();
+		const fourth = () => runReset();
+		const fifth = () => runReset();
 
 		if (typeof requestAnimationFrame === 'function') {
 			this.rowHeightResetHandle = requestAnimationFrame(() => {

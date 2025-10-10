@@ -55329,8 +55329,8 @@ var _AgGridAdapter = class {
       // Enter 键垂直导航
       enterNavigatesVerticallyAfterEdit: true,
       // 编辑后 Enter 垂直导航
-      // 行选择配置
-      rowSelection: "single",
+      // 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
+      rowSelection: "multiple",
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
@@ -56295,12 +56295,15 @@ var TableView = class extends import_obsidian.ItemView {
     this.cleanupEventListeners();
     this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
-      var _a4, _b2, _c;
+      var _a4, _b2, _c, _d;
       event.preventDefault();
       const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (blockIndex === null || blockIndex === void 0)
         return;
-      (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.selectRow) == null ? void 0 : _c.call(_b2, blockIndex, { ensureVisible: true });
+      const selectedRows = ((_b2 = this.gridAdapter) == null ? void 0 : _b2.getSelectedRows()) || [];
+      if (!selectedRows.includes(blockIndex)) {
+        (_d = (_c = this.gridAdapter) == null ? void 0 : _c.selectRow) == null ? void 0 : _d.call(_c, blockIndex, { ensureVisible: true });
+      }
       this.showContextMenu(event, blockIndex);
     };
     this.documentClickHandler = () => {
@@ -56323,11 +56326,14 @@ var TableView = class extends import_obsidian.ItemView {
       }
       const selectedRows = ((_a4 = this.gridAdapter) == null ? void 0 : _a4.getSelectedRows()) || [];
       const hasSelection = selectedRows.length > 0;
-      const firstSelectedRow = hasSelection ? selectedRows[0] : null;
       if ((event.metaKey || event.ctrlKey) && event.key === "d") {
         event.preventDefault();
-        if (hasSelection && firstSelectedRow !== null) {
-          this.duplicateRow(firstSelectedRow);
+        if (hasSelection) {
+          if (selectedRows.length > 1) {
+            this.duplicateRows(selectedRows);
+          } else {
+            this.duplicateRow(selectedRows[0]);
+          }
         }
         return;
       }
@@ -56338,9 +56344,11 @@ var TableView = class extends import_obsidian.ItemView {
    * 显示右键菜单
    */
   showContextMenu(event, blockIndex) {
-    var _a4, _b2, _c, _d, _e;
+    var _a4, _b2, _c, _d, _e, _f;
     this.hideContextMenu();
-    const ownerDoc = ((_a4 = this.tableContainer) == null ? void 0 : _a4.ownerDocument) || document;
+    const selectedRows = ((_a4 = this.gridAdapter) == null ? void 0 : _a4.getSelectedRows()) || [];
+    const isMultiSelect = selectedRows.length > 1;
+    const ownerDoc = ((_b2 = this.tableContainer) == null ? void 0 : _b2.ownerDocument) || document;
     this.contextMenu = ownerDoc.body.createDiv({ cls: "tlb-context-menu" });
     this.contextMenu.style.visibility = "hidden";
     this.contextMenu.style.left = "0px";
@@ -56358,16 +56366,37 @@ var TableView = class extends import_obsidian.ItemView {
       this.hideContextMenu();
     });
     this.contextMenu.createDiv({ cls: "tlb-context-menu-separator" });
-    const deleteRow = this.contextMenu.createDiv({ cls: "tlb-context-menu-item tlb-context-menu-item-danger" });
-    deleteRow.createSpan({ text: "\u5220\u9664\u6B64\u884C" });
-    deleteRow.addEventListener("click", () => {
-      this.deleteRow(blockIndex);
-      this.hideContextMenu();
-    });
+    if (isMultiSelect) {
+      const duplicateRows = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
+      duplicateRows.createSpan({ text: `\u590D\u5236\u9009\u4E2D\u7684 ${selectedRows.length} \u884C` });
+      duplicateRows.addEventListener("click", () => {
+        this.duplicateRows(selectedRows);
+        this.hideContextMenu();
+      });
+      const deleteRows = this.contextMenu.createDiv({ cls: "tlb-context-menu-item tlb-context-menu-item-danger" });
+      deleteRows.createSpan({ text: `\u5220\u9664\u9009\u4E2D\u7684 ${selectedRows.length} \u884C` });
+      deleteRows.addEventListener("click", () => {
+        this.deleteRows(selectedRows);
+        this.hideContextMenu();
+      });
+    } else {
+      const duplicateRow = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
+      duplicateRow.createSpan({ text: "\u590D\u5236\u6B64\u884C" });
+      duplicateRow.addEventListener("click", () => {
+        this.duplicateRow(blockIndex);
+        this.hideContextMenu();
+      });
+      const deleteRow = this.contextMenu.createDiv({ cls: "tlb-context-menu-item tlb-context-menu-item-danger" });
+      deleteRow.createSpan({ text: "\u5220\u9664\u6B64\u884C" });
+      deleteRow.addEventListener("click", () => {
+        this.deleteRow(blockIndex);
+        this.hideContextMenu();
+      });
+    }
     const defaultView = ownerDoc.defaultView || window;
     const docElement = ownerDoc.documentElement;
-    const viewportWidth = (_c = (_b2 = defaultView.innerWidth) != null ? _b2 : docElement == null ? void 0 : docElement.clientWidth) != null ? _c : 0;
-    const viewportHeight = (_e = (_d = defaultView.innerHeight) != null ? _d : docElement == null ? void 0 : docElement.clientHeight) != null ? _e : 0;
+    const viewportWidth = (_d = (_c = defaultView.innerWidth) != null ? _c : docElement == null ? void 0 : docElement.clientWidth) != null ? _d : 0;
+    const viewportHeight = (_f = (_e = defaultView.innerHeight) != null ? _e : docElement == null ? void 0 : docElement.clientHeight) != null ? _f : 0;
     const menuRect = this.contextMenu.getBoundingClientRect();
     const margin = 8;
     let left = event.clientX;
@@ -56541,6 +56570,66 @@ var TableView = class extends import_obsidian.ItemView {
     if (nextIndex >= 0) {
       this.focusRow(nextIndex, focusedCell == null ? void 0 : focusedCell.field);
     }
+    this.scheduleSave();
+  }
+  /**
+   * 批量删除指定的多行
+   * @param rowIndexes 要删除的行索引数组（块索引）
+   */
+  deleteRows(rowIndexes) {
+    var _a4;
+    if (!this.schema) {
+      console.error("Schema not initialized");
+      return;
+    }
+    if (rowIndexes.length === 0) {
+      return;
+    }
+    const sortedIndexes = [...rowIndexes].sort((a, b) => b - a);
+    for (const index of sortedIndexes) {
+      if (index >= 0 && index < this.blocks.length) {
+        this.blocks.splice(index, 1);
+      }
+    }
+    const data = this.extractTableData(this.blocks, this.schema);
+    (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    const minIndex = Math.min(...rowIndexes);
+    const nextIndex = Math.min(minIndex, this.blocks.length - 1);
+    if (nextIndex >= 0) {
+      this.focusRow(nextIndex);
+    }
+    this.scheduleSave();
+  }
+  /**
+   * 批量复制指定的多行
+   * @param rowIndexes 要复制的行索引数组（块索引）
+   */
+  duplicateRows(rowIndexes) {
+    var _a4, _b2, _c;
+    if (!this.schema) {
+      console.error("Schema not initialized");
+      return;
+    }
+    if (rowIndexes.length === 0) {
+      return;
+    }
+    const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
+    const sortedIndexes = [...rowIndexes].sort((a, b) => b - a);
+    for (const index of sortedIndexes) {
+      if (index >= 0 && index < this.blocks.length) {
+        const sourceBlock = this.blocks[index];
+        const duplicatedBlock = {
+          title: sourceBlock.title,
+          data: { ...sourceBlock.data }
+        };
+        this.blocks.splice(index + 1, 0, duplicatedBlock);
+      }
+    }
+    const data = this.extractTableData(this.blocks, this.schema);
+    (_c = this.gridAdapter) == null ? void 0 : _c.updateData(data);
+    const minIndex = Math.min(...rowIndexes);
+    const newIndex = minIndex + 1;
+    this.focusRow(newIndex, focusedCell == null ? void 0 : focusedCell.field);
     this.scheduleSave();
   }
   /**

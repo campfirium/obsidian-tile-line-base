@@ -122,6 +122,8 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 行选择配置
 			rowSelection: 'single',
+			// 禁用浏览器原生文本选择，避免拖动时仅选中文本而无法产生范围
+			enableCellTextSelection: false,
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
@@ -193,9 +195,6 @@ export class AgGridAdapter implements GridAdapter {
 					return false;
 				}
 			},
-
-			// 启用单元格复制粘贴
-			enableCellTextSelection: true,
 
 			// 性能优化：减少不必要的重绘
 			suppressAnimationFrame: false,  // 保留动画帧以提升流畅度

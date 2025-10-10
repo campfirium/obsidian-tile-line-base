@@ -64,6 +64,12 @@
   margin: 4px 0;
 }
 
+.tlb-cell-range-selected {
+  background-color: var(--background-modifier-selected);
+  outline: 1px solid var(--interactive-accent);
+  outline-offset: -1px;
+}
+
 .tlb-table {
   width: 100%;
   border-collapse: collapse;

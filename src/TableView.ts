@@ -30,6 +30,11 @@ interface Schema {
 	columnIds?: string[];             // 预留：稳定 ID 系统（用于 SchemaStore）
 }
 
+interface SelectionPoint {
+	row: number;
+	colId: string;
+}
+
 export class TableView extends ItemView {
 	file: TFile | null = null;
 	private blocks: H2Block[] = [];
@@ -53,6 +58,14 @@ export class TableView extends ItemView {
 	private lastContainerWidth: number = 0;
 	private lastContainerHeight: number = 0;
 	private pendingSizeUpdateHandle: number | null = null;
+	private selectionStart: SelectionPoint | null = null;
+	private selectionEnd: SelectionPoint | null = null;
+	private selectionHighlightedCells: HTMLElement[] = [];
+	private selectionOwnerDocument: Document | null = null;
+	private selectionMouseDownHandler: ((event: MouseEvent) => void) | null = null;
+	private selectionMouseMoveHandler: ((event: MouseEvent) => void) | null = null;
+	private selectionMouseUpHandler: ((event: MouseEvent) => void) | null = null;
+	private columnOrder: string[] = [];
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -456,6 +469,9 @@ export class TableView extends ItemView {
 				return baseColDef;
 			})
 		];
+		this.columnOrder = columns
+			.map(col => col.field)
+			.filter((field): field is string => !!field && field !== ROW_ID_FIELD);
 
 		// 根据 Obsidian 主题选择 AG Grid 主题
 		const isDarkMode = document.body.classList.contains('theme-dark');
@@ -468,6 +484,9 @@ export class TableView extends ItemView {
 		if (this.gridAdapter) {
 			this.gridAdapter.destroy();
 		}
+
+		// 清理旧的事件监听器
+		this.cleanupEventListeners();
 
 		// 创建并挂载新的表格
 		this.gridAdapter = new AgGridAdapter();
@@ -525,6 +544,9 @@ export class TableView extends ItemView {
 		// 添加右键菜单监听
 		this.setupContextMenu(tableContainer);
 
+		// 配置拖拽范围选择
+		this.setupRangeSelection(tableContainer);
+
 		// 添加键盘快捷键
 		this.setupKeyboardShortcuts(tableContainer);
 
@@ -570,6 +592,12 @@ export class TableView extends ItemView {
 			this.tableContainer.removeEventListener('keydown', this.keydownHandler);
 			this.keydownHandler = null;
 		}
+
+		// 移除范围选择事件
+		this.detachSelectionHandlers();
+		this.clearSelectionHighlight();
+		this.selectionStart = null;
+		this.selectionEnd = null;
 
 		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
 			cancelAnimationFrame(this.pendingSizeUpdateHandle);
@@ -789,12 +817,180 @@ export class TableView extends ItemView {
 	/**
 	 * 设置右键菜单
 	 */
-	private setupContextMenu(tableContainer: HTMLElement): void {
-		// 清理旧的事件监听器
-		this.cleanupEventListeners();
+	private setupRangeSelection(tableContainer: HTMLElement): void {
+		this.detachSelectionHandlers();
+		this.clearSelectionHighlight();
 
-		// 保存容器引用
-		this.tableContainer = tableContainer;
+		this.selectionMouseDownHandler = (event: MouseEvent) => {
+			// 仅处理左键，且忽略编辑输入框
+			if (event.button !== 0) {
+				return;
+			}
+
+			const target = event.target as HTMLElement | null;
+			if (target?.closest('.ag-cell-edit-input')) {
+				return;
+			}
+
+		const cellElement = target?.closest('.ag-cell') || null;
+		const startPoint = this.extractSelectionPoint(cellElement);
+			if (!startPoint) {
+				this.clearSelectionHighlight();
+				return;
+			}
+
+			event.preventDefault();
+			this.beginSelection(startPoint);
+
+			const ownerDoc = tableContainer.ownerDocument;
+			this.selectionOwnerDocument = ownerDoc;
+
+			this.clearDocumentSelectionHandlers();
+
+			this.selectionMouseMoveHandler = (moveEvent: MouseEvent) => {
+				if (!this.selectionStart) {
+					return;
+				}
+
+		const element = ownerDoc.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+		const hoveredCell = element instanceof Element ? element.closest('.ag-cell') : null;
+		const point = this.extractSelectionPoint(hoveredCell || null);
+				if (point) {
+					this.updateSelection(point);
+				}
+			};
+
+			this.selectionMouseUpHandler = () => {
+				this.endSelection();
+			};
+
+			ownerDoc.addEventListener('mousemove', this.selectionMouseMoveHandler);
+			ownerDoc.addEventListener('mouseup', this.selectionMouseUpHandler);
+		};
+
+		tableContainer.addEventListener('mousedown', this.selectionMouseDownHandler);
+	}
+
+	private beginSelection(point: SelectionPoint): void {
+		this.selectionStart = point;
+		this.selectionEnd = point;
+		this.applySelectionHighlight(point, point);
+	}
+
+	private updateSelection(point: SelectionPoint): void {
+		if (!this.selectionStart) {
+			this.beginSelection(point);
+			return;
+		}
+
+		this.selectionEnd = point;
+		this.applySelectionHighlight(this.selectionStart, point);
+	}
+
+	private endSelection(): void {
+		this.clearDocumentSelectionHandlers();
+		if (this.selectionStart && this.selectionEnd) {
+			this.applySelectionHighlight(this.selectionStart, this.selectionEnd);
+		}
+	}
+
+	private clearDocumentSelectionHandlers(): void {
+		if (this.selectionOwnerDocument && this.selectionMouseMoveHandler) {
+			this.selectionOwnerDocument.removeEventListener('mousemove', this.selectionMouseMoveHandler);
+		}
+		if (this.selectionOwnerDocument && this.selectionMouseUpHandler) {
+			this.selectionOwnerDocument.removeEventListener('mouseup', this.selectionMouseUpHandler);
+		}
+
+		this.selectionMouseMoveHandler = null;
+		this.selectionMouseUpHandler = null;
+		this.selectionOwnerDocument = null;
+	}
+
+	private detachSelectionHandlers(): void {
+		if (this.tableContainer && this.selectionMouseDownHandler) {
+			this.tableContainer.removeEventListener('mousedown', this.selectionMouseDownHandler);
+		}
+		this.selectionMouseDownHandler = null;
+		this.clearDocumentSelectionHandlers();
+	}
+
+	private clearSelectionHighlight(): void {
+		if (this.selectionHighlightedCells.length > 0) {
+			for (const cell of this.selectionHighlightedCells) {
+				cell.classList.remove('tlb-cell-range-selected');
+			}
+			this.selectionHighlightedCells = [];
+		}
+	}
+
+	private applySelectionHighlight(start: SelectionPoint, end: SelectionPoint): void {
+		if (!this.tableContainer || this.columnOrder.length === 0) {
+			return;
+		}
+
+		this.clearSelectionHighlight();
+
+		const startColIndex = this.columnOrder.indexOf(start.colId);
+		const endColIndex = this.columnOrder.indexOf(end.colId);
+
+		if (startColIndex === -1 || endColIndex === -1) {
+			return;
+		}
+
+		const rowStart = Math.min(start.row, end.row);
+		const rowEnd = Math.max(start.row, end.row);
+		const colStart = Math.min(startColIndex, endColIndex);
+		const colEnd = Math.max(startColIndex, endColIndex);
+
+		for (let row = rowStart; row <= rowEnd; row++) {
+			for (let colIndex = colStart; colIndex <= colEnd; colIndex++) {
+				const colId = this.columnOrder[colIndex];
+				const selector = `.ag-row[row-index="${row}"] .ag-cell[col-id="${this.escapeCssIdentifier(colId)}"]`;
+				const cell = this.tableContainer.querySelector<HTMLElement>(selector);
+				if (cell) {
+					cell.classList.add('tlb-cell-range-selected');
+					this.selectionHighlightedCells.push(cell);
+				}
+			}
+		}
+	}
+
+	private extractSelectionPoint(cell: Element | null): SelectionPoint | null {
+		if (!cell) {
+			return null;
+		}
+
+		const colId = cell.getAttribute('col-id');
+		const rowAttr = cell.getAttribute('row-index');
+
+		if (!colId || !rowAttr) {
+			return null;
+		}
+
+		if (!this.columnOrder.includes(colId)) {
+			return null;
+		}
+
+		const row = parseInt(rowAttr, 10);
+		if (Number.isNaN(row)) {
+			return null;
+		}
+
+		return { row, colId };
+	}
+
+	private escapeCssIdentifier(value: string): string {
+		if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+			return CSS.escape(value);
+		}
+		return value.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+	}
+
+	/**
+	 * 设置右键菜单
+	 */
+	private setupContextMenu(tableContainer: HTMLElement): void {
 
 		// 创建并保存右键菜单处理器
 		this.contextMenuHandler = (event: MouseEvent) => {
@@ -1039,6 +1235,10 @@ export class TableView extends ItemView {
 			return;
 		}
 
+ 		this.clearSelectionHighlight();
+ 		this.selectionStart = null;
+ 		this.selectionEnd = null;
+
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 		// 计算新条目编号
 		const entryNumber = this.blocks.length + 1;
@@ -1119,6 +1319,10 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		this.clearSelectionHighlight();
+		this.selectionStart = null;
+		this.selectionEnd = null;
+
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 
 		// 删除块
@@ -1152,6 +1356,10 @@ export class TableView extends ItemView {
 			console.error('Invalid row index:', rowIndex);
 			return;
 		}
+
+		this.clearSelectionHighlight();
+		this.selectionStart = null;
+		this.selectionEnd = null;
 
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 

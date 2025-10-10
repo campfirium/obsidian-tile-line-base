@@ -55331,6 +55331,8 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置
       rowSelection: "single",
+      // 禁用浏览器原生文本选择，避免拖动时仅选中文本而无法产生范围
+      enableCellTextSelection: false,
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
@@ -55389,8 +55391,6 @@ var _AgGridAdapter = class {
           return false;
         }
       },
-      // 启用单元格复制粘贴
-      enableCellTextSelection: true,
       // 性能优化：减少不必要的重绘
       suppressAnimationFrame: false,
       // 保留动画帧以提升流畅度
@@ -55747,6 +55747,14 @@ var TableView = class extends import_obsidian.ItemView {
     this.lastContainerWidth = 0;
     this.lastContainerHeight = 0;
     this.pendingSizeUpdateHandle = null;
+    this.selectionStart = null;
+    this.selectionEnd = null;
+    this.selectionHighlightedCells = [];
+    this.selectionOwnerDocument = null;
+    this.selectionMouseDownHandler = null;
+    this.selectionMouseMoveHandler = null;
+    this.selectionMouseUpHandler = null;
+    this.columnOrder = [];
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -56048,12 +56056,14 @@ var TableView = class extends import_obsidian.ItemView {
         return baseColDef;
       })
     ];
+    this.columnOrder = columns.map((col) => col.field).filter((field) => !!field && field !== ROW_ID_FIELD);
     const isDarkMode = document.body.classList.contains("theme-dark");
     const themeClass = isDarkMode ? "ag-theme-alpine-dark" : "ag-theme-alpine";
     const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
     if (this.gridAdapter) {
       this.gridAdapter.destroy();
     }
+    this.cleanupEventListeners();
     this.gridAdapter = new AgGridAdapter();
     this.gridAdapter.mount(tableContainer, columns, data);
     this.tableContainer = tableContainer;
@@ -56090,6 +56100,7 @@ var TableView = class extends import_obsidian.ItemView {
       setTimeout(() => tryEdit(), 50);
     });
     this.setupContextMenu(tableContainer);
+    this.setupRangeSelection(tableContainer);
     this.setupKeyboardShortcuts(tableContainer);
     this.setupResizeObserver(tableContainer);
     setTimeout(() => {
@@ -56122,6 +56133,10 @@ var TableView = class extends import_obsidian.ItemView {
       this.tableContainer.removeEventListener("keydown", this.keydownHandler);
       this.keydownHandler = null;
     }
+    this.detachSelectionHandlers();
+    this.clearSelectionHighlight();
+    this.selectionStart = null;
+    this.selectionEnd = null;
     if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === "function") {
       cancelAnimationFrame(this.pendingSizeUpdateHandle);
     }
@@ -56291,9 +56306,146 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 设置右键菜单
    */
+  setupRangeSelection(tableContainer) {
+    this.detachSelectionHandlers();
+    this.clearSelectionHighlight();
+    this.selectionMouseDownHandler = (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      const target = event.target;
+      if (target == null ? void 0 : target.closest(".ag-cell-edit-input")) {
+        return;
+      }
+      const cellElement = (target == null ? void 0 : target.closest(".ag-cell")) || null;
+      const startPoint = this.extractSelectionPoint(cellElement);
+      if (!startPoint) {
+        this.clearSelectionHighlight();
+        return;
+      }
+      event.preventDefault();
+      this.beginSelection(startPoint);
+      const ownerDoc = tableContainer.ownerDocument;
+      this.selectionOwnerDocument = ownerDoc;
+      this.clearDocumentSelectionHandlers();
+      this.selectionMouseMoveHandler = (moveEvent) => {
+        if (!this.selectionStart) {
+          return;
+        }
+        const element = ownerDoc.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        const hoveredCell = element instanceof Element ? element.closest(".ag-cell") : null;
+        const point = this.extractSelectionPoint(hoveredCell || null);
+        if (point) {
+          this.updateSelection(point);
+        }
+      };
+      this.selectionMouseUpHandler = () => {
+        this.endSelection();
+      };
+      ownerDoc.addEventListener("mousemove", this.selectionMouseMoveHandler);
+      ownerDoc.addEventListener("mouseup", this.selectionMouseUpHandler);
+    };
+    tableContainer.addEventListener("mousedown", this.selectionMouseDownHandler);
+  }
+  beginSelection(point) {
+    this.selectionStart = point;
+    this.selectionEnd = point;
+    this.applySelectionHighlight(point, point);
+  }
+  updateSelection(point) {
+    if (!this.selectionStart) {
+      this.beginSelection(point);
+      return;
+    }
+    this.selectionEnd = point;
+    this.applySelectionHighlight(this.selectionStart, point);
+  }
+  endSelection() {
+    this.clearDocumentSelectionHandlers();
+    if (this.selectionStart && this.selectionEnd) {
+      this.applySelectionHighlight(this.selectionStart, this.selectionEnd);
+    }
+  }
+  clearDocumentSelectionHandlers() {
+    if (this.selectionOwnerDocument && this.selectionMouseMoveHandler) {
+      this.selectionOwnerDocument.removeEventListener("mousemove", this.selectionMouseMoveHandler);
+    }
+    if (this.selectionOwnerDocument && this.selectionMouseUpHandler) {
+      this.selectionOwnerDocument.removeEventListener("mouseup", this.selectionMouseUpHandler);
+    }
+    this.selectionMouseMoveHandler = null;
+    this.selectionMouseUpHandler = null;
+    this.selectionOwnerDocument = null;
+  }
+  detachSelectionHandlers() {
+    if (this.tableContainer && this.selectionMouseDownHandler) {
+      this.tableContainer.removeEventListener("mousedown", this.selectionMouseDownHandler);
+    }
+    this.selectionMouseDownHandler = null;
+    this.clearDocumentSelectionHandlers();
+  }
+  clearSelectionHighlight() {
+    if (this.selectionHighlightedCells.length > 0) {
+      for (const cell of this.selectionHighlightedCells) {
+        cell.classList.remove("tlb-cell-range-selected");
+      }
+      this.selectionHighlightedCells = [];
+    }
+  }
+  applySelectionHighlight(start, end) {
+    if (!this.tableContainer || this.columnOrder.length === 0) {
+      return;
+    }
+    this.clearSelectionHighlight();
+    const startColIndex = this.columnOrder.indexOf(start.colId);
+    const endColIndex = this.columnOrder.indexOf(end.colId);
+    if (startColIndex === -1 || endColIndex === -1) {
+      return;
+    }
+    const rowStart = Math.min(start.row, end.row);
+    const rowEnd = Math.max(start.row, end.row);
+    const colStart = Math.min(startColIndex, endColIndex);
+    const colEnd = Math.max(startColIndex, endColIndex);
+    for (let row = rowStart; row <= rowEnd; row++) {
+      for (let colIndex = colStart; colIndex <= colEnd; colIndex++) {
+        const colId = this.columnOrder[colIndex];
+        const selector = `.ag-row[row-index="${row}"] .ag-cell[col-id="${this.escapeCssIdentifier(colId)}"]`;
+        const cell = this.tableContainer.querySelector(selector);
+        if (cell) {
+          cell.classList.add("tlb-cell-range-selected");
+          this.selectionHighlightedCells.push(cell);
+        }
+      }
+    }
+  }
+  extractSelectionPoint(cell) {
+    if (!cell) {
+      return null;
+    }
+    const colId = cell.getAttribute("col-id");
+    const rowAttr = cell.getAttribute("row-index");
+    if (!colId || !rowAttr) {
+      return null;
+    }
+    if (!this.columnOrder.includes(colId)) {
+      return null;
+    }
+    const row = parseInt(rowAttr, 10);
+    if (Number.isNaN(row)) {
+      return null;
+    }
+    return { row, colId };
+  }
+  escapeCssIdentifier(value) {
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(value);
+    }
+    return value.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
+  }
+  /**
+   * 设置右键菜单
+   */
   setupContextMenu(tableContainer) {
-    this.cleanupEventListeners();
-    this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
       var _a4, _b2, _c;
       event.preventDefault();
@@ -56473,6 +56625,9 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Schema not initialized");
       return;
     }
+    this.clearSelectionHighlight();
+    this.selectionStart = null;
+    this.selectionEnd = null;
     const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
     const entryNumber = this.blocks.length + 1;
     const newBlock = {
@@ -56533,6 +56688,9 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Invalid row index:", rowIndex);
       return;
     }
+    this.clearSelectionHighlight();
+    this.selectionStart = null;
+    this.selectionEnd = null;
     const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
     this.blocks.splice(rowIndex, 1);
     const data = this.extractTableData(this.blocks, this.schema);
@@ -56557,6 +56715,9 @@ var TableView = class extends import_obsidian.ItemView {
       console.error("Invalid row index:", rowIndex);
       return;
     }
+    this.clearSelectionHighlight();
+    this.selectionStart = null;
+    this.selectionEnd = null;
     const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
     const sourceBlock = this.blocks[rowIndex];
     const duplicatedBlock = {

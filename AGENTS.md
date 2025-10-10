@@ -1,4 +1,4 @@
-# Repository Guidelines
+# AGENTS
 
 ## 项目结构与模块组织
 - `src/` 存放 TypeScript 源码：`main.ts` 管理 Obsidian 插件生命周期，`TableView.ts` 负责解析与视图逻辑，`src/grid/` 封装 AG Grid 适配器。

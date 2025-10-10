@@ -30,6 +30,7 @@ export class AgGridAdapter implements GridAdapter {
 	private gridApi: GridApi | null = null;
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
+	private enterAtLastRowCallback?: (field: string) => void;
 	private lastAutoSizeTimestamp = 0;
 	private shouldAutoSizeOnNextResize = false;
 	private rowHeightResetHandle: number | null = null;
@@ -112,8 +113,12 @@ export class AgGridAdapter implements GridAdapter {
 			rowData: rows,
 
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
-			singleClickEdit: true, // 单击即可编辑
+			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2
 			stopEditingWhenCellsLoseFocus: true, // 失焦时停止编辑
+
+			// Enter 键导航配置（Excel 风格）
+			enterNavigatesVertically: true, // Enter 键垂直导航
+			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
 			// 行选择配置
 			rowSelection: 'single', // 单行选择
@@ -121,6 +126,28 @@ export class AgGridAdapter implements GridAdapter {
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
+			},
+
+			onCellKeyDown: (event) => {
+				// 检测 Enter 键在编辑状态下按下
+				const keyEvent = event.event as KeyboardEvent | undefined;
+				if (keyEvent?.key === 'Enter') {
+					const api = event.api;
+					const rowIndex = event.rowIndex;
+
+					// 检查是否为 CellKeyDownEvent（而非 FullWidthCellKeyDownEvent）
+					if (!('column' in event) || !event.column) return;
+					const colId = event.column.getColId();
+
+					// 检查是否在最后一行
+					const totalRows = api.getDisplayedRowCount();
+					if (rowIndex === totalRows - 1 && colId && this.enterAtLastRowCallback) {
+						// 延迟执行回调，让 AG Grid 先完成编辑和导航
+						setTimeout(() => {
+							this.enterAtLastRowCallback?.(colId);
+						}, 50);
+					}
+				}
 			},
 
 			// 默认列配置
@@ -520,6 +547,52 @@ export class AgGridAdapter implements GridAdapter {
 		});
 
 		return match;
+	}
+
+	/**
+	 * 开始编辑当前聚焦的单元格
+	 */
+	startEditingFocusedCell(): void {
+		if (!this.gridApi) return;
+
+		const focusedCell = this.gridApi.getFocusedCell();
+		if (!focusedCell) return;
+
+		this.gridApi.startEditingCell({
+			rowIndex: focusedCell.rowIndex,
+			colKey: focusedCell.column.getColId()
+		});
+	}
+
+	/**
+	 * 获取当前聚焦的单元格信息
+	 */
+	getFocusedCell(): { rowIndex: number; field: string } | null {
+		if (!this.gridApi) return null;
+
+		const focusedCell = this.gridApi.getFocusedCell();
+		if (!focusedCell) return null;
+
+		// 获取块索引
+		const rowNode = this.gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
+		const data = rowNode?.data as RowData | undefined;
+		if (!data) return null;
+
+		const raw = data[ROW_ID_FIELD];
+		const blockIndex = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+		if (Number.isNaN(blockIndex)) return null;
+
+		return {
+			rowIndex: blockIndex,
+			field: focusedCell.column.getColId()
+		};
+	}
+
+	/**
+	 * 监听 Enter 键在最后一行按下的事件
+	 */
+	onEnterAtLastRow(callback: (field: string) => void): void {
+		this.enterAtLastRowCallback = callback;
 	}
 
 }

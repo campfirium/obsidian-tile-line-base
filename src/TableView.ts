@@ -866,6 +866,9 @@ export class TableView extends ItemView {
 		// 使用容器所在的 document（支持新窗口）
 		const ownerDoc = this.tableContainer?.ownerDocument || document;
 		this.contextMenu = ownerDoc.body.createDiv({ cls: 'tlb-context-menu' });
+		this.contextMenu.style.visibility = 'hidden';
+		this.contextMenu.style.left = '0px';
+		this.contextMenu.style.top = '0px';
 
 		// 在上方插入行
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
@@ -894,9 +897,36 @@ export class TableView extends ItemView {
 			this.hideContextMenu();
 		});
 
-		// 定位菜单
-		this.contextMenu.style.left = `${event.pageX}px`;
-		this.contextMenu.style.top = `${event.pageY}px`;
+		// 定位菜单，避免超出屏幕
+		const defaultView = ownerDoc.defaultView || window;
+		const docElement = ownerDoc.documentElement;
+		const viewportWidth = defaultView.innerWidth ?? docElement?.clientWidth ?? 0;
+		const viewportHeight = defaultView.innerHeight ?? docElement?.clientHeight ?? 0;
+		const menuRect = this.contextMenu.getBoundingClientRect();
+		const margin = 8;
+
+		let left = event.clientX;
+		let top = event.clientY;
+
+		if (left + menuRect.width > viewportWidth - margin) {
+			left = Math.max(margin, viewportWidth - menuRect.width - margin);
+		}
+
+		if (top + menuRect.height > viewportHeight - margin) {
+			top = Math.max(margin, viewportHeight - menuRect.height - margin);
+		}
+
+		if (left < margin) {
+			left = margin;
+		}
+
+		if (top < margin) {
+			top = margin;
+		}
+
+		this.contextMenu.style.left = `${left}px`;
+		this.contextMenu.style.top = `${top}px`;
+		this.contextMenu.style.visibility = 'visible';
 	}
 
 	/**

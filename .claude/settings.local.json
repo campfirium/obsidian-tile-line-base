@@ -17,7 +17,10 @@
       "Bash(ls:*)",
       "Bash(git pull:*)",
       "Bash(git push:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(git branch:*)",
+      "Bash(cd:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

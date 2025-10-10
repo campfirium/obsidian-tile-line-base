@@ -14,7 +14,8 @@
       "Bash(git restore:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

@@ -55445,7 +55445,6 @@ var _AgGridAdapter = class {
     const gridOptions = {
       columnDefs: colDefs,
       rowData: rows,
-      enableRangeSelection: true,
       onCellClicked: (event) => {
         this.handleCellClicked(event);
       },
@@ -55467,7 +55466,10 @@ var _AgGridAdapter = class {
       enterNavigatesVerticallyAfterEdit: true,
       // 编辑后 Enter 垂直导航
       // 行选择配置
-      rowSelection: "single",
+      rowSelection: {
+        mode: "multiRow",
+        enableClickSelection: true
+      },
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);

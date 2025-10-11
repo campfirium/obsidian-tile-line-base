@@ -55611,6 +55611,7 @@ var _AgGridAdapter = class {
     }
   }
   handleCellClicked(event) {
+    var _a4;
     const mouseEvent = event.event;
     const node = event.node;
     const blockIndex = this.getBlockIndexFromNode(node);
@@ -55649,6 +55650,11 @@ var _AgGridAdapter = class {
       return;
     }
     this.shiftSelectAnchor = blockIndex;
+    (_a4 = this.gridApi) == null ? void 0 : _a4.deselectAll();
+    const currentNode = this.findRowNodeByBlockIndex(blockIndex);
+    if (currentNode) {
+      currentNode.setSelected(true, false);
+    }
   }
   getContextMenuItems(params) {
     var _a4, _b2;
@@ -55940,11 +55946,9 @@ var _AgGridAdapter = class {
     const node = this.findRowNodeByBlockIndex(blockIndex);
     if (!node)
       return;
-    const isSelected = !!node.isSelected && node.isSelected();
-    if (isSelected) {
-      node.setSelected(false, true);
-    } else {
-      node.setSelected(true, false);
+    const isSelected = node.isSelected();
+    node.setSelected(!isSelected, true);
+    if (!isSelected) {
       this.shiftSelectAnchor = blockIndex;
     }
   }

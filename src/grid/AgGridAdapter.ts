@@ -378,6 +378,12 @@ export class AgGridAdapter implements GridAdapter {
 		}
 
 		this.shiftSelectAnchor = blockIndex;
+		this.gridApi?.deselectAll();
+
+		const currentNode = this.findRowNodeByBlockIndex(blockIndex);
+		if (currentNode) {
+			currentNode.setSelected(true, false);
+		}
 	}
 
 	private getContextMenuItems(params: GetContextMenuItemsParams): Array<MenuItemDef | DefaultMenuItem> {
@@ -717,11 +723,9 @@ selectRow(blockIndex: number, options?: { ensureVisible?: boolean; additive?: bo
 		const node = this.findRowNodeByBlockIndex(blockIndex);
 		if (!node) return;
 
-		const isSelected = !!node.isSelected && node.isSelected();
-		if (isSelected) {
-			node.setSelected(false, true);
-		} else {
-			node.setSelected(true, false);
+		const isSelected = node.isSelected();
+		node.setSelected(!isSelected, true);
+		if (!isSelected) {
 			this.shiftSelectAnchor = blockIndex;
 		}
 	}

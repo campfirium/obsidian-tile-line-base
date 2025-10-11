@@ -36,25 +36,25 @@
 ## 实现计划
 
 ### 阶段 1：创建 StatusCellRenderer
-- [ ] 创建 `src/renderers/StatusCellRenderer.ts`
-- [ ] 实现 5 种状态的图标渲染
-- [ ] 支持状态值规范化（容错处理）
+- [x] 创建 `src/renderers/StatusCellRenderer.ts`
+- [x] 实现 5 种状态的图标渲染
+- [x] 支持状态值规范化（容错处理）
 
 ### 阶段 2：集成到 AgGridAdapter
-- [ ] 配置 status 列使用自定义渲染器
-- [ ] 实现左键点击切换（onCellClicked）
-- [ ] 实现右键菜单（getContextMenuItems）
-- [ ] 添加行样式规则（rowClassRules）
+- [x] 配置 status 列使用自定义渲染器
+- [x] 实现左键点击切换（onCellClicked）
+- [x] 实现右键菜单（getContextMenuItems）
+- [x] 添加行样式规则（rowClassRules）
 
 ### 阶段 3：集成到 TableView
-- [ ] 自动添加 status 为内置列
-- [ ] 新行初始化 status='todo'
-- [ ] 状态变更时自动更新 statusChanged
-- [ ] blocksToMarkdown 输出 statusChanged 字段
+- [x] 自动添加 status 为内置列
+- [x] 新行初始化 status='todo'
+- [x] 状态变更时自动更新 statusChanged
+- [x] blocksToMarkdown 输出 statusChanged 字段
 
 ### 阶段 4：CSS 样式
-- [ ] 添加 .tlb-row-completed 样式
-- [ ] 完成状态行：半透明 + 删除线
+- [x] 添加 .tlb-row-completed 样式
+- [x] 完成状态行：半透明 + 删除线
 
 ## 技术要点
 

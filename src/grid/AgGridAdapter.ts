@@ -10,6 +10,10 @@ import {
 	GridOptions,
 	ColDef,
 	CellEditingStoppedEvent,
+	CellClickedEvent,
+	GetContextMenuItemsParams,
+	MenuItemDef,
+	DefaultMenuItem,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode
@@ -22,6 +26,15 @@ import {
 	HeaderEditEvent,
 	ROW_ID_FIELD
 } from './GridAdapter';
+import { StatusCellRenderer } from '../renderers/StatusCellRenderer';
+import {
+	STATUS_VALUES,
+	getNextToggleStatus,
+	getStatusIcon,
+	getStatusLabel,
+	isCompletedStatus,
+	normalizeStatus
+} from '../status/statusUtils';
 
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -46,6 +59,25 @@ export class AgGridAdapter implements GridAdapter {
 	): void {
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
+			if (col.field === 'status') {
+				return {
+					field: col.field,
+					headerName: col.headerName,
+					editable: false,
+					width: 60,
+					minWidth: 60,
+					maxWidth: 60,
+					sortable: false,
+					filter: false,
+					resizable: false,
+					suppressSizeToFit: true,
+					cellRenderer: StatusCellRenderer,
+					cellClass: 'tlb-status-cell',
+					lockPosition: true,
+					suppressMovable: true
+				};
+			}
+
 			// 序号列特殊处理
 			if (col.field === '#') {
 				return {
@@ -111,6 +143,17 @@ export class AgGridAdapter implements GridAdapter {
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
 			rowData: rows,
+			onCellClicked: (event: CellClickedEvent) => {
+				this.handleCellClicked(event);
+			},
+			getContextMenuItems: (params: GetContextMenuItemsParams) => this.getContextMenuItems(params),
+
+			rowClassRules: {
+				'tlb-row-completed': params => {
+					const rawStatus = params.data ? (params.data as RowData)['status'] : undefined;
+					return isCompletedStatus(normalizeStatus(rawStatus));
+				}
+			},
 
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
 			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2
@@ -285,6 +328,81 @@ export class AgGridAdapter implements GridAdapter {
 				});
 			}
 		}
+	}
+
+	private handleCellClicked(event: CellClickedEvent): void {
+		if (event.colDef.field !== 'status') {
+			return;
+		}
+
+		const mouseEvent = event.event;
+		if (mouseEvent instanceof MouseEvent && mouseEvent.button !== 0) {
+			return;
+		}
+
+		const node = event.node;
+		if (!node) return;
+
+		const rowData = node.data as RowData | undefined;
+		const currentStatus = normalizeStatus(rowData?.status);
+		const nextStatus = getNextToggleStatus(currentStatus);
+
+		if (nextStatus === currentStatus) {
+			return;
+		}
+
+		node.setDataValue('status', nextStatus);
+		this.emitStatusCellEdit(node, event.rowIndex, nextStatus, currentStatus);
+	}
+
+	private getContextMenuItems(params: GetContextMenuItemsParams): Array<MenuItemDef | DefaultMenuItem> {
+		if (params.column?.getColId() !== 'status' || !params.node) {
+			return params.defaultItems ?? [];
+		}
+
+		const node = params.node;
+		const rowData = node.data as RowData | undefined;
+		const currentStatus = normalizeStatus(rowData?.status);
+
+		const statusItems: MenuItemDef[] = STATUS_VALUES.map(value => {
+			const icon = getStatusIcon(value);
+			const label = getStatusLabel(value);
+			return {
+				name: `${icon} ${label}`,
+				icon,
+				checked: value === currentStatus,
+				action: () => {
+					if (value === currentStatus) {
+						return;
+					}
+					node.setDataValue('status', value);
+					this.emitStatusCellEdit(node, node.rowIndex, value, currentStatus);
+				}
+			};
+		});
+
+		const separatorItem: DefaultMenuItem = 'separator';
+		const defaultItems: DefaultMenuItem[] = ['copy', 'copyWithHeaders', 'export'];
+
+		return [...statusItems, separatorItem, ...defaultItems];
+	}
+
+	private emitStatusCellEdit(
+		node: IRowNode<RowData>,
+		rowIndex: number | null | undefined,
+		newValue: string,
+		oldValue: string
+	): void {
+		if (!this.cellEditCallback) return;
+
+		const resolvedIndex = (rowIndex ?? node.rowIndex ?? 0);
+		this.cellEditCallback({
+			rowIndex: resolvedIndex,
+			field: 'status',
+			newValue,
+			oldValue,
+			rowData: node.data as RowData
+		});
 	}
 
 	/**

@@ -1,8 +1,13 @@
 import { ItemView, WorkspaceLeaf, TFile, EventRef } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
+import { normalizeStatus } from "./status/statusUtils";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
+
+const STATUS_FIELD = 'status';
+const STATUS_CHANGED_FIELD = 'statusChanged';
+const DEFAULT_STATUS = 'todo';
 
 interface TableViewState extends Record<string, unknown> {
 	filePath: string;
@@ -37,6 +42,7 @@ export class TableView extends ItemView {
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
 	private contextMenu: HTMLElement | null = null;
+	private needsStatusSyncSave = false;
 
 	// 事件监听器引用（用于清理）
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
@@ -290,10 +296,32 @@ export class TableView extends ItemView {
 			}
 		}
 
+		const finalColumnNames = this.applySystemColumns(columnNames);
+
 		return {
-			columnNames,
+			columnNames: finalColumnNames,
 			columnConfigs: columnConfigs || undefined
 		};
+	}
+
+	private applySystemColumns(columnNames: string[]): string[] {
+		const filtered = columnNames.filter(name => (
+			name !== STATUS_CHANGED_FIELD &&
+			name !== ROW_ID_FIELD
+		));
+
+		const statusIndex = filtered.indexOf(STATUS_FIELD);
+		const targetIndex = filtered.length === 0 ? 0 : 1;
+
+		if (statusIndex === -1) {
+			filtered.splice(targetIndex, 0, STATUS_FIELD);
+		} else if (filtered.length > 1 && statusIndex !== targetIndex) {
+			filtered.splice(statusIndex, 1);
+			const adjustedTarget = Math.min(targetIndex, filtered.length);
+			filtered.splice(adjustedTarget, 0, STATUS_FIELD);
+		}
+
+		return filtered;
 	}
 
 	/**
@@ -301,6 +329,7 @@ export class TableView extends ItemView {
 	 */
 	private extractTableData(blocks: H2Block[], schema: Schema): RowData[] {
 		const data: RowData[] = [];
+		let normalized = false;
 
 		// 所有块都是数据（没有模板H2）
 		for (let i = 0; i < blocks.length; i++) {
@@ -313,10 +342,34 @@ export class TableView extends ItemView {
 
 			// 所有列都从 block.data 提取
 			for (const key of schema.columnNames) {
-				row[key] = block.data[key] || '';
+				if (key === STATUS_FIELD) {
+					const normalizedStatus = normalizeStatus(block.data[STATUS_FIELD]);
+					if (block.data[STATUS_FIELD] !== normalizedStatus) {
+						block.data[STATUS_FIELD] = normalizedStatus;
+						normalized = true;
+					}
+					row[STATUS_FIELD] = normalizedStatus || DEFAULT_STATUS;
+				} else {
+					row[key] = block.data[key] || '';
+				}
+			}
+
+			if (!block.data[STATUS_FIELD]) {
+				block.data[STATUS_FIELD] = DEFAULT_STATUS;
+				row[STATUS_FIELD] = DEFAULT_STATUS;
+				normalized = true;
+			}
+
+			if (!block.data[STATUS_CHANGED_FIELD]) {
+				block.data[STATUS_CHANGED_FIELD] = new Date().toISOString();
+				normalized = true;
 			}
 
 			data.push(row);
+		}
+
+		if (normalized) {
+			this.needsStatusSyncSave = true;
 		}
 
 		return data;
@@ -351,6 +404,11 @@ export class TableView extends ItemView {
 						lines.push(`${key}：`);
 					}
 				}
+			}
+
+			const statusChangedValue = block.data[STATUS_CHANGED_FIELD] || '';
+			if (statusChangedValue !== undefined) {
+				lines.push(`${STATUS_CHANGED_FIELD}：${statusChangedValue}`);
 			}
 
 			// H2 块之间空一行
@@ -431,6 +489,8 @@ export class TableView extends ItemView {
 		// 提取数据
 		const data = this.extractTableData(this.blocks, this.schema);
 
+		const primaryColumnName = this.schema.columnNames.find(name => name !== STATUS_FIELD) ?? this.schema.columnNames[0];
+
 		// 准备列定义（添加序号列）
 		const columns: ColumnDef[] = [
 			{
@@ -439,11 +499,23 @@ export class TableView extends ItemView {
 				editable: false  // 序号列只读
 			},
 			...this.schema.columnNames.map(name => {
+				if (name === STATUS_FIELD) {
+					return {
+						field: STATUS_FIELD,
+						headerName: STATUS_FIELD,
+						editable: false
+					};
+				}
+
 				const baseColDef: ColumnDef = {
 					field: name,
 					headerName: name,
 					editable: true
 				};
+
+				if (primaryColumnName && name === primaryColumnName) {
+					(baseColDef as any).cellClass = 'tlb-title-cell';
+				}
 
 				// 应用头部配置块中的宽度配置
 				if (this.schema?.columnConfigs) {
@@ -691,6 +763,11 @@ export class TableView extends ItemView {
 
 		// 启动尺寸轮询兜底（处理最大化未触发 resize 的情况）
 		this.startSizePolling(tableContainer);
+
+		if (this.needsStatusSyncSave) {
+			this.scheduleSave();
+			this.needsStatusSyncSave = false;
+		}
 	}
 
 	/**
@@ -798,12 +875,20 @@ export class TableView extends ItemView {
 
 		// 创建并保存右键菜单处理器
 		this.contextMenuHandler = (event: MouseEvent) => {
-			event.preventDefault();
-
 			// 获取点击行对应的块索引
 			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
 			if (blockIndex === null || blockIndex === undefined) return;
 			this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
+
+			const targetCell = (event.target as HTMLElement | null)?.closest('.ag-cell');
+			const colId = targetCell?.getAttribute('col-id');
+
+			if (colId === STATUS_FIELD) {
+				this.hideContextMenu();
+				return; // 交给 AG Grid 内置菜单处理
+			}
+
+			event.preventDefault();
 
 			// 显示自定义菜单
 			this.showContextMenu(event, blockIndex);
@@ -970,7 +1055,17 @@ export class TableView extends ItemView {
 		const block = this.blocks[blockIndex];
 
 		// 所有列都更新 data[key]
-		block.data[field] = newValue;
+		if (field === STATUS_FIELD) {
+			const normalizedNew = normalizeStatus(newValue);
+			const previous = normalizeStatus(block.data[STATUS_FIELD]);
+
+			if (normalizedNew !== previous) {
+				block.data[STATUS_FIELD] = normalizedNew;
+				block.data[STATUS_CHANGED_FIELD] = new Date().toISOString();
+			}
+		} else {
+			block.data[field] = newValue;
+		}
 
 		// 触发保存
 		this.scheduleSave();
@@ -1042,6 +1137,8 @@ export class TableView extends ItemView {
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 		// 计算新条目编号
 		const entryNumber = this.blocks.length + 1;
+		const titleColumnIndex = this.schema.columnNames.findIndex(name => name !== STATUS_FIELD);
+		const createdAt = new Date().toISOString();
 
 		// 创建新 H2Block（初始化所有 key）
 		const newBlock: H2Block = {
@@ -1052,9 +1149,19 @@ export class TableView extends ItemView {
 		// 为所有列初始化值
 		for (let i = 0; i < this.schema.columnNames.length; i++) {
 			const key = this.schema.columnNames[i];
-			// 第一列使用"新条目 X"，其他列为空
-			newBlock.data[key] = (i === 0) ? `新条目 ${entryNumber}` : '';
+			if (key === STATUS_FIELD) {
+				newBlock.data[key] = DEFAULT_STATUS;
+				continue;
+			}
+
+			if (i === titleColumnIndex || (titleColumnIndex === -1 && i === 0)) {
+				newBlock.data[key] = `新条目 ${entryNumber}`;
+			} else {
+				newBlock.data[key] = '';
+			}
 		}
+
+		newBlock.data[STATUS_CHANGED_FIELD] = createdAt;
 
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）

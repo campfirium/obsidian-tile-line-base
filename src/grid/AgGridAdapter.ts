@@ -165,8 +165,10 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 行选择配置
 			rowSelection: {
-				mode: 'multiRow'
+				mode: 'multiRow',
+				enableClickSelection: true
 			},
+			rowMultiSelectWithClick: true,
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {

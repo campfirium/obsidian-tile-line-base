@@ -55475,8 +55475,10 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置
       rowSelection: {
-        mode: "multiRow"
+        mode: "multiRow",
+        enableClickSelection: true
       },
+      rowMultiSelectWithClick: true,
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
@@ -56567,9 +56569,8 @@ var TableView = class extends import_obsidian.ItemView {
         return;
       const selectedRows = ((_b2 = this.gridAdapter) == null ? void 0 : _b2.getSelectedRows()) || [];
       const alreadySelected = selectedRows.includes(blockIndex);
-      if (!alreadySelected) {
-        (_d = (_c = this.gridAdapter) == null ? void 0 : _c.selectRow) == null ? void 0 : _d.call(_c, blockIndex, { ensureVisible: true, additive: true });
-      }
+      const additive = alreadySelected || event.shiftKey || event.ctrlKey || event.metaKey;
+      (_d = (_c = this.gridAdapter) == null ? void 0 : _c.selectRow) == null ? void 0 : _d.call(_c, blockIndex, { ensureVisible: true, additive });
       const targetCell = (_e = event.target) == null ? void 0 : _e.closest(".ag-cell");
       const colId = targetCell == null ? void 0 : targetCell.getAttribute("col-id");
       if (colId === STATUS_FIELD) {

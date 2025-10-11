@@ -114,7 +114,7 @@ export interface GridAdapter {
 	 * @param blockIndex 块索引
 	 * @param options 选项：是否确保在视口内
 	 */
-	selectRow?(blockIndex: number, options?: { ensureVisible?: boolean }): void;
+	selectRow?(blockIndex: number, options?: { ensureVisible?: boolean; additive?: boolean }): void;
 
 	/**
 	 * 开始编辑当前聚焦的单元格

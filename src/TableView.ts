@@ -878,7 +878,12 @@ export class TableView extends ItemView {
 			// 获取点击行对应的块索引
 			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
 			if (blockIndex === null || blockIndex === undefined) return;
-			this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
+
+			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
+			const alreadySelected = selectedRows.includes(blockIndex);
+			if (!alreadySelected) {
+				this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
+			}
 
 			const targetCell = (event.target as HTMLElement | null)?.closest('.ag-cell');
 			const colId = targetCell?.getAttribute('col-id');
@@ -934,7 +939,14 @@ export class TableView extends ItemView {
 				return;
 			}
 
-			// Delete / Backspace 快捷键禁用：保留原生删除行为，通过上下文菜单删除整行
+			// Delete / Backspace: 删除选中行
+			if ((event.key === 'Delete' || event.key === 'Backspace') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+				event.preventDefault();
+				if (hasSelection) {
+					this.deleteRows(selectedRows);
+				}
+				return;
+			}
 		};
 
 		// 绑定事件监听器
@@ -955,6 +967,13 @@ export class TableView extends ItemView {
 		this.contextMenu.style.left = '0px';
 		this.contextMenu.style.top = '0px';
 
+		const selectedRowSet = new Set(this.gridAdapter?.getSelectedRows() || []);
+		if (!selectedRowSet.has(blockIndex)) {
+			selectedRowSet.add(blockIndex);
+		}
+		const selectedRowIndexes = Array.from(selectedRowSet).sort((a, b) => a - b);
+		const multiSelection = selectedRowIndexes.length > 1;
+
 		// 在上方插入行
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
 		insertAbove.createSpan({ text: '在上方插入行' });
@@ -974,11 +993,15 @@ export class TableView extends ItemView {
 		// 分隔线
 		this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
 
-		// 删除此行
+		const deleteTargets = multiSelection ? selectedRowIndexes : [blockIndex];
+		const deleteLabel = multiSelection
+			? `删除选中行 (${deleteTargets.length})`
+			: '删除此行';
+
 		const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-		deleteRow.createSpan({ text: '删除此行' });
+		deleteRow.createSpan({ text: deleteLabel });
 		deleteRow.addEventListener('click', () => {
-			this.deleteRow(blockIndex);
+			this.deleteRows(deleteTargets);
 			this.hideContextMenu();
 		});
 
@@ -1215,32 +1238,58 @@ export class TableView extends ItemView {
 	 * @param rowIndex 数据行索引
 	 */
 	private deleteRow(rowIndex: number): void {
+		this.deleteRows([rowIndex]);
+	}
+
+	private deleteRows(rowIndexes: number[]): void {
 		if (!this.schema) {
 			console.error('Schema not initialized');
 			return;
 		}
 
-		// 边界检查（rowIndex 直接对应 blocks 索引）
-		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-			console.error('Invalid row index:', rowIndex);
+		if (rowIndexes.length === 0) {
+			return;
+		}
+
+		const uniqueIndexes = Array.from(new Set(rowIndexes))
+			.filter(idx => idx >= 0 && idx < this.blocks.length)
+			.sort((a, b) => a - b);
+
+		if (uniqueIndexes.length === 0) {
+			console.warn('⚠️ 没有可删除的行索引', rowIndexes);
+			return;
+		}
+
+		const titles = uniqueIndexes.map(idx => this.blocks[idx]?.title || `条目 ${idx + 1}`);
+		let confirmMessage: string;
+
+		if (uniqueIndexes.length === 1) {
+			confirmMessage = `确定要删除这一行吗？\n\n"${titles[0]}"`;
+		} else {
+			const previewLines = titles.slice(0, 3).map(title => `• ${title}`).join('\n');
+			const moreIndicator = titles.length > 3 ? '\n• ...' : '';
+			confirmMessage = `确定要删除选中的 ${uniqueIndexes.length} 行吗？\n\n${previewLines}${moreIndicator}`;
+		}
+
+		if (!window.confirm(confirmMessage)) {
 			return;
 		}
 
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
+		const firstIndex = uniqueIndexes[0];
 
-		// 删除块
-		this.blocks.splice(rowIndex, 1);
+		for (let i = uniqueIndexes.length - 1; i >= 0; i--) {
+			this.blocks.splice(uniqueIndexes[i], 1);
+		}
 
-		// 更新 AG Grid 显示
 		const data = this.extractTableData(this.blocks, this.schema);
 		this.gridAdapter?.updateData(data);
 
-		const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
+		const nextIndex = Math.min(firstIndex, this.blocks.length - 1);
 		if (nextIndex >= 0) {
 			this.focusRow(nextIndex, focusedCell?.field);
 		}
 
-		// 触发保存
 		this.scheduleSave();
 	}
 

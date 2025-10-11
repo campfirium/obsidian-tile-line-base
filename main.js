@@ -55254,11 +55254,11 @@ var AllCommunityModule = {
 // src/status/statusUtils.ts
 var STATUS_VALUES = ["todo", "done", "inprogress", "onhold", "canceled"];
 var STATUS_ICON_MAP = {
-  todo: "\u2610",
-  done: "\u2611",
-  inprogress: "\u229F",
-  onhold: "\u23F8",
-  canceled: "\u2612"
+  todo: "",
+  done: "\u2713",
+  inprogress: "\u2500",
+  onhold: "\u2016",
+  canceled: "\u2715"
 };
 var STATUS_LABEL_MAP = {
   todo: "\u5F85\u529E",
@@ -55277,12 +55277,15 @@ var STATUS_ALIASES = {
   completed: "done",
   "\u5DF2\u5B8C\u6210": "done",
   "\u2611": "done",
+  "\u2713": "done",
   inprogress: "inprogress",
   "in-progress": "inprogress",
   "in_progress": "inprogress",
   doing: "inprogress",
   "\u8FDB\u884C\u4E2D": "inprogress",
   "\u229F": "inprogress",
+  "\u2500": "inprogress",
+  "-": "inprogress",
   onhold: "onhold",
   "on-hold": "onhold",
   "on_hold": "onhold",
@@ -55290,11 +55293,14 @@ var STATUS_ALIASES = {
   paused: "onhold",
   "\u5DF2\u6401\u7F6E": "onhold",
   "\u23F8": "onhold",
+  "\u2016": "onhold",
   canceled: "canceled",
   cancelled: "canceled",
   dropped: "canceled",
   "\u5DF2\u653E\u5F03": "canceled",
-  "\u2612": "canceled"
+  "\u2612": "canceled",
+  "\u2715": "canceled",
+  "\xD7": "canceled"
 };
 function normalizeStatus(value) {
   var _a4, _b2;
@@ -55350,12 +55356,14 @@ var StatusCellRenderer = class {
     this.status = normalizeStatus(rawValue);
     const icon = STATUS_ICON_MAP[this.status];
     const label = STATUS_LABEL_MAP[this.status];
-    this.eGui.textContent = icon;
+    this.eGui.textContent = "";
+    this.eGui.dataset.icon = icon;
     this.eGui.title = label;
     this.eGui.dataset.status = this.status;
     this.eGui.setAttribute("aria-label", label);
     this.eGui.setAttribute("role", "checkbox");
-    this.eGui.setAttribute("aria-checked", this.status === "done" ? "true" : "false");
+    const ariaChecked = this.status === "done" ? "true" : this.status === "todo" ? "false" : "mixed";
+    this.eGui.setAttribute("aria-checked", ariaChecked);
   }
 };
 
@@ -55467,8 +55475,7 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置
       rowSelection: {
-        mode: "multiRow",
-        enableClickSelection: true
+        mode: "multiRow"
       },
       // 事件监听
       onCellEditingStopped: (event) => {
@@ -55685,8 +55692,8 @@ var _AgGridAdapter = class {
     const node = this.findRowNodeByBlockIndex(blockIndex);
     if (!node)
       return;
-    this.gridApi.deselectAll();
-    node.setSelected(true, true);
+    const clearOthers = (options == null ? void 0 : options.additive) ? false : true;
+    node.setSelected(true, clearOthers);
     if ((options == null ? void 0 : options.ensureVisible) !== false) {
       const rowIndex = (_a4 = node.rowIndex) != null ? _a4 : null;
       if (rowIndex !== null) {
@@ -56554,12 +56561,16 @@ var TableView = class extends import_obsidian.ItemView {
     this.cleanupEventListeners();
     this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
-      var _a4, _b2, _c, _d;
+      var _a4, _b2, _c, _d, _e;
       const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (blockIndex === null || blockIndex === void 0)
         return;
-      (_c = (_b2 = this.gridAdapter) == null ? void 0 : _b2.selectRow) == null ? void 0 : _c.call(_b2, blockIndex, { ensureVisible: true });
-      const targetCell = (_d = event.target) == null ? void 0 : _d.closest(".ag-cell");
+      const selectedRows = ((_b2 = this.gridAdapter) == null ? void 0 : _b2.getSelectedRows()) || [];
+      const alreadySelected = selectedRows.includes(blockIndex);
+      if (!alreadySelected) {
+        (_d = (_c = this.gridAdapter) == null ? void 0 : _c.selectRow) == null ? void 0 : _d.call(_c, blockIndex, { ensureVisible: true });
+      }
+      const targetCell = (_e = event.target) == null ? void 0 : _e.closest(".ag-cell");
       const colId = targetCell == null ? void 0 : targetCell.getAttribute("col-id");
       if (colId === STATUS_FIELD) {
         this.hideContextMenu();
@@ -56596,6 +56607,13 @@ var TableView = class extends import_obsidian.ItemView {
         }
         return;
       }
+      if ((event.key === "Delete" || event.key === "Backspace") && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        if (hasSelection) {
+          this.deleteRows(selectedRows);
+        }
+        return;
+      }
     };
     tableContainer.addEventListener("keydown", this.keydownHandler);
   }
@@ -56603,13 +56621,19 @@ var TableView = class extends import_obsidian.ItemView {
    * 显示右键菜单
    */
   showContextMenu(event, blockIndex) {
-    var _a4, _b2, _c, _d, _e;
+    var _a4, _b2, _c, _d, _e, _f;
     this.hideContextMenu();
     const ownerDoc = ((_a4 = this.tableContainer) == null ? void 0 : _a4.ownerDocument) || document;
     this.contextMenu = ownerDoc.body.createDiv({ cls: "tlb-context-menu" });
     this.contextMenu.style.visibility = "hidden";
     this.contextMenu.style.left = "0px";
     this.contextMenu.style.top = "0px";
+    const selectedRowSet = new Set(((_b2 = this.gridAdapter) == null ? void 0 : _b2.getSelectedRows()) || []);
+    if (!selectedRowSet.has(blockIndex)) {
+      selectedRowSet.add(blockIndex);
+    }
+    const selectedRowIndexes = Array.from(selectedRowSet).sort((a, b) => a - b);
+    const multiSelection = selectedRowIndexes.length > 1;
     const insertAbove = this.contextMenu.createDiv({ cls: "tlb-context-menu-item" });
     insertAbove.createSpan({ text: "\u5728\u4E0A\u65B9\u63D2\u5165\u884C" });
     insertAbove.addEventListener("click", () => {
@@ -56623,16 +56647,18 @@ var TableView = class extends import_obsidian.ItemView {
       this.hideContextMenu();
     });
     this.contextMenu.createDiv({ cls: "tlb-context-menu-separator" });
+    const deleteTargets = multiSelection ? selectedRowIndexes : [blockIndex];
+    const deleteLabel = multiSelection ? `\u5220\u9664\u9009\u4E2D\u884C (${deleteTargets.length})` : "\u5220\u9664\u6B64\u884C";
     const deleteRow = this.contextMenu.createDiv({ cls: "tlb-context-menu-item tlb-context-menu-item-danger" });
-    deleteRow.createSpan({ text: "\u5220\u9664\u6B64\u884C" });
+    deleteRow.createSpan({ text: deleteLabel });
     deleteRow.addEventListener("click", () => {
-      this.deleteRow(blockIndex);
+      this.deleteRows(deleteTargets);
       this.hideContextMenu();
     });
     const defaultView = ownerDoc.defaultView || window;
     const docElement = ownerDoc.documentElement;
-    const viewportWidth = (_c = (_b2 = defaultView.innerWidth) != null ? _b2 : docElement == null ? void 0 : docElement.clientWidth) != null ? _c : 0;
-    const viewportHeight = (_e = (_d = defaultView.innerHeight) != null ? _d : docElement == null ? void 0 : docElement.clientHeight) != null ? _e : 0;
+    const viewportWidth = (_d = (_c = defaultView.innerWidth) != null ? _c : docElement == null ? void 0 : docElement.clientWidth) != null ? _d : 0;
+    const viewportHeight = (_f = (_e = defaultView.innerHeight) != null ? _e : docElement == null ? void 0 : docElement.clientHeight) != null ? _f : 0;
     const menuRect = this.contextMenu.getBoundingClientRect();
     const margin = 8;
     let left = event.clientX;
@@ -56809,20 +56835,49 @@ var TableView = class extends import_obsidian.ItemView {
    * @param rowIndex 数据行索引
    */
   deleteRow(rowIndex) {
+    this.deleteRows([rowIndex]);
+  }
+  deleteRows(rowIndexes) {
     var _a4, _b2, _c;
     if (!this.schema) {
       console.error("Schema not initialized");
       return;
     }
-    if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-      console.error("Invalid row index:", rowIndex);
+    if (rowIndexes.length === 0) {
+      return;
+    }
+    const uniqueIndexes = Array.from(new Set(rowIndexes)).filter((idx) => idx >= 0 && idx < this.blocks.length).sort((a, b) => a - b);
+    if (uniqueIndexes.length === 0) {
+      console.warn("\u26A0\uFE0F \u6CA1\u6709\u53EF\u5220\u9664\u7684\u884C\u7D22\u5F15", rowIndexes);
+      return;
+    }
+    const titles = uniqueIndexes.map((idx) => {
+      var _a5;
+      return ((_a5 = this.blocks[idx]) == null ? void 0 : _a5.title) || `\u6761\u76EE ${idx + 1}`;
+    });
+    let confirmMessage;
+    if (uniqueIndexes.length === 1) {
+      confirmMessage = `\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E00\u884C\u5417\uFF1F
+
+"${titles[0]}"`;
+    } else {
+      const previewLines = titles.slice(0, 3).map((title) => `\u2022 ${title}`).join("\n");
+      const moreIndicator = titles.length > 3 ? "\n\u2022 ..." : "";
+      confirmMessage = `\u786E\u5B9A\u8981\u5220\u9664\u9009\u4E2D\u7684 ${uniqueIndexes.length} \u884C\u5417\uFF1F
+
+${previewLines}${moreIndicator}`;
+    }
+    if (!window.confirm(confirmMessage)) {
       return;
     }
     const focusedCell = (_b2 = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getFocusedCell) == null ? void 0 : _b2.call(_a4);
-    this.blocks.splice(rowIndex, 1);
+    const firstIndex = uniqueIndexes[0];
+    for (let i = uniqueIndexes.length - 1; i >= 0; i--) {
+      this.blocks.splice(uniqueIndexes[i], 1);
+    }
     const data = this.extractTableData(this.blocks, this.schema);
     (_c = this.gridAdapter) == null ? void 0 : _c.updateData(data);
-    const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
+    const nextIndex = Math.min(firstIndex, this.blocks.length - 1);
     if (nextIndex >= 0) {
       this.focusRow(nextIndex, focusedCell == null ? void 0 : focusedCell.field);
     }

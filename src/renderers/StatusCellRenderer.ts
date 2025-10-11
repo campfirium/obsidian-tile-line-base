@@ -35,11 +35,13 @@ export class StatusCellRenderer implements ICellRendererComp {
 		const icon = STATUS_ICON_MAP[this.status];
 		const label = STATUS_LABEL_MAP[this.status];
 
-		this.eGui.textContent = icon;
+		this.eGui.textContent = '';
+		this.eGui.dataset.icon = icon;
 		this.eGui.title = label;
 		this.eGui.dataset.status = this.status;
 		this.eGui.setAttribute('aria-label', label);
 		this.eGui.setAttribute('role', 'checkbox');
-		this.eGui.setAttribute('aria-checked', this.status === 'done' ? 'true' : 'false');
+		const ariaChecked = this.status === 'done' ? 'true' : (this.status === 'todo' ? 'false' : 'mixed');
+		this.eGui.setAttribute('aria-checked', ariaChecked);
 	}
 }

@@ -164,7 +164,9 @@ export class AgGridAdapter implements GridAdapter {
 			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
 			// 行选择配置
-			rowSelection: 'single',
+			rowSelection: {
+				mode: 'multiRow'
+			},
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
@@ -423,13 +425,13 @@ export class AgGridAdapter implements GridAdapter {
 		this.queueRowHeightSync();
 	}
 
-	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {
+	selectRow(blockIndex: number, options?: { ensureVisible?: boolean; additive?: boolean }): void {
 		if (!this.gridApi) return;
 		const node = this.findRowNodeByBlockIndex(blockIndex);
 		if (!node) return;
 
-		this.gridApi.deselectAll();
-		node.setSelected(true, true);
+		const clearOthers = options?.additive ? false : true;
+		node.setSelected(true, clearOthers);
 
 		if (options?.ensureVisible !== false) {
 			const rowIndex = node.rowIndex ?? null;

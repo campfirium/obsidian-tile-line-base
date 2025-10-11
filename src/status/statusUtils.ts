@@ -3,11 +3,11 @@ export type StatusValue = 'todo' | 'done' | 'inprogress' | 'onhold' | 'canceled'
 export const STATUS_VALUES: StatusValue[] = ['todo', 'done', 'inprogress', 'onhold', 'canceled'];
 
 export const STATUS_ICON_MAP: Record<StatusValue, string> = {
-	todo: '☐',
-	done: '☑',
-	inprogress: '⊟',
-	onhold: '⏸',
-	canceled: '☒'
+	todo: '',
+	done: '✓',
+	inprogress: '─',
+	onhold: '‖',
+	canceled: '✕'
 };
 
 export const STATUS_LABEL_MAP: Record<StatusValue, string> = {
@@ -28,12 +28,15 @@ const STATUS_ALIASES: Record<string, StatusValue> = {
 	completed: 'done',
 	'已完成': 'done',
 	'☑': 'done',
+	'✓': 'done',
 	inprogress: 'inprogress',
 	'in-progress': 'inprogress',
 	'in_progress': 'inprogress',
 	doing: 'inprogress',
 	'进行中': 'inprogress',
 	'⊟': 'inprogress',
+	'─': 'inprogress',
+	'-': 'inprogress',
 	onhold: 'onhold',
 	'on-hold': 'onhold',
 	'on_hold': 'onhold',
@@ -41,11 +44,14 @@ const STATUS_ALIASES: Record<string, StatusValue> = {
 	paused: 'onhold',
 	'已搁置': 'onhold',
 	'⏸': 'onhold',
+	'‖': 'onhold',
 	canceled: 'canceled',
 	cancelled: 'canceled',
 	dropped: 'canceled',
 	'已放弃': 'canceled',
-	'☒': 'canceled'
+	'☒': 'canceled',
+	'✕': 'canceled',
+	'×': 'canceled'
 };
 
 export function normalizeStatus(value: unknown): StatusValue {

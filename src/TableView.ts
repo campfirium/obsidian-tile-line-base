@@ -882,7 +882,7 @@ export class TableView extends ItemView {
 			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
 			const alreadySelected = selectedRows.includes(blockIndex);
 			if (!alreadySelected) {
-				this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
+				this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true, additive: true });
 			}
 
 			const targetCell = (event.target as HTMLElement | null)?.closest('.ag-cell');

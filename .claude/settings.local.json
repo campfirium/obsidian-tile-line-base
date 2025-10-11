@@ -21,6 +21,13 @@
       "Bash(git branch:*)",
       "Bash(cd:*)",
       "Bash(awk:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git log:*)",
+      "Bash(for commit in 82e1938 aa81936 c2a9293 fbed5cb d0522d2)",
+      "Bash(do echo \"=== Checking commit $commit ===\")",
+      "Bash(done)",
+      "Bash(git fsck:*)",
+      "Bash(git cat-file:*)",
       "WebSearch"
     ],
     "deny": [],

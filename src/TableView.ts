@@ -803,7 +803,14 @@ export class TableView extends ItemView {
 			// 获取点击行对应的块索引
 			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
 			if (blockIndex === null || blockIndex === undefined) return;
-			this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
+
+			// 检查当前选中的行
+			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
+
+			// 如果右键点击的行不在已选中的行中，则只选中这一行
+			if (!selectedRows.includes(blockIndex)) {
+				this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
+			}
 
 			// 显示自定义菜单
 			this.showContextMenu(event, blockIndex);
@@ -838,13 +845,18 @@ export class TableView extends ItemView {
 
 			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
 			const hasSelection = selectedRows.length > 0;
-			const firstSelectedRow = hasSelection ? selectedRows[0] : null;
 
-			// Cmd+D / Ctrl+D: 复制行
+			// Cmd+D / Ctrl+D: 复制行（支持单行和多行）
 			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
 				event.preventDefault();
-				if (hasSelection && firstSelectedRow !== null) {
-					this.duplicateRow(firstSelectedRow);
+				if (hasSelection) {
+					if (selectedRows.length > 1) {
+						// 多行选择：批量复制
+						this.duplicateRows(selectedRows);
+					} else {
+						// 单行选择：单行复制
+						this.duplicateRow(selectedRows[0]);
+					}
 				}
 				return;
 			}
@@ -862,6 +874,10 @@ export class TableView extends ItemView {
 	private showContextMenu(event: MouseEvent, blockIndex: number): void {
 		// 移除旧菜单
 		this.hideContextMenu();
+
+		// 获取当前选中的所有行
+		const selectedRows = this.gridAdapter?.getSelectedRows() || [];
+		const isMultiSelect = selectedRows.length > 1;
 
 		// 使用容器所在的 document（支持新窗口）
 		const ownerDoc = this.tableContainer?.ownerDocument || document;
@@ -889,13 +905,41 @@ export class TableView extends ItemView {
 		// 分隔线
 		this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
 
-		// 删除此行
-		const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-		deleteRow.createSpan({ text: '删除此行' });
-		deleteRow.addEventListener('click', () => {
-			this.deleteRow(blockIndex);
-			this.hideContextMenu();
-		});
+		if (isMultiSelect) {
+			// 多选模式：显示批量操作菜单
+			// 复制选中的行
+			const duplicateRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
+			duplicateRows.createSpan({ text: `复制选中的 ${selectedRows.length} 行` });
+			duplicateRows.addEventListener('click', () => {
+				this.duplicateRows(selectedRows);
+				this.hideContextMenu();
+			});
+
+			// 删除选中的行
+			const deleteRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
+			deleteRows.createSpan({ text: `删除选中的 ${selectedRows.length} 行` });
+			deleteRows.addEventListener('click', () => {
+				this.deleteRows(selectedRows);
+				this.hideContextMenu();
+			});
+		} else {
+			// 单选模式：显示单行操作菜单
+			// 复制此行
+			const duplicateRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
+			duplicateRow.createSpan({ text: '复制此行' });
+			duplicateRow.addEventListener('click', () => {
+				this.duplicateRow(blockIndex);
+				this.hideContextMenu();
+			});
+
+			// 删除此行
+			const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
+			deleteRow.createSpan({ text: '删除此行' });
+			deleteRow.addEventListener('click', () => {
+				this.deleteRow(blockIndex);
+				this.hideContextMenu();
+			});
+		}
 
 		// 定位菜单，避免超出屏幕
 		const defaultView = ownerDoc.defaultView || window;
@@ -1132,6 +1176,91 @@ export class TableView extends ItemView {
 		if (nextIndex >= 0) {
 			this.focusRow(nextIndex, focusedCell?.field);
 		}
+
+		// 触发保存
+		this.scheduleSave();
+	}
+
+	/**
+	 * 批量删除指定的多行
+	 * @param rowIndexes 要删除的行索引数组（块索引）
+	 */
+	private deleteRows(rowIndexes: number[]): void {
+		if (!this.schema) {
+			console.error('Schema not initialized');
+			return;
+		}
+
+		if (rowIndexes.length === 0) {
+			return;
+		}
+
+		// 排序索引（从大到小），避免删除时索引偏移
+		const sortedIndexes = [...rowIndexes].sort((a, b) => b - a);
+
+		// 删除所有选中的行
+		for (const index of sortedIndexes) {
+			if (index >= 0 && index < this.blocks.length) {
+				this.blocks.splice(index, 1);
+			}
+		}
+
+		// 更新 AG Grid 显示
+		const data = this.extractTableData(this.blocks, this.schema);
+		this.gridAdapter?.updateData(data);
+
+		// 聚焦到最小索引位置的下一行
+		const minIndex = Math.min(...rowIndexes);
+		const nextIndex = Math.min(minIndex, this.blocks.length - 1);
+		if (nextIndex >= 0) {
+			this.focusRow(nextIndex);
+		}
+
+		// 触发保存
+		this.scheduleSave();
+	}
+
+	/**
+	 * 批量复制指定的多行
+	 * @param rowIndexes 要复制的行索引数组（块索引）
+	 */
+	private duplicateRows(rowIndexes: number[]): void {
+		if (!this.schema) {
+			console.error('Schema not initialized');
+			return;
+		}
+
+		if (rowIndexes.length === 0) {
+			return;
+		}
+
+		const focusedCell = this.gridAdapter?.getFocusedCell?.();
+
+		// 排序索引（从大到小），避免插入时索引偏移
+		const sortedIndexes = [...rowIndexes].sort((a, b) => b - a);
+
+		// 复制所有选中的行（从高索引到低索引，保持插入位置正确）
+		for (const index of sortedIndexes) {
+			if (index >= 0 && index < this.blocks.length) {
+				const sourceBlock = this.blocks[index];
+				const duplicatedBlock: H2Block = {
+					title: sourceBlock.title,
+					data: { ...sourceBlock.data }
+				};
+
+				// 在源块之后插入复制的块
+				this.blocks.splice(index + 1, 0, duplicatedBlock);
+			}
+		}
+
+		// 更新 AG Grid 显示
+		const data = this.extractTableData(this.blocks, this.schema);
+		this.gridAdapter?.updateData(data);
+
+		// 聚焦到最小索引对应的复制行（最小索引 + 1）
+		const minIndex = Math.min(...rowIndexes);
+		const newIndex = minIndex + 1;
+		this.focusRow(newIndex, focusedCell?.field);
 
 		// 触发保存
 		this.scheduleSave();

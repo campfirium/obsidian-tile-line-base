@@ -120,8 +120,8 @@ export class AgGridAdapter implements GridAdapter {
 			enterNavigatesVertically: true, // Enter 键垂直导航
 			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
-			// 行选择配置
-			rowSelection: 'single',
+			// 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
+			rowSelection: 'multiple',
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {

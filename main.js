@@ -55478,7 +55478,6 @@ var _AgGridAdapter = class {
         mode: "multiRow",
         enableClickSelection: true
       },
-      rowMultiSelectWithClick: true,
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);

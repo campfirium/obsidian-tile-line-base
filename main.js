@@ -55445,6 +55445,7 @@ var _AgGridAdapter = class {
     const gridOptions = {
       columnDefs: colDefs,
       rowData: rows,
+      enableRangeSelection: true,
       onCellClicked: (event) => {
         this.handleCellClicked(event);
       },

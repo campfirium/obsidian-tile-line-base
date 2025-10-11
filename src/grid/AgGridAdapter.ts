@@ -143,6 +143,7 @@ export class AgGridAdapter implements GridAdapter {
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
 			rowData: rows,
+			enableRangeSelection: true,
 			onCellClicked: (event: CellClickedEvent) => {
 				this.handleCellClicked(event);
 			},

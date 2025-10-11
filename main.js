@@ -55251,6 +55251,74 @@ var AllCommunityModule = {
   ]
 };
 
+// src/renderers/StatusCellRenderer.ts
+var StatusCellRenderer = class {
+  /**
+   * 初始化渲染器
+   */
+  init(params) {
+    this.params = params;
+    this.eGui = document.createElement("div");
+    this.eGui.className = "tlb-status-cell";
+    this.eGui.style.cssText = `
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			height: 100%;
+			cursor: pointer;
+			user-select: none;
+		`;
+    this.refresh(params);
+    this.eGui.addEventListener("click", () => {
+      this.toggleStatus();
+    });
+  }
+  /**
+   * 获取渲染的 DOM 元素
+   */
+  getGui() {
+    return this.eGui;
+  }
+  /**
+   * 刷新渲染内容
+   */
+  refresh(params) {
+    this.params = params;
+    const value = params.value;
+    const isDone = value === "done" || value === "\u2611" || value === true;
+    const icon = document.createElement("span");
+    icon.style.cssText = `
+			font-size: 18px;
+			line-height: 1;
+		`;
+    icon.textContent = isDone ? "\u2611" : "\u2610";
+    this.eGui.innerHTML = "";
+    this.eGui.appendChild(icon);
+    return true;
+  }
+  /**
+   * 切换状态
+   */
+  toggleStatus() {
+    if (!this.params || !this.params.node || !this.params.colDef) {
+      return;
+    }
+    const field = this.params.colDef.field;
+    if (!field) {
+      return;
+    }
+    const currentValue = this.params.value;
+    const isDone = currentValue === "done" || currentValue === "\u2611" || currentValue === true;
+    const newValue = isDone ? "todo" : "done";
+    this.params.node.setDataValue(field, newValue);
+  }
+  /**
+   * 销毁渲染器
+   */
+  destroy() {
+  }
+};
+
 // src/grid/AgGridAdapter.ts
 ModuleRegistry.registerModules([AllCommunityModule]);
 var _AgGridAdapter = class {
@@ -55319,6 +55387,10 @@ var _AgGridAdapter = class {
     const gridOptions = {
       columnDefs: colDefs,
       rowData: rows,
+      // 注册自定义组件
+      components: {
+        StatusCellRenderer
+      },
       // 编辑配置（使用单元格编辑模式而非整行编辑）
       singleClickEdit: false,
       // 禁用单击编辑，需要双击或 F2
@@ -55939,6 +56011,7 @@ var TableView = class extends import_obsidian.ItemView {
       const row = {};
       row["#"] = String(i + 1);
       row[ROW_ID_FIELD] = String(i);
+      row["status"] = block.data["status"] || "todo";
       for (const key of schema.columnNames) {
         row[key] = block.data[key] || "";
       }
@@ -55969,6 +56042,8 @@ var TableView = class extends import_obsidian.ItemView {
           }
         }
       }
+      const status = block.data["status"] || "todo";
+      lines.push(`status\uFF1A${status}`);
       lines.push("");
     }
     return lines.join("\n");
@@ -56031,6 +56106,18 @@ var TableView = class extends import_obsidian.ItemView {
         headerName: "#",
         editable: false
         // 序号列只读
+      },
+      {
+        field: "status",
+        headerName: "\u72B6\u6001",
+        editable: false,
+        // 状态列通过点击切换，不需要编辑
+        width: 60,
+        // 固定宽度
+        maxWidth: 80,
+        resizable: false,
+        cellRenderer: "StatusCellRenderer"
+        // 使用自定义渲染器
       },
       ...this.schema.columnNames.map((name) => {
         var _a5;
@@ -56430,6 +56517,7 @@ var TableView = class extends import_obsidian.ItemView {
    * 处理单元格编辑（Key:Value 格式）
    */
   onCellEdit(event) {
+    var _a4;
     const { rowData, field, newValue, rowIndex } = event;
     if (field === "#") {
       return;
@@ -56449,6 +56537,10 @@ var TableView = class extends import_obsidian.ItemView {
     }
     const block = this.blocks[blockIndex];
     block.data[field] = newValue;
+    if (field === "status") {
+      const data = this.extractTableData(this.blocks, this.schema);
+      (_a4 = this.gridAdapter) == null ? void 0 : _a4.updateData(data);
+    }
     this.scheduleSave();
   }
   getBlockIndexFromRowData(rowData) {
@@ -56513,6 +56605,7 @@ var TableView = class extends import_obsidian.ItemView {
       const key = this.schema.columnNames[i];
       newBlock.data[key] = i === 0 ? `\u65B0\u6761\u76EE ${entryNumber}` : "";
     }
+    newBlock.data["status"] = "todo";
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
       this.blocks.splice(beforeRowIndex, 0, newBlock);
     } else {

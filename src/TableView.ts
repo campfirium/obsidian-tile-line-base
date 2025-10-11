@@ -311,6 +311,9 @@ export class TableView extends ItemView {
 			row['#'] = String(i + 1);
 			row[ROW_ID_FIELD] = String(i);
 
+			// 状态列（默认为 'todo'）
+			row['status'] = block.data['status'] || 'todo';
+
 			// 所有列都从 block.data 提取
 			for (const key of schema.columnNames) {
 				row[key] = block.data[key] || '';
@@ -352,6 +355,10 @@ export class TableView extends ItemView {
 					}
 				}
 			}
+
+			// 保存状态字段（作为压缩属性）
+			const status = block.data['status'] || 'todo';
+			lines.push(`status：${status}`);
 
 			// H2 块之间空一行
 			lines.push('');
@@ -431,13 +438,22 @@ export class TableView extends ItemView {
 		// 提取数据
 		const data = this.extractTableData(this.blocks, this.schema);
 
-		// 准备列定义（添加序号列）
+		// 准备列定义（添加序号列和状态列）
 		const columns: ColumnDef[] = [
 			{
 				field: '#',
 				headerName: '#',
 				editable: false  // 序号列只读
 			},
+			{
+				field: 'status',
+				headerName: '状态',
+				editable: false,  // 状态列通过点击切换，不需要编辑
+				width: 60,  // 固定宽度
+				maxWidth: 80,
+				resizable: false,
+				cellRenderer: 'StatusCellRenderer'  // 使用自定义渲染器
+			} as any,
 			...this.schema.columnNames.map(name => {
 				const baseColDef: ColumnDef = {
 					field: name,
@@ -1016,6 +1032,12 @@ export class TableView extends ItemView {
 		// 所有列都更新 data[key]
 		block.data[field] = newValue;
 
+		// 如果是状态列，刷新表格显示
+		if (field === 'status') {
+			const data = this.extractTableData(this.blocks, this.schema);
+			this.gridAdapter?.updateData(data);
+		}
+
 		// 触发保存
 		this.scheduleSave();
 	}
@@ -1099,6 +1121,9 @@ export class TableView extends ItemView {
 			// 第一列使用"新条目 X"，其他列为空
 			newBlock.data[key] = (i === 0) ? `新条目 ${entryNumber}` : '';
 		}
+
+		// 设置默认状态为 'todo'
+		newBlock.data['status'] = 'todo';
 
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）

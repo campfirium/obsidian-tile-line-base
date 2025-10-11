@@ -22,6 +22,7 @@ import {
 	HeaderEditEvent,
 	ROW_ID_FIELD
 } from './GridAdapter';
+import { StatusCellRenderer } from '../renderers/StatusCellRenderer';
 
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -111,6 +112,11 @@ export class AgGridAdapter implements GridAdapter {
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
 			rowData: rows,
+
+			// 注册自定义组件
+			components: {
+				StatusCellRenderer: StatusCellRenderer
+			},
 
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
 			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2

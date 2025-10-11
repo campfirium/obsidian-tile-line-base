@@ -55375,6 +55375,7 @@ var _AgGridAdapter = class {
     this.lastAutoSizeTimestamp = 0;
     this.shouldAutoSizeOnNextResize = false;
     this.rowHeightResetHandle = null;
+    this.shiftSelectAnchor = null;
   }
   /**
    * 挂载表格到指定容器
@@ -55475,7 +55476,8 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置
       rowSelection: "multiple",
-      rowMultiSelectWithClick: true,
+      rowMultiSelectWithClick: false,
+      suppressRowClickSelection: true,
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
@@ -55609,24 +55611,44 @@ var _AgGridAdapter = class {
     }
   }
   handleCellClicked(event) {
-    if (event.colDef.field !== "status") {
-      return;
-    }
     const mouseEvent = event.event;
-    if (mouseEvent instanceof MouseEvent && mouseEvent.button !== 0) {
-      return;
-    }
     const node = event.node;
-    if (!node)
-      return;
-    const rowData = node.data;
-    const currentStatus = normalizeStatus(rowData == null ? void 0 : rowData.status);
-    const nextStatus = getNextToggleStatus(currentStatus);
-    if (nextStatus === currentStatus) {
+    const blockIndex = this.getBlockIndexFromNode(node);
+    if (blockIndex === null) {
       return;
     }
-    node.setDataValue("status", nextStatus);
-    this.emitStatusCellEdit(node, event.rowIndex, nextStatus, currentStatus);
+    if (event.colDef.field === "status") {
+      if (!(mouseEvent instanceof MouseEvent) || mouseEvent.button !== 0) {
+        return;
+      }
+      const rowData = node == null ? void 0 : node.data;
+      const currentStatus = normalizeStatus(rowData == null ? void 0 : rowData.status);
+      const nextStatus = getNextToggleStatus(currentStatus);
+      if (nextStatus === currentStatus) {
+        return;
+      }
+      node == null ? void 0 : node.setDataValue("status", nextStatus);
+      this.emitStatusCellEdit(node, event.rowIndex, nextStatus, currentStatus);
+      return;
+    }
+    if (!(mouseEvent instanceof MouseEvent)) {
+      return;
+    }
+    const isShift = mouseEvent.shiftKey;
+    const isMultiToggle = mouseEvent.metaKey || mouseEvent.ctrlKey;
+    if (isShift) {
+      if (this.shiftSelectAnchor === null) {
+        this.shiftSelectAnchor = blockIndex;
+      }
+      this.selectRange(this.shiftSelectAnchor, blockIndex, isMultiToggle);
+      return;
+    }
+    if (isMultiToggle) {
+      this.toggleRowSelection(blockIndex);
+      this.shiftSelectAnchor = blockIndex;
+      return;
+    }
+    this.shiftSelectAnchor = blockIndex;
   }
   getContextMenuItems(params) {
     var _a4, _b2;
@@ -55670,8 +55692,8 @@ var _AgGridAdapter = class {
     });
   }
   /**
-   * 更新表格数据
-   */
+  	 * 更新表格数据
+  	 */
   updateData(rows) {
     if (this.gridApi) {
       this.gridApi.setGridOption("rowData", rows);
@@ -55691,8 +55713,11 @@ var _AgGridAdapter = class {
     const node = this.findRowNodeByBlockIndex(blockIndex);
     if (!node)
       return;
-    const clearOthers = (options == null ? void 0 : options.additive) ? false : true;
-    node.setSelected(true, clearOthers);
+    if (!(options == null ? void 0 : options.additive)) {
+      this.gridApi.deselectAll();
+    }
+    node.setSelected(true, false);
+    this.shiftSelectAnchor = blockIndex;
     if ((options == null ? void 0 : options.ensureVisible) !== false) {
       const rowIndex = (_a4 = node.rowIndex) != null ? _a4 : null;
       if (rowIndex !== null) {
@@ -55880,6 +55905,48 @@ var _AgGridAdapter = class {
       }
     });
     return match;
+  }
+  getBlockIndexFromNode(node) {
+    if (!node)
+      return null;
+    const data = node.data;
+    if (!data)
+      return null;
+    const raw = data[ROW_ID_FIELD];
+    const parsed = raw !== void 0 ? parseInt(String(raw), 10) : NaN;
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  selectRange(anchor, target, additive) {
+    if (!this.gridApi)
+      return;
+    const start = Math.min(anchor, target);
+    const end = Math.max(anchor, target);
+    if (!additive) {
+      this.gridApi.deselectAll();
+    }
+    this.gridApi.forEachNode((node) => {
+      const blockIndex = this.getBlockIndexFromNode(node);
+      if (blockIndex === null)
+        return;
+      if (blockIndex >= start && blockIndex <= end) {
+        node.setSelected(true, true);
+      }
+    });
+    this.shiftSelectAnchor = anchor;
+  }
+  toggleRowSelection(blockIndex) {
+    if (!this.gridApi)
+      return;
+    const node = this.findRowNodeByBlockIndex(blockIndex);
+    if (!node)
+      return;
+    const isSelected = !!node.isSelected && node.isSelected();
+    if (isSelected) {
+      node.setSelected(false, true);
+    } else {
+      node.setSelected(true, false);
+      this.shiftSelectAnchor = blockIndex;
+    }
   }
   /**
    * 开始编辑当前聚焦的单元格

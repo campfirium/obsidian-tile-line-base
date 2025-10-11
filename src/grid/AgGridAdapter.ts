@@ -48,6 +48,7 @@ export class AgGridAdapter implements GridAdapter {
 	private shouldAutoSizeOnNextResize = false;
 	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
+	private shiftSelectAnchor: number | null = null;
 
 	/**
 	 * 挂载表格到指定容器
@@ -165,7 +166,8 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 行选择配置
 			rowSelection: 'multiple',
-			rowMultiSelectWithClick: true,
+			rowMultiSelectWithClick: false,
+			suppressRowClickSelection: true,
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
@@ -332,28 +334,50 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	private handleCellClicked(event: CellClickedEvent): void {
-		if (event.colDef.field !== 'status') {
-			return;
-		}
-
 		const mouseEvent = event.event;
-		if (mouseEvent instanceof MouseEvent && mouseEvent.button !== 0) {
-			return;
-		}
-
 		const node = event.node;
-		if (!node) return;
-
-		const rowData = node.data as RowData | undefined;
-		const currentStatus = normalizeStatus(rowData?.status);
-		const nextStatus = getNextToggleStatus(currentStatus);
-
-		if (nextStatus === currentStatus) {
+		const blockIndex = this.getBlockIndexFromNode(node);
+		if (blockIndex === null) {
 			return;
 		}
 
-		node.setDataValue('status', nextStatus);
-		this.emitStatusCellEdit(node, event.rowIndex, nextStatus, currentStatus);
+		if (event.colDef.field === 'status') {
+			if (!(mouseEvent instanceof MouseEvent) || mouseEvent.button !== 0) {
+				return;
+			}
+			const rowData = node?.data as RowData | undefined;
+			const currentStatus = normalizeStatus(rowData?.status);
+			const nextStatus = getNextToggleStatus(currentStatus);
+			if (nextStatus === currentStatus) {
+				return;
+			}
+			node?.setDataValue('status', nextStatus);
+			this.emitStatusCellEdit(node!, event.rowIndex, nextStatus, currentStatus);
+			return;
+		}
+
+		if (!(mouseEvent instanceof MouseEvent)) {
+			return;
+		}
+
+		const isShift = mouseEvent.shiftKey;
+		const isMultiToggle = mouseEvent.metaKey || mouseEvent.ctrlKey;
+
+		if (isShift) {
+			if (this.shiftSelectAnchor === null) {
+				this.shiftSelectAnchor = blockIndex;
+			}
+			this.selectRange(this.shiftSelectAnchor, blockIndex, isMultiToggle);
+			return;
+		}
+
+		if (isMultiToggle) {
+			this.toggleRowSelection(blockIndex);
+			this.shiftSelectAnchor = blockIndex;
+			return;
+		}
+
+		this.shiftSelectAnchor = blockIndex;
 	}
 
 	private getContextMenuItems(params: GetContextMenuItemsParams): Array<MenuItemDef | DefaultMenuItem> {
@@ -383,34 +407,34 @@ export class AgGridAdapter implements GridAdapter {
 		});
 
 		const separatorItem: DefaultMenuItem = 'separator';
-		const defaultItems: DefaultMenuItem[] = ['copy', 'copyWithHeaders', 'export'];
+	const defaultItems: DefaultMenuItem[] = ['copy', 'copyWithHeaders', 'export'];
 
-		return [...statusItems, separatorItem, ...defaultItems];
-	}
+	return [...statusItems, separatorItem, ...defaultItems];
+}
 
-	private emitStatusCellEdit(
-		node: IRowNode<RowData>,
-		rowIndex: number | null | undefined,
-		newValue: string,
-		oldValue: string
-	): void {
+private emitStatusCellEdit(
+	node: IRowNode<RowData>,
+	rowIndex: number | null | undefined,
+	newValue: string,
+	oldValue: string
+): void {
 		if (!this.cellEditCallback) return;
 
-		const resolvedIndex = (rowIndex ?? node.rowIndex ?? 0);
-		this.cellEditCallback({
-			rowIndex: resolvedIndex,
-			field: 'status',
-			newValue,
-			oldValue,
-			rowData: node.data as RowData
-		});
-	}
+	const resolvedIndex = (rowIndex ?? node.rowIndex ?? 0);
+	this.cellEditCallback({
+		rowIndex: resolvedIndex,
+		field: 'status',
+		newValue,
+		oldValue,
+		rowData: node.data as RowData
+	});
+}
 
-	/**
+/**
 	 * 更新表格数据
 	 */
-	updateData(rows: RowData[]): void {
-		if (this.gridApi) {
+updateData(rows: RowData[]): void {
+	if (this.gridApi) {
 			this.gridApi.setGridOption('rowData', rows);
 			// 允许下一次 resizeColumns 重启 autoSize，确保新数据也能触发宽度调整
 			this.lastAutoSizeTimestamp = 0;
@@ -424,21 +448,25 @@ export class AgGridAdapter implements GridAdapter {
 		this.queueRowHeightSync();
 	}
 
-	selectRow(blockIndex: number, options?: { ensureVisible?: boolean; additive?: boolean }): void {
-		if (!this.gridApi) return;
-		const node = this.findRowNodeByBlockIndex(blockIndex);
-		if (!node) return;
+selectRow(blockIndex: number, options?: { ensureVisible?: boolean; additive?: boolean }): void {
+	if (!this.gridApi) return;
+	const node = this.findRowNodeByBlockIndex(blockIndex);
+	if (!node) return;
 
-		const clearOthers = options?.additive ? false : true;
-		node.setSelected(true, clearOthers);
+	if (!options?.additive) {
+		this.gridApi.deselectAll();
+	}
 
-		if (options?.ensureVisible !== false) {
-			const rowIndex = node.rowIndex ?? null;
-			if (rowIndex !== null) {
-				this.gridApi.ensureIndexVisible(rowIndex, 'middle');
-			}
+	node.setSelected(true, false);
+	this.shiftSelectAnchor = blockIndex;
+
+	if (options?.ensureVisible !== false) {
+		const rowIndex = node.rowIndex ?? null;
+		if (rowIndex !== null) {
+			this.gridApi.ensureIndexVisible(rowIndex, 'middle');
 		}
 	}
+}
 
 	/**
 	 * 监听单元格编辑事件
@@ -652,6 +680,50 @@ export class AgGridAdapter implements GridAdapter {
 		});
 
 		return match;
+	}
+
+	private getBlockIndexFromNode(node: IRowNode<RowData> | null): number | null {
+		if (!node) return null;
+		const data = node.data as RowData | undefined;
+		if (!data) return null;
+		const raw = data[ROW_ID_FIELD];
+		const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+
+	private selectRange(anchor: number, target: number, additive: boolean): void {
+		if (!this.gridApi) return;
+
+		const start = Math.min(anchor, target);
+		const end = Math.max(anchor, target);
+
+		if (!additive) {
+			this.gridApi.deselectAll();
+		}
+
+		this.gridApi.forEachNode(node => {
+			const blockIndex = this.getBlockIndexFromNode(node);
+			if (blockIndex === null) return;
+			if (blockIndex >= start && blockIndex <= end) {
+				node.setSelected(true, true);
+			}
+		});
+
+		this.shiftSelectAnchor = anchor;
+	}
+
+	private toggleRowSelection(blockIndex: number): void {
+		if (!this.gridApi) return;
+		const node = this.findRowNodeByBlockIndex(blockIndex);
+		if (!node) return;
+
+		const isSelected = !!node.isSelected && node.isSelected();
+		if (isSelected) {
+			node.setSelected(false, true);
+		} else {
+			node.setSelected(true, false);
+			this.shiftSelectAnchor = blockIndex;
+		}
 	}
 
 	/**

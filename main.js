@@ -55475,7 +55475,8 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置
       rowSelection: {
-        mode: "multiRow"
+        mode: "multiRow",
+        enableClickSelection: true
       },
       // 事件监听
       onCellEditingStopped: (event) => {

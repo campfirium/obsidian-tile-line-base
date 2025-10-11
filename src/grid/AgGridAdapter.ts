@@ -164,10 +164,8 @@ export class AgGridAdapter implements GridAdapter {
 			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
 			// 行选择配置
-			rowSelection: {
-				mode: 'multiRow',
-				enableClickSelection: true
-			},
+			rowSelection: 'multiple',
+			rowMultiSelectWithClick: true,
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {

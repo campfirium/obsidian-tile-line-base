@@ -10,7 +10,7 @@ import {
 	GridOptions,
 	ColDef,
 	CellEditingStoppedEvent,
-	CellValueChangedEvent,
+	CellClickedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode
@@ -135,9 +135,9 @@ export class AgGridAdapter implements GridAdapter {
 				this.handleCellEdit(event);
 			},
 
-			// 监听单元格值变化（用于自定义渲染器中的 setDataValue）
-			onCellValueChanged: (event: CellValueChangedEvent) => {
-				this.handleCellValueChange(event);
+			// 监听单元格点击（用于状态列切换）
+			onCellClicked: (event: CellClickedEvent) => {
+				this.handleCellClicked(event);
 			},
 
 			// 默认列配置
@@ -300,32 +300,45 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	/**
-	 * 处理单元格值变化事件（用于自定义渲染器中的 setDataValue）
+	 * 处理单元格点击事件（用于状态列切换）
 	 */
-	private handleCellValueChange(event: CellValueChangedEvent): void {
-		if (!this.cellEditCallback) return;
+	private handleCellClicked(event: CellClickedEvent): void {
+		// 只处理状态列的点击
+		if (event.colDef.field !== 'status') {
+			return;
+		}
 
-		// 获取变化信息
-		const field = event.colDef.field;
-		const rowIndex = event.node.rowIndex;
-		const newValue = event.newValue;
-		const oldValue = event.oldValue;
+		// 确保是鼠标左键点击
+		const mouseEvent = event.event;
+		if (!(mouseEvent instanceof MouseEvent) || mouseEvent.button !== 0) {
+			return;
+		}
 
-		if (field && rowIndex !== null && rowIndex !== undefined) {
-			// 规范化值
-			const newStr = String(newValue ?? '');
-			const oldStr = String(oldValue ?? '');
+		// 获取当前状态
+		const node = event.node;
+		const rowData = node?.data as RowData | undefined;
+		const currentStatus = rowData?.status || 'todo';
 
-			// 只有当值真正改变时才触发回调
-			if (newStr !== oldStr) {
-				this.cellEditCallback({
-					rowIndex: rowIndex,
-					field: field,
-					newValue: newStr,
-					oldValue: oldStr,
-					rowData: event.data as RowData
-				});
-			}
+		// 切换状态
+		const newStatus = currentStatus === 'done' ? 'todo' : 'done';
+
+		// 如果状态没有变化，不处理
+		if (newStatus === currentStatus) {
+			return;
+		}
+
+		// 更新单元格值（触发界面刷新）
+		node?.setDataValue('status', newStatus);
+
+		// 触发保存回调
+		if (this.cellEditCallback && event.rowIndex !== null && event.rowIndex !== undefined) {
+			this.cellEditCallback({
+				rowIndex: event.rowIndex,
+				field: 'status',
+				newValue: newStatus,
+				oldValue: currentStatus,
+				rowData: rowData!
+			});
 		}
 	}
 

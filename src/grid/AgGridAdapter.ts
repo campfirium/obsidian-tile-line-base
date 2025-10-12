@@ -10,6 +10,7 @@ import {
 	GridOptions,
 	ColDef,
 	CellEditingStoppedEvent,
+	CellValueChangedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode
@@ -132,6 +133,11 @@ export class AgGridAdapter implements GridAdapter {
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
+			},
+
+			// 监听单元格值变化（用于自定义渲染器中的 setDataValue）
+			onCellValueChanged: (event: CellValueChangedEvent) => {
+				this.handleCellValueChange(event);
 			},
 
 			// 默认列配置
@@ -277,6 +283,36 @@ export class AgGridAdapter implements GridAdapter {
 
 		if (field && rowIndex !== null && rowIndex !== undefined) {
 			// 规范化值（undefined、null、空字符串 都转为空字符串）
+			const newStr = String(newValue ?? '');
+			const oldStr = String(oldValue ?? '');
+
+			// 只有当值真正改变时才触发回调
+			if (newStr !== oldStr) {
+				this.cellEditCallback({
+					rowIndex: rowIndex,
+					field: field,
+					newValue: newStr,
+					oldValue: oldStr,
+					rowData: event.data as RowData
+				});
+			}
+		}
+	}
+
+	/**
+	 * 处理单元格值变化事件（用于自定义渲染器中的 setDataValue）
+	 */
+	private handleCellValueChange(event: CellValueChangedEvent): void {
+		if (!this.cellEditCallback) return;
+
+		// 获取变化信息
+		const field = event.colDef.field;
+		const rowIndex = event.node.rowIndex;
+		const newValue = event.newValue;
+		const oldValue = event.oldValue;
+
+		if (field && rowIndex !== null && rowIndex !== undefined) {
+			// 规范化值
 			const newStr = String(newValue ?? '');
 			const oldStr = String(oldValue ?? '');
 

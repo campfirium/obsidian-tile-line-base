@@ -1011,7 +1011,7 @@ export class TableView extends ItemView {
 	 * 处理单元格编辑（Key:Value 格式）
 	 */
 	private onCellEdit(event: CellEditEvent): void {
-		const { rowData, field, newValue, rowIndex } = event;
+		const { rowData, field, newValue } = event;
 
 		// 序号列不可编辑，直接返回
 		if (field === '#') {

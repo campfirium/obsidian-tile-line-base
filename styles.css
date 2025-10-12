@@ -8,6 +8,29 @@
   flex-direction: column;
 }
 
+/* AG Grid 单元格行距调整（autoHeight 模式）
+   通过减小 line-height 并增加 padding 来实现更宽松的行间距，同时保持垂直对齐 */
+.ag-theme-alpine .ag-cell-auto-height,
+.ag-theme-alpine-dark .ag-cell-auto-height {
+  --line-spacing-adjustment: -4px;  /* 减小 line-height */
+  line-height: calc(var(--ag-internal-calculated-line-height, 1.5) + var(--line-spacing-adjustment)) !important;
+  padding-top: calc(var(--ag-cell-vertical-padding, 8px) - var(--line-spacing-adjustment) / 2) !important;
+  padding-bottom: calc(var(--ag-cell-vertical-padding, 8px) - var(--line-spacing-adjustment) / 2) !important;
+}
+
+/* 确保单元格内容垂直居中 */
+.ag-theme-alpine .ag-cell,
+.ag-theme-alpine-dark .ag-cell {
+  display: flex;
+  align-items: center;
+}
+
+/* 编辑器输入框行距 */
+.ag-theme-alpine .ag-cell-edit-input,
+.ag-theme-alpine-dark .ag-cell-edit-input {
+  line-height: 1.5 !important;
+}
+
 .tlb-table-container {
   width: 100%; /* 适应窗口宽度 */
   height: 100%; /* 占满父容器高度 */

@@ -55268,9 +55268,30 @@ var StatusCellRenderer = class {
 			cursor: pointer;
 			user-select: none;
 		`;
+    this.checkbox = document.createElement("div");
+    this.checkbox.className = "tlb-checkbox";
+    this.checkbox.style.cssText = `
+			width: 16px;
+			height: 16px;
+			border: 2px solid var(--checkbox-border);
+			border-radius: 3px;
+			background: var(--checkbox-color);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.1s ease-in-out;
+			flex-shrink: 0;
+		`;
+    this.eGui.appendChild(this.checkbox);
     this.refresh(params);
     this.eGui.addEventListener("click", () => {
       this.toggleStatus();
+    });
+    this.eGui.addEventListener("mouseenter", () => {
+      this.checkbox.style.borderColor = "var(--checkbox-border-hover)";
+    });
+    this.eGui.addEventListener("mouseleave", () => {
+      this.checkbox.style.borderColor = "var(--checkbox-border)";
     });
   }
   /**
@@ -55286,14 +55307,27 @@ var StatusCellRenderer = class {
     this.params = params;
     const value = params.value;
     const isDone = value === "done" || value === "\u2611" || value === true;
-    const icon = document.createElement("span");
-    icon.style.cssText = `
-			font-size: 18px;
-			line-height: 1;
-		`;
-    icon.textContent = isDone ? "\u2611" : "\u2610";
-    this.eGui.innerHTML = "";
-    this.eGui.appendChild(icon);
+    this.checkbox.innerHTML = "";
+    if (isDone) {
+      const checkmark = document.createElement("svg");
+      checkmark.setAttribute("viewBox", "0 0 14 14");
+      checkmark.style.cssText = `
+				width: 12px;
+				height: 12px;
+				fill: none;
+				stroke: var(--text-on-accent);
+				stroke-width: 2;
+				stroke-linecap: round;
+				stroke-linejoin: round;
+			`;
+      checkmark.innerHTML = '<polyline points="2,7 6,11 12,3"></polyline>';
+      this.checkbox.style.background = "var(--interactive-accent)";
+      this.checkbox.style.borderColor = "var(--interactive-accent)";
+      this.checkbox.appendChild(checkmark);
+    } else {
+      this.checkbox.style.background = "var(--checkbox-color)";
+      this.checkbox.style.borderColor = "var(--checkbox-border)";
+    }
     return true;
   }
   /**
@@ -55989,6 +56023,8 @@ var TableView = class extends import_obsidian.ItemView {
       const seenKeys = /* @__PURE__ */ new Set();
       for (const block of blocks) {
         for (const key of Object.keys(block.data)) {
+          if (key === "status")
+            continue;
           if (!seenKeys.has(key)) {
             columnNames.push(key);
             seenKeys.add(key);
@@ -56100,6 +56136,21 @@ var TableView = class extends import_obsidian.ItemView {
       return;
     }
     const data = this.extractTableData(this.blocks, this.schema);
+    const dataColumns = this.schema.columnNames.map((name) => {
+      var _a5;
+      const baseColDef = {
+        field: name,
+        headerName: name,
+        editable: true
+      };
+      if ((_a5 = this.schema) == null ? void 0 : _a5.columnConfigs) {
+        const config = this.schema.columnConfigs.find((c) => c.name === name);
+        if (config) {
+          this.applyWidthConfig(baseColDef, config);
+        }
+      }
+      return baseColDef;
+    });
     const columns = [
       {
         field: "#",
@@ -56107,33 +56158,24 @@ var TableView = class extends import_obsidian.ItemView {
         editable: false
         // 序号列只读
       },
+      ...dataColumns.length > 0 ? [dataColumns[0]] : [],
+      // 第一个数据列
       {
         field: "status",
-        headerName: "\u72B6\u6001",
+        headerName: "\u2713",
+        // 使用简单的勾号作为表头
         editable: false,
         // 状态列通过点击切换，不需要编辑
         width: 60,
         // 固定宽度
         maxWidth: 80,
         resizable: false,
+        suppressSizeToFit: true,
         cellRenderer: "StatusCellRenderer"
         // 使用自定义渲染器
       },
-      ...this.schema.columnNames.map((name) => {
-        var _a5;
-        const baseColDef = {
-          field: name,
-          headerName: name,
-          editable: true
-        };
-        if ((_a5 = this.schema) == null ? void 0 : _a5.columnConfigs) {
-          const config = this.schema.columnConfigs.find((c) => c.name === name);
-          if (config) {
-            this.applyWidthConfig(baseColDef, config);
-          }
-        }
-        return baseColDef;
-      })
+      ...dataColumns.slice(1)
+      // 其他数据列
     ];
     const isDarkMode = document.body.classList.contains("theme-dark");
     const themeClass = isDarkMode ? "ag-theme-alpine-dark" : "ag-theme-alpine";

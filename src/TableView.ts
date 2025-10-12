@@ -282,6 +282,9 @@ export class TableView extends ItemView {
 
 			for (const block of blocks) {
 				for (const key of Object.keys(block.data)) {
+					// 过滤掉 status 元数据字段
+					if (key === 'status') continue;
+
 					if (!seenKeys.has(key)) {
 						columnNames.push(key);
 						seenKeys.add(key);
@@ -439,38 +442,43 @@ export class TableView extends ItemView {
 		const data = this.extractTableData(this.blocks, this.schema);
 
 		// 准备列定义（添加序号列和状态列）
+		const dataColumns = this.schema.columnNames.map(name => {
+			const baseColDef: ColumnDef = {
+				field: name,
+				headerName: name,
+				editable: true
+			};
+
+			// 应用头部配置块中的宽度配置
+			if (this.schema?.columnConfigs) {
+				const config = this.schema.columnConfigs.find(c => c.name === name);
+				if (config) {
+					this.applyWidthConfig(baseColDef, config);
+				}
+			}
+
+			return baseColDef;
+		});
+
+		// 列顺序：序号 → 第一个数据列 → 状态 → 其他数据列
 		const columns: ColumnDef[] = [
 			{
 				field: '#',
 				headerName: '#',
 				editable: false  // 序号列只读
 			},
+			...(dataColumns.length > 0 ? [dataColumns[0]] : []),  // 第一个数据列
 			{
 				field: 'status',
-				headerName: '状态',
+				headerName: '✓',  // 使用简单的勾号作为表头
 				editable: false,  // 状态列通过点击切换，不需要编辑
 				width: 60,  // 固定宽度
 				maxWidth: 80,
 				resizable: false,
+				suppressSizeToFit: true,
 				cellRenderer: 'StatusCellRenderer'  // 使用自定义渲染器
 			} as any,
-			...this.schema.columnNames.map(name => {
-				const baseColDef: ColumnDef = {
-					field: name,
-					headerName: name,
-					editable: true
-				};
-
-				// 应用头部配置块中的宽度配置
-				if (this.schema?.columnConfigs) {
-					const config = this.schema.columnConfigs.find(c => c.name === name);
-					if (config) {
-						this.applyWidthConfig(baseColDef, config);
-					}
-				}
-
-				return baseColDef;
-			})
+			...dataColumns.slice(1)  // 其他数据列
 		];
 
 		// 根据 Obsidian 主题选择 AG Grid 主题

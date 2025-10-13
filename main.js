@@ -55945,6 +55945,20 @@ var _AgGridAdapter = class {
 var AgGridAdapter = _AgGridAdapter;
 AgGridAdapter.AUTO_SIZE_COOLDOWN_MS = 800;
 
+// src/utils/datetime.ts
+function formatLocalDateTime(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+function getCurrentLocalDateTime() {
+  return formatLocalDateTime(new Date());
+}
+
 // src/TableView.ts
 var TABLE_VIEW_TYPE = "tile-line-base-table";
 var TableView = class extends import_obsidian.ItemView {
@@ -56155,7 +56169,8 @@ var TableView = class extends import_obsidian.ItemView {
     if (statusIndex !== -1) {
       columnNames.splice(statusIndex, 1);
     }
-    columnNames.unshift("status");
+    const insertIndex = columnNames.length > 0 ? 1 : 0;
+    columnNames.splice(insertIndex, 0, "status");
     return {
       columnNames,
       columnConfigs: columnConfigs || void 0
@@ -56175,7 +56190,7 @@ var TableView = class extends import_obsidian.ItemView {
         if (key === "status" && !block.data[key]) {
           block.data[key] = "todo";
           if (!block.data["statusChanged"]) {
-            block.data["statusChanged"] = new Date().toISOString();
+            block.data["statusChanged"] = getCurrentLocalDateTime();
           }
         }
         row[key] = block.data[key] || "";

@@ -55312,7 +55312,7 @@ var StatusCellRenderer = class {
     this.eGui.style.userSelect = "none";
     this.eGui.style.width = "100%";
     this.eGui.style.height = "100%";
-    this.eGui.style.padding = "0 calc(var(--ag-grid-size) * 3)";
+    this.eGui.style.padding = "0 var(--ag-cell-horizontal-padding)";
     this.renderIcon();
     this.clickHandler = (e) => {
       e.preventDefault();

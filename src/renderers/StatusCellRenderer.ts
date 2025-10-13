@@ -99,7 +99,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.style.userSelect = 'none';  // 禁止文本选择
 		this.eGui.style.width = '100%';
 		this.eGui.style.height = '100%';
-		this.eGui.style.padding = '0 calc(var(--ag-grid-size) * 3)';  // 使用 AG Grid 的默认单元格内边距
+		this.eGui.style.padding = '0 var(--ag-cell-horizontal-padding)';  // 使用 AG Grid 的单元格水平内边距
 
 		// 渲染图标
 		this.renderIcon();

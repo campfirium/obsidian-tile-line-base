@@ -117,19 +117,7 @@
 
 /* ==================== 状态列样式 ==================== */
 
-/* 状态单元格样式 */
-.tlb-status-cell {
-  text-align: center;
-  cursor: pointer;
-  font-size: 16px;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
+/* 状态单元格样式（hover 效果） */
 .tlb-status-cell:hover {
   opacity: 0.7;
   transform: scale(1.1);

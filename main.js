@@ -27,10 +27,10 @@ __export(main_exports, {
   default: () => TileLineBasePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/TableView.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/grid/GridAdapter.ts
 var ROW_ID_FIELD = "__tlb_row_id";
@@ -55516,6 +55516,7 @@ var StatusCellRenderer = class {
 };
 
 // src/grid/AgGridAdapter.ts
+var import_obsidian2 = require("obsidian");
 ModuleRegistry.registerModules([AllCommunityModule]);
 var _AgGridAdapter = class {
   constructor() {
@@ -55568,6 +55569,129 @@ var _AgGridAdapter = class {
             cursor: "pointer",
             padding: "10px var(--ag-cell-horizontal-padding)"
             // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
+          },
+          // 处理左键点击：切换状态
+          onCellClicked: (params) => {
+            var _a4, _b2, _c;
+            const event = params.event;
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            const rowId = (_a4 = params.node) == null ? void 0 : _a4.id;
+            if (!rowId)
+              return;
+            const currentStatus = normalizeStatus((_b2 = params.data) == null ? void 0 : _b2.status);
+            let newStatus;
+            if (currentStatus === "todo") {
+              newStatus = "done";
+            } else if (currentStatus === "done") {
+              newStatus = "todo";
+            } else {
+              newStatus = "done";
+            }
+            (_c = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _c.call(context, rowId, newStatus);
+          },
+          // 处理右键点击：显示状态选择菜单（处理整个单元格区域包括padding）
+          onCellContextMenu: (params) => {
+            var _a4, _b2;
+            const event = params.event;
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            const rowId = (_a4 = params.node) == null ? void 0 : _a4.id;
+            if (!rowId)
+              return;
+            const currentStatus = normalizeStatus((_b2 = params.data) == null ? void 0 : _b2.status);
+            const ownerDoc = container.ownerDocument;
+            const contextMenu = ownerDoc.createElement("div");
+            contextMenu.className = "tlb-status-context-menu";
+            contextMenu.style.position = "fixed";
+            contextMenu.style.zIndex = "10000";
+            contextMenu.style.backgroundColor = "var(--background-primary)";
+            contextMenu.style.border = "1px solid var(--background-modifier-border)";
+            contextMenu.style.borderRadius = "4px";
+            contextMenu.style.padding = "4px 0";
+            contextMenu.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+            contextMenu.style.minWidth = "120px";
+            const statuses = [
+              { status: "todo", label: "Todo" },
+              { status: "done", label: "Done" },
+              { status: "inprogress", label: "In Progress" },
+              { status: "onhold", label: "On Hold" },
+              { status: "canceled", label: "Canceled" }
+            ];
+            for (const { status, label } of statuses) {
+              const item = ownerDoc.createElement("div");
+              item.className = "tlb-status-menu-item";
+              item.style.padding = "6px 12px";
+              item.style.cursor = "pointer";
+              item.style.userSelect = "none";
+              item.style.display = "flex";
+              item.style.alignItems = "center";
+              item.style.gap = "8px";
+              const iconContainer = ownerDoc.createElement("span");
+              iconContainer.style.display = "inline-flex";
+              iconContainer.style.width = "16px";
+              iconContainer.style.height = "16px";
+              (0, import_obsidian2.setIcon)(iconContainer, getStatusIcon(status));
+              const labelSpan = ownerDoc.createElement("span");
+              labelSpan.textContent = label;
+              item.appendChild(iconContainer);
+              item.appendChild(labelSpan);
+              if (status === currentStatus) {
+                item.style.opacity = "0.5";
+                item.style.cursor = "default";
+              } else {
+                item.addEventListener("mouseenter", () => {
+                  item.style.backgroundColor = "var(--background-modifier-hover)";
+                });
+                item.addEventListener("mouseleave", () => {
+                  item.style.backgroundColor = "";
+                });
+                item.addEventListener("click", (e) => {
+                  var _a5;
+                  e.stopPropagation();
+                  (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, status);
+                  contextMenu.remove();
+                  ownerDoc.removeEventListener("click", hideMenu);
+                  ownerDoc.removeEventListener("contextmenu", hideMenu);
+                });
+              }
+              contextMenu.appendChild(item);
+            }
+            const defaultView = ownerDoc.defaultView || window;
+            const viewportWidth = defaultView.innerWidth;
+            const viewportHeight = defaultView.innerHeight;
+            ownerDoc.body.appendChild(contextMenu);
+            const menuRect = contextMenu.getBoundingClientRect();
+            let left = event.clientX;
+            let top = event.clientY;
+            if (left + menuRect.width > viewportWidth - 8) {
+              left = viewportWidth - menuRect.width - 8;
+            }
+            if (top + menuRect.height > viewportHeight - 8) {
+              top = viewportHeight - menuRect.height - 8;
+            }
+            if (left < 8)
+              left = 8;
+            if (top < 8)
+              top = 8;
+            contextMenu.style.left = `${left}px`;
+            contextMenu.style.top = `${top}px`;
+            const hideMenu = (e) => {
+              if (contextMenu && contextMenu.contains(e.target)) {
+                return;
+              }
+              contextMenu.remove();
+              ownerDoc.removeEventListener("click", hideMenu);
+              ownerDoc.removeEventListener("contextmenu", hideMenu);
+            };
+            setTimeout(() => {
+              ownerDoc.addEventListener("click", hideMenu, { capture: true });
+              ownerDoc.addEventListener("contextmenu", hideMenu, { capture: true });
+            }, 0);
           }
         };
       }
@@ -55626,9 +55750,33 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
       rowSelection: "multiple",
+      suppressRowClickSelection: true,
+      // 阻止点击行时自动选择，改为手动控制
+      // 启用右键菜单
+      allowContextMenuWithControlKey: true,
+      // 允许 Ctrl+右键显示浏览器菜单
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
+      },
+      // 单元格点击事件：手动处理行选择（排除状态列）
+      onCellClicked: (event) => {
+        var _a4;
+        const field = (_a4 = event.column) == null ? void 0 : _a4.getColId();
+        if (field === "status") {
+          return;
+        }
+        const mouseEvent = event.event;
+        const isMultiKey = mouseEvent.ctrlKey || mouseEvent.metaKey;
+        const isShiftKey = mouseEvent.shiftKey;
+        if (isShiftKey) {
+          event.node.setSelected(true, false);
+        } else if (isMultiKey) {
+          event.node.setSelected(!event.node.isSelected(), false);
+        } else {
+          event.api.deselectAll();
+          event.node.setSelected(true, false);
+        }
       },
       // 默认列配置
       defaultColDef: {
@@ -56100,7 +56248,7 @@ function getCurrentLocalDateTime() {
 
 // src/TableView.ts
 var TABLE_VIEW_TYPE = "tile-line-base-table";
-var TableView = class extends import_obsidian2.ItemView {
+var TableView = class extends import_obsidian3.ItemView {
   constructor(leaf) {
     super(leaf);
     this.file = null;
@@ -56134,7 +56282,7 @@ var TableView = class extends import_obsidian2.ItemView {
   }
   async setState(state, result) {
     const file = this.app.vault.getAbstractFileByPath(state.filePath);
-    if (file instanceof import_obsidian2.TFile) {
+    if (file instanceof import_obsidian3.TFile) {
       this.file = file;
       await this.render();
     }
@@ -57145,7 +57293,7 @@ var TableView = class extends import_obsidian2.ItemView {
 };
 
 // src/main.ts
-var TileLineBasePlugin = class extends import_obsidian3.Plugin {
+var TileLineBasePlugin = class extends import_obsidian4.Plugin {
   async onload() {
     this.registerView(
       TABLE_VIEW_TYPE,

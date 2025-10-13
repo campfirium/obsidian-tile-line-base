@@ -28,7 +28,8 @@
       "Bash(done)",
       "Bash(git fsck:*)",
       "Bash(git cat-file:*)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:www.ag-grid.com)"
     ],
     "deny": [],
     "ask": []

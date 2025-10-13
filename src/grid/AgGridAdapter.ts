@@ -12,7 +12,9 @@ import {
 	CellEditingStoppedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
-	IRowNode
+	IRowNode,
+	GetContextMenuItemsParams,
+	MenuItemDef
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -22,6 +24,12 @@ import {
 	HeaderEditEvent,
 	ROW_ID_FIELD
 } from './GridAdapter';
+import {
+	StatusCellRenderer,
+	TaskStatus,
+	normalizeStatus,
+	getStatusLabel
+} from '../renderers/StatusCellRenderer';
 
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -42,7 +50,10 @@ export class AgGridAdapter implements GridAdapter {
 	mount(
 		container: HTMLElement,
 		columns: ColumnDef[],
-		rows: RowData[]
+		rows: RowData[],
+		context?: {
+			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
+		}
 	): void {
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
@@ -59,6 +70,26 @@ export class AgGridAdapter implements GridAdapter {
 					resizable: false,
 					suppressSizeToFit: true,  // 不参与自动调整
 					cellStyle: { textAlign: 'center' }  // 居中显示
+				};
+			}
+
+			// status 列特殊处理
+			if (col.field === 'status') {
+				return {
+					field: col.field,
+					headerName: col.headerName || 'Status',
+					editable: false,  // 禁用编辑模式
+					width: 60,  // 固定宽度
+					resizable: false,
+					sortable: true,
+					filter: true,
+					suppressSizeToFit: true,  // 不参与自动调整
+					suppressNavigable: true,  // 禁止键盘导航
+					cellRenderer: StatusCellRenderer,  // 使用自定义渲染器
+					cellStyle: {
+						textAlign: 'center',
+						cursor: 'pointer'
+					}
 				};
 			}
 
@@ -111,6 +142,14 @@ export class AgGridAdapter implements GridAdapter {
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
 			rowData: rows,
+
+			// 提供稳定的行 ID（用于增量更新和状态管理）
+			getRowId: (params) => {
+				return String(params.data[ROW_ID_FIELD]);
+			},
+
+			// 传递上下文（包含回调函数）
+			context: context || {},
 
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
 			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2
@@ -200,6 +239,76 @@ export class AgGridAdapter implements GridAdapter {
 			// 性能优化：减少不必要的重绘
 			suppressAnimationFrame: false,  // 保留动画帧以提升流畅度
 			suppressColumnVirtualisation: false,  // 保留列虚拟化以提升性能
+
+			// 行样式规则：done 和 canceled 状态的行半透明
+			rowClassRules: {
+				'tlb-row-completed': (params) => {
+					const status = normalizeStatus(params.data?.status);
+					return status === 'done' || status === 'canceled';
+				}
+			},
+
+			// 单元格样式规则：标题列添加删除线（假设第一个数据列是标题列）
+			// 注意：这里需要动态获取标题列的 colId
+			// 暂时使用通用选择器，后续在 TableView 中根据实际列名配置
+
+			// 右键菜单配置
+			getContextMenuItems: (params: GetContextMenuItemsParams) => {
+				const field = params.column?.getColId();
+
+				// 如果是 status 列，显示状态菜单
+				if (field === 'status') {
+					const rowId = params.node?.id;
+					if (!rowId) return ['copy', 'export'];
+
+					const currentStatus = normalizeStatus(params.node?.data?.status);
+
+					// 返回 5 种状态的菜单项
+					return [
+						{
+							name: '待办 ☐',
+							disabled: currentStatus === 'todo',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'todo');
+							}
+						},
+						{
+							name: '已完成 ☑',
+							disabled: currentStatus === 'done',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'done');
+							}
+						},
+						{
+							name: '进行中 ⊟',
+							disabled: currentStatus === 'inprogress',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'inprogress');
+							}
+						},
+						{
+							name: '已搁置 ⏸',
+							disabled: currentStatus === 'onhold',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'onhold');
+							}
+						},
+						{
+							name: '已放弃 ☒',
+							disabled: currentStatus === 'canceled',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'canceled');
+							}
+						},
+						'separator',
+						'copy',
+						'export'
+					];
+				}
+
+				// 其他列使用默认菜单
+				return ['copy', 'export'];
+			}
 		};
 
 		// 创建并挂载 AG Grid

@@ -55251,6 +55251,133 @@ var AllCommunityModule = {
   ]
 };
 
+// src/renderers/StatusCellRenderer.ts
+function normalizeStatus(value) {
+  const str = String(value || "todo").toLowerCase().trim();
+  if (str === "done" || str === "completed") {
+    return "done";
+  }
+  if (str === "inprogress" || str === "in-progress" || str === "in_progress" || str === "doing") {
+    return "inprogress";
+  }
+  if (str === "onhold" || str === "on-hold" || str === "on_hold" || str === "hold" || str === "paused") {
+    return "onhold";
+  }
+  if (str === "canceled" || str === "cancelled" || str === "dropped") {
+    return "canceled";
+  }
+  return "todo";
+}
+function getStatusIcon(status) {
+  const icons = {
+    "todo": "\u2610",
+    // U+2610 空方框
+    "done": "\u2611",
+    // U+2611 方框中对勾
+    "inprogress": "\u229F",
+    // U+229F 方框中横线
+    "onhold": "\u23F8",
+    // U+23F8 暂停符号
+    "canceled": "\u2612"
+    // U+2612 方框中叉号
+  };
+  return icons[status] || icons["todo"];
+}
+function getStatusLabel(status) {
+  const labels = {
+    "todo": "\u5F85\u529E",
+    "done": "\u5DF2\u5B8C\u6210",
+    "inprogress": "\u8FDB\u884C\u4E2D",
+    "onhold": "\u5DF2\u6401\u7F6E",
+    "canceled": "\u5DF2\u653E\u5F03"
+  };
+  return labels[status] || labels["todo"];
+}
+var StatusCellRenderer = class {
+  /**
+   * 初始化渲染器
+   */
+  init(params) {
+    this.params = params;
+    this.eGui = document.createElement("div");
+    this.eGui.className = "tlb-status-cell";
+    this.eGui.style.textAlign = "center";
+    this.eGui.style.cursor = "pointer";
+    this.eGui.style.fontSize = "16px";
+    this.eGui.style.userSelect = "none";
+    this.renderIcon();
+    this.clickHandler = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      this.handleClick();
+    };
+    this.eGui.addEventListener("click", this.clickHandler);
+  }
+  /**
+   * 渲染图标和可访问性属性
+   */
+  renderIcon() {
+    var _a4;
+    const status = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
+    const icon = getStatusIcon(status);
+    const label = getStatusLabel(status);
+    this.eGui.textContent = icon;
+    this.eGui.title = label;
+    this.eGui.setAttribute("aria-label", label);
+    this.eGui.setAttribute("role", "button");
+  }
+  /**
+   * 处理左键点击：切换状态
+   */
+  handleClick() {
+    var _a4, _b2, _c;
+    const currentStatus = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
+    let newStatus;
+    if (currentStatus === "todo") {
+      newStatus = "done";
+    } else if (currentStatus === "done") {
+      newStatus = "todo";
+    } else {
+      newStatus = "done";
+    }
+    const rowId = (_b2 = this.params.node) == null ? void 0 : _b2.id;
+    if (!rowId) {
+      console.error("StatusCellRenderer: rowId is undefined");
+      return;
+    }
+    if ((_c = this.params.context) == null ? void 0 : _c.onStatusChange) {
+      this.params.context.onStatusChange(rowId, newStatus);
+    } else {
+      console.warn("StatusCellRenderer: onStatusChange callback not found in context");
+    }
+  }
+  /**
+   * 返回 DOM 元素
+   */
+  getGui() {
+    return this.eGui;
+  }
+  /**
+   * 刷新渲染器（支持增量更新）
+   * 返回 true 表示复用当前实例，返回 false 表示重新创建实例
+   */
+  refresh(params) {
+    this.params = params;
+    this.renderIcon();
+    return true;
+  }
+  /**
+   * 销毁渲染器（清理事件监听器）
+   */
+  destroy() {
+    if (this.clickHandler && this.eGui) {
+      this.eGui.removeEventListener("click", this.clickHandler);
+      this.clickHandler = void 0;
+    }
+  }
+};
+
 // src/grid/AgGridAdapter.ts
 ModuleRegistry.registerModules([AllCommunityModule]);
 var _AgGridAdapter = class {
@@ -55263,7 +55390,7 @@ var _AgGridAdapter = class {
   /**
    * 挂载表格到指定容器
    */
-  mount(container, columns, rows) {
+  mount(container, columns, rows, context) {
     const colDefs = columns.map((col) => {
       if (col.field === "#") {
         return {
@@ -55280,6 +55407,29 @@ var _AgGridAdapter = class {
           // 不参与自动调整
           cellStyle: { textAlign: "center" }
           // 居中显示
+        };
+      }
+      if (col.field === "status") {
+        return {
+          field: col.field,
+          headerName: col.headerName || "Status",
+          editable: false,
+          // 禁用编辑模式
+          width: 60,
+          // 固定宽度
+          resizable: false,
+          sortable: true,
+          filter: true,
+          suppressSizeToFit: true,
+          // 不参与自动调整
+          suppressNavigable: true,
+          // 禁止键盘导航
+          cellRenderer: StatusCellRenderer,
+          // 使用自定义渲染器
+          cellStyle: {
+            textAlign: "center",
+            cursor: "pointer"
+          }
         };
       }
       const baseColDef = {
@@ -55319,6 +55469,12 @@ var _AgGridAdapter = class {
     const gridOptions = {
       columnDefs: colDefs,
       rowData: rows,
+      // 提供稳定的行 ID（用于增量更新和状态管理）
+      getRowId: (params) => {
+        return String(params.data[ROW_ID_FIELD]);
+      },
+      // 传递上下文（包含回调函数）
+      context: context || {},
       // 编辑配置（使用单元格编辑模式而非整行编辑）
       singleClickEdit: false,
       // 禁用单击编辑，需要双击或 F2
@@ -55394,8 +55550,76 @@ var _AgGridAdapter = class {
       // 性能优化：减少不必要的重绘
       suppressAnimationFrame: false,
       // 保留动画帧以提升流畅度
-      suppressColumnVirtualisation: false
+      suppressColumnVirtualisation: false,
       // 保留列虚拟化以提升性能
+      // 行样式规则：done 和 canceled 状态的行半透明
+      rowClassRules: {
+        "tlb-row-completed": (params) => {
+          var _a4;
+          const status = normalizeStatus((_a4 = params.data) == null ? void 0 : _a4.status);
+          return status === "done" || status === "canceled";
+        }
+      },
+      // 单元格样式规则：标题列添加删除线（假设第一个数据列是标题列）
+      // 注意：这里需要动态获取标题列的 colId
+      // 暂时使用通用选择器，后续在 TableView 中根据实际列名配置
+      // 右键菜单配置
+      getContextMenuItems: (params) => {
+        var _a4, _b2, _c, _d;
+        const field = (_a4 = params.column) == null ? void 0 : _a4.getColId();
+        if (field === "status") {
+          const rowId = (_b2 = params.node) == null ? void 0 : _b2.id;
+          if (!rowId)
+            return ["copy", "export"];
+          const currentStatus = normalizeStatus((_d = (_c = params.node) == null ? void 0 : _c.data) == null ? void 0 : _d.status);
+          return [
+            {
+              name: "\u5F85\u529E \u2610",
+              disabled: currentStatus === "todo",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "todo");
+              }
+            },
+            {
+              name: "\u5DF2\u5B8C\u6210 \u2611",
+              disabled: currentStatus === "done",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "done");
+              }
+            },
+            {
+              name: "\u8FDB\u884C\u4E2D \u229F",
+              disabled: currentStatus === "inprogress",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "inprogress");
+              }
+            },
+            {
+              name: "\u5DF2\u6401\u7F6E \u23F8",
+              disabled: currentStatus === "onhold",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "onhold");
+              }
+            },
+            {
+              name: "\u5DF2\u653E\u5F03 \u2612",
+              disabled: currentStatus === "canceled",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "canceled");
+              }
+            },
+            "separator",
+            "copy",
+            "export"
+          ];
+        }
+        return ["copy", "export"];
+      }
     };
     this.gridApi = createGrid(container, gridOptions);
     this.lastAutoSizeTimestamp = 0;
@@ -55904,6 +56128,7 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 动态扫描所有 H2 块，提取 Schema
    * 如果有头部配置块，优先使用配置块定义的列顺序
+   * 自动添加 status 为内置系统列
    */
   extractSchema(blocks, columnConfigs) {
     if (blocks.length === 0) {
@@ -55917,6 +56142,8 @@ var TableView = class extends import_obsidian.ItemView {
       const seenKeys = /* @__PURE__ */ new Set();
       for (const block of blocks) {
         for (const key of Object.keys(block.data)) {
+          if (key === "statusChanged")
+            continue;
           if (!seenKeys.has(key)) {
             columnNames.push(key);
             seenKeys.add(key);
@@ -55924,6 +56151,11 @@ var TableView = class extends import_obsidian.ItemView {
         }
       }
     }
+    const statusIndex = columnNames.indexOf("status");
+    if (statusIndex !== -1) {
+      columnNames.splice(statusIndex, 1);
+    }
+    columnNames.unshift("status");
     return {
       columnNames,
       columnConfigs: columnConfigs || void 0
@@ -55940,6 +56172,12 @@ var TableView = class extends import_obsidian.ItemView {
       row["#"] = String(i + 1);
       row[ROW_ID_FIELD] = String(i);
       for (const key of schema.columnNames) {
+        if (key === "status" && !block.data[key]) {
+          block.data[key] = "todo";
+          if (!block.data["statusChanged"]) {
+            block.data["statusChanged"] = new Date().toISOString();
+          }
+        }
         row[key] = block.data[key] || "";
       }
       data.push(row);
@@ -55949,6 +56187,7 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 将 blocks 数组转换回 Markdown 格式（Key:Value）
    * 第一个 key:value 作为 H2 标题，其余作为正文
+   * 输出压缩属性（statusChanged 等）
    */
   blocksToMarkdown() {
     if (!this.schema)
@@ -55968,6 +56207,9 @@ var TableView = class extends import_obsidian.ItemView {
             lines.push(`${key}\uFF1A`);
           }
         }
+      }
+      if (block.data["statusChanged"]) {
+        lines.push(`statusChanged\uFF1A${block.data["statusChanged"]}`);
       }
       lines.push("");
     }
@@ -56055,7 +56297,11 @@ var TableView = class extends import_obsidian.ItemView {
       this.gridAdapter.destroy();
     }
     this.gridAdapter = new AgGridAdapter();
-    this.gridAdapter.mount(tableContainer, columns, data);
+    this.gridAdapter.mount(tableContainer, columns, data, {
+      onStatusChange: (rowId, newStatus) => {
+        this.onStatusChange(rowId, newStatus);
+      }
+    });
     this.tableContainer = tableContainer;
     this.updateTableContainerSize();
     this.gridAdapter.onCellEdit((event) => {
@@ -56427,6 +56673,34 @@ var TableView = class extends import_obsidian.ItemView {
     }
   }
   /**
+   * 处理状态变更
+   * @param rowId 行的稳定 ID（使用 ROW_ID_FIELD）
+   * @param newStatus 新的状态值
+   */
+  onStatusChange(rowId, newStatus) {
+    if (!this.schema || !this.gridAdapter) {
+      console.error("Schema or GridAdapter not initialized");
+      return;
+    }
+    const blockIndex = parseInt(rowId, 10);
+    if (isNaN(blockIndex) || blockIndex < 0 || blockIndex >= this.blocks.length) {
+      console.error("Invalid blockIndex:", blockIndex);
+      return;
+    }
+    const block = this.blocks[blockIndex];
+    block.data["status"] = newStatus;
+    block.data["statusChanged"] = new Date().toISOString();
+    const gridApi = this.gridAdapter.gridApi;
+    if (gridApi) {
+      const rowNode = gridApi.getRowNode(rowId);
+      if (rowNode) {
+        rowNode.setDataValue("status", newStatus);
+        gridApi.redrawRows({ rowNodes: [rowNode] });
+      }
+    }
+    this.scheduleSave();
+  }
+  /**
    * 处理单元格编辑（Key:Value 格式）
    */
   onCellEdit(event) {
@@ -56511,8 +56785,15 @@ var TableView = class extends import_obsidian.ItemView {
     };
     for (let i = 0; i < this.schema.columnNames.length; i++) {
       const key = this.schema.columnNames[i];
-      newBlock.data[key] = i === 0 ? `\u65B0\u6761\u76EE ${entryNumber}` : "";
+      if (key === "status") {
+        newBlock.data[key] = "todo";
+      } else if (i === 0) {
+        newBlock.data[key] = `\u65B0\u6761\u76EE ${entryNumber}`;
+      } else {
+        newBlock.data[key] = "";
+      }
     }
+    newBlock.data["statusChanged"] = new Date().toISOString();
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
       this.blocks.splice(beforeRowIndex, 0, newBlock);
     } else {

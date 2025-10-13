@@ -56704,7 +56704,7 @@ var TableView = class extends import_obsidian.ItemView {
     }
     const block = this.blocks[blockIndex];
     block.data["status"] = newStatus;
-    block.data["statusChanged"] = new Date().toISOString();
+    block.data["statusChanged"] = getCurrentLocalDateTime();
     const gridApi = this.gridAdapter.gridApi;
     if (gridApi) {
       const rowNode = gridApi.getRowNode(rowId);
@@ -56808,7 +56808,7 @@ var TableView = class extends import_obsidian.ItemView {
         newBlock.data[key] = "";
       }
     }
-    newBlock.data["statusChanged"] = new Date().toISOString();
+    newBlock.data["statusChanged"] = getCurrentLocalDateTime();
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
       this.blocks.splice(beforeRowIndex, 0, newBlock);
     } else {

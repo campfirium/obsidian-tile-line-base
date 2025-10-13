@@ -4,6 +4,7 @@
  * 功能：
  * - 渲染 5 种任务状态图标（todo, done, inprogress, onhold, canceled）
  * - 左键点击：在 todo ↔ done 之间切换
+ * - 右键点击：显示所有 5 种状态的菜单
  * - 支持可访问性（title, aria-label）
  */
 
@@ -78,6 +79,8 @@ export class StatusCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
 	private params!: ICellRendererParams;
 	private clickHandler?: (e: MouseEvent) => void;
+	private contextMenuHandler?: (e: MouseEvent) => void;
+	private contextMenu: HTMLElement | null = null;
 
 	/**
 	 * 初始化渲染器
@@ -96,18 +99,25 @@ export class StatusCellRenderer implements ICellRendererComp {
 		// 渲染图标
 		this.renderIcon();
 
-		// 绑定点击事件（左键切换状态）
+		// 绑定左键点击事件（切换状态）
 		this.clickHandler = (e: MouseEvent) => {
-			// 只阻止左键点击事件，不阻止右键菜单事件
-			if (e.button === 0) {  // 0 = 左键
-				e.preventDefault();
-				e.stopPropagation();
-				e.stopImmediatePropagation();
-				this.handleClick();
-			}
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			this.hideContextMenu();  // 隐藏可能存在的菜单
+			this.handleClick();
+		};
+
+		// 绑定右键菜单事件（显示所有状态选项）
+		this.contextMenuHandler = (e: MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			this.showContextMenu(e);
 		};
 
 		this.eGui.addEventListener('click', this.clickHandler);
+		this.eGui.addEventListener('contextmenu', this.contextMenuHandler);
 	}
 
 	/**
@@ -145,6 +155,126 @@ export class StatusCellRenderer implements ICellRendererComp {
 			newStatus = 'done';
 		}
 
+		this.changeStatus(newStatus);
+	}
+
+	/**
+	 * 显示右键菜单
+	 */
+	private showContextMenu(event: MouseEvent): void {
+		// 隐藏旧菜单
+		this.hideContextMenu();
+
+		const currentStatus = normalizeStatus(this.params.data?.status);
+
+		// 获取容器所在的 document（支持新窗口）
+		const ownerDoc = this.eGui.ownerDocument;
+		this.contextMenu = ownerDoc.createElement('div');
+		this.contextMenu.className = 'tlb-status-context-menu';
+		this.contextMenu.style.position = 'fixed';
+		this.contextMenu.style.zIndex = '10000';
+		this.contextMenu.style.backgroundColor = 'var(--background-primary)';
+		this.contextMenu.style.border = '1px solid var(--background-modifier-border)';
+		this.contextMenu.style.borderRadius = '4px';
+		this.contextMenu.style.padding = '4px 0';
+		this.contextMenu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+		this.contextMenu.style.minWidth = '120px';
+
+		// 创建菜单项
+		const statuses: Array<{ status: TaskStatus; label: string; icon: string }> = [
+			{ status: 'todo', label: '待办', icon: '☐' },
+			{ status: 'done', label: '已完成', icon: '☑' },
+			{ status: 'inprogress', label: '进行中', icon: '⊟' },
+			{ status: 'onhold', label: '已搁置', icon: '⏸' },
+			{ status: 'canceled', label: '已放弃', icon: '☒' }
+		];
+
+		for (const { status, label, icon } of statuses) {
+			const item = ownerDoc.createElement('div');
+			item.className = 'tlb-status-menu-item';
+			item.style.padding = '6px 12px';
+			item.style.cursor = 'pointer';
+			item.style.userSelect = 'none';
+			item.style.display = 'flex';
+			item.style.alignItems = 'center';
+			item.style.gap = '8px';
+			item.textContent = `${icon} ${label}`;
+
+			// 当前状态禁用
+			if (status === currentStatus) {
+				item.style.opacity = '0.5';
+				item.style.cursor = 'default';
+			} else {
+				// 悬停效果
+				item.addEventListener('mouseenter', () => {
+					item.style.backgroundColor = 'var(--background-modifier-hover)';
+				});
+				item.addEventListener('mouseleave', () => {
+					item.style.backgroundColor = '';
+				});
+
+				// 点击切换状态
+				item.addEventListener('click', (e) => {
+					e.stopPropagation();
+					this.changeStatus(status);
+					this.hideContextMenu();
+				});
+			}
+
+			this.contextMenu!.appendChild(item);
+		}
+
+		// 定位菜单
+		const defaultView = ownerDoc.defaultView || window;
+		const viewportWidth = defaultView.innerWidth;
+		const viewportHeight = defaultView.innerHeight;
+
+		// 临时添加到 DOM 以获取尺寸
+		ownerDoc.body.appendChild(this.contextMenu);
+		const menuRect = this.contextMenu.getBoundingClientRect();
+
+		let left = event.clientX;
+		let top = event.clientY;
+
+		// 防止超出屏幕
+		if (left + menuRect.width > viewportWidth - 8) {
+			left = viewportWidth - menuRect.width - 8;
+		}
+		if (top + menuRect.height > viewportHeight - 8) {
+			top = viewportHeight - menuRect.height - 8;
+		}
+		if (left < 8) left = 8;
+		if (top < 8) top = 8;
+
+		this.contextMenu.style.left = `${left}px`;
+		this.contextMenu.style.top = `${top}px`;
+
+		// 点击外部隐藏菜单
+		const hideOnClick = (e: MouseEvent) => {
+			if (this.contextMenu && !this.contextMenu.contains(e.target as Node)) {
+				this.hideContextMenu();
+				ownerDoc.removeEventListener('click', hideOnClick);
+			}
+		};
+		setTimeout(() => {
+			ownerDoc.addEventListener('click', hideOnClick);
+		}, 0);
+	}
+
+	/**
+	 * 隐藏右键菜单
+	 */
+	private hideContextMenu(): void {
+		if (this.contextMenu) {
+			this.contextMenu.remove();
+			this.contextMenu = null;
+		}
+	}
+
+	/**
+	 * 更改状态（通用方法）
+	 */
+	private changeStatus(newStatus: TaskStatus): void {
 		// 获取 rowId（稳定标识，不受排序/过滤影响）
 		const rowId = this.params.node?.id;
 		if (!rowId) {
@@ -181,9 +311,16 @@ export class StatusCellRenderer implements ICellRendererComp {
 	 * 销毁渲染器（清理事件监听器）
 	 */
 	destroy(): void {
+		this.hideContextMenu();
+
 		if (this.clickHandler && this.eGui) {
 			this.eGui.removeEventListener('click', this.clickHandler);
 			this.clickHandler = undefined;
+		}
+
+		if (this.contextMenuHandler && this.eGui) {
+			this.eGui.removeEventListener('contextmenu', this.contextMenuHandler);
+			this.contextMenuHandler = undefined;
 		}
 	}
 }

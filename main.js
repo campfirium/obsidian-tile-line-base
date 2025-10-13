@@ -55312,7 +55312,6 @@ var StatusCellRenderer = class {
     this.eGui.style.userSelect = "none";
     this.eGui.style.width = "100%";
     this.eGui.style.height = "100%";
-    this.eGui.style.padding = "0 var(--ag-cell-horizontal-padding)";
     this.renderIcon();
     this.clickHandler = (e) => {
       e.preventDefault();
@@ -55440,23 +55439,33 @@ var StatusCellRenderer = class {
       top = 8;
     this.contextMenu.style.left = `${left}px`;
     this.contextMenu.style.top = `${top}px`;
-    const hideOnClick = (e) => {
-      if (this.contextMenu && !this.contextMenu.contains(e.target)) {
-        this.hideContextMenu();
-        ownerDoc.removeEventListener("click", hideOnClick);
+    this.documentClickHandler = (e) => {
+      if (this.contextMenu && this.contextMenu.contains(e.target)) {
+        return;
       }
+      this.hideContextMenu();
     };
     setTimeout(() => {
-      ownerDoc.addEventListener("click", hideOnClick);
+      if (this.documentClickHandler) {
+        ownerDoc.addEventListener("click", this.documentClickHandler, { capture: true });
+        ownerDoc.addEventListener("contextmenu", this.documentClickHandler, { capture: true });
+      }
     }, 0);
   }
   /**
    * 隐藏右键菜单
    */
   hideContextMenu() {
+    var _a4;
     if (this.contextMenu) {
       this.contextMenu.remove();
       this.contextMenu = null;
+    }
+    if (this.documentClickHandler) {
+      const ownerDoc = ((_a4 = this.eGui) == null ? void 0 : _a4.ownerDocument) || document;
+      ownerDoc.removeEventListener("click", this.documentClickHandler);
+      ownerDoc.removeEventListener("contextmenu", this.documentClickHandler);
+      this.documentClickHandler = void 0;
     }
   }
   /**
@@ -55556,7 +55565,9 @@ var _AgGridAdapter = class {
           // 使用自定义渲染器
           cellStyle: {
             textAlign: "center",
-            cursor: "pointer"
+            cursor: "pointer",
+            padding: "0 18px"
+            // 手动设置水平内边距（AG Grid 默认值：6px * 3）
           }
         };
       }

@@ -1,6 +1,8 @@
 import { ItemView, WorkspaceLeaf, TFile, EventRef } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
+import { TaskStatus } from "./renderers/StatusCellRenderer";
+import { getCurrentLocalDateTime } from "./utils/datetime";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -264,6 +266,7 @@ export class TableView extends ItemView {
 	/**
 	 * 动态扫描所有 H2 块，提取 Schema
 	 * 如果有头部配置块，优先使用配置块定义的列顺序
+	 * 自动添加 status 为内置系统列
 	 */
 	private extractSchema(blocks: H2Block[], columnConfigs: ColumnConfig[] | null): Schema | null {
 		if (blocks.length === 0) {
@@ -282,6 +285,9 @@ export class TableView extends ItemView {
 
 			for (const block of blocks) {
 				for (const key of Object.keys(block.data)) {
+					// 跳过压缩属性（statusChanged 等）
+					if (key === 'statusChanged') continue;
+
 					if (!seenKeys.has(key)) {
 						columnNames.push(key);
 						seenKeys.add(key);
@@ -289,6 +295,18 @@ export class TableView extends ItemView {
 				}
 			}
 		}
+
+		// 自动添加 status 为内置列（在第一个数据列之后，即第三列位置）
+		// 如果 columnNames 中已经有 status，先移除
+		const statusIndex = columnNames.indexOf('status');
+		if (statusIndex !== -1) {
+			columnNames.splice(statusIndex, 1);
+		}
+
+		// 在第二个位置插入 status（实际显示时：# -> 第一个数据列 -> status）
+		// 如果没有数据列，就放在第一个位置
+		const insertIndex = columnNames.length > 0 ? 1 : 0;
+		columnNames.splice(insertIndex, 0, 'status');
 
 		return {
 			columnNames,
@@ -313,6 +331,15 @@ export class TableView extends ItemView {
 
 			// 所有列都从 block.data 提取
 			for (const key of schema.columnNames) {
+				// 如果是 status 列，确保有默认值
+				if (key === 'status' && !block.data[key]) {
+					block.data[key] = 'todo';
+					// 如果没有 statusChanged，也初始化
+					if (!block.data['statusChanged']) {
+						block.data['statusChanged'] = getCurrentLocalDateTime();
+					}
+				}
+
 				row[key] = block.data[key] || '';
 			}
 
@@ -325,6 +352,7 @@ export class TableView extends ItemView {
 	/**
 	 * 将 blocks 数组转换回 Markdown 格式（Key:Value）
 	 * 第一个 key:value 作为 H2 标题，其余作为正文
+	 * 输出压缩属性（statusChanged 等）
 	 */
 	private blocksToMarkdown(): string {
 		if (!this.schema) return '';
@@ -351,6 +379,11 @@ export class TableView extends ItemView {
 						lines.push(`${key}：`);
 					}
 				}
+			}
+
+			// 输出压缩属性（不在 columnNames 中的属性）
+			if (block.data['statusChanged']) {
+				lines.push(`statusChanged：${block.data['statusChanged']}`);
 			}
 
 			// H2 块之间空一行
@@ -471,7 +504,11 @@ export class TableView extends ItemView {
 
 		// 创建并挂载新的表格
 		this.gridAdapter = new AgGridAdapter();
-		this.gridAdapter.mount(tableContainer, columns, data);
+		this.gridAdapter.mount(tableContainer, columns, data, {
+			onStatusChange: (rowId: string, newStatus: TaskStatus) => {
+				this.onStatusChange(rowId, newStatus);
+			}
+		});
 		this.tableContainer = tableContainer;
 		this.updateTableContainerSize();
 
@@ -798,6 +835,17 @@ export class TableView extends ItemView {
 
 		// 创建并保存右键菜单处理器
 		this.contextMenuHandler = (event: MouseEvent) => {
+			// 检查是否点击的是 status 列
+			const target = event.target as HTMLElement;
+			const cellElement = target.closest('.ag-cell');
+			const colId = cellElement?.getAttribute('col-id');
+
+			// 如果是 status 列，让 AG Grid 的原生菜单处理
+			if (colId === 'status') {
+				return;  // 不阻止事件，让 AG Grid 的 getContextMenuItems 生效
+			}
+
+			// 其他列使用自定义菜单
 			event.preventDefault();
 
 			// 获取点击行对应的块索引
@@ -984,6 +1032,47 @@ export class TableView extends ItemView {
 	}
 
 	/**
+	 * 处理状态变更
+	 * @param rowId 行的稳定 ID（使用 ROW_ID_FIELD）
+	 * @param newStatus 新的状态值
+	 */
+	private onStatusChange(rowId: string, newStatus: TaskStatus): void {
+		if (!this.schema || !this.gridAdapter) {
+			console.error('Schema or GridAdapter not initialized');
+			return;
+		}
+
+		// 通过 rowId 获取 blockIndex
+		const blockIndex = parseInt(rowId, 10);
+		if (isNaN(blockIndex) || blockIndex < 0 || blockIndex >= this.blocks.length) {
+			console.error('Invalid blockIndex:', blockIndex);
+			return;
+		}
+
+		const block = this.blocks[blockIndex];
+
+		// 直接修改 blocks 数组（数据的唯一真实来源）
+		block.data['status'] = newStatus;
+		block.data['statusChanged'] = getCurrentLocalDateTime();
+
+		// 使用增量刷新（通过 AG Grid API 直接更新单元格）
+		const gridApi = (this.gridAdapter as any).gridApi;
+		if (gridApi) {
+			const rowNode = gridApi.getRowNode(rowId);
+			if (rowNode) {
+				// 更新 status 单元格
+				rowNode.setDataValue('status', newStatus);
+
+				// 触发行样式刷新（done/canceled 状态需要半透明）
+				gridApi.redrawRows({ rowNodes: [rowNode] });
+			}
+		}
+
+		// 触发保存到文件
+		this.scheduleSave();
+	}
+
+	/**
 	 * 处理单元格编辑（Key:Value 格式）
 	 */
 	private onCellEdit(event: CellEditEvent): void {
@@ -1096,9 +1185,23 @@ export class TableView extends ItemView {
 		// 为所有列初始化值
 		for (let i = 0; i < this.schema.columnNames.length; i++) {
 			const key = this.schema.columnNames[i];
+
+			// status 列初始化为 'todo'
+			if (key === 'status') {
+				newBlock.data[key] = 'todo';
+			}
 			// 第一列使用"新条目 X"，其他列为空
-			newBlock.data[key] = (i === 0) ? `新条目 ${entryNumber}` : '';
+			else if (i === 0) {
+				newBlock.data[key] = `新条目 ${entryNumber}`;
+			}
+			// 其他列为空
+			else {
+				newBlock.data[key] = '';
+			}
 		}
+
+		// 初始化 statusChanged 时间戳
+		newBlock.data['statusChanged'] = getCurrentLocalDateTime();
 
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）

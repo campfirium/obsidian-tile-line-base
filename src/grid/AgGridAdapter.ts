@@ -12,7 +12,9 @@ import {
 	CellEditingStoppedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
-	IRowNode
+	IRowNode,
+	GetContextMenuItemsParams,
+	MenuItemDef
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -22,6 +24,14 @@ import {
 	HeaderEditEvent,
 	ROW_ID_FIELD
 } from './GridAdapter';
+import {
+	StatusCellRenderer,
+	TaskStatus,
+	normalizeStatus,
+	getStatusLabel,
+	getStatusIcon
+} from '../renderers/StatusCellRenderer';
+import { setIcon } from 'obsidian';
 
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -42,7 +52,10 @@ export class AgGridAdapter implements GridAdapter {
 	mount(
 		container: HTMLElement,
 		columns: ColumnDef[],
-		rows: RowData[]
+		rows: RowData[],
+		context?: {
+			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
+		}
 	): void {
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
@@ -59,6 +72,168 @@ export class AgGridAdapter implements GridAdapter {
 					resizable: false,
 					suppressSizeToFit: true,  // 不参与自动调整
 					cellStyle: { textAlign: 'center' }  // 居中显示
+				};
+			}
+
+			// status 列特殊处理
+			if (col.field === 'status') {
+				return {
+					field: col.field,
+					headerName: col.headerName || 'Status',
+					editable: false,  // 禁用编辑模式
+					width: 60,  // 固定宽度
+					resizable: false,
+					sortable: true,
+					filter: true,
+					suppressSizeToFit: true,  // 不参与自动调整
+					suppressNavigable: true,  // 禁止键盘导航
+					cellRenderer: StatusCellRenderer,  // 使用自定义渲染器
+					cellStyle: {
+						textAlign: 'center',
+						cursor: 'pointer',
+						padding: '10px var(--ag-cell-horizontal-padding)'  // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
+					},
+					// 处理左键点击：切换状态
+					onCellClicked: (params: any) => {
+						const event = params.event as MouseEvent;
+						if (event) {
+							// 阻止默认的行选择行为
+							event.preventDefault();
+							event.stopPropagation();
+						}
+						// 获取当前状态并切换
+						const rowId = params.node?.id;
+						if (!rowId) return;
+
+						const currentStatus = normalizeStatus(params.data?.status);
+						let newStatus: TaskStatus;
+						if (currentStatus === 'todo') {
+							newStatus = 'done';
+						} else if (currentStatus === 'done') {
+							newStatus = 'todo';
+						} else {
+							// inprogress, onhold, canceled 点击后统一变为 done
+							newStatus = 'done';
+						}
+
+						context?.onStatusChange?.(rowId, newStatus);
+					},
+					// 处理右键点击：显示状态选择菜单（处理整个单元格区域包括padding）
+					onCellContextMenu: (params: any) => {
+						const event = params.event as MouseEvent;
+						if (event) {
+							event.preventDefault();
+							event.stopPropagation();
+						}
+
+						const rowId = params.node?.id;
+						if (!rowId) return;
+
+						const currentStatus = normalizeStatus(params.data?.status);
+
+						// 创建菜单（复用 StatusCellRenderer 的菜单逻辑）
+						const ownerDoc = container.ownerDocument;
+						const contextMenu = ownerDoc.createElement('div');
+						contextMenu.className = 'tlb-status-context-menu';
+						contextMenu.style.position = 'fixed';
+						contextMenu.style.zIndex = '10000';
+						contextMenu.style.backgroundColor = 'var(--background-primary)';
+						contextMenu.style.border = '1px solid var(--background-modifier-border)';
+						contextMenu.style.borderRadius = '4px';
+						contextMenu.style.padding = '4px 0';
+						contextMenu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+						contextMenu.style.minWidth = '120px';
+
+						const statuses: Array<{ status: TaskStatus; label: string }> = [
+							{ status: 'todo', label: 'Todo' },
+							{ status: 'done', label: 'Done' },
+							{ status: 'inprogress', label: 'In Progress' },
+							{ status: 'onhold', label: 'On Hold' },
+							{ status: 'canceled', label: 'Canceled' }
+						];
+
+						for (const { status, label } of statuses) {
+							const item = ownerDoc.createElement('div');
+							item.className = 'tlb-status-menu-item';
+							item.style.padding = '6px 12px';
+							item.style.cursor = 'pointer';
+							item.style.userSelect = 'none';
+							item.style.display = 'flex';
+							item.style.alignItems = 'center';
+							item.style.gap = '8px';
+
+							const iconContainer = ownerDoc.createElement('span');
+							iconContainer.style.display = 'inline-flex';
+							iconContainer.style.width = '16px';
+							iconContainer.style.height = '16px';
+							setIcon(iconContainer, getStatusIcon(status));
+
+							const labelSpan = ownerDoc.createElement('span');
+							labelSpan.textContent = label;
+
+							item.appendChild(iconContainer);
+							item.appendChild(labelSpan);
+
+							if (status === currentStatus) {
+								item.style.opacity = '0.5';
+								item.style.cursor = 'default';
+							} else {
+								item.addEventListener('mouseenter', () => {
+									item.style.backgroundColor = 'var(--background-modifier-hover)';
+								});
+								item.addEventListener('mouseleave', () => {
+									item.style.backgroundColor = '';
+								});
+								item.addEventListener('click', (e) => {
+									e.stopPropagation();
+									context?.onStatusChange?.(rowId, status);
+									contextMenu.remove();
+									ownerDoc.removeEventListener('click', hideMenu);
+									ownerDoc.removeEventListener('contextmenu', hideMenu);
+								});
+							}
+
+							contextMenu.appendChild(item);
+						}
+
+						// 定位菜单
+						const defaultView = ownerDoc.defaultView || window;
+						const viewportWidth = defaultView.innerWidth;
+						const viewportHeight = defaultView.innerHeight;
+
+						ownerDoc.body.appendChild(contextMenu);
+						const menuRect = contextMenu.getBoundingClientRect();
+
+						let left = event.clientX;
+						let top = event.clientY;
+
+						if (left + menuRect.width > viewportWidth - 8) {
+							left = viewportWidth - menuRect.width - 8;
+						}
+						if (top + menuRect.height > viewportHeight - 8) {
+							top = viewportHeight - menuRect.height - 8;
+						}
+						if (left < 8) left = 8;
+						if (top < 8) top = 8;
+
+						contextMenu.style.left = `${left}px`;
+						contextMenu.style.top = `${top}px`;
+
+						// 点击外部隐藏菜单
+						const hideMenu = (e: MouseEvent) => {
+							if (contextMenu && contextMenu.contains(e.target as Node)) {
+								return;
+							}
+							contextMenu.remove();
+							ownerDoc.removeEventListener('click', hideMenu);
+							ownerDoc.removeEventListener('contextmenu', hideMenu);
+						};
+
+						setTimeout(() => {
+							ownerDoc.addEventListener('click', hideMenu, { capture: true });
+							ownerDoc.addEventListener('contextmenu', hideMenu, { capture: true });
+						}, 0);
+					}
 				};
 			}
 
@@ -112,6 +287,14 @@ export class AgGridAdapter implements GridAdapter {
 			columnDefs: colDefs,
 			rowData: rows,
 
+			// 提供稳定的行 ID（用于增量更新和状态管理）
+			getRowId: (params) => {
+				return String(params.data[ROW_ID_FIELD]);
+			},
+
+			// 传递上下文（包含回调函数）
+			context: context || {},
+
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
 			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2
 			stopEditingWhenCellsLoseFocus: true, // 失焦时停止编辑
@@ -122,10 +305,40 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
 			rowSelection: 'multiple',
+			suppressRowClickSelection: true,  // 阻止点击行时自动选择，改为手动控制
+
+			// 启用右键菜单
+			allowContextMenuWithControlKey: true,  // 允许 Ctrl+右键显示浏览器菜单
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
+			},
+
+			// 单元格点击事件：手动处理行选择（排除状态列）
+			onCellClicked: (event: any) => {
+				const field = event.column?.getColId();
+				// 状态列由列配置中的 onCellClicked 处理，不在此选择行
+				if (field === 'status') {
+					return;
+				}
+
+				// 其他列：手动选择行（支持 Ctrl/Cmd 和 Shift 多选）
+				const mouseEvent = event.event as MouseEvent;
+				const isMultiKey = mouseEvent.ctrlKey || mouseEvent.metaKey;
+				const isShiftKey = mouseEvent.shiftKey;
+
+				if (isShiftKey) {
+					// Shift 范围选择由 AG Grid 内部处理
+					event.node.setSelected(true, false);
+				} else if (isMultiKey) {
+					// Ctrl/Cmd 切换选择
+					event.node.setSelected(!event.node.isSelected(), false);
+				} else {
+					// 单选：清除其他选择
+					event.api.deselectAll();
+					event.node.setSelected(true, false);
+				}
 			},
 
 			// 默认列配置
@@ -200,6 +413,76 @@ export class AgGridAdapter implements GridAdapter {
 			// 性能优化：减少不必要的重绘
 			suppressAnimationFrame: false,  // 保留动画帧以提升流畅度
 			suppressColumnVirtualisation: false,  // 保留列虚拟化以提升性能
+
+			// 行样式规则：done 和 canceled 状态的行半透明
+			rowClassRules: {
+				'tlb-row-completed': (params) => {
+					const status = normalizeStatus(params.data?.status);
+					return status === 'done' || status === 'canceled';
+				}
+			},
+
+			// 单元格样式规则：标题列添加删除线（假设第一个数据列是标题列）
+			// 注意：这里需要动态获取标题列的 colId
+			// 暂时使用通用选择器，后续在 TableView 中根据实际列名配置
+
+			// 右键菜单配置
+			getContextMenuItems: (params: GetContextMenuItemsParams) => {
+				const field = params.column?.getColId();
+
+				// 如果是 status 列，显示状态菜单
+				if (field === 'status') {
+					const rowId = params.node?.id;
+					if (!rowId) return ['copy', 'export'];
+
+					const currentStatus = normalizeStatus(params.node?.data?.status);
+
+					// 返回 5 种状态的菜单项
+					return [
+						{
+							name: '待办 ☐',
+							disabled: currentStatus === 'todo',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'todo');
+							}
+						},
+						{
+							name: '已完成 ☑',
+							disabled: currentStatus === 'done',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'done');
+							}
+						},
+						{
+							name: '进行中 ⊟',
+							disabled: currentStatus === 'inprogress',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'inprogress');
+							}
+						},
+						{
+							name: '已搁置 ⏸',
+							disabled: currentStatus === 'onhold',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'onhold');
+							}
+						},
+						{
+							name: '已放弃 ☒',
+							disabled: currentStatus === 'canceled',
+							action: () => {
+								context?.onStatusChange?.(rowId, 'canceled');
+							}
+						},
+						'separator',
+						'copy',
+						'export'
+					];
+				}
+
+				// 其他列使用默认菜单
+				return ['copy', 'export'];
+			}
 		};
 
 		// 创建并挂载 AG Grid

@@ -27,10 +27,10 @@ __export(main_exports, {
   default: () => TileLineBasePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian2 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/TableView.ts
-var import_obsidian = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/grid/GridAdapter.ts
 var ROW_ID_FIELD = "__tlb_row_id";
@@ -55251,7 +55251,272 @@ var AllCommunityModule = {
   ]
 };
 
+// src/renderers/StatusCellRenderer.ts
+var import_obsidian = require("obsidian");
+function normalizeStatus(value) {
+  const str = String(value || "todo").toLowerCase().trim();
+  if (str === "done" || str === "completed") {
+    return "done";
+  }
+  if (str === "inprogress" || str === "in-progress" || str === "in_progress" || str === "doing") {
+    return "inprogress";
+  }
+  if (str === "onhold" || str === "on-hold" || str === "on_hold" || str === "hold" || str === "paused") {
+    return "onhold";
+  }
+  if (str === "canceled" || str === "cancelled" || str === "dropped") {
+    return "canceled";
+  }
+  return "todo";
+}
+function getStatusIcon(status) {
+  const icons = {
+    "todo": "square",
+    // □ 空方框（Obsidian 任务列表原生）
+    "done": "check-square",
+    // ☑ 已完成（Obsidian 任务列表原生）
+    "inprogress": "circle-dashed",
+    // ◌ 虚线圆（暗示进行中）
+    "onhold": "pause-circle",
+    // ⏸ 暂停图标
+    "canceled": "x-square"
+    // ☒ 叉号方框
+  };
+  return icons[status] || icons["todo"];
+}
+function getStatusLabel(status) {
+  const labels = {
+    "todo": "Todo",
+    "done": "Done",
+    "inprogress": "In Progress",
+    "onhold": "On Hold",
+    "canceled": "Canceled"
+  };
+  return labels[status] || labels["todo"];
+}
+var StatusCellRenderer = class {
+  constructor() {
+    this.contextMenu = null;
+  }
+  /**
+   * 初始化渲染器
+   */
+  init(params) {
+    this.params = params;
+    this.eGui = document.createElement("div");
+    this.eGui.className = "tlb-status-cell";
+    this.eGui.style.display = "flex";
+    this.eGui.style.alignItems = "center";
+    this.eGui.style.justifyContent = "center";
+    this.eGui.style.cursor = "pointer";
+    this.eGui.style.userSelect = "none";
+    this.eGui.style.width = "100%";
+    this.eGui.style.height = "100%";
+    this.renderIcon();
+    this.clickHandler = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      this.hideContextMenu();
+      this.handleClick();
+    };
+    this.contextMenuHandler = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      this.showContextMenu(e);
+    };
+    this.eGui.addEventListener("click", this.clickHandler);
+    this.eGui.addEventListener("contextmenu", this.contextMenuHandler);
+  }
+  /**
+   * 渲染图标和可访问性属性
+   */
+  renderIcon() {
+    var _a4;
+    const status = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
+    const iconId = getStatusIcon(status);
+    const label = getStatusLabel(status);
+    this.eGui.innerHTML = "";
+    (0, import_obsidian.setIcon)(this.eGui, iconId);
+    this.eGui.title = label;
+    this.eGui.setAttribute("aria-label", label);
+    this.eGui.setAttribute("role", "button");
+  }
+  /**
+   * 处理左键点击：切换状态
+   */
+  handleClick() {
+    var _a4;
+    const currentStatus = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
+    let newStatus;
+    if (currentStatus === "todo") {
+      newStatus = "done";
+    } else if (currentStatus === "done") {
+      newStatus = "todo";
+    } else {
+      newStatus = "done";
+    }
+    this.changeStatus(newStatus);
+  }
+  /**
+   * 显示右键菜单
+   */
+  showContextMenu(event) {
+    var _a4;
+    this.hideContextMenu();
+    const currentStatus = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
+    const ownerDoc = this.eGui.ownerDocument;
+    this.contextMenu = ownerDoc.createElement("div");
+    this.contextMenu.className = "tlb-status-context-menu";
+    this.contextMenu.style.position = "fixed";
+    this.contextMenu.style.zIndex = "10000";
+    this.contextMenu.style.backgroundColor = "var(--background-primary)";
+    this.contextMenu.style.border = "1px solid var(--background-modifier-border)";
+    this.contextMenu.style.borderRadius = "4px";
+    this.contextMenu.style.padding = "4px 0";
+    this.contextMenu.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+    this.contextMenu.style.minWidth = "120px";
+    const statuses = [
+      { status: "todo", label: "Todo" },
+      { status: "done", label: "Done" },
+      { status: "inprogress", label: "In Progress" },
+      { status: "onhold", label: "On Hold" },
+      { status: "canceled", label: "Canceled" }
+    ];
+    for (const { status, label } of statuses) {
+      const item = ownerDoc.createElement("div");
+      item.className = "tlb-status-menu-item";
+      item.style.padding = "6px 12px";
+      item.style.cursor = "pointer";
+      item.style.userSelect = "none";
+      item.style.display = "flex";
+      item.style.alignItems = "center";
+      item.style.gap = "8px";
+      const iconContainer = ownerDoc.createElement("span");
+      iconContainer.style.display = "inline-flex";
+      iconContainer.style.width = "16px";
+      iconContainer.style.height = "16px";
+      (0, import_obsidian.setIcon)(iconContainer, getStatusIcon(status));
+      const labelSpan = ownerDoc.createElement("span");
+      labelSpan.textContent = label;
+      item.appendChild(iconContainer);
+      item.appendChild(labelSpan);
+      if (status === currentStatus) {
+        item.style.opacity = "0.5";
+        item.style.cursor = "default";
+      } else {
+        item.addEventListener("mouseenter", () => {
+          item.style.backgroundColor = "var(--background-modifier-hover)";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.backgroundColor = "";
+        });
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.changeStatus(status);
+          this.hideContextMenu();
+        });
+      }
+      this.contextMenu.appendChild(item);
+    }
+    const defaultView = ownerDoc.defaultView || window;
+    const viewportWidth = defaultView.innerWidth;
+    const viewportHeight = defaultView.innerHeight;
+    ownerDoc.body.appendChild(this.contextMenu);
+    const menuRect = this.contextMenu.getBoundingClientRect();
+    let left = event.clientX;
+    let top = event.clientY;
+    if (left + menuRect.width > viewportWidth - 8) {
+      left = viewportWidth - menuRect.width - 8;
+    }
+    if (top + menuRect.height > viewportHeight - 8) {
+      top = viewportHeight - menuRect.height - 8;
+    }
+    if (left < 8)
+      left = 8;
+    if (top < 8)
+      top = 8;
+    this.contextMenu.style.left = `${left}px`;
+    this.contextMenu.style.top = `${top}px`;
+    this.documentClickHandler = (e) => {
+      if (this.contextMenu && this.contextMenu.contains(e.target)) {
+        return;
+      }
+      this.hideContextMenu();
+    };
+    setTimeout(() => {
+      if (this.documentClickHandler) {
+        ownerDoc.addEventListener("click", this.documentClickHandler, { capture: true });
+        ownerDoc.addEventListener("contextmenu", this.documentClickHandler, { capture: true });
+      }
+    }, 0);
+  }
+  /**
+   * 隐藏右键菜单
+   */
+  hideContextMenu() {
+    var _a4;
+    if (this.contextMenu) {
+      this.contextMenu.remove();
+      this.contextMenu = null;
+    }
+    if (this.documentClickHandler) {
+      const ownerDoc = ((_a4 = this.eGui) == null ? void 0 : _a4.ownerDocument) || document;
+      ownerDoc.removeEventListener("click", this.documentClickHandler);
+      ownerDoc.removeEventListener("contextmenu", this.documentClickHandler);
+      this.documentClickHandler = void 0;
+    }
+  }
+  /**
+   * 更改状态（通用方法）
+   */
+  changeStatus(newStatus) {
+    var _a4, _b2;
+    const rowId = (_a4 = this.params.node) == null ? void 0 : _a4.id;
+    if (!rowId) {
+      console.error("StatusCellRenderer: rowId is undefined");
+      return;
+    }
+    if ((_b2 = this.params.context) == null ? void 0 : _b2.onStatusChange) {
+      this.params.context.onStatusChange(rowId, newStatus);
+    } else {
+      console.warn("StatusCellRenderer: onStatusChange callback not found in context");
+    }
+  }
+  /**
+   * 返回 DOM 元素
+   */
+  getGui() {
+    return this.eGui;
+  }
+  /**
+   * 刷新渲染器（支持增量更新）
+   * 返回 true 表示复用当前实例，返回 false 表示重新创建实例
+   */
+  refresh(params) {
+    this.params = params;
+    this.renderIcon();
+    return true;
+  }
+  /**
+   * 销毁渲染器（清理事件监听器）
+   */
+  destroy() {
+    this.hideContextMenu();
+    if (this.clickHandler && this.eGui) {
+      this.eGui.removeEventListener("click", this.clickHandler);
+      this.clickHandler = void 0;
+    }
+    if (this.contextMenuHandler && this.eGui) {
+      this.eGui.removeEventListener("contextmenu", this.contextMenuHandler);
+      this.contextMenuHandler = void 0;
+    }
+  }
+};
+
 // src/grid/AgGridAdapter.ts
+var import_obsidian2 = require("obsidian");
 ModuleRegistry.registerModules([AllCommunityModule]);
 var _AgGridAdapter = class {
   constructor() {
@@ -55263,7 +55528,7 @@ var _AgGridAdapter = class {
   /**
    * 挂载表格到指定容器
    */
-  mount(container, columns, rows) {
+  mount(container, columns, rows, context) {
     const colDefs = columns.map((col) => {
       if (col.field === "#") {
         return {
@@ -55280,6 +55545,154 @@ var _AgGridAdapter = class {
           // 不参与自动调整
           cellStyle: { textAlign: "center" }
           // 居中显示
+        };
+      }
+      if (col.field === "status") {
+        return {
+          field: col.field,
+          headerName: col.headerName || "Status",
+          editable: false,
+          // 禁用编辑模式
+          width: 60,
+          // 固定宽度
+          resizable: false,
+          sortable: true,
+          filter: true,
+          suppressSizeToFit: true,
+          // 不参与自动调整
+          suppressNavigable: true,
+          // 禁止键盘导航
+          cellRenderer: StatusCellRenderer,
+          // 使用自定义渲染器
+          cellStyle: {
+            textAlign: "center",
+            cursor: "pointer",
+            padding: "10px var(--ag-cell-horizontal-padding)"
+            // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
+          },
+          // 处理左键点击：切换状态
+          onCellClicked: (params) => {
+            var _a4, _b2, _c;
+            const event = params.event;
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            const rowId = (_a4 = params.node) == null ? void 0 : _a4.id;
+            if (!rowId)
+              return;
+            const currentStatus = normalizeStatus((_b2 = params.data) == null ? void 0 : _b2.status);
+            let newStatus;
+            if (currentStatus === "todo") {
+              newStatus = "done";
+            } else if (currentStatus === "done") {
+              newStatus = "todo";
+            } else {
+              newStatus = "done";
+            }
+            (_c = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _c.call(context, rowId, newStatus);
+          },
+          // 处理右键点击：显示状态选择菜单（处理整个单元格区域包括padding）
+          onCellContextMenu: (params) => {
+            var _a4, _b2;
+            const event = params.event;
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            const rowId = (_a4 = params.node) == null ? void 0 : _a4.id;
+            if (!rowId)
+              return;
+            const currentStatus = normalizeStatus((_b2 = params.data) == null ? void 0 : _b2.status);
+            const ownerDoc = container.ownerDocument;
+            const contextMenu = ownerDoc.createElement("div");
+            contextMenu.className = "tlb-status-context-menu";
+            contextMenu.style.position = "fixed";
+            contextMenu.style.zIndex = "10000";
+            contextMenu.style.backgroundColor = "var(--background-primary)";
+            contextMenu.style.border = "1px solid var(--background-modifier-border)";
+            contextMenu.style.borderRadius = "4px";
+            contextMenu.style.padding = "4px 0";
+            contextMenu.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+            contextMenu.style.minWidth = "120px";
+            const statuses = [
+              { status: "todo", label: "Todo" },
+              { status: "done", label: "Done" },
+              { status: "inprogress", label: "In Progress" },
+              { status: "onhold", label: "On Hold" },
+              { status: "canceled", label: "Canceled" }
+            ];
+            for (const { status, label } of statuses) {
+              const item = ownerDoc.createElement("div");
+              item.className = "tlb-status-menu-item";
+              item.style.padding = "6px 12px";
+              item.style.cursor = "pointer";
+              item.style.userSelect = "none";
+              item.style.display = "flex";
+              item.style.alignItems = "center";
+              item.style.gap = "8px";
+              const iconContainer = ownerDoc.createElement("span");
+              iconContainer.style.display = "inline-flex";
+              iconContainer.style.width = "16px";
+              iconContainer.style.height = "16px";
+              (0, import_obsidian2.setIcon)(iconContainer, getStatusIcon(status));
+              const labelSpan = ownerDoc.createElement("span");
+              labelSpan.textContent = label;
+              item.appendChild(iconContainer);
+              item.appendChild(labelSpan);
+              if (status === currentStatus) {
+                item.style.opacity = "0.5";
+                item.style.cursor = "default";
+              } else {
+                item.addEventListener("mouseenter", () => {
+                  item.style.backgroundColor = "var(--background-modifier-hover)";
+                });
+                item.addEventListener("mouseleave", () => {
+                  item.style.backgroundColor = "";
+                });
+                item.addEventListener("click", (e) => {
+                  var _a5;
+                  e.stopPropagation();
+                  (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, status);
+                  contextMenu.remove();
+                  ownerDoc.removeEventListener("click", hideMenu);
+                  ownerDoc.removeEventListener("contextmenu", hideMenu);
+                });
+              }
+              contextMenu.appendChild(item);
+            }
+            const defaultView = ownerDoc.defaultView || window;
+            const viewportWidth = defaultView.innerWidth;
+            const viewportHeight = defaultView.innerHeight;
+            ownerDoc.body.appendChild(contextMenu);
+            const menuRect = contextMenu.getBoundingClientRect();
+            let left = event.clientX;
+            let top = event.clientY;
+            if (left + menuRect.width > viewportWidth - 8) {
+              left = viewportWidth - menuRect.width - 8;
+            }
+            if (top + menuRect.height > viewportHeight - 8) {
+              top = viewportHeight - menuRect.height - 8;
+            }
+            if (left < 8)
+              left = 8;
+            if (top < 8)
+              top = 8;
+            contextMenu.style.left = `${left}px`;
+            contextMenu.style.top = `${top}px`;
+            const hideMenu = (e) => {
+              if (contextMenu && contextMenu.contains(e.target)) {
+                return;
+              }
+              contextMenu.remove();
+              ownerDoc.removeEventListener("click", hideMenu);
+              ownerDoc.removeEventListener("contextmenu", hideMenu);
+            };
+            setTimeout(() => {
+              ownerDoc.addEventListener("click", hideMenu, { capture: true });
+              ownerDoc.addEventListener("contextmenu", hideMenu, { capture: true });
+            }, 0);
+          }
         };
       }
       const baseColDef = {
@@ -55319,6 +55732,12 @@ var _AgGridAdapter = class {
     const gridOptions = {
       columnDefs: colDefs,
       rowData: rows,
+      // 提供稳定的行 ID（用于增量更新和状态管理）
+      getRowId: (params) => {
+        return String(params.data[ROW_ID_FIELD]);
+      },
+      // 传递上下文（包含回调函数）
+      context: context || {},
       // 编辑配置（使用单元格编辑模式而非整行编辑）
       singleClickEdit: false,
       // 禁用单击编辑，需要双击或 F2
@@ -55331,9 +55750,33 @@ var _AgGridAdapter = class {
       // 编辑后 Enter 垂直导航
       // 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
       rowSelection: "multiple",
+      suppressRowClickSelection: true,
+      // 阻止点击行时自动选择，改为手动控制
+      // 启用右键菜单
+      allowContextMenuWithControlKey: true,
+      // 允许 Ctrl+右键显示浏览器菜单
       // 事件监听
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
+      },
+      // 单元格点击事件：手动处理行选择（排除状态列）
+      onCellClicked: (event) => {
+        var _a4;
+        const field = (_a4 = event.column) == null ? void 0 : _a4.getColId();
+        if (field === "status") {
+          return;
+        }
+        const mouseEvent = event.event;
+        const isMultiKey = mouseEvent.ctrlKey || mouseEvent.metaKey;
+        const isShiftKey = mouseEvent.shiftKey;
+        if (isShiftKey) {
+          event.node.setSelected(true, false);
+        } else if (isMultiKey) {
+          event.node.setSelected(!event.node.isSelected(), false);
+        } else {
+          event.api.deselectAll();
+          event.node.setSelected(true, false);
+        }
       },
       // 默认列配置
       defaultColDef: {
@@ -55394,8 +55837,76 @@ var _AgGridAdapter = class {
       // 性能优化：减少不必要的重绘
       suppressAnimationFrame: false,
       // 保留动画帧以提升流畅度
-      suppressColumnVirtualisation: false
+      suppressColumnVirtualisation: false,
       // 保留列虚拟化以提升性能
+      // 行样式规则：done 和 canceled 状态的行半透明
+      rowClassRules: {
+        "tlb-row-completed": (params) => {
+          var _a4;
+          const status = normalizeStatus((_a4 = params.data) == null ? void 0 : _a4.status);
+          return status === "done" || status === "canceled";
+        }
+      },
+      // 单元格样式规则：标题列添加删除线（假设第一个数据列是标题列）
+      // 注意：这里需要动态获取标题列的 colId
+      // 暂时使用通用选择器，后续在 TableView 中根据实际列名配置
+      // 右键菜单配置
+      getContextMenuItems: (params) => {
+        var _a4, _b2, _c, _d;
+        const field = (_a4 = params.column) == null ? void 0 : _a4.getColId();
+        if (field === "status") {
+          const rowId = (_b2 = params.node) == null ? void 0 : _b2.id;
+          if (!rowId)
+            return ["copy", "export"];
+          const currentStatus = normalizeStatus((_d = (_c = params.node) == null ? void 0 : _c.data) == null ? void 0 : _d.status);
+          return [
+            {
+              name: "\u5F85\u529E \u2610",
+              disabled: currentStatus === "todo",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "todo");
+              }
+            },
+            {
+              name: "\u5DF2\u5B8C\u6210 \u2611",
+              disabled: currentStatus === "done",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "done");
+              }
+            },
+            {
+              name: "\u8FDB\u884C\u4E2D \u229F",
+              disabled: currentStatus === "inprogress",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "inprogress");
+              }
+            },
+            {
+              name: "\u5DF2\u6401\u7F6E \u23F8",
+              disabled: currentStatus === "onhold",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "onhold");
+              }
+            },
+            {
+              name: "\u5DF2\u653E\u5F03 \u2612",
+              disabled: currentStatus === "canceled",
+              action: () => {
+                var _a5;
+                (_a5 = context == null ? void 0 : context.onStatusChange) == null ? void 0 : _a5.call(context, rowId, "canceled");
+              }
+            },
+            "separator",
+            "copy",
+            "export"
+          ];
+        }
+        return ["copy", "export"];
+      }
     };
     this.gridApi = createGrid(container, gridOptions);
     this.lastAutoSizeTimestamp = 0;
@@ -55721,9 +56232,23 @@ var _AgGridAdapter = class {
 var AgGridAdapter = _AgGridAdapter;
 AgGridAdapter.AUTO_SIZE_COOLDOWN_MS = 800;
 
+// src/utils/datetime.ts
+function formatLocalDateTime(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+function getCurrentLocalDateTime() {
+  return formatLocalDateTime(new Date());
+}
+
 // src/TableView.ts
 var TABLE_VIEW_TYPE = "tile-line-base-table";
-var TableView = class extends import_obsidian.ItemView {
+var TableView = class extends import_obsidian3.ItemView {
   constructor(leaf) {
     super(leaf);
     this.file = null;
@@ -55757,7 +56282,7 @@ var TableView = class extends import_obsidian.ItemView {
   }
   async setState(state, result) {
     const file = this.app.vault.getAbstractFileByPath(state.filePath);
-    if (file instanceof import_obsidian.TFile) {
+    if (file instanceof import_obsidian3.TFile) {
       this.file = file;
       await this.render();
     }
@@ -55904,6 +56429,7 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 动态扫描所有 H2 块，提取 Schema
    * 如果有头部配置块，优先使用配置块定义的列顺序
+   * 自动添加 status 为内置系统列
    */
   extractSchema(blocks, columnConfigs) {
     if (blocks.length === 0) {
@@ -55917,6 +56443,8 @@ var TableView = class extends import_obsidian.ItemView {
       const seenKeys = /* @__PURE__ */ new Set();
       for (const block of blocks) {
         for (const key of Object.keys(block.data)) {
+          if (key === "statusChanged")
+            continue;
           if (!seenKeys.has(key)) {
             columnNames.push(key);
             seenKeys.add(key);
@@ -55924,6 +56452,12 @@ var TableView = class extends import_obsidian.ItemView {
         }
       }
     }
+    const statusIndex = columnNames.indexOf("status");
+    if (statusIndex !== -1) {
+      columnNames.splice(statusIndex, 1);
+    }
+    const insertIndex = columnNames.length > 0 ? 1 : 0;
+    columnNames.splice(insertIndex, 0, "status");
     return {
       columnNames,
       columnConfigs: columnConfigs || void 0
@@ -55940,6 +56474,12 @@ var TableView = class extends import_obsidian.ItemView {
       row["#"] = String(i + 1);
       row[ROW_ID_FIELD] = String(i);
       for (const key of schema.columnNames) {
+        if (key === "status" && !block.data[key]) {
+          block.data[key] = "todo";
+          if (!block.data["statusChanged"]) {
+            block.data["statusChanged"] = getCurrentLocalDateTime();
+          }
+        }
         row[key] = block.data[key] || "";
       }
       data.push(row);
@@ -55949,6 +56489,7 @@ var TableView = class extends import_obsidian.ItemView {
   /**
    * 将 blocks 数组转换回 Markdown 格式（Key:Value）
    * 第一个 key:value 作为 H2 标题，其余作为正文
+   * 输出压缩属性（statusChanged 等）
    */
   blocksToMarkdown() {
     if (!this.schema)
@@ -55968,6 +56509,9 @@ var TableView = class extends import_obsidian.ItemView {
             lines.push(`${key}\uFF1A`);
           }
         }
+      }
+      if (block.data["statusChanged"]) {
+        lines.push(`statusChanged\uFF1A${block.data["statusChanged"]}`);
       }
       lines.push("");
     }
@@ -56055,7 +56599,11 @@ var TableView = class extends import_obsidian.ItemView {
       this.gridAdapter.destroy();
     }
     this.gridAdapter = new AgGridAdapter();
-    this.gridAdapter.mount(tableContainer, columns, data);
+    this.gridAdapter.mount(tableContainer, columns, data, {
+      onStatusChange: (rowId, newStatus) => {
+        this.onStatusChange(rowId, newStatus);
+      }
+    });
     this.tableContainer = tableContainer;
     this.updateTableContainerSize();
     this.gridAdapter.onCellEdit((event) => {
@@ -56296,6 +56844,12 @@ var TableView = class extends import_obsidian.ItemView {
     this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
       var _a4, _b2, _c, _d;
+      const target = event.target;
+      const cellElement = target.closest(".ag-cell");
+      const colId = cellElement == null ? void 0 : cellElement.getAttribute("col-id");
+      if (colId === "status") {
+        return;
+      }
       event.preventDefault();
       const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (blockIndex === null || blockIndex === void 0)
@@ -56427,6 +56981,34 @@ var TableView = class extends import_obsidian.ItemView {
     }
   }
   /**
+   * 处理状态变更
+   * @param rowId 行的稳定 ID（使用 ROW_ID_FIELD）
+   * @param newStatus 新的状态值
+   */
+  onStatusChange(rowId, newStatus) {
+    if (!this.schema || !this.gridAdapter) {
+      console.error("Schema or GridAdapter not initialized");
+      return;
+    }
+    const blockIndex = parseInt(rowId, 10);
+    if (isNaN(blockIndex) || blockIndex < 0 || blockIndex >= this.blocks.length) {
+      console.error("Invalid blockIndex:", blockIndex);
+      return;
+    }
+    const block = this.blocks[blockIndex];
+    block.data["status"] = newStatus;
+    block.data["statusChanged"] = getCurrentLocalDateTime();
+    const gridApi = this.gridAdapter.gridApi;
+    if (gridApi) {
+      const rowNode = gridApi.getRowNode(rowId);
+      if (rowNode) {
+        rowNode.setDataValue("status", newStatus);
+        gridApi.redrawRows({ rowNodes: [rowNode] });
+      }
+    }
+    this.scheduleSave();
+  }
+  /**
    * 处理单元格编辑（Key:Value 格式）
    */
   onCellEdit(event) {
@@ -56511,8 +57093,15 @@ var TableView = class extends import_obsidian.ItemView {
     };
     for (let i = 0; i < this.schema.columnNames.length; i++) {
       const key = this.schema.columnNames[i];
-      newBlock.data[key] = i === 0 ? `\u65B0\u6761\u76EE ${entryNumber}` : "";
+      if (key === "status") {
+        newBlock.data[key] = "todo";
+      } else if (i === 0) {
+        newBlock.data[key] = `\u65B0\u6761\u76EE ${entryNumber}`;
+      } else {
+        newBlock.data[key] = "";
+      }
     }
+    newBlock.data["statusChanged"] = getCurrentLocalDateTime();
     if (beforeRowIndex !== void 0 && beforeRowIndex !== null) {
       this.blocks.splice(beforeRowIndex, 0, newBlock);
     } else {
@@ -56704,7 +57293,7 @@ var TableView = class extends import_obsidian.ItemView {
 };
 
 // src/main.ts
-var TileLineBasePlugin = class extends import_obsidian2.Plugin {
+var TileLineBasePlugin = class extends import_obsidian4.Plugin {
   async onload() {
     this.registerView(
       TABLE_VIEW_TYPE,

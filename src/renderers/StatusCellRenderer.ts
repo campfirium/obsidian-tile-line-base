@@ -98,12 +98,13 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 		// 绑定点击事件（左键切换状态）
 		this.clickHandler = (e: MouseEvent) => {
-			// 阻止所有事件传播，防止 AG Grid 捕获
-			e.preventDefault();
-			e.stopPropagation();
-			e.stopImmediatePropagation();
-
-			this.handleClick();
+			// 只阻止左键点击事件，不阻止右键菜单事件
+			if (e.button === 0) {  // 0 = 左键
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				this.handleClick();
+			}
 		};
 
 		this.eGui.addEventListener('click', this.clickHandler);

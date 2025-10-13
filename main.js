@@ -55307,10 +55307,12 @@ var StatusCellRenderer = class {
     this.eGui.style.userSelect = "none";
     this.renderIcon();
     this.clickHandler = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      this.handleClick();
+      if (e.button === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        this.handleClick();
+      }
     };
     this.eGui.addEventListener("click", this.clickHandler);
   }

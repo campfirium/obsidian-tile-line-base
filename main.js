@@ -55566,8 +55566,8 @@ var _AgGridAdapter = class {
           cellStyle: {
             textAlign: "center",
             cursor: "pointer",
-            padding: "0 18px"
-            // 手动设置水平内边距（AG Grid 默认值：6px * 3）
+            padding: "10px var(--ag-cell-horizontal-padding)"
+            // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
           }
         };
       }

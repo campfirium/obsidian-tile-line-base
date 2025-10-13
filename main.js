@@ -27,10 +27,10 @@ __export(main_exports, {
   default: () => TileLineBasePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/TableView.ts
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 
 // src/grid/GridAdapter.ts
 var ROW_ID_FIELD = "__tlb_row_id";
@@ -55252,6 +55252,7 @@ var AllCommunityModule = {
 };
 
 // src/renderers/StatusCellRenderer.ts
+var import_obsidian = require("obsidian");
 function normalizeStatus(value) {
   const str = String(value || "todo").toLowerCase().trim();
   if (str === "done" || str === "completed") {
@@ -55270,16 +55271,16 @@ function normalizeStatus(value) {
 }
 function getStatusIcon(status) {
   const icons = {
-    "todo": "\u2610",
-    // U+2610 空方框
-    "done": "\u2611",
-    // U+2611 方框中对勾
-    "inprogress": "\u229F",
-    // U+229F 方框中横线
-    "onhold": "\u23F8",
-    // U+23F8 暂停符号
-    "canceled": "\u2612"
-    // U+2612 方框中叉号
+    "todo": "square",
+    // □ 空方框（Obsidian 任务列表原生）
+    "done": "check-square",
+    // ☑ 已完成（Obsidian 任务列表原生）
+    "inprogress": "circle-dashed",
+    // ◌ 虚线圆（暗示进行中）
+    "onhold": "pause-circle",
+    // ⏸ 暂停图标
+    "canceled": "x-square"
+    // ☒ 叉号方框
   };
   return icons[status] || icons["todo"];
 }
@@ -55294,6 +55295,9 @@ function getStatusLabel(status) {
   return labels[status] || labels["todo"];
 }
 var StatusCellRenderer = class {
+  constructor() {
+    this.contextMenu = null;
+  }
   /**
    * 初始化渲染器
    */
@@ -55301,20 +55305,29 @@ var StatusCellRenderer = class {
     this.params = params;
     this.eGui = document.createElement("div");
     this.eGui.className = "tlb-status-cell";
-    this.eGui.style.textAlign = "center";
+    this.eGui.style.display = "flex";
+    this.eGui.style.alignItems = "center";
+    this.eGui.style.justifyContent = "center";
     this.eGui.style.cursor = "pointer";
-    this.eGui.style.fontSize = "16px";
     this.eGui.style.userSelect = "none";
+    this.eGui.style.width = "100%";
+    this.eGui.style.height = "100%";
     this.renderIcon();
     this.clickHandler = (e) => {
-      if (e.button === 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        this.handleClick();
-      }
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      this.hideContextMenu();
+      this.handleClick();
+    };
+    this.contextMenuHandler = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      this.showContextMenu(e);
     };
     this.eGui.addEventListener("click", this.clickHandler);
+    this.eGui.addEventListener("contextmenu", this.contextMenuHandler);
   }
   /**
    * 渲染图标和可访问性属性
@@ -55322,9 +55335,10 @@ var StatusCellRenderer = class {
   renderIcon() {
     var _a4;
     const status = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
-    const icon = getStatusIcon(status);
+    const iconId = getStatusIcon(status);
     const label = getStatusLabel(status);
-    this.eGui.textContent = icon;
+    this.eGui.innerHTML = "";
+    (0, import_obsidian.setIcon)(this.eGui, iconId);
     this.eGui.title = label;
     this.eGui.setAttribute("aria-label", label);
     this.eGui.setAttribute("role", "button");
@@ -55333,7 +55347,7 @@ var StatusCellRenderer = class {
    * 处理左键点击：切换状态
    */
   handleClick() {
-    var _a4, _b2, _c;
+    var _a4;
     const currentStatus = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
     let newStatus;
     if (currentStatus === "todo") {
@@ -55343,12 +55357,118 @@ var StatusCellRenderer = class {
     } else {
       newStatus = "done";
     }
-    const rowId = (_b2 = this.params.node) == null ? void 0 : _b2.id;
+    this.changeStatus(newStatus);
+  }
+  /**
+   * 显示右键菜单
+   */
+  showContextMenu(event) {
+    var _a4;
+    this.hideContextMenu();
+    const currentStatus = normalizeStatus((_a4 = this.params.data) == null ? void 0 : _a4.status);
+    const ownerDoc = this.eGui.ownerDocument;
+    this.contextMenu = ownerDoc.createElement("div");
+    this.contextMenu.className = "tlb-status-context-menu";
+    this.contextMenu.style.position = "fixed";
+    this.contextMenu.style.zIndex = "10000";
+    this.contextMenu.style.backgroundColor = "var(--background-primary)";
+    this.contextMenu.style.border = "1px solid var(--background-modifier-border)";
+    this.contextMenu.style.borderRadius = "4px";
+    this.contextMenu.style.padding = "4px 0";
+    this.contextMenu.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+    this.contextMenu.style.minWidth = "120px";
+    const statuses = [
+      { status: "todo", label: "\u5F85\u529E" },
+      { status: "done", label: "\u5DF2\u5B8C\u6210" },
+      { status: "inprogress", label: "\u8FDB\u884C\u4E2D" },
+      { status: "onhold", label: "\u5DF2\u6401\u7F6E" },
+      { status: "canceled", label: "\u5DF2\u653E\u5F03" }
+    ];
+    for (const { status, label } of statuses) {
+      const item = ownerDoc.createElement("div");
+      item.className = "tlb-status-menu-item";
+      item.style.padding = "6px 12px";
+      item.style.cursor = "pointer";
+      item.style.userSelect = "none";
+      item.style.display = "flex";
+      item.style.alignItems = "center";
+      item.style.gap = "8px";
+      const iconContainer = ownerDoc.createElement("span");
+      iconContainer.style.display = "inline-flex";
+      iconContainer.style.width = "16px";
+      iconContainer.style.height = "16px";
+      (0, import_obsidian.setIcon)(iconContainer, getStatusIcon(status));
+      const labelSpan = ownerDoc.createElement("span");
+      labelSpan.textContent = label;
+      item.appendChild(iconContainer);
+      item.appendChild(labelSpan);
+      if (status === currentStatus) {
+        item.style.opacity = "0.5";
+        item.style.cursor = "default";
+      } else {
+        item.addEventListener("mouseenter", () => {
+          item.style.backgroundColor = "var(--background-modifier-hover)";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.backgroundColor = "";
+        });
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.changeStatus(status);
+          this.hideContextMenu();
+        });
+      }
+      this.contextMenu.appendChild(item);
+    }
+    const defaultView = ownerDoc.defaultView || window;
+    const viewportWidth = defaultView.innerWidth;
+    const viewportHeight = defaultView.innerHeight;
+    ownerDoc.body.appendChild(this.contextMenu);
+    const menuRect = this.contextMenu.getBoundingClientRect();
+    let left = event.clientX;
+    let top = event.clientY;
+    if (left + menuRect.width > viewportWidth - 8) {
+      left = viewportWidth - menuRect.width - 8;
+    }
+    if (top + menuRect.height > viewportHeight - 8) {
+      top = viewportHeight - menuRect.height - 8;
+    }
+    if (left < 8)
+      left = 8;
+    if (top < 8)
+      top = 8;
+    this.contextMenu.style.left = `${left}px`;
+    this.contextMenu.style.top = `${top}px`;
+    const hideOnClick = (e) => {
+      if (this.contextMenu && !this.contextMenu.contains(e.target)) {
+        this.hideContextMenu();
+        ownerDoc.removeEventListener("click", hideOnClick);
+      }
+    };
+    setTimeout(() => {
+      ownerDoc.addEventListener("click", hideOnClick);
+    }, 0);
+  }
+  /**
+   * 隐藏右键菜单
+   */
+  hideContextMenu() {
+    if (this.contextMenu) {
+      this.contextMenu.remove();
+      this.contextMenu = null;
+    }
+  }
+  /**
+   * 更改状态（通用方法）
+   */
+  changeStatus(newStatus) {
+    var _a4, _b2;
+    const rowId = (_a4 = this.params.node) == null ? void 0 : _a4.id;
     if (!rowId) {
       console.error("StatusCellRenderer: rowId is undefined");
       return;
     }
-    if ((_c = this.params.context) == null ? void 0 : _c.onStatusChange) {
+    if ((_b2 = this.params.context) == null ? void 0 : _b2.onStatusChange) {
       this.params.context.onStatusChange(rowId, newStatus);
     } else {
       console.warn("StatusCellRenderer: onStatusChange callback not found in context");
@@ -55373,9 +55493,14 @@ var StatusCellRenderer = class {
    * 销毁渲染器（清理事件监听器）
    */
   destroy() {
+    this.hideContextMenu();
     if (this.clickHandler && this.eGui) {
       this.eGui.removeEventListener("click", this.clickHandler);
       this.clickHandler = void 0;
+    }
+    if (this.contextMenuHandler && this.eGui) {
+      this.eGui.removeEventListener("contextmenu", this.contextMenuHandler);
+      this.contextMenuHandler = void 0;
     }
   }
 };
@@ -55963,7 +56088,7 @@ function getCurrentLocalDateTime() {
 
 // src/TableView.ts
 var TABLE_VIEW_TYPE = "tile-line-base-table";
-var TableView = class extends import_obsidian.ItemView {
+var TableView = class extends import_obsidian2.ItemView {
   constructor(leaf) {
     super(leaf);
     this.file = null;
@@ -55997,7 +56122,7 @@ var TableView = class extends import_obsidian.ItemView {
   }
   async setState(state, result) {
     const file = this.app.vault.getAbstractFileByPath(state.filePath);
-    if (file instanceof import_obsidian.TFile) {
+    if (file instanceof import_obsidian2.TFile) {
       this.file = file;
       await this.render();
     }
@@ -57008,7 +57133,7 @@ var TableView = class extends import_obsidian.ItemView {
 };
 
 // src/main.ts
-var TileLineBasePlugin = class extends import_obsidian2.Plugin {
+var TileLineBasePlugin = class extends import_obsidian3.Plugin {
   async onload() {
     this.registerView(
       TABLE_VIEW_TYPE,

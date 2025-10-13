@@ -9,6 +9,7 @@
  */
 
 import { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
+import { setIcon } from 'obsidian';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
 
 // 状态类型定义
@@ -45,15 +46,15 @@ export function normalizeStatus(value: any): TaskStatus {
 }
 
 /**
- * 获取状态对应的 Unicode 图标
+ * 获取状态对应的 Lucide 图标 ID
  */
 export function getStatusIcon(status: TaskStatus): string {
 	const icons: Record<TaskStatus, string> = {
-		'todo': '☐',        // U+2610 空方框
-		'done': '☑',        // U+2611 方框中对勾
-		'inprogress': '⊟',  // U+229F 方框中横线
-		'onhold': '⏸',      // U+23F8 暂停符号
-		'canceled': '☒'     // U+2612 方框中叉号
+		'todo': 'square',           // □ 空方框（Obsidian 任务列表原生）
+		'done': 'check-square',     // ☑ 已完成（Obsidian 任务列表原生）
+		'inprogress': 'circle-dashed',  // ◌ 虚线圆（暗示进行中）
+		'onhold': 'pause-circle',   // ⏸ 暂停图标
+		'canceled': 'x-square'      // ☒ 叉号方框
 	};
 	return icons[status] || icons['todo'];
 }
@@ -91,10 +92,13 @@ export class StatusCellRenderer implements ICellRendererComp {
 		// 创建容器元素
 		this.eGui = document.createElement('div');
 		this.eGui.className = 'tlb-status-cell';
-		this.eGui.style.textAlign = 'center';
+		this.eGui.style.display = 'flex';
+		this.eGui.style.alignItems = 'center';
+		this.eGui.style.justifyContent = 'center';
 		this.eGui.style.cursor = 'pointer';
-		this.eGui.style.fontSize = '16px';
 		this.eGui.style.userSelect = 'none';  // 禁止文本选择
+		this.eGui.style.width = '100%';
+		this.eGui.style.height = '100%';
 
 		// 渲染图标
 		this.renderIcon();
@@ -125,11 +129,12 @@ export class StatusCellRenderer implements ICellRendererComp {
 	 */
 	private renderIcon(): void {
 		const status = normalizeStatus(this.params.data?.status);
-		const icon = getStatusIcon(status);
+		const iconId = getStatusIcon(status);
 		const label = getStatusLabel(status);
 
-		// 设置图标
-		this.eGui.textContent = icon;
+		// 清空内容，使用 Obsidian 的 Lucide 图标
+		this.eGui.innerHTML = '';
+		setIcon(this.eGui, iconId);
 
 		// 添加可访问性支持
 		this.eGui.title = label;
@@ -181,15 +186,15 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.contextMenu.style.minWidth = '120px';
 
 		// 创建菜单项
-		const statuses: Array<{ status: TaskStatus; label: string; icon: string }> = [
-			{ status: 'todo', label: '待办', icon: '☐' },
-			{ status: 'done', label: '已完成', icon: '☑' },
-			{ status: 'inprogress', label: '进行中', icon: '⊟' },
-			{ status: 'onhold', label: '已搁置', icon: '⏸' },
-			{ status: 'canceled', label: '已放弃', icon: '☒' }
+		const statuses: Array<{ status: TaskStatus; label: string }> = [
+			{ status: 'todo', label: '待办' },
+			{ status: 'done', label: '已完成' },
+			{ status: 'inprogress', label: '进行中' },
+			{ status: 'onhold', label: '已搁置' },
+			{ status: 'canceled', label: '已放弃' }
 		];
 
-		for (const { status, label, icon } of statuses) {
+		for (const { status, label } of statuses) {
 			const item = ownerDoc.createElement('div');
 			item.className = 'tlb-status-menu-item';
 			item.style.padding = '6px 12px';
@@ -198,7 +203,21 @@ export class StatusCellRenderer implements ICellRendererComp {
 			item.style.display = 'flex';
 			item.style.alignItems = 'center';
 			item.style.gap = '8px';
-			item.textContent = `${icon} ${label}`;
+
+			// 创建图标容器
+			const iconContainer = ownerDoc.createElement('span');
+			iconContainer.style.display = 'inline-flex';
+			iconContainer.style.width = '16px';
+			iconContainer.style.height = '16px';
+			setIcon(iconContainer, getStatusIcon(status));
+
+			// 创建文本标签
+			const labelSpan = ownerDoc.createElement('span');
+			labelSpan.textContent = label;
+
+			// 组装菜单项
+			item.appendChild(iconContainer);
+			item.appendChild(labelSpan);
 
 			// 当前状态禁用
 			if (status === currentStatus) {

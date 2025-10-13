@@ -24,3 +24,4 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+docs/tasks/T0000.md

@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, TFile, EventRef } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
+import { getCurrentLocalDateTime } from "./utils/datetime";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -295,15 +296,17 @@ export class TableView extends ItemView {
 			}
 		}
 
-		// 自动添加 status 为内置列（在第一个数据列之前）
+		// 自动添加 status 为内置列（在第一个数据列之后，即第三列位置）
 		// 如果 columnNames 中已经有 status，先移除
 		const statusIndex = columnNames.indexOf('status');
 		if (statusIndex !== -1) {
 			columnNames.splice(statusIndex, 1);
 		}
 
-		// 在第一个位置插入 status（实际显示时会在序号列之后）
-		columnNames.unshift('status');
+		// 在第二个位置插入 status（实际显示时：# -> 第一个数据列 -> status）
+		// 如果没有数据列，就放在第一个位置
+		const insertIndex = columnNames.length > 0 ? 1 : 0;
+		columnNames.splice(insertIndex, 0, 'status');
 
 		return {
 			columnNames,
@@ -333,7 +336,7 @@ export class TableView extends ItemView {
 					block.data[key] = 'todo';
 					// 如果没有 statusChanged，也初始化
 					if (!block.data['statusChanged']) {
-						block.data['statusChanged'] = new Date().toISOString();
+						block.data['statusChanged'] = getCurrentLocalDateTime();
 					}
 				}
 

@@ -88,7 +88,8 @@ export class AgGridAdapter implements GridAdapter {
 					cellRenderer: StatusCellRenderer,  // 使用自定义渲染器
 					cellStyle: {
 						textAlign: 'center',
-						cursor: 'pointer'
+						cursor: 'pointer',
+						padding: '0 18px'  // 手动设置水平内边距（AG Grid 默认值：6px * 3）
 					}
 				};
 			}

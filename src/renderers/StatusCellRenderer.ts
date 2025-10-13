@@ -82,6 +82,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 	private clickHandler?: (e: MouseEvent) => void;
 	private contextMenuHandler?: (e: MouseEvent) => void;
 	private contextMenu: HTMLElement | null = null;
+	private documentClickHandler?: (e: MouseEvent) => void;
 
 	/**
 	 * 初始化渲染器
@@ -99,7 +100,6 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.style.userSelect = 'none';  // 禁止文本选择
 		this.eGui.style.width = '100%';
 		this.eGui.style.height = '100%';
-		this.eGui.style.padding = '0 var(--ag-cell-horizontal-padding)';  // 使用 AG Grid 的单元格水平内边距
 
 		// 渲染图标
 		this.renderIcon();
@@ -270,14 +270,21 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.contextMenu.style.top = `${top}px`;
 
 		// 点击外部隐藏菜单
-		const hideOnClick = (e: MouseEvent) => {
-			if (this.contextMenu && !this.contextMenu.contains(e.target as Node)) {
-				this.hideContextMenu();
-				ownerDoc.removeEventListener('click', hideOnClick);
+		this.documentClickHandler = (e: MouseEvent) => {
+			// 如果点击在菜单内部，不隐藏
+			if (this.contextMenu && this.contextMenu.contains(e.target as Node)) {
+				return;
 			}
+			// 点击外部或右键，隐藏菜单
+			this.hideContextMenu();
 		};
+
+		// 延迟添加监听器，避免当前右键事件立即触发
 		setTimeout(() => {
-			ownerDoc.addEventListener('click', hideOnClick);
+			if (this.documentClickHandler) {
+				ownerDoc.addEventListener('click', this.documentClickHandler, { capture: true });
+				ownerDoc.addEventListener('contextmenu', this.documentClickHandler, { capture: true });
+			}
 		}, 0);
 	}
 
@@ -288,6 +295,14 @@ export class StatusCellRenderer implements ICellRendererComp {
 		if (this.contextMenu) {
 			this.contextMenu.remove();
 			this.contextMenu = null;
+		}
+
+		// 移除 document 的点击监听器
+		if (this.documentClickHandler) {
+			const ownerDoc = this.eGui?.ownerDocument || document;
+			ownerDoc.removeEventListener('click', this.documentClickHandler);
+			ownerDoc.removeEventListener('contextmenu', this.documentClickHandler);
+			this.documentClickHandler = undefined;
 		}
 	}
 

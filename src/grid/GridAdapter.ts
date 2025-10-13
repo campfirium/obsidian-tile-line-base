@@ -55,11 +55,13 @@ export interface GridAdapter {
 	 * @param container - 容器 DOM 元素
 	 * @param columns - 列定义数组
 	 * @param rows - 行数据数组
+	 * @param context - 可选的上下文对象（包含回调函数等）
 	 */
 	mount(
 		container: HTMLElement,
 		columns: ColumnDef[],
-		rows: RowData[]
+		rows: RowData[],
+		context?: any
 	): void;
 
 	/**

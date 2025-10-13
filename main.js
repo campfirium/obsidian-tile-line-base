@@ -56559,6 +56559,12 @@ var TableView = class extends import_obsidian.ItemView {
     this.tableContainer = tableContainer;
     this.contextMenuHandler = (event) => {
       var _a4, _b2, _c, _d;
+      const target = event.target;
+      const cellElement = target.closest(".ag-cell");
+      const colId = cellElement == null ? void 0 : cellElement.getAttribute("col-id");
+      if (colId === "status") {
+        return;
+      }
       event.preventDefault();
       const blockIndex = (_a4 = this.gridAdapter) == null ? void 0 : _a4.getRowIndexFromEvent(event);
       if (blockIndex === null || blockIndex === void 0)

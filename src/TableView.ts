@@ -835,6 +835,17 @@ export class TableView extends ItemView {
 
 		// 创建并保存右键菜单处理器
 		this.contextMenuHandler = (event: MouseEvent) => {
+			// 检查是否点击的是 status 列
+			const target = event.target as HTMLElement;
+			const cellElement = target.closest('.ag-cell');
+			const colId = cellElement?.getAttribute('col-id');
+
+			// 如果是 status 列，让 AG Grid 的原生菜单处理
+			if (colId === 'status') {
+				return;  // 不阻止事件，让 AG Grid 的 getContextMenuItems 生效
+			}
+
+			// 其他列使用自定义菜单
 			event.preventDefault();
 
 			// 获取点击行对应的块索引

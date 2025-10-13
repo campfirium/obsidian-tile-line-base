@@ -55286,11 +55286,11 @@ function getStatusIcon(status) {
 }
 function getStatusLabel(status) {
   const labels = {
-    "todo": "\u5F85\u529E",
-    "done": "\u5DF2\u5B8C\u6210",
-    "inprogress": "\u8FDB\u884C\u4E2D",
-    "onhold": "\u5DF2\u6401\u7F6E",
-    "canceled": "\u5DF2\u653E\u5F03"
+    "todo": "Todo",
+    "done": "Done",
+    "inprogress": "In Progress",
+    "onhold": "On Hold",
+    "canceled": "Canceled"
   };
   return labels[status] || labels["todo"];
 }
@@ -55312,6 +55312,7 @@ var StatusCellRenderer = class {
     this.eGui.style.userSelect = "none";
     this.eGui.style.width = "100%";
     this.eGui.style.height = "100%";
+    this.eGui.style.padding = "0 calc(var(--ag-grid-size) * 3)";
     this.renderIcon();
     this.clickHandler = (e) => {
       e.preventDefault();
@@ -55378,11 +55379,11 @@ var StatusCellRenderer = class {
     this.contextMenu.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
     this.contextMenu.style.minWidth = "120px";
     const statuses = [
-      { status: "todo", label: "\u5F85\u529E" },
-      { status: "done", label: "\u5DF2\u5B8C\u6210" },
-      { status: "inprogress", label: "\u8FDB\u884C\u4E2D" },
-      { status: "onhold", label: "\u5DF2\u6401\u7F6E" },
-      { status: "canceled", label: "\u5DF2\u653E\u5F03" }
+      { status: "todo", label: "Todo" },
+      { status: "done", label: "Done" },
+      { status: "inprogress", label: "In Progress" },
+      { status: "onhold", label: "On Hold" },
+      { status: "canceled", label: "Canceled" }
     ];
     for (const { status, label } of statuses) {
       const item = ownerDoc.createElement("div");

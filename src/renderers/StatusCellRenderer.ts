@@ -64,11 +64,11 @@ export function getStatusIcon(status: TaskStatus): string {
  */
 export function getStatusLabel(status: TaskStatus): string {
 	const labels: Record<TaskStatus, string> = {
-		'todo': '待办',
-		'done': '已完成',
-		'inprogress': '进行中',
-		'onhold': '已搁置',
-		'canceled': '已放弃'
+		'todo': 'Todo',
+		'done': 'Done',
+		'inprogress': 'In Progress',
+		'onhold': 'On Hold',
+		'canceled': 'Canceled'
 	};
 	return labels[status] || labels['todo'];
 }
@@ -99,6 +99,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.style.userSelect = 'none';  // 禁止文本选择
 		this.eGui.style.width = '100%';
 		this.eGui.style.height = '100%';
+		this.eGui.style.padding = '0 calc(var(--ag-grid-size) * 3)';  // 使用 AG Grid 的默认单元格内边距
 
 		// 渲染图标
 		this.renderIcon();
@@ -187,11 +188,11 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 		// 创建菜单项
 		const statuses: Array<{ status: TaskStatus; label: string }> = [
-			{ status: 'todo', label: '待办' },
-			{ status: 'done', label: '已完成' },
-			{ status: 'inprogress', label: '进行中' },
-			{ status: 'onhold', label: '已搁置' },
-			{ status: 'canceled', label: '已放弃' }
+			{ status: 'todo', label: 'Todo' },
+			{ status: 'done', label: 'Done' },
+			{ status: 'inprogress', label: 'In Progress' },
+			{ status: 'onhold', label: 'On Hold' },
+			{ status: 'canceled', label: 'Canceled' }
 		];
 
 		for (const { status, label } of statuses) {

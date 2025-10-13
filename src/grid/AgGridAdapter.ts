@@ -97,9 +97,8 @@ export class AgGridAdapter implements GridAdapter {
 					onCellClicked: (params: any) => {
 						const event = params.event as MouseEvent;
 						if (event) {
-							// 阻止默认的行选择行为
+							// 阻止默认的行选择行为（不调用 stopPropagation，避免影响 gridOptions 的 onCellClicked）
 							event.preventDefault();
-							event.stopPropagation();
 						}
 						// 获取当前状态并切换
 						const rowId = params.node?.id;
@@ -122,8 +121,8 @@ export class AgGridAdapter implements GridAdapter {
 					onCellContextMenu: (params: any) => {
 						const event = params.event as MouseEvent;
 						if (event) {
+							// 阻止默认右键菜单（不调用 stopPropagation）
 							event.preventDefault();
-							event.stopPropagation();
 						}
 
 						const rowId = params.node?.id;

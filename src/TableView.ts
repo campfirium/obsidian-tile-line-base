@@ -1042,7 +1042,7 @@ export class TableView extends ItemView {
 
 		// 直接修改 blocks 数组（数据的唯一真实来源）
 		block.data['status'] = newStatus;
-		block.data['statusChanged'] = new Date().toISOString();
+		block.data['statusChanged'] = getCurrentLocalDateTime();
 
 		// 使用增量刷新（通过 AG Grid API 直接更新单元格）
 		const gridApi = (this.gridAdapter as any).gridApi;
@@ -1190,7 +1190,7 @@ export class TableView extends ItemView {
 		}
 
 		// 初始化 statusChanged 时间戳
-		newBlock.data['statusChanged'] = new Date().toISOString();
+		newBlock.data['statusChanged'] = getCurrentLocalDateTime();
 
 		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）

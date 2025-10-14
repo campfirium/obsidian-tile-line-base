@@ -55830,8 +55830,56 @@ var _AgGridAdapter = class {
           return false;
         }
       },
-      // 启用单元格复制粘贴
-      enableCellTextSelection: true,
+      // 自定义键盘事件处理（实现复制粘贴功能）
+      onCellKeyDown: (params) => {
+        var _a4;
+        const keyEvent = params.event;
+        const api = params.api;
+        const isCtrlOrCmd = keyEvent.ctrlKey || keyEvent.metaKey;
+        if (isCtrlOrCmd && keyEvent.key === "c") {
+          const focusedCell = api.getFocusedCell();
+          if (!focusedCell)
+            return;
+          const rowNode = api.getDisplayedRowAtIndex(focusedCell.rowIndex);
+          if (!rowNode)
+            return;
+          const colId = focusedCell.column.getColId();
+          const cellValue = (_a4 = rowNode.data) == null ? void 0 : _a4[colId];
+          const textToCopy = String(cellValue != null ? cellValue : "");
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).catch((err) => {
+              console.warn("TLB: Failed to copy to clipboard", err);
+            });
+          }
+          keyEvent.preventDefault();
+          keyEvent.stopPropagation();
+        }
+        if (isCtrlOrCmd && keyEvent.key === "v") {
+          const focusedCell = api.getFocusedCell();
+          if (!focusedCell)
+            return;
+          const rowNode = api.getDisplayedRowAtIndex(focusedCell.rowIndex);
+          if (!rowNode)
+            return;
+          const colId = focusedCell.column.getColId();
+          const colDef = focusedCell.column.getColDef();
+          if (colDef.editable === false) {
+            keyEvent.preventDefault();
+            keyEvent.stopPropagation();
+            return;
+          }
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            navigator.clipboard.readText().then((text) => {
+              rowNode.setDataValue(colId, text);
+              api.refreshCells({ rowNodes: [rowNode], columns: [colId], force: true });
+            }).catch((err) => {
+              console.warn("TLB: Failed to read from clipboard", err);
+            });
+          }
+          keyEvent.preventDefault();
+          keyEvent.stopPropagation();
+        }
+      },
       // 性能优化：减少不必要的重绘
       suppressAnimationFrame: false,
       // 保留动画帧以提升流畅度

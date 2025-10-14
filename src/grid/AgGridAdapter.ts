@@ -406,8 +406,70 @@ export class AgGridAdapter implements GridAdapter {
 				}
 			},
 
-			// 启用单元格复制粘贴
-			enableCellTextSelection: true,
+			// 自定义键盘事件处理（实现复制粘贴功能）
+			onCellKeyDown: (params: any) => {
+				const keyEvent = params.event as KeyboardEvent;
+				const api = params.api;
+				const isCtrlOrCmd = keyEvent.ctrlKey || keyEvent.metaKey;
+
+				// 处理 Ctrl+C / Cmd+C（复制）
+				if (isCtrlOrCmd && keyEvent.key === 'c') {
+					const focusedCell = api.getFocusedCell();
+					if (!focusedCell) return;
+
+					const rowNode = api.getDisplayedRowAtIndex(focusedCell.rowIndex);
+					if (!rowNode) return;
+
+					const colId = focusedCell.column.getColId();
+					const cellValue = rowNode.data?.[colId];
+					const textToCopy = String(cellValue ?? '');
+
+					// 使用 navigator.clipboard API 复制
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						navigator.clipboard.writeText(textToCopy).catch((err) => {
+							console.warn('TLB: Failed to copy to clipboard', err);
+						});
+					}
+
+					keyEvent.preventDefault();
+					keyEvent.stopPropagation();
+				}
+
+				// 处理 Ctrl+V / Cmd+V（粘贴）
+				if (isCtrlOrCmd && keyEvent.key === 'v') {
+					const focusedCell = api.getFocusedCell();
+					if (!focusedCell) return;
+
+					const rowNode = api.getDisplayedRowAtIndex(focusedCell.rowIndex);
+					if (!rowNode) return;
+
+					const colId = focusedCell.column.getColId();
+					const colDef = focusedCell.column.getColDef();
+
+					// 检查单元格是否可编辑
+					if (colDef.editable === false) {
+						// 不可编辑的列不允许粘贴
+						keyEvent.preventDefault();
+						keyEvent.stopPropagation();
+						return;
+					}
+
+					// 使用 navigator.clipboard API 读取剪贴板
+					if (navigator.clipboard && navigator.clipboard.readText) {
+						navigator.clipboard.readText().then((text) => {
+							// 更新单元格值（会自动触发 onCellValueChanged 事件）
+							rowNode.setDataValue(colId, text);
+							// 刷新单元格显示
+							api.refreshCells({ rowNodes: [rowNode], columns: [colId], force: true });
+						}).catch((err) => {
+							console.warn('TLB: Failed to read from clipboard', err);
+						});
+					}
+
+					keyEvent.preventDefault();
+					keyEvent.stopPropagation();
+				}
+			},
 
 			// 性能优化：减少不必要的重绘
 			suppressAnimationFrame: false,  // 保留动画帧以提升流畅度

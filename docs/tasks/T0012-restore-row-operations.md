@@ -1,4 +1,4 @@
-# T0012：恢复行操作功能
+# T0012-restore-row-operations
 
 ## 积木编号
 **Building Block 12 / N**

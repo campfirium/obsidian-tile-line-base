@@ -1,4 +1,4 @@
-# T0016 - Excel 式单元格交互
+# T0016-excel-cell-interaction
 
 **目标**：实现 Excel 风格的单元格选中和编辑分离
 

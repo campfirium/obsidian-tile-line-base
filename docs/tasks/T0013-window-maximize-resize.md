@@ -1,4 +1,4 @@
-# T0013：新窗口最大化未触发列宽调整
+# T0013-window-maximize-resize
 
 ## 积木编号
 **Building Block 13 / N**

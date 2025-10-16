@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 const FILES_TO_COPY = ['main.js', 'manifest.json', 'styles.css'];
-const WINDOWS_PLUGIN_DIR = 'D:\\X\\Dropbox\\obt\\.obsidian\\plugins\\tile-line-base';
+const WINDOWS_PLUGIN_DIR = 'D:\\C\\obsidian-tile-line-base\\docs\\.obsidian\\plugins\\tile-line-base';
 
 function isWSL() {
 	if (process.platform !== 'linux') return false;

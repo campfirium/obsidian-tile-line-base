@@ -57,7 +57,10 @@ export class TableView extends ItemView {
 	private pendingSizeUpdateHandle: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
+		console.log('=== TableView 构造函数开始 ===');
+		console.log('leaf:', leaf);
 		super(leaf);
+		console.log('=== TableView 构造函数完成 ===');
 	}
 
 	getViewType(): string {
@@ -69,11 +72,20 @@ export class TableView extends ItemView {
 	}
 
 	async setState(state: TableViewState, result: any): Promise<void> {
-		// 根据文件路径获取文件对象
-		const file = this.app.vault.getAbstractFileByPath(state.filePath);
-		if (file instanceof TFile) {
-			this.file = file;
-			await this.render();
+		console.log('=== TableView.setState 开始 ===');
+		console.log('state:', state);
+		try {
+			// 根据文件路径获取文件对象
+			const file = this.app.vault.getAbstractFileByPath(state.filePath);
+			console.log('file:', file);
+			if (file instanceof TFile) {
+				this.file = file;
+				await this.render();
+			}
+			console.log('=== TableView.setState 完成 ===');
+		} catch (e) {
+			console.error('=== TableView.setState 错误 ===', e);
+			throw e;
 		}
 	}
 
@@ -423,14 +435,28 @@ export class TableView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		// 初始化容器
-		const container = this.containerEl.children[1];
-		container.addClass("tile-line-base-view");
+		console.log('=== TableView.onOpen 开始 ===');
+		try {
+			// 初始化容器
+			const container = this.containerEl.children[1];
+			container.addClass("tile-line-base-view");
+			console.log('=== TableView.onOpen 完成 ===');
+		} catch (e) {
+			console.error('=== TableView.onOpen 错误 ===', e);
+			throw e;
+		}
 	}
 
 	async render(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
+
+		// 🔍 调试：检查 render 是否被调用
+		console.log('=== TableView.render 开始 ===');
+		console.log('container:', container);
+		console.log('container.ownerDocument:', (container as HTMLElement).ownerDocument);
+		console.log('container.ownerDocument === document:', (container as HTMLElement).ownerDocument === document);
+		console.log('==============================');
 
 		if (!this.file) {
 			container.createDiv({ text: "未选择文件" });
@@ -490,8 +516,9 @@ export class TableView extends ItemView {
 			})
 		];
 
-		// 根据 Obsidian 主题选择 AG Grid 主题
-		const isDarkMode = document.body.classList.contains('theme-dark');
+		// 根据 Obsidian 主题选择 AG Grid 主题（支持新窗口）
+		const ownerDoc = (container as HTMLElement).ownerDocument;
+		const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
 		const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
 
 		// 创建表格容器
@@ -883,7 +910,9 @@ export class TableView extends ItemView {
 	private setupKeyboardShortcuts(tableContainer: HTMLElement): void {
 		// 创建并保存键盘事件处理器
 		this.keydownHandler = (event: KeyboardEvent) => {
-			const activeElement = document.activeElement;
+			// 使用容器所在的 document（支持新窗口）
+			const ownerDoc = tableContainer.ownerDocument;
+			const activeElement = ownerDoc.activeElement;
 			const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
 
 			// 如果正在编辑单元格，不触发其他快捷键

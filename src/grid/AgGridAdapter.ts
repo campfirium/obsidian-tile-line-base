@@ -28,8 +28,11 @@ import {
 	StatusCellRenderer,
 	TaskStatus,
 	normalizeStatus,
-	getStatusLabel
+	getStatusLabel,
+	getStatusIcon
 } from '../renderers/StatusCellRenderer';
+import { createTextCellEditor } from './editors/TextCellEditor';
+import { setIcon } from 'obsidian';
 
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -139,6 +142,18 @@ export class AgGridAdapter implements GridAdapter {
 			return mergedColDef;
 		});
 
+		// 获取容器所在的 document 和 body（支持 pop-out 窗口）
+		const ownerDoc = container.ownerDocument;
+		const popupParent = ownerDoc.body;
+
+		// 🔍 调试：检查 AG Grid 初始化环境
+		console.log('=== AG Grid 初始化 ===');
+		console.log('container:', container);
+		console.log('container.ownerDocument:', ownerDoc);
+		console.log('ownerDoc === document:', ownerDoc === document);
+		console.log('popupParent:', popupParent);
+		console.log('=======================');
+
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
@@ -152,8 +167,11 @@ export class AgGridAdapter implements GridAdapter {
 			// 传递上下文（包含回调函数）
 			context: context || {},
 
+			// 设置弹出元素的父容器（支持 pop-out 窗口）
+			popupParent: popupParent,
+
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
-			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2
+			singleClickEdit: false, // 禁用单击编辑，双击或按键可以进入编辑
 			stopEditingWhenCellsLoseFocus: true, // 失焦时停止编辑
 
 			// Enter 键导航配置（Excel 风格）
@@ -174,6 +192,7 @@ export class AgGridAdapter implements GridAdapter {
 				sortable: true,
 				filter: true,
 				resizable: true,
+				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
 				suppressKeyboardEvent: (params: any) => {
 					const keyEvent = params.event as KeyboardEvent;
 					if (keyEvent.key !== 'Enter') {

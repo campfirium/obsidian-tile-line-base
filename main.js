@@ -55518,70 +55518,72 @@ var StatusCellRenderer = class {
 };
 
 // src/grid/editors/TextCellEditor.ts
-var TextCellEditor2 = class {
-  constructor() {
-    this.initialValue = "";
-  }
-  init(params) {
-    var _a4, _b2, _c, _d;
-    this.params = params;
-    const doc = ((_a4 = params.eGridCell) == null ? void 0 : _a4.ownerDocument) || document;
-    this.eInput = doc.createElement("input");
-    this.eInput.type = "text";
-    this.eInput.classList.add("ag-cell-edit-input");
-    this.eInput.style.width = "100%";
-    this.eInput.style.height = "100%";
-    this.initialValue = (_b2 = params.value) != null ? _b2 : "";
-    const eventKey = params.eventKey;
-    console.log("=== TextCellEditor.init \u5F00\u59CB ===");
-    console.log("Full params:", params);
-    console.log("params.eGridCell:", params.eGridCell);
-    console.log("params.eGridCell?.ownerDocument:", (_c = params.eGridCell) == null ? void 0 : _c.ownerDocument);
-    console.log("ownerDocument === document:", ((_d = params.eGridCell) == null ? void 0 : _d.ownerDocument) === document);
-    console.log("eventKey:", eventKey);
-    console.log("params.charPress:", params.charPress);
-    console.log("params.key:", params.key);
-    console.log("params.keyPress:", params.keyPress);
-    console.log("initialValue:", this.initialValue);
-    console.log("=== TextCellEditor.init \u7ED3\u675F ===");
-    if (eventKey && eventKey.length === 1) {
-      console.log("Using eventKey as initial value:", eventKey);
-      this.eInput.value = eventKey;
-    } else {
-      console.log("Using original value:", this.initialValue);
-      this.eInput.value = this.initialValue;
+function createTextCellEditor() {
+  return class {
+    constructor() {
+      this.initialValue = "";
     }
-    this.eInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === "Tab") {
-        event.stopPropagation();
-        params.stopEditing(false);
-      } else if (event.key === "Escape") {
-        event.stopPropagation();
-        params.stopEditing(true);
+    init(params) {
+      var _a4, _b2, _c, _d;
+      this.params = params;
+      const doc = ((_a4 = params.eGridCell) == null ? void 0 : _a4.ownerDocument) || document;
+      this.eInput = doc.createElement("input");
+      this.eInput.type = "text";
+      this.eInput.classList.add("ag-cell-edit-input");
+      this.eInput.style.width = "100%";
+      this.eInput.style.height = "100%";
+      this.initialValue = (_b2 = params.value) != null ? _b2 : "";
+      const eventKey = params.eventKey;
+      console.log("=== TextCellEditor.init \u5F00\u59CB (\u5DE5\u5382\u7248\u672C) ===");
+      console.log("Full params:", params);
+      console.log("params.eGridCell:", params.eGridCell);
+      console.log("params.eGridCell?.ownerDocument:", (_c = params.eGridCell) == null ? void 0 : _c.ownerDocument);
+      console.log("ownerDocument === document:", ((_d = params.eGridCell) == null ? void 0 : _d.ownerDocument) === document);
+      console.log("eventKey:", eventKey);
+      console.log("params.charPress:", params.charPress);
+      console.log("params.key:", params.key);
+      console.log("params.keyPress:", params.keyPress);
+      console.log("initialValue:", this.initialValue);
+      console.log("=== TextCellEditor.init \u7ED3\u675F ===");
+      if (eventKey && eventKey.length === 1) {
+        console.log("Using eventKey as initial value:", eventKey);
+        this.eInput.value = eventKey;
+      } else {
+        console.log("Using original value:", this.initialValue);
+        this.eInput.value = this.initialValue;
       }
-    });
-  }
-  getGui() {
-    return this.eInput;
-  }
-  afterGuiAttached() {
-    this.eInput.focus();
-    const eventKey = this.params.eventKey;
-    if (eventKey && eventKey.length === 1) {
-      this.eInput.setSelectionRange(this.eInput.value.length, this.eInput.value.length);
-    } else {
-      this.eInput.select();
+      this.eInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === "Tab") {
+          event.stopPropagation();
+          params.stopEditing(false);
+        } else if (event.key === "Escape") {
+          event.stopPropagation();
+          params.stopEditing(true);
+        }
+      });
     }
-  }
-  getValue() {
-    return this.eInput.value;
-  }
-  destroy() {
-  }
-  isPopup() {
-    return false;
-  }
-};
+    getGui() {
+      return this.eInput;
+    }
+    afterGuiAttached() {
+      this.eInput.focus();
+      const eventKey = this.params.eventKey;
+      if (eventKey && eventKey.length === 1) {
+        this.eInput.setSelectionRange(this.eInput.value.length, this.eInput.value.length);
+      } else {
+        this.eInput.select();
+      }
+    }
+    getValue() {
+      return this.eInput.value;
+    }
+    destroy() {
+    }
+    isPopup() {
+      return false;
+    }
+  };
+}
 
 // src/grid/AgGridAdapter.ts
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -55714,8 +55716,8 @@ var _AgGridAdapter = class {
         sortable: true,
         filter: true,
         resizable: true,
-        cellEditor: TextCellEditor2,
-        // 使用自定义编辑器修复首字符丢失问题
+        cellEditor: createTextCellEditor(),
+        // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
         suppressKeyboardEvent: (params) => {
           const keyEvent = params.event;
           if (keyEvent.key !== "Enter") {
@@ -56179,6 +56181,7 @@ function getCurrentLocalDateTime() {
 }
 
 // src/TableView.ts
+var LOG_PREFIX = "[TileLineBase]";
 var TABLE_VIEW_TYPE = "tile-line-base-table";
 var TableView = class extends import_obsidian2.ItemView {
   constructor(leaf) {
@@ -56497,14 +56500,17 @@ var TableView = class extends import_obsidian2.ItemView {
     }
   }
   async render() {
-    var _a4, _b2;
+    var _a4, _b2, _c;
     const container = this.containerEl.children[1];
     container.empty();
-    console.log("=== TableView.render \u5F00\u59CB ===");
-    console.log("container:", container);
-    console.log("container.ownerDocument:", container.ownerDocument);
-    console.log("container.ownerDocument === document:", container.ownerDocument === document);
-    console.log("==============================");
+    const ownerDoc = container.ownerDocument;
+    const ownerWindow = (_a4 = ownerDoc == null ? void 0 : ownerDoc.defaultView) != null ? _a4 : null;
+    console.log(LOG_PREFIX, "TableView.render start", {
+      file: (_b2 = this.file) == null ? void 0 : _b2.path,
+      containerTag: container.tagName,
+      containerClass: container.className,
+      window: this.describeWindow(ownerWindow)
+    });
     if (!this.file) {
       container.createDiv({ text: "\u672A\u9009\u62E9\u6587\u4EF6" });
       return;
@@ -56548,67 +56554,78 @@ var TableView = class extends import_obsidian2.ItemView {
         return baseColDef;
       })
     ];
-    const ownerDoc = container.ownerDocument;
     const isDarkMode = ownerDoc.body.classList.contains("theme-dark");
     const themeClass = isDarkMode ? "ag-theme-alpine-dark" : "ag-theme-alpine";
     const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
-    if (this.gridAdapter) {
-      this.gridAdapter.destroy();
-    }
-    this.gridAdapter = new AgGridAdapter();
-    this.gridAdapter.mount(tableContainer, columns, data, {
-      onStatusChange: (rowId, newStatus) => {
-        this.onStatusChange(rowId, newStatus);
+    const containerWindow = (_c = ownerDoc == null ? void 0 : ownerDoc.defaultView) != null ? _c : window;
+    console.log(LOG_PREFIX, "TableView.render container window", this.describeWindow(containerWindow));
+    const mountGrid = () => {
+      var _a5, _b3;
+      if (this.gridAdapter) {
+        this.gridAdapter.destroy();
       }
-    });
-    this.tableContainer = tableContainer;
-    this.updateTableContainerSize();
-    this.gridAdapter.onCellEdit((event) => {
-      this.onCellEdit(event);
-    });
-    this.gridAdapter.onHeaderEdit((event) => {
-    });
-    (_b2 = (_a4 = this.gridAdapter).onEnterAtLastRow) == null ? void 0 : _b2.call(_a4, (field) => {
-      const oldRowCount = this.blocks.length;
-      this.addRow(oldRowCount);
-      const tryEdit = (attempt = 0) => {
-        if (!this.gridAdapter || attempt > 5)
-          return;
-        const api = this.gridAdapter.gridApi;
-        if (!api)
-          return;
-        api.ensureIndexVisible(oldRowCount);
-        const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
-        newRowNode == null ? void 0 : newRowNode.setSelected(true, true);
-        api.setFocusedCell(oldRowCount, field);
-        api.startEditingCell({
-          rowIndex: oldRowCount,
-          colKey: field
-        });
-        setTimeout(() => {
-          const editingCells = api.getEditingCells();
-          if (editingCells.length === 0) {
-            tryEdit(attempt + 1);
-          }
-        }, 50);
-      };
-      setTimeout(() => tryEdit(), 50);
-    });
-    this.setupContextMenu(tableContainer);
-    this.setupKeyboardShortcuts(tableContainer);
-    this.setupResizeObserver(tableContainer);
-    setTimeout(() => {
-      var _a5, _b3;
-      (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
-    }, 100);
-    setTimeout(() => {
-      var _a5, _b3;
-      (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
-    }, 300);
-    setTimeout(() => {
-      var _a5, _b3;
-      (_b3 = (_a5 = this.gridAdapter) == null ? void 0 : _a5.resizeColumns) == null ? void 0 : _b3.call(_a5);
-    }, 800);
+      this.gridAdapter = new AgGridAdapter();
+      this.gridAdapter.mount(tableContainer, columns, data, {
+        onStatusChange: (rowId, newStatus) => {
+          this.onStatusChange(rowId, newStatus);
+        }
+      });
+      this.tableContainer = tableContainer;
+      this.updateTableContainerSize();
+      this.gridAdapter.onCellEdit((event) => {
+        this.onCellEdit(event);
+      });
+      this.gridAdapter.onHeaderEdit((event) => {
+      });
+      (_b3 = (_a5 = this.gridAdapter).onEnterAtLastRow) == null ? void 0 : _b3.call(_a5, (field) => {
+        const oldRowCount = this.blocks.length;
+        this.addRow(oldRowCount);
+        const tryEdit = (attempt = 0) => {
+          if (!this.gridAdapter || attempt > 5)
+            return;
+          const api = this.gridAdapter.gridApi;
+          if (!api)
+            return;
+          api.ensureIndexVisible(oldRowCount);
+          const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
+          newRowNode == null ? void 0 : newRowNode.setSelected(true, true);
+          api.setFocusedCell(oldRowCount, field);
+          api.startEditingCell({
+            rowIndex: oldRowCount,
+            colKey: field
+          });
+          setTimeout(() => {
+            const editingCells = api.getEditingCells();
+            if (editingCells.length === 0) {
+              tryEdit(attempt + 1);
+            }
+          }, 50);
+        };
+        setTimeout(() => tryEdit(), 50);
+      });
+      this.setupContextMenu(tableContainer);
+      this.setupKeyboardShortcuts(tableContainer);
+      this.setupResizeObserver(tableContainer);
+      setTimeout(() => {
+        var _a6, _b4;
+        (_b4 = (_a6 = this.gridAdapter) == null ? void 0 : _a6.resizeColumns) == null ? void 0 : _b4.call(_a6);
+      }, 100);
+      setTimeout(() => {
+        var _a6, _b4;
+        (_b4 = (_a6 = this.gridAdapter) == null ? void 0 : _a6.resizeColumns) == null ? void 0 : _b4.call(_a6);
+      }, 300);
+      setTimeout(() => {
+        var _a6, _b4;
+        (_b4 = (_a6 = this.gridAdapter) == null ? void 0 : _a6.resizeColumns) == null ? void 0 : _b4.call(_a6);
+      }, 800);
+    };
+    if (containerWindow && typeof containerWindow.requestAnimationFrame === "function") {
+      containerWindow.requestAnimationFrame(() => {
+        mountGrid();
+      });
+    } else {
+      mountGrid();
+    }
   }
   /**
    * 清理事件监听器（防止内存泄漏）
@@ -57231,6 +57248,22 @@ var TableView = class extends import_obsidian2.ItemView {
   renameColumn(columnId, newName) {
     console.warn("renameColumn not implemented yet. Coming in T0010+.");
   }
+  describeWindow(win) {
+    var _a4;
+    if (!win) {
+      return null;
+    }
+    let href;
+    try {
+      href = (_a4 = win.location) == null ? void 0 : _a4.href;
+    } catch (error) {
+      href = void 0;
+    }
+    return {
+      href,
+      isMain: win === window
+    };
+  }
   async onClose() {
     this.cleanupEventListeners();
     this.hideContextMenu();
@@ -57251,61 +57284,168 @@ var TableView = class extends import_obsidian2.ItemView {
 };
 
 // src/main.ts
+var LOG_PREFIX2 = "[TileLineBase]";
 var TileLineBasePlugin = class extends import_obsidian3.Plugin {
+  constructor() {
+    super(...arguments);
+    this.windowContexts = /* @__PURE__ */ new Map();
+    this.windowIds = /* @__PURE__ */ new WeakMap();
+    this.mainContext = null;
+  }
   async onload() {
-    console.log("=== \u6CE8\u518C TableView ===");
-    console.log("TABLE_VIEW_TYPE:", TABLE_VIEW_TYPE);
+    var _a4;
+    console.log(LOG_PREFIX2, "Registering TableView view");
+    console.log(LOG_PREFIX2, "TABLE_VIEW_TYPE =", TABLE_VIEW_TYPE);
     this.registerView(
       TABLE_VIEW_TYPE,
       (leaf) => {
-        var _a4, _b2, _c, _d, _e;
-        console.log("=== \u521B\u5EFA TableView \u5B9E\u4F8B ===");
-        console.log("leaf:", leaf);
-        console.log("leaf.view?.containerEl:", (_a4 = leaf.view) == null ? void 0 : _a4.containerEl);
-        console.log("leaf.view?.containerEl.ownerDocument:", (_c = (_b2 = leaf.view) == null ? void 0 : _b2.containerEl) == null ? void 0 : _c.ownerDocument);
-        console.log("ownerDocument === document:", ((_e = (_d = leaf.view) == null ? void 0 : _d.containerEl) == null ? void 0 : _e.ownerDocument) === document);
+        console.log(LOG_PREFIX2, "Instantiate TableView", this.describeLeaf(leaf));
         return new TableView(leaf);
       }
     );
-    this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, file) => {
-        menu.addItem((item) => {
-          item.setTitle("\u4EE5 TileLineBase \u8868\u683C\u6253\u5F00").setIcon("table").onClick(async () => {
-            await this.openTableView(file);
-          });
-        });
-      })
-    );
+    this.mainContext = (_a4 = this.registerWindow(window)) != null ? _a4 : { window, app: this.app };
+    this.captureExistingWindows();
     this.addCommand({
       id: "toggle-table-view",
       name: "\u5207\u6362 TileLineBase \u8868\u683C\u89C6\u56FE",
       checkCallback: (checking) => {
-        console.log("=== toggle-table-view \u547D\u4EE4\u89E6\u53D1 ===");
-        console.log("checking:", checking);
+        var _a5;
         const activeLeaf = this.app.workspace.activeLeaf;
-        console.log("activeLeaf:", activeLeaf);
+        console.log(LOG_PREFIX2, "toggle-table-view command", {
+          checking,
+          activeLeaf: this.describeLeaf(activeLeaf)
+        });
         if (!activeLeaf) {
-          console.log("\u6CA1\u6709 activeLeaf");
           return false;
         }
         if (!checking) {
-          this.toggleTableView(activeLeaf);
+          const leafWindow = this.getLeafWindow(activeLeaf);
+          const context = (_a5 = this.getWindowContext(leafWindow)) != null ? _a5 : this.mainContext;
+          this.toggleTableView(activeLeaf, context);
         }
         return true;
       }
     });
+    this.registerEvent(
+      this.app.workspace.on("window-open", (workspaceWindow, win) => {
+        console.log(LOG_PREFIX2, "window-open", {
+          window: this.describeWindow(win)
+        });
+        this.registerWindow(win, workspaceWindow);
+      })
+    );
+    this.registerEvent(
+      this.app.workspace.on("window-close", (_workspaceWindow, win) => {
+        console.log(LOG_PREFIX2, "window-close", {
+          window: this.describeWindow(win)
+        });
+        this.unregisterWindow(win);
+      })
+    );
   }
   async onunload() {
+    console.log(LOG_PREFIX2, "Detaching all table views");
     this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
   }
-  async openTableView(file) {
-    console.log("=== openTableView \u5F00\u59CB ===");
-    console.log("file:", file);
-    const { workspace } = this.app;
-    console.log("workspace:", workspace);
-    const leaf = workspace.getLeaf(false);
-    console.log("leaf:", leaf);
-    console.log("leaf.view:", leaf.view);
+  registerWindow(win, workspaceWindow) {
+    const existing = this.windowContexts.get(win);
+    if (existing) {
+      existing.workspaceWindow = workspaceWindow != null ? workspaceWindow : existing.workspaceWindow;
+      return existing;
+    }
+    const winApp = win.app;
+    const app = winApp != null ? winApp : this.app;
+    if (!app) {
+      console.warn(LOG_PREFIX2, "registerWindow: app not found", this.describeWindow(win));
+      return null;
+    }
+    const context = { window: win, app, workspaceWindow };
+    this.windowContexts.set(win, context);
+    console.log(LOG_PREFIX2, "registerWindow", {
+      window: this.describeWindow(win)
+    });
+    const fileMenuRef = app.workspace.on("file-menu", (menu, file) => {
+      this.handleFileMenu(menu, file, context);
+    });
+    this.registerEvent(fileMenuRef);
+    return context;
+  }
+  unregisterWindow(win) {
+    if (this.windowContexts.delete(win)) {
+      console.log(LOG_PREFIX2, "unregisterWindow", {
+        window: this.describeWindow(win)
+      });
+    }
+  }
+  captureExistingWindows() {
+    const seen = /* @__PURE__ */ new Set();
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      const win = this.getLeafWindow(leaf);
+      if (win && !seen.has(win)) {
+        seen.add(win);
+        this.registerWindow(win);
+      }
+    });
+  }
+  handleFileMenu(menu, file, context) {
+    if (!(file instanceof import_obsidian3.TFile)) {
+      return;
+    }
+    menu.addItem((item) => {
+      item.setTitle("\u7528 TileLineBase \u8868\u683C\u6253\u5F00").setIcon("table").onClick(async (evt) => {
+        var _a4, _b2;
+        console.log(LOG_PREFIX2, "file-menu onClick triggered", {
+          file: file.path,
+          eventType: evt == null ? void 0 : evt.type,
+          window: this.describeWindow(context.window)
+        });
+        const resolution = this.resolveLeafFromEvent(evt, context);
+        await this.openTableView(file, {
+          leaf: resolution.leaf,
+          preferredWindow: (_a4 = resolution.preferredWindow) != null ? _a4 : context.window,
+          workspace: (_b2 = resolution.workspace) != null ? _b2 : context.app.workspace
+        });
+      });
+    });
+  }
+  async openTableView(file, options) {
+    var _a4, _b2, _c, _d;
+    const requestedLeaf = (_a4 = options == null ? void 0 : options.leaf) != null ? _a4 : null;
+    const preferredWindow = (_b2 = options == null ? void 0 : options.preferredWindow) != null ? _b2 : this.getLeafWindow(requestedLeaf);
+    const workspace = (_d = (_c = options == null ? void 0 : options.workspace) != null ? _c : this.getWorkspaceForLeaf(requestedLeaf)) != null ? _d : this.app.workspace;
+    console.log(LOG_PREFIX2, "openTableView start", {
+      file: file.path,
+      requestedLeaf: this.describeLeaf(requestedLeaf),
+      preferredWindow: this.describeWindow(preferredWindow),
+      workspaceIsMain: workspace === this.app.workspace
+    });
+    let leaf = requestedLeaf;
+    if (leaf && preferredWindow) {
+      const leafWindow = this.getLeafWindow(leaf);
+      if (leafWindow && leafWindow !== preferredWindow) {
+        console.log(LOG_PREFIX2, "requested leaf window mismatch", {
+          requestedLeaf: this.describeLeaf(leaf),
+          targetWindow: this.describeWindow(preferredWindow)
+        });
+        leaf = null;
+      }
+    }
+    if (!leaf) {
+      leaf = this.selectLeaf(workspace, preferredWindow);
+      console.log(LOG_PREFIX2, "openTableView selectLeaf result", this.describeLeaf(leaf));
+    }
+    if (!leaf && preferredWindow) {
+      leaf = this.createLeafInWindow(workspace, preferredWindow);
+      console.log(LOG_PREFIX2, "openTableView createLeafInWindow result", this.describeLeaf(leaf));
+    }
+    if (!leaf) {
+      leaf = this.selectLeaf(this.app.workspace);
+      console.log(LOG_PREFIX2, "openTableView global fallback leaf", this.describeLeaf(leaf));
+    }
+    if (!leaf) {
+      console.warn(LOG_PREFIX2, "No leaf available, aborting openTableView");
+      return;
+    }
     await leaf.setViewState({
       type: TABLE_VIEW_TYPE,
       active: true,
@@ -57313,12 +57453,14 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
         filePath: file.path
       }
     });
-    console.log("setViewState \u5B8C\u6210");
-    workspace.revealLeaf(leaf);
-    console.log("=== openTableView \u5B8C\u6210 ===");
+    console.log(LOG_PREFIX2, "openTableView setViewState done", this.describeLeaf(leaf));
+    await workspace.revealLeaf(leaf);
+    console.log(LOG_PREFIX2, "openTableView finish");
   }
-  async toggleTableView(leaf) {
+  async toggleTableView(leaf, context) {
+    var _a4, _b2;
     const currentView = leaf.view;
+    console.log(LOG_PREFIX2, "toggleTableView", this.describeLeaf(leaf));
     if (currentView.getViewType() === TABLE_VIEW_TYPE) {
       const tableView = currentView;
       const file = tableView.file;
@@ -57331,16 +57473,181 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
         });
       }
     } else {
-      const activeFile = this.app.workspace.getActiveFile();
+      const workspace = (_b2 = (_a4 = context == null ? void 0 : context.app.workspace) != null ? _a4 : this.getWorkspaceForLeaf(leaf)) != null ? _b2 : this.app.workspace;
+      const activeFile = workspace.getActiveFile();
       if (activeFile) {
-        await leaf.setViewState({
-          type: TABLE_VIEW_TYPE,
-          active: true,
-          state: {
-            filePath: activeFile.path
-          }
+        await this.openTableView(activeFile, {
+          leaf,
+          preferredWindow: this.getLeafWindow(leaf),
+          workspace
         });
       }
     }
+  }
+  resolveLeafFromEvent(evt, fallbackContext) {
+    var _a4, _b2, _c, _d, _e;
+    const targetWindow = (_b2 = (_a4 = this.getEventWindow(evt)) != null ? _a4 : fallbackContext == null ? void 0 : fallbackContext.window) != null ? _b2 : null;
+    const context = (_d = (_c = targetWindow ? this.getWindowContext(targetWindow) : null) != null ? _c : fallbackContext) != null ? _d : this.mainContext;
+    const workspace = (_e = context == null ? void 0 : context.app.workspace) != null ? _e : this.app.workspace;
+    console.log(LOG_PREFIX2, "resolveLeafFromEvent", {
+      eventType: evt == null ? void 0 : evt.type,
+      targetWindow: this.describeWindow(targetWindow),
+      workspaceIsMain: workspace === this.app.workspace
+    });
+    if (!targetWindow) {
+      const leaf = this.selectLeaf(workspace);
+      console.log(LOG_PREFIX2, "resolveLeafFromEvent default leaf", this.describeLeaf(leaf));
+      return { leaf, preferredWindow: null, workspace };
+    }
+    const matched = this.findLeafForWindow(workspace, targetWindow);
+    if (matched) {
+      console.log(LOG_PREFIX2, "resolveLeafFromEvent matched leaf", this.describeLeaf(matched));
+      return { leaf: matched, preferredWindow: targetWindow, workspace };
+    }
+    const fallback = this.selectLeaf(workspace, targetWindow);
+    console.log(LOG_PREFIX2, "resolveLeafFromEvent fallback leaf", this.describeLeaf(fallback));
+    return { leaf: fallback, preferredWindow: targetWindow, workspace };
+  }
+  getEventWindow(evt) {
+    const eventView = (evt == null ? void 0 : evt.view) || null;
+    if (eventView) {
+      return eventView;
+    }
+    const maybeActiveWindow = globalThis.activeWindow;
+    if (maybeActiveWindow) {
+      return maybeActiveWindow;
+    }
+    if (typeof window !== "undefined") {
+      return window;
+    }
+    return null;
+  }
+  findLeafForWindow(workspace, targetWindow) {
+    let resolved = null;
+    workspace.iterateAllLeaves((leaf) => {
+      if (resolved) {
+        return;
+      }
+      const leafWindow = this.getLeafWindow(leaf);
+      if (leafWindow === targetWindow) {
+        resolved = leaf;
+      }
+    });
+    return resolved;
+  }
+  createLeafInWindow(workspace, targetWindow) {
+    try {
+      const newLeaf = workspace.getLeaf(true);
+      if (newLeaf) {
+        console.log(LOG_PREFIX2, "createLeafInWindow via workspace.getLeaf(true)", this.describeLeaf(newLeaf));
+        const newLeafWindow = this.getLeafWindow(newLeaf);
+        if (newLeafWindow && newLeafWindow !== targetWindow) {
+          console.warn(LOG_PREFIX2, "createLeafInWindow leaf belongs to another window", {
+            targetWindow: this.describeWindow(targetWindow),
+            leafWindow: this.describeWindow(newLeafWindow)
+          });
+        }
+        return newLeaf;
+      }
+    } catch (error) {
+      console.warn(LOG_PREFIX2, "createLeafInWindow workspace.getLeaf(true) failed", error);
+    }
+    console.log(LOG_PREFIX2, "createLeafInWindow unavailable", this.describeWindow(targetWindow));
+    return null;
+  }
+  getLeafWindow(leaf) {
+    var _a4, _b2, _c, _d;
+    return (_d = (_c = (_b2 = (_a4 = leaf == null ? void 0 : leaf.view) == null ? void 0 : _a4.containerEl) == null ? void 0 : _b2.ownerDocument) == null ? void 0 : _c.defaultView) != null ? _d : null;
+  }
+  getWorkspaceForLeaf(leaf) {
+    var _a4, _b2;
+    const win = this.getLeafWindow(leaf);
+    return (_b2 = (_a4 = this.getWindowContext(win)) == null ? void 0 : _a4.app.workspace) != null ? _b2 : null;
+  }
+  getWindowContext(win) {
+    var _a4;
+    if (!win) {
+      return null;
+    }
+    return (_a4 = this.windowContexts.get(win)) != null ? _a4 : null;
+  }
+  selectLeaf(workspace, preferredWindow) {
+    console.log(LOG_PREFIX2, "selectLeaf", {
+      preferredWindow: this.describeWindow(preferredWindow),
+      workspaceIsMain: workspace === this.app.workspace
+    });
+    const activeLeaf = workspace.activeLeaf;
+    if (activeLeaf && (!preferredWindow || this.getLeafWindow(activeLeaf) === preferredWindow)) {
+      console.log(LOG_PREFIX2, "selectLeaf -> activeLeaf");
+      return activeLeaf;
+    }
+    const mostRecent = workspace.getMostRecentLeaf();
+    if (mostRecent && (!preferredWindow || this.getLeafWindow(mostRecent) === preferredWindow)) {
+      console.log(LOG_PREFIX2, "selectLeaf -> mostRecent");
+      return mostRecent;
+    }
+    if (preferredWindow) {
+      let candidate = null;
+      workspace.iterateAllLeaves((leaf) => {
+        if (candidate) {
+          return;
+        }
+        if (this.getLeafWindow(leaf) === preferredWindow) {
+          candidate = leaf;
+        }
+      });
+      if (candidate) {
+        console.log(LOG_PREFIX2, "selectLeaf -> candidateFromIteration", this.describeLeaf(candidate));
+        return candidate;
+      }
+      return null;
+    }
+    const fallback = workspace.getLeaf(false);
+    console.log(LOG_PREFIX2, "selectLeaf -> workspace.getLeaf(false)", this.describeLeaf(fallback));
+    return fallback;
+  }
+  describeLeaf(leaf) {
+    var _a4;
+    if (!leaf) {
+      return null;
+    }
+    let type;
+    try {
+      type = leaf.getViewState().type;
+    } catch (err) {
+      type = void 0;
+    }
+    const leafWindow = this.getLeafWindow(leaf);
+    return {
+      id: (_a4 = leaf.id) != null ? _a4 : void 0,
+      type,
+      window: this.describeWindow(leafWindow)
+    };
+  }
+  describeWindow(win) {
+    var _a4;
+    if (!win) {
+      return null;
+    }
+    let href;
+    try {
+      href = (_a4 = win.location) == null ? void 0 : _a4.href;
+    } catch (err) {
+      href = void 0;
+    }
+    return {
+      id: this.getWindowId(win),
+      href,
+      isMain: win === window,
+      managed: this.windowContexts.has(win)
+    };
+  }
+  getWindowId(win) {
+    let id = this.windowIds.get(win);
+    if (!id) {
+      id = `win-${Math.random().toString(36).slice(2, 8)}`;
+      this.windowIds.set(win, id);
+    }
+    return id;
   }
 };

@@ -4,6 +4,8 @@ import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 
+const LOG_PREFIX = "[TileLineBase]";
+
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
 interface TableViewState extends Record<string, unknown> {
@@ -451,12 +453,14 @@ export class TableView extends ItemView {
 		const container = this.containerEl.children[1];
 		container.empty();
 
-		// 🔍 调试：检查 render 是否被调用
-		console.log('=== TableView.render 开始 ===');
-		console.log('container:', container);
-		console.log('container.ownerDocument:', (container as HTMLElement).ownerDocument);
-		console.log('container.ownerDocument === document:', (container as HTMLElement).ownerDocument === document);
-		console.log('==============================');
+		const ownerDoc = (container as HTMLElement).ownerDocument;
+		const ownerWindow = ownerDoc?.defaultView ?? null;
+		console.log(LOG_PREFIX, 'TableView.render start', {
+			file: this.file?.path,
+			containerTag: (container as HTMLElement).tagName,
+			containerClass: (container as HTMLElement).className,
+			window: this.describeWindow(ownerWindow)
+		});
 
 		if (!this.file) {
 			container.createDiv({ text: "未选择文件" });
@@ -517,7 +521,6 @@ export class TableView extends ItemView {
 		];
 
 		// 根据 Obsidian 主题选择 AG Grid 主题（支持新窗口）
-		const ownerDoc = (container as HTMLElement).ownerDocument;
 		const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
 		const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
 
@@ -525,91 +528,99 @@ export class TableView extends ItemView {
 		const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
 
 		// 销毁旧的表格实例（如果存在）
-		if (this.gridAdapter) {
-			this.gridAdapter.destroy();
-		}
 
-		// 创建并挂载新的表格
-		this.gridAdapter = new AgGridAdapter();
-		this.gridAdapter.mount(tableContainer, columns, data, {
-			onStatusChange: (rowId: string, newStatus: TaskStatus) => {
-				this.onStatusChange(rowId, newStatus);
+		const containerWindow = ownerDoc?.defaultView ?? window;
+		console.log(LOG_PREFIX, 'TableView.render container window', this.describeWindow(containerWindow));
+
+		const mountGrid = () => {
+			// 销毁旧的表格实例（如果存在）
+			if (this.gridAdapter) {
+				this.gridAdapter.destroy();
 			}
-		});
-		this.tableContainer = tableContainer;
-		this.updateTableContainerSize();
 
-		// 监听单元格编辑事件
-		this.gridAdapter.onCellEdit((event) => {
-			this.onCellEdit(event);
-		});
+			// 创建并挂载新的表格
+			this.gridAdapter = new AgGridAdapter();
+			this.gridAdapter.mount(tableContainer, columns, data, {
+				onStatusChange: (rowId: string, newStatus: TaskStatus) => {
+					this.onStatusChange(rowId, newStatus);
+				}
+			});
+			this.tableContainer = tableContainer;
+			this.updateTableContainerSize();
 
-		// 监听表头编辑事件（暂未实现）
-		this.gridAdapter.onHeaderEdit((event) => {
-			// TODO: 实现表头编辑
-		});
+			// 监听单元格编辑事件
+			this.gridAdapter.onCellEdit((event) => {
+				this.onCellEdit(event);
+			});
 
-		// 监听最后一行 Enter 事件（自动新增行）
-		this.gridAdapter.onEnterAtLastRow?.((field) => {
-			const oldRowCount = this.blocks.length;
-			this.addRow(oldRowCount); // 在最后添加新行（oldRowCount 就是新行的索引）
+			// 监听表头编辑事件（暂未实现）
+			this.gridAdapter.onHeaderEdit((event) => {
+				// TODO: 实现表头编辑
+			});
 
-			// 多次尝试聚焦和编辑，确保成功
-			const tryEdit = (attempt: number = 0) => {
-				if (!this.gridAdapter || attempt > 5) return;
+			// 监听最后一行 Enter 事件（自动新增行）
+			this.gridAdapter.onEnterAtLastRow?.((field) => {
+				const oldRowCount = this.blocks.length;
+				this.addRow(oldRowCount);
 
-				const api = (this.gridAdapter as any).gridApi;
-				if (!api) return;
+				// 多次尝试聚焦和编辑，确保成功
+				const tryEdit = (attempt: number = 0) => {
+					if (!this.gridAdapter || attempt > 5) return;
 
-				// 确保新行可见
-				api.ensureIndexVisible(oldRowCount);
-				const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
-				newRowNode?.setSelected(true, true);
-				api.setFocusedCell(oldRowCount, field);
+					const api = (this.gridAdapter as any).gridApi;
+					if (!api) return;
 
-				// 开始编辑新行的同一列
-				api.startEditingCell({
-					rowIndex: oldRowCount,
-					colKey: field
-				});
+					api.ensureIndexVisible(oldRowCount);
+					const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
+					newRowNode?.setSelected(true, true);
+					api.setFocusedCell(oldRowCount, field);
 
-				// 如果没有成功进入编辑，延迟重试
-				setTimeout(() => {
-					const editingCells = api.getEditingCells();
-					if (editingCells.length === 0) {
-						tryEdit(attempt + 1);
-					}
-				}, 50);
-			};
+					api.startEditingCell({
+						rowIndex: oldRowCount,
+						colKey: field
+					});
 
-			// 延迟执行，等待 updateData 完成
-			setTimeout(() => tryEdit(), 50);
-		});
+					setTimeout(() => {
+						const editingCells = api.getEditingCells();
+						if (editingCells.length === 0) {
+							tryEdit(attempt + 1);
+						}
+					}, 50);
+				};
 
-		// 添加右键菜单监听
-		this.setupContextMenu(tableContainer);
+				setTimeout(() => tryEdit(), 50);
+			});
 
-		// 添加键盘快捷键
-		this.setupKeyboardShortcuts(tableContainer);
+			// 添加右键菜单监听
+			this.setupContextMenu(tableContainer);
 
-		// 设置容器尺寸监听（处理新窗口和窗口调整大小）
-		this.setupResizeObserver(tableContainer);
+			// 添加键盘快捷键
+			this.setupKeyboardShortcuts(tableContainer);
 
-		// 多次尝试调整列宽，确保在新窗口中也能正确初始化
-		// 第一次：立即尝试（可能容器尺寸还未确定）
-		setTimeout(() => {
-			this.gridAdapter?.resizeColumns?.();
-		}, 100);
+			// 设置容器尺寸监听（处理新窗口和窗口调整大小）
+			this.setupResizeObserver(tableContainer);
 
-		// 第二次：延迟尝试（容器尺寸应该已确定）
-		setTimeout(() => {
-			this.gridAdapter?.resizeColumns?.();
-		}, 300);
+			// 多次尝试调整列宽，确保在新窗口中也能正确初始化
+			setTimeout(() => {
+				this.gridAdapter?.resizeColumns?.();
+			}, 100);
 
-		// 第三次：最后一次尝试（确保在所有布局完成后）
-		setTimeout(() => {
-			this.gridAdapter?.resizeColumns?.();
-		}, 800);
+			setTimeout(() => {
+				this.gridAdapter?.resizeColumns?.();
+			}, 300);
+
+			setTimeout(() => {
+				this.gridAdapter?.resizeColumns?.();
+			}, 800);
+		};
+
+		if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
+			containerWindow.requestAnimationFrame(() => {
+				mountGrid();
+			});
+		} else {
+			mountGrid();
+		}
 	}
 
 	/**
@@ -1463,6 +1474,24 @@ export class TableView extends ItemView {
 	 */
 	private renameColumn(columnId: string, newName: string): void {
 		console.warn('renameColumn not implemented yet. Coming in T0010+.');
+	}
+
+	private describeWindow(win: Window | null | undefined): Record<string, unknown> | null {
+		if (!win) {
+			return null;
+		}
+
+		let href: string | undefined;
+		try {
+			href = win.location?.href;
+		} catch (error) {
+			href = undefined;
+		}
+
+		return {
+			href,
+			isMain: win === window
+		};
 	}
 
 	async onClose(): Promise<void> {

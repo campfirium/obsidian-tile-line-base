@@ -29,7 +29,9 @@
       "Bash(git fsck:*)",
       "Bash(git cat-file:*)",
       "WebSearch",
-      "WebFetch(domain:www.ag-grid.com)"
+      "WebFetch(domain:www.ag-grid.com)",
+      "Bash(node:*)",
+      "WebFetch(domain:obsidian.md)"
     ],
     "deny": [],
     "ask": []

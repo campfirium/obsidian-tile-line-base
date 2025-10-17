@@ -55302,8 +55302,10 @@ var StatusCellRenderer = class {
    * 初始化渲染器
    */
   init(params) {
+    var _a4;
     this.params = params;
-    this.eGui = document.createElement("div");
+    const doc = ((_a4 = params.eGridCell) == null ? void 0 : _a4.ownerDocument) || document;
+    this.eGui = doc.createElement("div");
     this.eGui.className = "tlb-status-cell";
     this.eGui.style.display = "flex";
     this.eGui.style.alignItems = "center";
@@ -55515,6 +55517,72 @@ var StatusCellRenderer = class {
   }
 };
 
+// src/grid/editors/TextCellEditor.ts
+var TextCellEditor2 = class {
+  constructor() {
+    this.initialValue = "";
+  }
+  init(params) {
+    var _a4, _b2, _c, _d;
+    this.params = params;
+    const doc = ((_a4 = params.eGridCell) == null ? void 0 : _a4.ownerDocument) || document;
+    this.eInput = doc.createElement("input");
+    this.eInput.type = "text";
+    this.eInput.classList.add("ag-cell-edit-input");
+    this.eInput.style.width = "100%";
+    this.eInput.style.height = "100%";
+    this.initialValue = (_b2 = params.value) != null ? _b2 : "";
+    const eventKey = params.eventKey;
+    console.log("=== TextCellEditor.init \u5F00\u59CB ===");
+    console.log("Full params:", params);
+    console.log("params.eGridCell:", params.eGridCell);
+    console.log("params.eGridCell?.ownerDocument:", (_c = params.eGridCell) == null ? void 0 : _c.ownerDocument);
+    console.log("ownerDocument === document:", ((_d = params.eGridCell) == null ? void 0 : _d.ownerDocument) === document);
+    console.log("eventKey:", eventKey);
+    console.log("params.charPress:", params.charPress);
+    console.log("params.key:", params.key);
+    console.log("params.keyPress:", params.keyPress);
+    console.log("initialValue:", this.initialValue);
+    console.log("=== TextCellEditor.init \u7ED3\u675F ===");
+    if (eventKey && eventKey.length === 1) {
+      console.log("Using eventKey as initial value:", eventKey);
+      this.eInput.value = eventKey;
+    } else {
+      console.log("Using original value:", this.initialValue);
+      this.eInput.value = this.initialValue;
+    }
+    this.eInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.stopPropagation();
+        params.stopEditing(false);
+      } else if (event.key === "Escape") {
+        event.stopPropagation();
+        params.stopEditing(true);
+      }
+    });
+  }
+  getGui() {
+    return this.eInput;
+  }
+  afterGuiAttached() {
+    this.eInput.focus();
+    const eventKey = this.params.eventKey;
+    if (eventKey && eventKey.length === 1) {
+      this.eInput.setSelectionRange(this.eInput.value.length, this.eInput.value.length);
+    } else {
+      this.eInput.select();
+    }
+  }
+  getValue() {
+    return this.eInput.value;
+  }
+  destroy() {
+  }
+  isPopup() {
+    return false;
+  }
+};
+
 // src/grid/AgGridAdapter.ts
 ModuleRegistry.registerModules([AllCommunityModule]);
 var _AgGridAdapter = class {
@@ -55605,6 +55673,14 @@ var _AgGridAdapter = class {
       }
       return mergedColDef;
     });
+    const ownerDoc = container.ownerDocument;
+    const popupParent = ownerDoc.body;
+    console.log("=== AG Grid \u521D\u59CB\u5316 ===");
+    console.log("container:", container);
+    console.log("container.ownerDocument:", ownerDoc);
+    console.log("ownerDoc === document:", ownerDoc === document);
+    console.log("popupParent:", popupParent);
+    console.log("=======================");
     const gridOptions = {
       columnDefs: colDefs,
       rowData: rows,
@@ -55614,9 +55690,11 @@ var _AgGridAdapter = class {
       },
       // 传递上下文（包含回调函数）
       context: context || {},
+      // 设置弹出元素的父容器（支持 pop-out 窗口）
+      popupParent,
       // 编辑配置（使用单元格编辑模式而非整行编辑）
       singleClickEdit: false,
-      // 禁用单击编辑，需要双击或 F2
+      // 禁用单击编辑，双击或按键可以进入编辑
       stopEditingWhenCellsLoseFocus: true,
       // 失焦时停止编辑
       // Enter 键导航配置（Excel 风格）
@@ -55636,6 +55714,8 @@ var _AgGridAdapter = class {
         sortable: true,
         filter: true,
         resizable: true,
+        cellEditor: TextCellEditor2,
+        // 使用自定义编辑器修复首字符丢失问题
         suppressKeyboardEvent: (params) => {
           const keyEvent = params.event;
           if (keyEvent.key !== "Enter") {
@@ -56102,6 +56182,8 @@ function getCurrentLocalDateTime() {
 var TABLE_VIEW_TYPE = "tile-line-base-table";
 var TableView = class extends import_obsidian2.ItemView {
   constructor(leaf) {
+    console.log("=== TableView \u6784\u9020\u51FD\u6570\u5F00\u59CB ===");
+    console.log("leaf:", leaf);
     super(leaf);
     this.file = null;
     this.blocks = [];
@@ -56124,6 +56206,7 @@ var TableView = class extends import_obsidian2.ItemView {
     this.lastContainerWidth = 0;
     this.lastContainerHeight = 0;
     this.pendingSizeUpdateHandle = null;
+    console.log("=== TableView \u6784\u9020\u51FD\u6570\u5B8C\u6210 ===");
   }
   getViewType() {
     return TABLE_VIEW_TYPE;
@@ -56133,10 +56216,19 @@ var TableView = class extends import_obsidian2.ItemView {
     return ((_a4 = this.file) == null ? void 0 : _a4.basename) || "TileLineBase \u8868\u683C";
   }
   async setState(state, result) {
-    const file = this.app.vault.getAbstractFileByPath(state.filePath);
-    if (file instanceof import_obsidian2.TFile) {
-      this.file = file;
-      await this.render();
+    console.log("=== TableView.setState \u5F00\u59CB ===");
+    console.log("state:", state);
+    try {
+      const file = this.app.vault.getAbstractFileByPath(state.filePath);
+      console.log("file:", file);
+      if (file instanceof import_obsidian2.TFile) {
+        this.file = file;
+        await this.render();
+      }
+      console.log("=== TableView.setState \u5B8C\u6210 ===");
+    } catch (e) {
+      console.error("=== TableView.setState \u9519\u8BEF ===", e);
+      throw e;
     }
   }
   getState() {
@@ -56394,13 +56486,25 @@ var TableView = class extends import_obsidian2.ItemView {
     }
   }
   async onOpen() {
-    const container = this.containerEl.children[1];
-    container.addClass("tile-line-base-view");
+    console.log("=== TableView.onOpen \u5F00\u59CB ===");
+    try {
+      const container = this.containerEl.children[1];
+      container.addClass("tile-line-base-view");
+      console.log("=== TableView.onOpen \u5B8C\u6210 ===");
+    } catch (e) {
+      console.error("=== TableView.onOpen \u9519\u8BEF ===", e);
+      throw e;
+    }
   }
   async render() {
     var _a4, _b2;
     const container = this.containerEl.children[1];
     container.empty();
+    console.log("=== TableView.render \u5F00\u59CB ===");
+    console.log("container:", container);
+    console.log("container.ownerDocument:", container.ownerDocument);
+    console.log("container.ownerDocument === document:", container.ownerDocument === document);
+    console.log("==============================");
     if (!this.file) {
       container.createDiv({ text: "\u672A\u9009\u62E9\u6587\u4EF6" });
       return;
@@ -56444,7 +56548,8 @@ var TableView = class extends import_obsidian2.ItemView {
         return baseColDef;
       })
     ];
-    const isDarkMode = document.body.classList.contains("theme-dark");
+    const ownerDoc = container.ownerDocument;
+    const isDarkMode = ownerDoc.body.classList.contains("theme-dark");
     const themeClass = isDarkMode ? "ag-theme-alpine-dark" : "ag-theme-alpine";
     const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
     if (this.gridAdapter) {
@@ -56725,7 +56830,8 @@ var TableView = class extends import_obsidian2.ItemView {
   setupKeyboardShortcuts(tableContainer) {
     this.keydownHandler = (event) => {
       var _a4;
-      const activeElement = document.activeElement;
+      const ownerDoc = tableContainer.ownerDocument;
+      const activeElement = ownerDoc.activeElement;
       const isEditing2 = activeElement == null ? void 0 : activeElement.classList.contains("ag-cell-edit-input");
       if (isEditing2) {
         return;
@@ -57147,9 +57253,19 @@ var TableView = class extends import_obsidian2.ItemView {
 // src/main.ts
 var TileLineBasePlugin = class extends import_obsidian3.Plugin {
   async onload() {
+    console.log("=== \u6CE8\u518C TableView ===");
+    console.log("TABLE_VIEW_TYPE:", TABLE_VIEW_TYPE);
     this.registerView(
       TABLE_VIEW_TYPE,
-      (leaf) => new TableView(leaf)
+      (leaf) => {
+        var _a4, _b2, _c, _d, _e;
+        console.log("=== \u521B\u5EFA TableView \u5B9E\u4F8B ===");
+        console.log("leaf:", leaf);
+        console.log("leaf.view?.containerEl:", (_a4 = leaf.view) == null ? void 0 : _a4.containerEl);
+        console.log("leaf.view?.containerEl.ownerDocument:", (_c = (_b2 = leaf.view) == null ? void 0 : _b2.containerEl) == null ? void 0 : _c.ownerDocument);
+        console.log("ownerDocument === document:", ((_e = (_d = leaf.view) == null ? void 0 : _d.containerEl) == null ? void 0 : _e.ownerDocument) === document);
+        return new TableView(leaf);
+      }
     );
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
@@ -57164,9 +57280,14 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
       id: "toggle-table-view",
       name: "\u5207\u6362 TileLineBase \u8868\u683C\u89C6\u56FE",
       checkCallback: (checking) => {
+        console.log("=== toggle-table-view \u547D\u4EE4\u89E6\u53D1 ===");
+        console.log("checking:", checking);
         const activeLeaf = this.app.workspace.activeLeaf;
-        if (!activeLeaf)
+        console.log("activeLeaf:", activeLeaf);
+        if (!activeLeaf) {
+          console.log("\u6CA1\u6709 activeLeaf");
           return false;
+        }
         if (!checking) {
           this.toggleTableView(activeLeaf);
         }
@@ -57178,8 +57299,13 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
     this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
   }
   async openTableView(file) {
+    console.log("=== openTableView \u5F00\u59CB ===");
+    console.log("file:", file);
     const { workspace } = this.app;
+    console.log("workspace:", workspace);
     const leaf = workspace.getLeaf(false);
+    console.log("leaf:", leaf);
+    console.log("leaf.view:", leaf.view);
     await leaf.setViewState({
       type: TABLE_VIEW_TYPE,
       active: true,
@@ -57187,7 +57313,9 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
         filePath: file.path
       }
     });
+    console.log("setViewState \u5B8C\u6210");
     workspace.revealLeaf(leaf);
+    console.log("=== openTableView \u5B8C\u6210 ===");
   }
   async toggleTableView(leaf) {
     const currentView = leaf.view;

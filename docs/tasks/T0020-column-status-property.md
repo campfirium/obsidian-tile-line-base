@@ -1,4 +1,4 @@
-# T0020 - 列属性：status（待办状态）
+# T0020-column-status-property
 
 ## 需求概述
 

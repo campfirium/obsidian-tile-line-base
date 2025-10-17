@@ -90,8 +90,11 @@ export class StatusCellRenderer implements ICellRendererComp {
 	init(params: ICellRendererParams): void {
 		this.params = params;
 
+		// 从 AG Grid 的单元格元素获取正确的 document（支持 pop-out 窗口）
+		const doc = (params.eGridCell?.ownerDocument || document);
+
 		// 创建容器元素
-		this.eGui = document.createElement('div');
+		this.eGui = doc.createElement('div');
 		this.eGui.className = 'tlb-status-cell';
 		this.eGui.style.display = 'flex';
 		this.eGui.style.alignItems = 'center';

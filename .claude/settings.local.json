@@ -31,7 +31,8 @@
       "WebSearch",
       "WebFetch(domain:www.ag-grid.com)",
       "Bash(node:*)",
-      "WebFetch(domain:obsidian.md)"
+      "WebFetch(domain:obsidian.md)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

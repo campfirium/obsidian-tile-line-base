@@ -55522,11 +55522,9 @@ function createTextCellEditor() {
   return class {
     constructor() {
       this.initialValue = "";
-      this.isComposing = false;
     }
-    // 标记是否在输入法组合中
     init(params) {
-      var _a4, _b2, _c, _d;
+      var _a4, _b2;
       this.params = params;
       const doc = ((_a4 = params.eGridCell) == null ? void 0 : _a4.ownerDocument) || document;
       this.eInput = doc.createElement("input");
@@ -55534,44 +55532,10 @@ function createTextCellEditor() {
       this.eInput.classList.add("ag-cell-edit-input");
       this.eInput.style.width = "100%";
       this.eInput.style.height = "100%";
-      this.initialValue = (_b2 = params.value) != null ? _b2 : "";
-      const eventKey = params.eventKey;
-      const manualEventKey = params.manualEventKey;
-      const actualKey = eventKey || manualEventKey;
-      console.log("=== TextCellEditor.init \u5F00\u59CB (\u5DE5\u5382\u7248\u672C) ===");
-      console.log("Full params:", params);
-      console.log("params.eGridCell:", params.eGridCell);
-      console.log("params.eGridCell?.ownerDocument:", (_c = params.eGridCell) == null ? void 0 : _c.ownerDocument);
-      console.log("ownerDocument === document:", ((_d = params.eGridCell) == null ? void 0 : _d.ownerDocument) === document);
-      console.log("eventKey:", eventKey);
-      console.log("manualEventKey:", manualEventKey);
-      console.log("actualKey:", actualKey);
-      console.log("params.charPress:", params.charPress);
-      console.log("params.key:", params.key);
-      console.log("params.keyPress:", params.keyPress);
-      console.log("initialValue:", this.initialValue);
-      console.log("=== TextCellEditor.init \u7ED3\u675F ===");
-      if (actualKey && actualKey.length === 1) {
-        console.log("Using actualKey as initial value:", actualKey);
-        this.eInput.value = actualKey;
-      } else {
-        console.log("Using original value:", this.initialValue);
-        this.eInput.value = this.initialValue;
-      }
-      this.eInput.addEventListener("compositionstart", () => {
-        this.isComposing = true;
-        console.log("[TextCellEditor] \u8F93\u5165\u6CD5\u7EC4\u5408\u5F00\u59CB");
-        this.eInput.value = this.initialValue;
-      });
-      this.eInput.addEventListener("compositionend", () => {
-        this.isComposing = false;
-        console.log("[TextCellEditor] \u8F93\u5165\u6CD5\u7EC4\u5408\u7ED3\u675F\uFF0C\u5F53\u524D\u503C:", this.eInput.value);
-      });
+      this.initialValue = String((_b2 = params.value) != null ? _b2 : "");
+      this.eInput.value = this.initialValue;
       this.eInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === "Tab") {
-          if (this.isComposing) {
-            return;
-          }
           event.stopPropagation();
           params.stopEditing(false);
         } else if (event.key === "Escape") {
@@ -55585,12 +55549,7 @@ function createTextCellEditor() {
     }
     afterGuiAttached() {
       this.eInput.focus();
-      const eventKey = this.params.eventKey;
-      const manualEventKey = this.params.manualEventKey;
-      const actualKey = eventKey || manualEventKey;
-      if (actualKey && actualKey.length === 1) {
-        this.eInput.setSelectionRange(this.eInput.value.length, this.eInput.value.length);
-      } else {
+      if (this.initialValue) {
         this.eInput.select();
       }
     }
@@ -55605,6 +55564,119 @@ function createTextCellEditor() {
   };
 }
 
+// src/grid/utils/CompositionProxy.ts
+var CompositionProxy = class {
+  constructor(ownerDocument = document) {
+    this.composing = false;
+    this.asciiTimer = null;
+    this.ownerDocument = ownerDocument;
+    const el = ownerDocument.createElement("div");
+    el.setAttribute("contenteditable", "true");
+    Object.assign(el.style, {
+      position: "fixed",
+      zIndex: "2147483647",
+      // 最高层级
+      // 视觉透明（比纯 opacity:0 更稳定）
+      color: "transparent",
+      caretColor: "transparent",
+      background: "transparent",
+      outline: "none",
+      whiteSpace: "pre",
+      pointerEvents: "none"
+      // 不影响鼠标事件
+      // 不要设置 display:none 或 visibility:hidden（会导致 IME 候选窗不弹出）
+    });
+    this.host = el;
+    ownerDocument.body.appendChild(el);
+    this.host.addEventListener("compositionstart", () => {
+      this.composing = true;
+      console.log("[CompositionProxy] compositionstart - \u5F00\u59CB IME \u7EC4\u5408");
+    });
+    this.host.addEventListener("compositionend", (e) => {
+      var _a4, _b2, _c;
+      this.composing = false;
+      const text = ((_b2 = (_a4 = e.data) != null ? _a4 : this.host.textContent) != null ? _b2 : "").toString();
+      console.log("[CompositionProxy] compositionend - IME \u7EC4\u5408\u7ED3\u675F");
+      console.log("  event.data:", e.data);
+      console.log("  textContent:", this.host.textContent);
+      console.log("  \u6700\u7EC8\u6587\u672C:", text);
+      this.cleanup();
+      (_c = this.resolve) == null ? void 0 : _c.call(this, text);
+    });
+    this.host.addEventListener("input", () => {
+      if (!this.composing && this.asciiTimer == null) {
+        this.asciiTimer = window.setTimeout(() => {
+          var _a4, _b2;
+          const text = ((_a4 = this.host.textContent) != null ? _a4 : "").toString();
+          console.log("[CompositionProxy] ASCII \u5FEB\u901F\u8DEF\u5F84\u89E6\u53D1\uFF0C\u6587\u672C:", text);
+          this.cleanup();
+          (_b2 = this.resolve) == null ? void 0 : _b2.call(this, text);
+        }, 32);
+      }
+    });
+    this.host.addEventListener("keydown", (e) => {
+      var _a4;
+      if (e.key === "Escape") {
+        console.log("[CompositionProxy] Esc \u53D6\u6D88\u8F93\u5165");
+        this.cleanup();
+        (_a4 = this.reject) == null ? void 0 : _a4.call(this, "cancelled");
+      }
+    });
+  }
+  /**
+   * 清理代理层状态
+   */
+  cleanup() {
+    var _a4;
+    if (this.asciiTimer != null) {
+      window.clearTimeout(this.asciiTimer);
+      this.asciiTimer = null;
+    }
+    this.host.textContent = "";
+    const activeEl = this.ownerDocument.activeElement;
+    if (activeEl === this.host) {
+      (_a4 = activeEl.blur) == null ? void 0 : _a4.call(activeEl);
+    }
+    console.log("[CompositionProxy] cleanup \u5B8C\u6210");
+  }
+  /**
+   * 在指定矩形处激活代理层并捕获一次文本（ASCII 或 IME 最终产物）
+   *
+   * @param rect 单元格的可视矩形
+   * @returns Promise，resolve 为捕获的文本
+   */
+  captureOnceAt(rect) {
+    return new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+      const w = Math.max(8, rect.width);
+      const h = Math.max(16, rect.height);
+      Object.assign(this.host.style, {
+        left: `${Math.max(0, rect.left)}px`,
+        top: `${Math.max(0, rect.top)}px`,
+        width: `${w}px`,
+        height: `${h}px`,
+        lineHeight: `${h}px`
+        // 行高与单元格高度匹配，稳定候选窗锚点
+      });
+      console.log("[CompositionProxy] \u6FC0\u6D3B\u4EE3\u7406\u5C42");
+      console.log("  \u4F4D\u7F6E:", { left: rect.left, top: rect.top, width: w, height: h });
+      this.host.textContent = "";
+      this.host.focus();
+      console.log("[CompositionProxy] \u5DF2\u805A\u7126\uFF0C\u7B49\u5F85\u8F93\u5165...");
+    });
+  }
+  /**
+   * 销毁代理层
+   */
+  destroy() {
+    this.cleanup();
+    if (this.host.parentNode) {
+      this.host.parentNode.removeChild(this.host);
+    }
+  }
+};
+
 // src/grid/AgGridAdapter.ts
 ModuleRegistry.registerModules([AllCommunityModule]);
 var _AgGridAdapter = class {
@@ -55613,8 +55685,27 @@ var _AgGridAdapter = class {
     this.lastAutoSizeTimestamp = 0;
     this.shouldAutoSizeOnNextResize = false;
     this.rowHeightResetHandle = null;
-    // 🔑 用于在 pop-out 窗口中捕获启动编辑的按键
-    this.lastKeyPressedForEdit = null;
+    // Composition Proxy：每个 Document 一个代理层
+    this.proxyByDoc = /* @__PURE__ */ new WeakMap();
+    this.capturing = false;
+  }
+  // 标记是否正在捕获输入
+  /**
+   * 获取或创建指定 Document 的 CompositionProxy
+   */
+  getProxy(doc) {
+    let proxy = this.proxyByDoc.get(doc);
+    if (!proxy) {
+      proxy = new CompositionProxy(doc);
+      this.proxyByDoc.set(doc, proxy);
+    }
+    return proxy;
+  }
+  /**
+   * 判断是否为可打印字符
+   */
+  isPrintable(e) {
+    return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
   }
   /**
    * 挂载表格到指定容器
@@ -55732,6 +55823,54 @@ var _AgGridAdapter = class {
       onCellEditingStopped: (event) => {
         this.handleCellEdit(event);
       },
+      // 🔑 处理首键启动编辑（Composition Proxy Overlay 方案）
+      // 参考：
+      // - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2.md
+      // - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2分析.md
+      onCellKeyDown: (params) => {
+        const keyEvent = params.event;
+        if (this.capturing || params.editing)
+          return;
+        if (!this.isPrintable(keyEvent))
+          return;
+        this.capturing = true;
+        const targetEl = keyEvent.target;
+        const doc = targetEl.ownerDocument || document;
+        const cellEl = targetEl.closest(".ag-cell");
+        if (!cellEl) {
+          console.warn("[AgGridAdapter] \u672A\u627E\u5230\u5355\u5143\u683C\u5143\u7D20");
+          this.capturing = false;
+          return;
+        }
+        const rect = cellEl.getBoundingClientRect();
+        console.log("[AgGridAdapter] \u53EF\u6253\u5370\u5B57\u7B26\u6309\u4E0B\uFF0C\u542F\u52A8 CompositionProxy");
+        console.log("  key:", keyEvent.key);
+        console.log("  \u5355\u5143\u683C\u77E9\u5F62:", { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+        const api = params.api;
+        const rowIndex = params.rowIndex;
+        const colKey = params.column.getColId();
+        this.getProxy(doc).captureOnceAt(rect).then((text) => {
+          console.log("[AgGridAdapter] CompositionProxy \u8FD4\u56DE\u6587\u672C:", text);
+          api.startEditingCell({ rowIndex, colKey });
+          queueMicrotask(() => {
+            const editorRoot = doc.querySelector(".ag-cell-editor");
+            const input = editorRoot == null ? void 0 : editorRoot.querySelector("input,textarea");
+            if (!input) {
+              console.warn("[AgGridAdapter] \u672A\u627E\u5230\u7F16\u8F91\u5668\u8F93\u5165\u6846");
+              return;
+            }
+            input.value = text != null ? text : "";
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+            input.focus();
+            console.log("[AgGridAdapter] \u5DF2\u5C06\u6587\u672C\u5199\u56DE\u7F16\u8F91\u5668:", text);
+          });
+        }).catch((err) => {
+          console.error("[AgGridAdapter] CompositionProxy \u5931\u8D25:", err);
+        }).finally(() => {
+          this.capturing = false;
+        });
+      },
       // 默认列配置
       defaultColDef: {
         editable: true,
@@ -55740,26 +55879,14 @@ var _AgGridAdapter = class {
         resizable: true,
         cellEditor: createTextCellEditor(),
         // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
-        cellEditorParams: (params) => {
-          const capturedKey = this.lastKeyPressedForEdit;
-          this.lastKeyPressedForEdit = null;
-          return {
-            ...params,
-            // 如果 AG Grid 没有传递 eventKey（pop-out 窗口的情况），使用我们捕获的按键
-            manualEventKey: capturedKey
-          };
-        },
         suppressKeyboardEvent: (params) => {
           const keyEvent = params.event;
+          if (this.capturing) {
+            return true;
+          }
           if (!params.editing && keyEvent.type === "keydown") {
-            if (keyEvent.isComposing) {
-              console.log("[AgGridAdapter] \u68C0\u6D4B\u5230\u8F93\u5165\u6CD5\u7EC4\u5408\uFF0C\u8DF3\u8FC7\u6309\u952E\u6355\u83B7");
-              return false;
-            }
-            const isPrintableChar = keyEvent.key.length === 1 && !keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;
-            if (isPrintableChar) {
-              this.lastKeyPressedForEdit = keyEvent.key;
-              console.log("[AgGridAdapter] \u6355\u83B7\u542F\u52A8\u7F16\u8F91\u7684\u6309\u952E:", keyEvent.key);
+            if (this.isPrintable(keyEvent)) {
+              return true;
             }
           }
           if (keyEvent.key !== "Enter") {

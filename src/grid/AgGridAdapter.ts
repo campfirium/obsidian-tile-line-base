@@ -215,7 +215,7 @@ export class AgGridAdapter implements GridAdapter {
 			// 参考：
 			// - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2.md
 			// - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2分析.md
-			onCellKeyDown: async (params: any) => {
+			onCellKeyDown: (params: any) => {
 				const keyEvent = params.event as KeyboardEvent;
 
 				// 合成期间或已在编辑，不处理
@@ -230,63 +230,65 @@ export class AgGridAdapter implements GridAdapter {
 				const targetEl = keyEvent.target as HTMLElement;
 				const doc = targetEl.ownerDocument || document;
 
-				try {
-					// 找到单元格元素
-					const cellEl = targetEl.closest('.ag-cell') as HTMLElement;
-					if (!cellEl) {
-						console.warn('[AgGridAdapter] 未找到单元格元素');
-						return;
-					}
-
-					// 获取单元格的可视矩形
-					const rect = cellEl.getBoundingClientRect();
-
-					console.log('[AgGridAdapter] 可打印字符按下，启动 CompositionProxy');
-					console.log('  key:', keyEvent.key);
-					console.log('  单元格矩形:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-
-					// 不要 preventDefault —— 让"首键默认输入"落入 overlay
-					// keyEvent.preventDefault(); // ❌ 不要阻止
-
-					// 使用 CompositionProxy 捕获文本
-					const text = await this.getProxy(doc).captureOnceAt(rect);
-
-					console.log('[AgGridAdapter] CompositionProxy 返回文本:', text);
-
-					// 启动真正的编辑器
-					const api = params.api as GridApi;
-					const rowIndex = params.rowIndex;
-					const colKey = params.column.getColId();
-
-					api.startEditingCell({ rowIndex, colKey });
-
-					// 将捕获的文本写回编辑器输入框
-					queueMicrotask(() => {
-						const editorRoot = doc.querySelector('.ag-cell-editor');
-						const input = editorRoot?.querySelector('input,textarea') as HTMLInputElement | HTMLTextAreaElement | null;
-
-						if (!input) {
-							console.warn('[AgGridAdapter] 未找到编辑器输入框');
-							return;
-						}
-
-						// 写回策略：覆盖（与 Excel 一致）
-						input.value = text ?? '';
-
-						// 光标置尾
-						const len = input.value.length;
-						input.setSelectionRange(len, len);
-
-						// 聚焦
-						input.focus();
-
-						console.log('[AgGridAdapter] 已将文本写回编辑器:', text);
-					});
-				} catch (err) {
-					console.error('[AgGridAdapter] CompositionProxy 失败:', err);
-				} finally {
+				// 找到单元格元素
+				const cellEl = targetEl.closest('.ag-cell') as HTMLElement;
+				if (!cellEl) {
+					console.warn('[AgGridAdapter] 未找到单元格元素');
 					this.capturing = false;
+					return;
 				}
+
+				// 获取单元格的可视矩形
+				const rect = cellEl.getBoundingClientRect();
+
+				console.log('[AgGridAdapter] 可打印字符按下，启动 CompositionProxy');
+				console.log('  key:', keyEvent.key);
+				console.log('  单元格矩形:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+
+				// 不要 preventDefault —— 让"首键默认输入"落入 overlay
+				// keyEvent.preventDefault(); // ❌ 不要阻止
+
+				// 🔑 启动异步捕获（不要 await，立即返回）
+				const api = params.api as GridApi;
+				const rowIndex = params.rowIndex;
+				const colKey = params.column.getColId();
+
+				this.getProxy(doc).captureOnceAt(rect)
+					.then((text) => {
+						console.log('[AgGridAdapter] CompositionProxy 返回文本:', text);
+
+						// 启动真正的编辑器
+						api.startEditingCell({ rowIndex, colKey });
+
+						// 将捕获的文本写回编辑器输入框
+						queueMicrotask(() => {
+							const editorRoot = doc.querySelector('.ag-cell-editor');
+							const input = editorRoot?.querySelector('input,textarea') as HTMLInputElement | HTMLTextAreaElement | null;
+
+							if (!input) {
+								console.warn('[AgGridAdapter] 未找到编辑器输入框');
+								return;
+							}
+
+							// 写回策略：覆盖（与 Excel 一致）
+							input.value = text ?? '';
+
+							// 光标置尾
+							const len = input.value.length;
+							input.setSelectionRange(len, len);
+
+							// 聚焦
+							input.focus();
+
+							console.log('[AgGridAdapter] 已将文本写回编辑器:', text);
+						});
+					})
+					.catch((err) => {
+						console.error('[AgGridAdapter] CompositionProxy 失败:', err);
+					})
+					.finally(() => {
+						this.capturing = false;
+					});
 			},
 
 			// 默认列配置

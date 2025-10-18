@@ -32,6 +32,7 @@ import {
 	getStatusIcon
 } from '../renderers/StatusCellRenderer';
 import { createTextCellEditor } from './editors/TextCellEditor';
+import { CompositionProxy } from './utils/CompositionProxy';
 import { setIcon } from 'obsidian';
 
 // 注册 AG Grid Community 模块
@@ -47,8 +48,28 @@ export class AgGridAdapter implements GridAdapter {
 	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
-	// 🔑 用于在 pop-out 窗口中捕获启动编辑的按键
-	private lastKeyPressedForEdit: string | null = null;
+	// Composition Proxy：每个 Document 一个代理层
+	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
+	private capturing = false; // 标记是否正在捕获输入
+
+	/**
+	 * 获取或创建指定 Document 的 CompositionProxy
+	 */
+	private getProxy(doc: Document): CompositionProxy {
+		let proxy = this.proxyByDoc.get(doc);
+		if (!proxy) {
+			proxy = new CompositionProxy(doc);
+			this.proxyByDoc.set(doc, proxy);
+		}
+		return proxy;
+	}
+
+	/**
+	 * 判断是否为可打印字符
+	 */
+	private isPrintable(e: KeyboardEvent): boolean {
+		return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+	}
 
 	/**
 	 * 挂载表格到指定容器
@@ -157,6 +178,7 @@ export class AgGridAdapter implements GridAdapter {
 		console.log('popupParent:', popupParent);
 		console.log('=======================');
 
+
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
@@ -189,6 +211,84 @@ export class AgGridAdapter implements GridAdapter {
 				this.handleCellEdit(event);
 			},
 
+			// 🔑 处理首键启动编辑（Composition Proxy Overlay 方案）
+			// 参考：
+			// - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2.md
+			// - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2分析.md
+			onCellKeyDown: async (params: any) => {
+				const keyEvent = params.event as KeyboardEvent;
+
+				// 合成期间或已在编辑，不处理
+				if (this.capturing || params.editing) return;
+
+				// 只处理可打印字符
+				if (!this.isPrintable(keyEvent)) return;
+
+				// 标记为捕获状态
+				this.capturing = true;
+
+				const targetEl = keyEvent.target as HTMLElement;
+				const doc = targetEl.ownerDocument || document;
+
+				try {
+					// 找到单元格元素
+					const cellEl = targetEl.closest('.ag-cell') as HTMLElement;
+					if (!cellEl) {
+						console.warn('[AgGridAdapter] 未找到单元格元素');
+						return;
+					}
+
+					// 获取单元格的可视矩形
+					const rect = cellEl.getBoundingClientRect();
+
+					console.log('[AgGridAdapter] 可打印字符按下，启动 CompositionProxy');
+					console.log('  key:', keyEvent.key);
+					console.log('  单元格矩形:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+
+					// 不要 preventDefault —— 让"首键默认输入"落入 overlay
+					// keyEvent.preventDefault(); // ❌ 不要阻止
+
+					// 使用 CompositionProxy 捕获文本
+					const text = await this.getProxy(doc).captureOnceAt(rect);
+
+					console.log('[AgGridAdapter] CompositionProxy 返回文本:', text);
+
+					// 启动真正的编辑器
+					const api = params.api as GridApi;
+					const rowIndex = params.rowIndex;
+					const colKey = params.column.getColId();
+
+					api.startEditingCell({ rowIndex, colKey });
+
+					// 将捕获的文本写回编辑器输入框
+					queueMicrotask(() => {
+						const editorRoot = doc.querySelector('.ag-cell-editor');
+						const input = editorRoot?.querySelector('input,textarea') as HTMLInputElement | HTMLTextAreaElement | null;
+
+						if (!input) {
+							console.warn('[AgGridAdapter] 未找到编辑器输入框');
+							return;
+						}
+
+						// 写回策略：覆盖（与 Excel 一致）
+						input.value = text ?? '';
+
+						// 光标置尾
+						const len = input.value.length;
+						input.setSelectionRange(len, len);
+
+						// 聚焦
+						input.focus();
+
+						console.log('[AgGridAdapter] 已将文本写回编辑器:', text);
+					});
+				} catch (err) {
+					console.error('[AgGridAdapter] CompositionProxy 失败:', err);
+				} finally {
+					this.capturing = false;
+				}
+			},
+
 			// 默认列配置
 			defaultColDef: {
 				editable: true,
@@ -196,42 +296,25 @@ export class AgGridAdapter implements GridAdapter {
 				filter: true,
 				resizable: true,
 				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
-				cellEditorParams: (params: any) => {
-					// 🔑 传递我们手动捕获的按键（用于 pop-out 窗口）
-					const capturedKey = this.lastKeyPressedForEdit;
-					// 清除状态，避免影响下次编辑
-					this.lastKeyPressedForEdit = null;
-
-					return {
-						...params,
-						// 如果 AG Grid 没有传递 eventKey（pop-out 窗口的情况），使用我们捕获的按键
-						manualEventKey: capturedKey
-					};
-				},
 				suppressKeyboardEvent: (params: any) => {
 					const keyEvent = params.event as KeyboardEvent;
 
-					// 🔑 捕获可打印字符，用于 pop-out 窗口的首字符修复
-					// 在 pop-out 窗口中，AG Grid 不会传递 eventKey，所以我们手动捕获
+					// 合成期间一刀切：任何键都别给 AG Grid
+					// 避免方向键、Enter、Tab 被 AG Grid 抢走（它们会参与 IME 候选选择）
+					if (this.capturing) {
+						return true;
+					}
+
+					// 🔑 我们通过 onCellKeyDown 接管首键启动编辑
+					// 阻止 AG Grid 自己的首键启动逻辑
 					if (!params.editing && keyEvent.type === 'keydown') {
-						// 🔑 如果按键事件是输入法组合的一部分，阻止 AG Grid 启动编辑
-						// 这样可以避免截断拼音（如 "ni" 被截断成 "n" + "i"）
-						if (keyEvent.isComposing) {
-							console.log('[AgGridAdapter] 检测到输入法组合，阻止启动编辑');
-							return true; // 返回 true 阻止 AG Grid 处理这个按键
-						}
-
-						// 判断是否为可打印字符（单个字符，非修饰键）
-						const isPrintableChar = keyEvent.key.length === 1 &&
-							!keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;
-
-						if (isPrintableChar) {
-							// 存储这个按键，稍后在编辑器初始化时使用
-							this.lastKeyPressedForEdit = keyEvent.key;
-							console.log('[AgGridAdapter] 捕获启动编辑的按键:', keyEvent.key);
+						if (this.isPrintable(keyEvent)) {
+							// 阻止 AG Grid 的默认首键启动，由 onCellKeyDown 处理
+							return true;
 						}
 					}
 
+					// Enter 键的特殊处理（最后一行等）
 					if (keyEvent.key !== 'Enter') {
 						return false;
 					}

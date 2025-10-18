@@ -375,15 +375,142 @@ export function createTextCellEditor() {
 
 ---
 
+## 尝试 4：CompositionProxy - 覆盖式透明捕获（失败）
+
+### 设计思路
+
+**核心理念**：创建一个视觉上透明但功能完整的覆盖层输入框，直接覆盖在单元格上方。
+
+**实现策略**：
+1. 检测到可打印字符后，在单元格上方创建透明的 `contenteditable` 元素
+2. 将焦点切换到该元素，让首字符和后续 IME 输入都进入该元素
+3. 等待 IME 组合完成或 ASCII 超时
+4. 将捕获的文本传递给真实编辑器
+
+### 实现代码
+
+**CompositionProxy.ts**：
+```typescript
+export class CompositionProxy {
+    private overlay: HTMLDivElement;
+    private composing: boolean = false;
+    private asciiTimer: NodeJS.Timeout | null = null;
+    private ownerDocument: Document;
+
+    constructor(ownerDocument: Document = document) {
+        this.ownerDocument = ownerDocument;
+        const el = ownerDocument.createElement('div');
+        el.setAttribute('contenteditable', 'true');
+        Object.assign(el.style, {
+            position: 'fixed',
+            zIndex: '2147483647',
+            color: 'transparent',
+            caretColor: 'transparent',
+            background: 'transparent',
+            outline: 'none',
+            whiteSpace: 'pre',
+            // ... 其他样式
+        });
+        this.ownerDocument.body.appendChild(el);
+        this.overlay = el;
+    }
+
+    captureOnceAt(rect: DOMRect): Promise<string | null> {
+        return new Promise<string | null>((resolve) => {
+            // 定位到单元格位置
+            Object.assign(this.overlay.style, {
+                left: `${rect.left}px`,
+                top: `${rect.top}px`,
+                width: `${rect.width}px`,
+                height: `${rect.height}px`,
+            });
+
+            this.overlay.textContent = '';
+            this.overlay.focus();
+
+            // 监听 compositionstart/compositionend 判断 IME
+            // 或使用超时机制判断 ASCII
+            // ...
+        });
+    }
+}
+```
+
+**AgGridAdapter.ts**：
+```typescript
+onCellKeyDown: (params: any) => {
+    const keyEvent = params.event as KeyboardEvent;
+    const isPrintableChar = keyEvent.key.length === 1 &&
+        !keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;
+
+    if (!isPrintableChar) return;
+
+    const cellEl = targetEl.closest('.ag-cell') as HTMLElement;
+    const rect = cellEl.getBoundingClientRect();
+
+    // 🔑 启动异步捕获（不阻塞返回）
+    this.getProxy(doc).captureOnceAt(rect)
+        .then((text) => {
+            // 启动真正的编辑器
+            api.startEditingCell({ rowIndex, colKey });
+
+            // 将捕获的文本写回编辑器
+            queueMicrotask(() => {
+                const input = doc.querySelector('.ag-cell-editor input');
+                if (input) {
+                    input.value = text ?? '';
+                    input.setSelectionRange(text.length, text.length);
+                }
+            });
+        });
+}
+```
+
+### 测试结果
+
+**失败**。
+
+**失败原因**：
+1. **焦点切换时机问题**：
+   - `onCellKeyDown` 中调用 `overlay.focus()`，但焦点切换不是同步的
+   - 首字符的 `keydown` 事件已经触发，还没有进入 overlay
+   - 导致首字符丢失
+
+2. **异步处理的矛盾**：
+   - 将 `onCellKeyDown` 改为非 async，启动异步捕获但不等待
+   - 这样可以避免阻塞 AG Grid 的事件处理
+   - 但同时也意味着首字符的按键事件无法被 overlay 捕获
+
+3. **本质问题**：
+   - 浏览器的事件传递机制：`keydown` → 焦点元素处理 → `keypress` → `input`
+   - 在 `keydown` 阶段切换焦点，已经晚了
+   - 首字符的按键事件已经绑定到原来的焦点元素，无法重定向
+
+### 根本矛盾
+
+**覆盖层方案的核心矛盾**：
+- 需要在 `keydown` 时切换焦点到 overlay
+- 但 `keydown` 时按键事件已经开始处理，无法重定向到新的焦点元素
+- 首字符永远会丢失
+
+**可能的改进**：
+- 预先创建 overlay 并保持焦点？→ 会破坏 AG Grid 的焦点管理
+- 使用全局 `keydown` 捕获？→ 会影响所有其他功能的按键处理
+
+**结论**：覆盖层方案理论上比隐藏输入框更好（用户可见、位置正确），但仍然无法解决首字符捕获的时机问题。
+
+---
+
 ## 总结与建议
 
-### 三种方案对比
+### 四种方案对比
 
 | 方案 | 优点 | 缺点 | 结论 |
 |------|------|------|------|
 | 方案 1：IME 检测分流 | 理论上可以区分 ASCII 和 IME | 某些输入法不触发 IME 标记，检测不可靠 | ❌ 失败 |
 | 方案 2：隐藏缓冲输入框 | 理论上可以捕获完整输入 | 用户看不到候选列表，焦点切换不可控，首字符丢失 | ❌ 失败 |
 | 方案 3：放弃捕获首字符 | 简单可靠，IME 完全正常 | 用户需要重新输入首字符 | ✅ 推荐 |
+| 方案 4：CompositionProxy 覆盖层 | 用户可见，位置正确 | 焦点切换时机无法解决，首字符丢失 | ❌ 失败 |
 
 ### 推荐方案
 

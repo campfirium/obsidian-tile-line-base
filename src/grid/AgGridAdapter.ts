@@ -47,6 +47,9 @@ export class AgGridAdapter implements GridAdapter {
 	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
+	// 🔑 用于在 pop-out 窗口中捕获启动编辑的按键
+	private lastKeyPressedForEdit: string | null = null;
+
 	/**
 	 * 挂载表格到指定容器
 	 */
@@ -193,8 +196,35 @@ export class AgGridAdapter implements GridAdapter {
 				filter: true,
 				resizable: true,
 				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
+				cellEditorParams: (params: any) => {
+					// 🔑 传递我们手动捕获的按键（用于 pop-out 窗口）
+					const capturedKey = this.lastKeyPressedForEdit;
+					// 清除状态，避免影响下次编辑
+					this.lastKeyPressedForEdit = null;
+
+					return {
+						...params,
+						// 如果 AG Grid 没有传递 eventKey（pop-out 窗口的情况），使用我们捕获的按键
+						manualEventKey: capturedKey
+					};
+				},
 				suppressKeyboardEvent: (params: any) => {
 					const keyEvent = params.event as KeyboardEvent;
+
+					// 🔑 捕获可打印字符，用于 pop-out 窗口的首字符修复
+					// 在 pop-out 窗口中，AG Grid 不会传递 eventKey，所以我们手动捕获
+					if (!params.editing && keyEvent.type === 'keydown') {
+						// 判断是否为可打印字符（单个字符，非修饰键）
+						const isPrintableChar = keyEvent.key.length === 1 &&
+							!keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;
+
+						if (isPrintableChar) {
+							// 存储这个按键，稍后在编辑器初始化时使用
+							this.lastKeyPressedForEdit = keyEvent.key;
+							console.log('[AgGridAdapter] 捕获启动编辑的按键:', keyEvent.key);
+						}
+					}
+
 					if (keyEvent.key !== 'Enter') {
 						return false;
 					}

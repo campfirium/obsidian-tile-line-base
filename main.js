@@ -55534,20 +55534,24 @@ function createTextCellEditor() {
       this.eInput.style.height = "100%";
       this.initialValue = (_b2 = params.value) != null ? _b2 : "";
       const eventKey = params.eventKey;
+      const manualEventKey = params.manualEventKey;
+      const actualKey = eventKey || manualEventKey;
       console.log("=== TextCellEditor.init \u5F00\u59CB (\u5DE5\u5382\u7248\u672C) ===");
       console.log("Full params:", params);
       console.log("params.eGridCell:", params.eGridCell);
       console.log("params.eGridCell?.ownerDocument:", (_c = params.eGridCell) == null ? void 0 : _c.ownerDocument);
       console.log("ownerDocument === document:", ((_d = params.eGridCell) == null ? void 0 : _d.ownerDocument) === document);
       console.log("eventKey:", eventKey);
+      console.log("manualEventKey:", manualEventKey);
+      console.log("actualKey:", actualKey);
       console.log("params.charPress:", params.charPress);
       console.log("params.key:", params.key);
       console.log("params.keyPress:", params.keyPress);
       console.log("initialValue:", this.initialValue);
       console.log("=== TextCellEditor.init \u7ED3\u675F ===");
-      if (eventKey && eventKey.length === 1) {
-        console.log("Using eventKey as initial value:", eventKey);
-        this.eInput.value = eventKey;
+      if (actualKey && actualKey.length === 1) {
+        console.log("Using actualKey as initial value:", actualKey);
+        this.eInput.value = actualKey;
       } else {
         console.log("Using original value:", this.initialValue);
         this.eInput.value = this.initialValue;
@@ -55568,7 +55572,9 @@ function createTextCellEditor() {
     afterGuiAttached() {
       this.eInput.focus();
       const eventKey = this.params.eventKey;
-      if (eventKey && eventKey.length === 1) {
+      const manualEventKey = this.params.manualEventKey;
+      const actualKey = eventKey || manualEventKey;
+      if (actualKey && actualKey.length === 1) {
         this.eInput.setSelectionRange(this.eInput.value.length, this.eInput.value.length);
       } else {
         this.eInput.select();
@@ -55593,6 +55599,8 @@ var _AgGridAdapter = class {
     this.lastAutoSizeTimestamp = 0;
     this.shouldAutoSizeOnNextResize = false;
     this.rowHeightResetHandle = null;
+    // 🔑 用于在 pop-out 窗口中捕获启动编辑的按键
+    this.lastKeyPressedForEdit = null;
   }
   /**
    * 挂载表格到指定容器
@@ -55718,8 +55726,24 @@ var _AgGridAdapter = class {
         resizable: true,
         cellEditor: createTextCellEditor(),
         // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
+        cellEditorParams: (params) => {
+          const capturedKey = this.lastKeyPressedForEdit;
+          this.lastKeyPressedForEdit = null;
+          return {
+            ...params,
+            // 如果 AG Grid 没有传递 eventKey（pop-out 窗口的情况），使用我们捕获的按键
+            manualEventKey: capturedKey
+          };
+        },
         suppressKeyboardEvent: (params) => {
           const keyEvent = params.event;
+          if (!params.editing && keyEvent.type === "keydown") {
+            const isPrintableChar = keyEvent.key.length === 1 && !keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;
+            if (isPrintableChar) {
+              this.lastKeyPressedForEdit = keyEvent.key;
+              console.log("[AgGridAdapter] \u6355\u83B7\u542F\u52A8\u7F16\u8F91\u7684\u6309\u952E:", keyEvent.key);
+            }
+          }
           if (keyEvent.key !== "Enter") {
             return false;
           }
@@ -56493,6 +56517,14 @@ var TableView = class extends import_obsidian2.ItemView {
     try {
       const container = this.containerEl.children[1];
       container.addClass("tile-line-base-view");
+      if (typeof this.containerEl.onWindowMigrated === "function") {
+        this.containerEl.onWindowMigrated(() => {
+          console.log(LOG_PREFIX, "Window migrated, rebuilding view");
+          if (typeof this.leaf.rebuildView === "function") {
+            this.leaf.rebuildView();
+          }
+        });
+      }
       console.log("=== TableView.onOpen \u5B8C\u6210 ===");
     } catch (e) {
       console.error("=== TableView.onOpen \u9519\u8BEF ===", e);
@@ -57294,17 +57326,35 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
   }
   async onload() {
     var _a4;
+    console.log(LOG_PREFIX2, "========== Plugin onload \u5F00\u59CB ==========");
     console.log(LOG_PREFIX2, "Registering TableView view");
     console.log(LOG_PREFIX2, "TABLE_VIEW_TYPE =", TABLE_VIEW_TYPE);
     this.registerView(
       TABLE_VIEW_TYPE,
       (leaf) => {
-        console.log(LOG_PREFIX2, "Instantiate TableView", this.describeLeaf(leaf));
-        return new TableView(leaf);
+        const leafWindow = this.getLeafWindow(leaf);
+        console.log(LOG_PREFIX2, "========== registerView \u5DE5\u5382\u51FD\u6570\u88AB\u8C03\u7528 ==========");
+        console.log(LOG_PREFIX2, "leaf:", this.describeLeaf(leaf));
+        console.log(LOG_PREFIX2, "leaf \u6240\u5728\u7A97\u53E3:", this.describeWindow(leafWindow));
+        console.log(LOG_PREFIX2, "leaf \u6240\u5728\u7A97\u53E3\u662F\u5426\u5DF2\u6CE8\u518C:", this.windowContexts.has(leafWindow != null ? leafWindow : window));
+        const view = new TableView(leaf);
+        console.log(LOG_PREFIX2, "TableView \u5B9E\u4F8B\u5DF2\u521B\u5EFA");
+        return view;
       }
     );
+    console.log(LOG_PREFIX2, "registerView \u5B8C\u6210");
     this.mainContext = (_a4 = this.registerWindow(window)) != null ? _a4 : { window, app: this.app };
     this.captureExistingWindows();
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        var _a5, _b2, _c;
+        const activeLeaf = this.app.workspace.activeLeaf;
+        const activeWindow = (_a5 = this.getLeafWindow(activeLeaf)) != null ? _a5 : window;
+        const context = (_c = (_b2 = this.getWindowContext(activeWindow)) != null ? _b2 : this.mainContext) != null ? _c : { window, app: this.app };
+        console.log(LOG_PREFIX2, "file-menu \u4E8B\u4EF6\u89E6\u53D1 (main console)");
+        this.handleFileMenu(menu, file, context);
+      })
+    );
     this.addCommand({
       id: "toggle-table-view",
       name: "\u5207\u6362 TileLineBase \u8868\u683C\u89C6\u56FE",
@@ -57328,9 +57378,37 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
     });
     this.registerEvent(
       this.app.workspace.on("window-open", (workspaceWindow, win) => {
-        console.log(LOG_PREFIX2, "window-open", {
-          window: this.describeWindow(win)
-        });
+        console.log(LOG_PREFIX2, "========== WINDOW-OPEN EVENT ==========");
+        console.log(LOG_PREFIX2, "window:", this.describeWindow(win));
+        console.log(LOG_PREFIX2, "WorkspaceWindow \u5BF9\u8C61:", workspaceWindow);
+        console.log(LOG_PREFIX2, "WorkspaceWindow \u53EF\u7528\u5C5E\u6027:", Object.keys(workspaceWindow));
+        console.log(LOG_PREFIX2, "WorkspaceWindow \u539F\u578B\u65B9\u6CD5:", Object.getOwnPropertyNames(Object.getPrototypeOf(workspaceWindow)));
+        const winApp = win.app;
+        console.log(LOG_PREFIX2, "win.app === this.app:", winApp === this.app);
+        console.log(LOG_PREFIX2, "win.app \u5B58\u5728:", !!winApp);
+        if ("getRoot" in workspaceWindow) {
+          try {
+            const root = workspaceWindow.getRoot();
+            console.log(LOG_PREFIX2, "workspaceWindow.getRoot() \u6210\u529F:", root);
+            console.log(LOG_PREFIX2, "root \u53EF\u7528\u65B9\u6CD5:", Object.getOwnPropertyNames(Object.getPrototypeOf(root)));
+            if (typeof root.getLeaf === "function") {
+              console.log(LOG_PREFIX2, "root.getLeaf \u65B9\u6CD5\u5B58\u5728");
+            }
+          } catch (e) {
+            console.warn(LOG_PREFIX2, "workspaceWindow.getRoot() \u5931\u8D25:", e);
+          }
+        } else {
+          console.log(LOG_PREFIX2, "workspaceWindow \u6CA1\u6709 getRoot \u65B9\u6CD5");
+        }
+        if ("activeLeaf" in workspaceWindow) {
+          console.log(LOG_PREFIX2, "workspaceWindow.activeLeaf:", workspaceWindow.activeLeaf);
+        } else {
+          console.log(LOG_PREFIX2, "workspaceWindow \u6CA1\u6709 activeLeaf \u5C5E\u6027");
+        }
+        console.log(LOG_PREFIX2, "\u6D4B\u8BD5 workspace.getLeaf(true) \u884C\u4E3A:");
+        const beforeLeafCount = this.countLeaves();
+        console.log(LOG_PREFIX2, "\u521B\u5EFA\u524D leaf \u603B\u6570:", beforeLeafCount);
+        console.log(LOG_PREFIX2, "========================================");
         this.registerWindow(win, workspaceWindow);
       })
     );
@@ -57351,6 +57429,9 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
     const existing = this.windowContexts.get(win);
     if (existing) {
       existing.workspaceWindow = workspaceWindow != null ? workspaceWindow : existing.workspaceWindow;
+      console.log(LOG_PREFIX2, "registerWindow: \u7A97\u53E3\u5DF2\u5B58\u5728\uFF0C\u66F4\u65B0 workspaceWindow", {
+        window: this.describeWindow(win)
+      });
       return existing;
     }
     const winApp = win.app;
@@ -57361,13 +57442,10 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
     }
     const context = { window: win, app, workspaceWindow };
     this.windowContexts.set(win, context);
-    console.log(LOG_PREFIX2, "registerWindow", {
-      window: this.describeWindow(win)
-    });
-    const fileMenuRef = app.workspace.on("file-menu", (menu, file) => {
-      this.handleFileMenu(menu, file, context);
-    });
-    this.registerEvent(fileMenuRef);
+    console.log(LOG_PREFIX2, "========== registerWindow \u65B0\u7A97\u53E3 ==========");
+    console.log(LOG_PREFIX2, "window:", this.describeWindow(win));
+    console.log(LOG_PREFIX2, "windowContexts.size:", this.windowContexts.size);
+    console.log(LOG_PREFIX2, "==========================================");
     return context;
   }
   unregisterWindow(win) {
@@ -57388,25 +57466,44 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
     });
   }
   handleFileMenu(menu, file, context) {
+    const targetWindow = context.window;
+    const targetConsole = targetWindow.console || console;
+    targetConsole.log(LOG_PREFIX2, "========== handleFileMenu \u88AB\u8C03\u7528 ==========");
+    targetConsole.log(LOG_PREFIX2, "file:", file.path);
+    targetConsole.log(LOG_PREFIX2, "context.window.isMain:", targetWindow === window);
+    console.log(LOG_PREFIX2, "handleFileMenu \u88AB\u8C03\u7528 (context.window.isMain:", targetWindow === window, ")");
     if (!(file instanceof import_obsidian3.TFile)) {
+      targetConsole.log(LOG_PREFIX2, "handleFileMenu: file is not TFile, returning");
       return;
     }
     menu.addItem((item) => {
-      item.setTitle("\u7528 TileLineBase \u8868\u683C\u6253\u5F00").setIcon("table").onClick(async (evt) => {
+      targetConsole.log(LOG_PREFIX2, "menu.addItem: \u6B63\u5728\u6DFB\u52A0\u83DC\u5355\u9879...");
+      const clickHandler = async (evt) => {
         var _a4, _b2;
-        console.log(LOG_PREFIX2, "file-menu onClick triggered", {
-          file: file.path,
-          eventType: evt == null ? void 0 : evt.type,
-          window: this.describeWindow(context.window)
-        });
+        const eventWindow = (evt == null ? void 0 : evt.view) || targetWindow;
+        const eventConsole = eventWindow.console || console;
+        eventConsole.log(LOG_PREFIX2, "========== file-menu onClick \u89E6\u53D1 ==========");
+        eventConsole.log(LOG_PREFIX2, "file:", file.path);
+        eventConsole.log(LOG_PREFIX2, "eventType:", evt == null ? void 0 : evt.type);
+        eventConsole.log(LOG_PREFIX2, "event.view === context.window:", (evt == null ? void 0 : evt.view) === context.window);
+        console.log(LOG_PREFIX2, "onClick \u89E6\u53D1 (event.view === context.window:", (evt == null ? void 0 : evt.view) === context.window, ")");
         const resolution = this.resolveLeafFromEvent(evt, context);
+        eventConsole.log(LOG_PREFIX2, "onClick: resolution \u7ED3\u679C:", {
+          leaf: this.describeLeaf(resolution.leaf),
+          preferredWindow: this.describeWindow(resolution.preferredWindow),
+          workspace: resolution.workspace === this.app.workspace ? "main" : "other"
+        });
         await this.openTableView(file, {
           leaf: resolution.leaf,
           preferredWindow: (_a4 = resolution.preferredWindow) != null ? _a4 : context.window,
           workspace: (_b2 = resolution.workspace) != null ? _b2 : context.app.workspace
         });
-      });
+        eventConsole.log(LOG_PREFIX2, "========== file-menu onClick \u5B8C\u6210 ==========");
+      };
+      item.setTitle("\u7528 TileLineBase \u8868\u683C\u6253\u5F00").setIcon("table").onClick(clickHandler);
+      targetConsole.log(LOG_PREFIX2, "menu.addItem: \u83DC\u5355\u9879\u6DFB\u52A0\u5B8C\u6210\uFF0ConClick handler \u5DF2\u8BBE\u7F6E");
     });
+    targetConsole.log(LOG_PREFIX2, "========== handleFileMenu \u5B8C\u6210 ==========");
   }
   async openTableView(file, options) {
     var _a4, _b2, _c, _d;
@@ -57446,14 +57543,24 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
       console.warn(LOG_PREFIX2, "No leaf available, aborting openTableView");
       return;
     }
-    await leaf.setViewState({
-      type: TABLE_VIEW_TYPE,
-      active: true,
-      state: {
-        filePath: file.path
-      }
+    console.log(LOG_PREFIX2, "openTableView \u5373\u5C06\u8C03\u7528 leaf.setViewState", {
+      leaf: this.describeLeaf(leaf),
+      viewType: TABLE_VIEW_TYPE,
+      filePath: file.path
     });
-    console.log(LOG_PREFIX2, "openTableView setViewState done", this.describeLeaf(leaf));
+    try {
+      await leaf.setViewState({
+        type: TABLE_VIEW_TYPE,
+        active: true,
+        state: {
+          filePath: file.path
+        }
+      });
+      console.log(LOG_PREFIX2, "openTableView setViewState \u6210\u529F\u5B8C\u6210", this.describeLeaf(leaf));
+    } catch (error) {
+      console.error(LOG_PREFIX2, "openTableView setViewState \u5931\u8D25:", error);
+      throw error;
+    }
     await workspace.revealLeaf(leaf);
     console.log(LOG_PREFIX2, "openTableView finish");
   }
@@ -57649,5 +57756,12 @@ var TileLineBasePlugin = class extends import_obsidian3.Plugin {
       this.windowIds.set(win, id);
     }
     return id;
+  }
+  countLeaves() {
+    let count = 0;
+    this.app.workspace.iterateAllLeaves(() => {
+      count++;
+    });
+    return count;
   }
 };

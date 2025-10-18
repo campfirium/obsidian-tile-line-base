@@ -132,6 +132,10 @@ export function createTextCellEditor() {
 
 			// AG Grid 34+ 使用 eventKey 传递按键（旧版本使用 key 或 charPress）
 			const eventKey = (params as any).eventKey;
+			// 🔑 在 pop-out 窗口中，AG Grid 不传递 eventKey，使用我们手动捕获的按键
+			const manualEventKey = (params as any).manualEventKey;
+			// 优先使用 AG Grid 的 eventKey，如果没有则使用手动捕获的
+			const actualKey = eventKey || manualEventKey;
 
 			// 🔍 详细调试日志
 			console.log('=== TextCellEditor.init 开始 (工厂版本) ===');
@@ -140,16 +144,18 @@ export function createTextCellEditor() {
 			console.log('params.eGridCell?.ownerDocument:', params.eGridCell?.ownerDocument);
 			console.log('ownerDocument === document:', (params.eGridCell?.ownerDocument === document));
 			console.log('eventKey:', eventKey);
+			console.log('manualEventKey:', manualEventKey);
+			console.log('actualKey:', actualKey);
 			console.log('params.charPress:', (params as any).charPress);
 			console.log('params.key:', (params as any).key);
 			console.log('params.keyPress:', (params as any).keyPress);
 			console.log('initialValue:', this.initialValue);
 			console.log('=== TextCellEditor.init 结束 ===');
 
-			if (eventKey && eventKey.length === 1) {
+			if (actualKey && actualKey.length === 1) {
 				// 如果是单字符按键启动编辑，用这个字符作为初始值
-				console.log('Using eventKey as initial value:', eventKey);
-				this.eInput.value = eventKey;
+				console.log('Using actualKey as initial value:', actualKey);
+				this.eInput.value = actualKey;
 			} else {
 				// 否则使用原有值
 				console.log('Using original value:', this.initialValue);
@@ -179,7 +185,9 @@ export function createTextCellEditor() {
 			// 聚焦并选中所有文本（如果有eventKey就光标在末尾）
 			this.eInput.focus();
 			const eventKey = (this.params as any).eventKey;
-			if (eventKey && eventKey.length === 1) {
+			const manualEventKey = (this.params as any).manualEventKey;
+			const actualKey = eventKey || manualEventKey;
+			if (actualKey && actualKey.length === 1) {
 				// 有启动字符时，光标移到末尾
 				this.eInput.setSelectionRange(this.eInput.value.length, this.eInput.value.length);
 			} else {

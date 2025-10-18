@@ -442,6 +442,19 @@ export class TableView extends ItemView {
 			// 初始化容器
 			const container = this.containerEl.children[1];
 			container.addClass("tile-line-base-view");
+
+			// 支持 Pop-out 窗口的 Window Migration (Obsidian 0.15.3+)
+			// 当视图被拖动到不同窗口时，需要重新渲染
+			if (typeof (this.containerEl as any).onWindowMigrated === 'function') {
+				(this.containerEl as any).onWindowMigrated(() => {
+					console.log(LOG_PREFIX, 'Window migrated, rebuilding view');
+					// 重新构建视图以使用新窗口的上下文
+					if (typeof (this.leaf as any).rebuildView === 'function') {
+						(this.leaf as any).rebuildView();
+					}
+				});
+			}
+
 			console.log('=== TableView.onOpen 完成 ===');
 		} catch (e) {
 			console.error('=== TableView.onOpen 错误 ===', e);

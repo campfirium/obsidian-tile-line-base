@@ -214,6 +214,13 @@ export class AgGridAdapter implements GridAdapter {
 					// 🔑 捕获可打印字符，用于 pop-out 窗口的首字符修复
 					// 在 pop-out 窗口中，AG Grid 不会传递 eventKey，所以我们手动捕获
 					if (!params.editing && keyEvent.type === 'keydown') {
+						// 🔑 如果按键事件是输入法组合的一部分，阻止 AG Grid 启动编辑
+						// 这样可以避免截断拼音（如 "ni" 被截断成 "n" + "i"）
+						if (keyEvent.isComposing) {
+							console.log('[AgGridAdapter] 检测到输入法组合，阻止启动编辑');
+							return true; // 返回 true 阻止 AG Grid 处理这个按键
+						}
+
 						// 判断是否为可打印字符（单个字符，非修饰键）
 						const isPrintableChar = keyEvent.key.length === 1 &&
 							!keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;

@@ -55522,7 +55522,9 @@ function createTextCellEditor() {
   return class {
     constructor() {
       this.initialValue = "";
+      this.isComposing = false;
     }
+    // 标记是否在输入法组合中
     init(params) {
       var _a4, _b2, _c, _d;
       this.params = params;
@@ -55556,8 +55558,20 @@ function createTextCellEditor() {
         console.log("Using original value:", this.initialValue);
         this.eInput.value = this.initialValue;
       }
+      this.eInput.addEventListener("compositionstart", () => {
+        this.isComposing = true;
+        console.log("[TextCellEditor] \u8F93\u5165\u6CD5\u7EC4\u5408\u5F00\u59CB");
+        this.eInput.value = this.initialValue;
+      });
+      this.eInput.addEventListener("compositionend", () => {
+        this.isComposing = false;
+        console.log("[TextCellEditor] \u8F93\u5165\u6CD5\u7EC4\u5408\u7ED3\u675F\uFF0C\u5F53\u524D\u503C:", this.eInput.value);
+      });
       this.eInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === "Tab") {
+          if (this.isComposing) {
+            return;
+          }
           event.stopPropagation();
           params.stopEditing(false);
         } else if (event.key === "Escape") {
@@ -55738,6 +55752,10 @@ var _AgGridAdapter = class {
         suppressKeyboardEvent: (params) => {
           const keyEvent = params.event;
           if (!params.editing && keyEvent.type === "keydown") {
+            if (keyEvent.isComposing) {
+              console.log("[AgGridAdapter] \u68C0\u6D4B\u5230\u8F93\u5165\u6CD5\u7EC4\u5408\uFF0C\u8DF3\u8FC7\u6309\u952E\u6355\u83B7");
+              return false;
+            }
             const isPrintableChar = keyEvent.key.length === 1 && !keyEvent.ctrlKey && !keyEvent.altKey && !keyEvent.metaKey;
             if (isPrintableChar) {
               this.lastKeyPressedForEdit = keyEvent.key;

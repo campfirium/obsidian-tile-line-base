@@ -113,6 +113,7 @@ export function createTextCellEditor() {
 		private eInput!: HTMLInputElement;
 		private params!: ICellEditorParams;
 		private initialValue: string = '';
+		private isComposing: boolean = false; // 标记是否在输入法组合中
 
 		init(params: ICellEditorParams): void {
 			this.params = params;
@@ -162,10 +163,50 @@ export function createTextCellEditor() {
 				this.eInput.value = this.initialValue;
 			}
 
+			// 🔑 处理输入法组合事件（中文输入等）
+			this.eInput.addEventListener('compositionstart', (e: CompositionEvent) => {
+				this.isComposing = true;
+				console.log('[TextCellEditor] 输入法组合开始, data:', e.data);
+
+				// 如果我们之前捕获了首字符（actualKey），需要把它还给输入法
+				if (actualKey && actualKey.length === 1 && this.eInput.value === actualKey) {
+					console.log('[TextCellEditor] 检测到输入法，需要恢复首字符:', actualKey);
+
+					// 恢复原值
+					this.eInput.value = this.initialValue;
+
+					// 🔑 尝试把首字符重新插入，让输入法能识别
+					// 注意：这可能不会完美工作，因为输入法已经启动了
+					const selStart = this.eInput.selectionStart || 0;
+					const selEnd = this.eInput.selectionEnd || 0;
+					const currentValue = this.eInput.value;
+
+					// 在光标位置插入字符
+					this.eInput.value =
+						currentValue.substring(0, selStart) +
+						actualKey +
+						currentValue.substring(selEnd);
+
+					// 设置光标位置到字符后面
+					this.eInput.setSelectionRange(selStart + 1, selStart + 1);
+
+					console.log('[TextCellEditor] 已尝试恢复字符，当前值:', this.eInput.value);
+				}
+			});
+
+			this.eInput.addEventListener('compositionend', () => {
+				this.isComposing = false;
+				console.log('[TextCellEditor] 输入法组合结束，当前值:', this.eInput.value);
+			});
+
 			// 添加键盘事件处理
 			this.eInput.addEventListener('keydown', (event) => {
 				// Enter 或 Tab 提交编辑
 				if (event.key === 'Enter' || event.key === 'Tab') {
+					// 如果正在输入法组合中，Enter 是确认输入，不提交编辑
+					if (this.isComposing) {
+						return;
+					}
 					event.stopPropagation();
 					params.stopEditing(false);
 				}

@@ -14,6 +14,7 @@ export const ROW_ID_FIELD = '__tlb_row_id';
 export interface ColumnDef {
 	field: string;       // 字段名（列ID）
 	headerName: string;  // 表头显示名称
+	headerTooltip?: string;  // 表头提示
 	editable: boolean;   // 是否可编辑
 }
 

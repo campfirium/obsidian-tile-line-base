@@ -51,6 +51,7 @@ export class AgGridAdapter implements GridAdapter {
 	// Composition Proxy：每个 Document 一个代理层
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
 	private capturing = false; // 标记是否正在捕获输入
+	private detachPrintableKeyInterceptor?: () => void;
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -69,6 +70,131 @@ export class AgGridAdapter implements GridAdapter {
 	 */
 	private isPrintable(e: KeyboardEvent): boolean {
 		return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+	}
+
+	private attachPrintableKeyInterceptor(container: HTMLElement): void {
+		this.detachPrintableKeyInterceptor?.();
+
+		const handler = (event: KeyboardEvent) => {
+			if (!this.gridApi) return;
+			if (event.defaultPrevented) return;
+
+			// 只处理可打印字符
+			if (!this.isPrintable(event)) return;
+
+			const target = event.target as HTMLElement | null;
+			if (!target) return;
+
+			// 不要在编辑状态下拦截，保持原有行为
+			const editingCells = this.gridApi.getEditingCells();
+			if (editingCells.length > 0) return;
+
+			// 已经在捕获流程中则拦截后续事件
+			if (this.capturing) {
+				event.stopImmediatePropagation();
+				event.stopPropagation();
+				return;
+			}
+
+			const cellEl = target.closest('.ag-cell') as HTMLElement | null;
+			if (!cellEl || cellEl.classList.contains('ag-cell-inline-editing')) {
+				return;
+			}
+
+			const focusedCell = this.gridApi.getFocusedCell();
+			if (!focusedCell) return;
+
+			const colKey = focusedCell.column.getColId();
+			const rowIndex = focusedCell.rowIndex;
+			if (rowIndex == null) return;
+
+			const doc = (cellEl.ownerDocument || document);
+			const rect = cellEl.getBoundingClientRect();
+
+			this.capturing = true;
+			event.stopImmediatePropagation();
+			event.stopPropagation();
+
+			this.getProxy(doc).captureOnceAt(rect)
+				.then((text) => {
+					window.setTimeout(() => {
+						this.startEditingWithCapturedText(doc, rowIndex, colKey, text);
+					}, 0);
+				})
+				.catch((err) => {
+					if (err === 'cancelled') {
+						return;
+					}
+
+					console.error('[AgGridAdapter] CompositionProxy 捕获失败', err);
+					window.setTimeout(() => {
+						this.startEditingWithCapturedText(doc, rowIndex, colKey, '');
+					}, 0);
+				})
+				.finally(() => {
+					this.capturing = false;
+				});
+		};
+
+		container.addEventListener('keydown', handler, true);
+		this.detachPrintableKeyInterceptor = () => {
+			container.removeEventListener('keydown', handler, true);
+		};
+	}
+
+	private startEditingWithCapturedText(doc: Document, rowIndex: number, colKey: string, text: string): void {
+		if (!this.gridApi) return;
+
+		this.gridApi.setFocusedCell(rowIndex, colKey);
+		this.gridApi.startEditingCell({ rowIndex, colKey });
+
+		this.waitForEditorInput(doc)
+			.then((input) => {
+				input.value = text ?? '';
+				const len = input.value.length;
+				input.setSelectionRange(len, len);
+				input.focus();
+			})
+			.catch((err) => {
+				console.warn('[AgGridAdapter] 未找到编辑器输入框', err);
+			});
+	}
+
+	private waitForEditorInput(doc: Document): Promise<HTMLInputElement | HTMLTextAreaElement> {
+		return new Promise((resolve, reject) => {
+			const lookup = () => doc.querySelector('.ag-cell-editor input, .ag-cell-editor textarea') as HTMLInputElement | HTMLTextAreaElement | null;
+			const immediate = lookup();
+			if (immediate) {
+				resolve(immediate);
+				return;
+			}
+
+			const body = doc.body;
+			if (!body) {
+				reject(new Error('document.body 不可用'));
+				return;
+			}
+
+			const observer = new MutationObserver(() => {
+				const candidate = lookup();
+				if (candidate) {
+					cleanup();
+					resolve(candidate);
+				}
+			});
+
+			const timeout = window.setTimeout(() => {
+				cleanup();
+				reject(new Error('等待编辑器超时'));
+			}, 1000);
+
+			const cleanup = () => {
+				window.clearTimeout(timeout);
+				observer.disconnect();
+			};
+
+			observer.observe(body, { childList: true, subtree: true });
+		});
 	}
 
 	/**
@@ -206,90 +332,10 @@ export class AgGridAdapter implements GridAdapter {
 			// 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
 			rowSelection: 'multiple',
 
-			// 事件监听
-			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
-				this.handleCellEdit(event);
-			},
-
-			// 🔑 处理首键启动编辑（Composition Proxy Overlay 方案）
-			// 参考：
-			// - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2.md
-			// - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2分析.md
-			onCellKeyDown: (params: any) => {
-				const keyEvent = params.event as KeyboardEvent;
-
-				// 合成期间或已在编辑，不处理
-				if (this.capturing || params.editing) return;
-
-				// 只处理可打印字符
-				if (!this.isPrintable(keyEvent)) return;
-
-				// 标记为捕获状态
-				this.capturing = true;
-
-				const targetEl = keyEvent.target as HTMLElement;
-				const doc = targetEl.ownerDocument || document;
-
-				// 找到单元格元素
-				const cellEl = targetEl.closest('.ag-cell') as HTMLElement;
-				if (!cellEl) {
-					console.warn('[AgGridAdapter] 未找到单元格元素');
-					this.capturing = false;
-					return;
-				}
-
-				// 获取单元格的可视矩形
-				const rect = cellEl.getBoundingClientRect();
-
-				console.log('[AgGridAdapter] 可打印字符按下，启动 CompositionProxy');
-				console.log('  key:', keyEvent.key);
-				console.log('  单元格矩形:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-
-				// 不要 preventDefault —— 让"首键默认输入"落入 overlay
-				// keyEvent.preventDefault(); // ❌ 不要阻止
-
-				// 🔑 启动异步捕获（不要 await，立即返回）
-				const api = params.api as GridApi;
-				const rowIndex = params.rowIndex;
-				const colKey = params.column.getColId();
-
-				this.getProxy(doc).captureOnceAt(rect)
-					.then((text) => {
-						console.log('[AgGridAdapter] CompositionProxy 返回文本:', text);
-
-						// 启动真正的编辑器
-						api.startEditingCell({ rowIndex, colKey });
-
-						// 将捕获的文本写回编辑器输入框
-						queueMicrotask(() => {
-							const editorRoot = doc.querySelector('.ag-cell-editor');
-							const input = editorRoot?.querySelector('input,textarea') as HTMLInputElement | HTMLTextAreaElement | null;
-
-							if (!input) {
-								console.warn('[AgGridAdapter] 未找到编辑器输入框');
-								return;
-							}
-
-							// 写回策略：覆盖（与 Excel 一致）
-							input.value = text ?? '';
-
-							// 光标置尾
-							const len = input.value.length;
-							input.setSelectionRange(len, len);
-
-							// 聚焦
-							input.focus();
-
-							console.log('[AgGridAdapter] 已将文本写回编辑器:', text);
-						});
-					})
-					.catch((err) => {
-						console.error('[AgGridAdapter] CompositionProxy 失败:', err);
-					})
-					.finally(() => {
-						this.capturing = false;
-					});
-			},
+		// 事件监听
+		onCellEditingStopped: (event: CellEditingStoppedEvent) => {
+			this.handleCellEdit(event);
+		},
 
 			// 默认列配置
 			defaultColDef: {
@@ -307,14 +353,10 @@ export class AgGridAdapter implements GridAdapter {
 						return true;
 					}
 
-					// 🔑 我们通过 onCellKeyDown 接管首键启动编辑
-					// 阻止 AG Grid 自己的首键启动逻辑
-					if (!params.editing && keyEvent.type === 'keydown') {
-						if (this.isPrintable(keyEvent)) {
-							// 阻止 AG Grid 的默认首键启动，由 onCellKeyDown 处理
-							return true;
-						}
-					}
+				// 🔑 可打印字符的首键由捕获器接管，这里作为兜底直接让出
+				if (!params.editing && keyEvent.type === 'keydown' && this.isPrintable(keyEvent)) {
+					return true;
+				}
 
 					// Enter 键的特殊处理（最后一行等）
 					if (keyEvent.key !== 'Enter') {
@@ -455,6 +497,7 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
+		this.attachPrintableKeyInterceptor(container);
 		this.lastAutoSizeTimestamp = 0;
 		this.shouldAutoSizeOnNextResize = false;
 		this.clearRowHeightResetHandle();

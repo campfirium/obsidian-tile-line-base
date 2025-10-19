@@ -29,6 +29,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private readonly windowIds = new WeakMap<Window, string>();
 	private mainContext: WindowContext | null = null;
 	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
+	private suppressAutoSwitchUntil = new Map<string, number>();
 
 	async onload() {
 		await this.loadSettings();
@@ -409,6 +410,8 @@ export default class TileLineBasePlugin extends Plugin {
 						file: file.path
 					}
 				});
+				await this.updateFileViewPreference(file, 'markdown');
+				this.suppressAutoSwitchUntil.set(file.path, Date.now() + 1000);
 			}
 		} else {
 			const workspace = context?.app.workspace ?? this.getWorkspaceForLeaf(leaf) ?? this.app.workspace;
@@ -612,6 +615,12 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private async maybeSwitchToTableView(file: TFile): Promise<void> {
+		const suppressUntil = this.suppressAutoSwitchUntil.get(file.path);
+		if (suppressUntil && suppressUntil > Date.now()) {
+			debugLog('maybeSwitchToTableView: suppressed due to recent manual switch', { file: file.path });
+			return;
+		}
+		this.suppressAutoSwitchUntil.delete(file.path);
 		if (!this.shouldAutoOpenForFile(file)) {
 			debugLog('maybeSwitchToTableView: skipped (preference not table)', { file: file.path });
 			return;

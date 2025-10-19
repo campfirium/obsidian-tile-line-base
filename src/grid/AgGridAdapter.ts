@@ -10,6 +10,8 @@ import {
 	GridOptions,
 	ColDef,
 	CellEditingStoppedEvent,
+	CellEditingStartedEvent,
+	CellFocusedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode,
@@ -31,6 +33,8 @@ import {
 	getStatusLabel,
 	getStatusIcon
 } from '../renderers/StatusCellRenderer';
+import { createTextCellEditor } from './editors/TextCellEditor';
+import { CompositionProxy } from './utils/CompositionProxy';
 import { setIcon } from 'obsidian';
 
 // 注册 AG Grid Community 模块
@@ -46,6 +50,285 @@ export class AgGridAdapter implements GridAdapter {
 	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
+	// Composition Proxy：每个 Document 一个代理层
+	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
+	private containerEl: HTMLElement | null = null;
+	private focusedDoc: Document | null = null;
+	private focusedRowIndex: number | null = null;
+	private focusedColId: string | null = null;
+	private pendingCaptureCancel?: (reason?: string) => void;
+	private editing = false;
+
+	/**
+	 * 获取或创建指定 Document 的 CompositionProxy
+	 */
+	private getProxy(doc: Document): CompositionProxy {
+		let proxy = this.proxyByDoc.get(doc);
+		if (!proxy) {
+			proxy = new CompositionProxy(doc);
+			this.proxyByDoc.set(doc, proxy);
+		}
+		return proxy;
+	}
+
+	/**
+	 * 判断是否为可打印字符
+	 */
+	private isPrintable(e: KeyboardEvent): boolean {
+		return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+	}
+
+
+	private startEditingWithCapturedText(doc: Document, rowIndex: number, colKey: string, text: string): Promise<void> {
+		if (!this.gridApi) {
+			return Promise.resolve();
+		}
+
+		this.editing = true;
+		this.focusedRowIndex = rowIndex;
+		this.focusedColId = colKey;
+		this.cancelPendingCapture('editing-started');
+		this.getProxy(doc).setKeyHandler(undefined);
+
+		this.gridApi.setFocusedCell(rowIndex, colKey);
+		this.gridApi.startEditingCell({ rowIndex, colKey });
+
+		return this.waitForEditorInput(doc)
+			.then((input) => {
+				input.value = text ?? '';
+				const len = input.value.length;
+				input.setSelectionRange(len, len);
+				input.focus();
+			})
+			.catch((err) => {
+				console.warn('[AgGridAdapter] 未找到编辑器输入框', err);
+			});
+	}
+
+	private waitForEditorInput(doc: Document): Promise<HTMLInputElement | HTMLTextAreaElement> {
+		const selector = '.ag-cell-editor input, .ag-cell-editor textarea, .ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-cell-edit-input';
+		return new Promise((resolve, reject) => {
+			const lookup = () => doc.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement | null;
+			const immediate = lookup();
+			if (immediate) {
+				resolve(immediate);
+				return;
+			}
+
+			const body = doc.body;
+			if (!body) {
+				reject(new Error('document.body 不可用'));
+				return;
+			}
+
+			const observer = new MutationObserver(() => {
+				const candidate = lookup();
+				if (candidate) {
+					cleanup();
+					resolve(candidate);
+				}
+			});
+
+			const timeout = window.setTimeout(() => {
+				cleanup();
+				reject(new Error('等待编辑器超时'));
+			}, 1000);
+
+			const cleanup = () => {
+				window.clearTimeout(timeout);
+				observer.disconnect();
+			};
+
+			observer.observe(body, { childList: true, subtree: true });
+		});
+	}
+
+	private cancelPendingCapture(reason?: string): void {
+		if (this.pendingCaptureCancel) {
+			const cancel = this.pendingCaptureCancel;
+			this.pendingCaptureCancel = undefined;
+			cancel(reason);
+		} else if (this.focusedDoc) {
+			this.getProxy(this.focusedDoc).cancel(reason);
+		}
+	}
+
+	private getCellElementFor(rowIndex: number, colKey: string, doc: Document): HTMLElement | null {
+		const root = (this.containerEl ?? doc) as Document | Element;
+		const selector = `.ag-center-cols-container [row-index="${rowIndex}"] [col-id="${colKey}"]`;
+		return root.querySelector(selector) as HTMLElement | null;
+	}
+
+	private armProxyForCurrentCell(): void {
+		if (!this.gridApi) return;
+		if (this.editing) return;
+		if (this.focusedDoc == null || this.focusedRowIndex == null || !this.focusedColId) {
+			this.cancelPendingCapture('focus-cleared');
+			return;
+		}
+
+		const doc = this.focusedDoc;
+		const rowIndex = this.focusedRowIndex;
+		const colKey = this.focusedColId;
+		const cellEl = this.getCellElementFor(rowIndex, colKey, doc);
+		if (!cellEl) {
+			this.cancelPendingCapture('cell-missing');
+			return;
+		}
+
+		const rect = cellEl.getBoundingClientRect();
+		const proxy = this.getProxy(doc);
+
+		this.cancelPendingCapture('rearm');
+		const capturePromise = proxy.captureOnceAt(rect);
+		proxy.setKeyHandler((event) => this.handleProxyKeyDown(event));
+		this.pendingCaptureCancel = (reason?: string) => proxy.cancel(reason);
+
+		capturePromise
+			.then((text) => {
+				this.pendingCaptureCancel = undefined;
+				if (this.editing) return;
+				if (this.focusedRowIndex == null || !this.focusedColId) return;
+				return this.startEditingWithCapturedText(doc, this.focusedRowIndex, this.focusedColId, text);
+			})
+			.catch((err) => {
+				this.pendingCaptureCancel = undefined;
+				if (err === 'cancelled' || err === 'rearm' || err === 'editing-started' || err === 'focus-cleared' || err === 'cell-missing' || err === 'destroyed' || err === 'focus-move') {
+					return;
+				}
+				console.error('[AgGridAdapter] CompositionProxy 捕获失败', err);
+			});
+	}
+
+	private handleProxyKeyDown(event: KeyboardEvent): void {
+		if (!this.gridApi) return;
+
+		if (this.isPrintable(event)) {
+			return;
+		}
+
+		switch (event.key) {
+			case 'Enter':
+				event.preventDefault();
+				event.stopPropagation();
+				this.handleProxyEnter(event.shiftKey);
+				break;
+			case 'Tab':
+				event.preventDefault();
+				event.stopPropagation();
+				if (event.shiftKey) {
+					this.moveFocus(0, -1);
+				} else {
+					this.moveFocus(0, 1);
+				}
+				break;
+			case 'ArrowUp':
+			case 'Up':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(-1, 0);
+				break;
+			case 'ArrowDown':
+			case 'Down':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(1, 0);
+				break;
+			case 'ArrowLeft':
+			case 'Left':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(0, -1);
+				break;
+			case 'ArrowRight':
+			case 'Right':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(0, 1);
+				break;
+			default:
+				break;
+		}
+	}
+
+	private handleProxyEnter(shift: boolean): void {
+		if (!this.gridApi) return;
+		if (this.focusedRowIndex == null || !this.focusedColId) return;
+
+		if (shift) {
+			this.moveFocus(-1, 0);
+			return;
+		}
+
+		const rowIndex = this.focusedRowIndex;
+		const totalRows = this.gridApi.getDisplayedRowCount();
+		if (totalRows === 0) return;
+		const colId = this.focusedColId;
+
+		if (rowIndex === totalRows - 1) {
+			if (this.enterAtLastRowCallback) {
+				this.enterAtLastRowCallback(colId);
+			}
+			return;
+		}
+
+		this.moveFocus(1, 0);
+	}
+
+	private moveFocus(rowDelta: number, colDelta: number): void {
+		if (!this.gridApi) return;
+		if (this.focusedRowIndex == null || !this.focusedColId) return;
+
+		const displayedColumns = this.gridApi.getAllDisplayedColumns();
+		if (!displayedColumns || displayedColumns.length === 0) return;
+
+		const currentColIndex = displayedColumns.findIndex(col => col.getColId() === this.focusedColId);
+		if (currentColIndex === -1) return;
+
+		const targetColIndex = Math.max(0, Math.min(displayedColumns.length - 1, currentColIndex + colDelta));
+		const targetCol = displayedColumns[targetColIndex];
+
+		const rowCount = this.gridApi.getDisplayedRowCount();
+		if (rowCount === 0) return;
+		const targetRowIndex = Math.max(0, Math.min(rowCount - 1, this.focusedRowIndex + rowDelta));
+
+		this.cancelPendingCapture('focus-move');
+		this.gridApi.ensureIndexVisible(targetRowIndex);
+		this.gridApi.setFocusedCell(targetRowIndex, targetCol.getColId());
+		this.focusedRowIndex = targetRowIndex;
+		this.focusedColId = targetCol.getColId();
+		this.armProxyForCurrentCell();
+	}
+
+	private handleCellFocused(event: CellFocusedEvent): void {
+		this.focusedDoc = this.containerEl?.ownerDocument || document;
+
+		if (event.rowIndex == null || !event.column) {
+			this.focusedRowIndex = null;
+			this.focusedColId = null;
+			this.cancelPendingCapture('focus-cleared');
+			return;
+		}
+
+		this.focusedRowIndex = event.rowIndex;
+		const colId = (event as any).column?.getColId?.() ?? (event as any).columnId ?? null;
+		this.focusedColId = colId;
+
+		if (this.editing) {
+			return;
+		}
+
+		this.armProxyForCurrentCell();
+	}
+
+	private handleCellEditingStarted(): void {
+		this.editing = true;
+		this.cancelPendingCapture('editing-started');
+		if (this.focusedDoc) {
+			this.getProxy(this.focusedDoc).setKeyHandler(undefined);
+		}
+	}
+
 	/**
 	 * 挂载表格到指定容器
 	 */
@@ -57,6 +340,9 @@ export class AgGridAdapter implements GridAdapter {
 			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 		}
 	): void {
+		this.containerEl = container;
+		this.focusedDoc = container.ownerDocument || document;
+
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
 			// 序号列特殊处理
@@ -92,146 +378,6 @@ export class AgGridAdapter implements GridAdapter {
 						textAlign: 'center',
 						cursor: 'pointer',
 						padding: '10px var(--ag-cell-horizontal-padding)'  // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
-					},
-					// 处理左键点击：切换状态
-					onCellClicked: (params: any) => {
-						const event = params.event as MouseEvent;
-						if (event) {
-							// 阻止默认的行选择行为（不调用 stopPropagation，避免影响 gridOptions 的 onCellClicked）
-							event.preventDefault();
-						}
-						// 获取当前状态并切换
-						const rowId = params.node?.id;
-						if (!rowId) return;
-
-						const currentStatus = normalizeStatus(params.data?.status);
-						let newStatus: TaskStatus;
-						if (currentStatus === 'todo') {
-							newStatus = 'done';
-						} else if (currentStatus === 'done') {
-							newStatus = 'todo';
-						} else {
-							// inprogress, onhold, canceled 点击后统一变为 done
-							newStatus = 'done';
-						}
-
-						context?.onStatusChange?.(rowId, newStatus);
-					},
-					// 处理右键点击：显示状态选择菜单（处理整个单元格区域包括padding）
-					onCellContextMenu: (params: any) => {
-						const event = params.event as MouseEvent;
-						if (event) {
-							// 阻止默认右键菜单（不调用 stopPropagation）
-							event.preventDefault();
-						}
-
-						const rowId = params.node?.id;
-						if (!rowId) return;
-
-						const currentStatus = normalizeStatus(params.data?.status);
-
-						// 创建菜单（复用 StatusCellRenderer 的菜单逻辑）
-						const ownerDoc = container.ownerDocument;
-						const contextMenu = ownerDoc.createElement('div');
-						contextMenu.className = 'tlb-status-context-menu';
-						contextMenu.style.position = 'fixed';
-						contextMenu.style.zIndex = '10000';
-						contextMenu.style.backgroundColor = 'var(--background-primary)';
-						contextMenu.style.border = '1px solid var(--background-modifier-border)';
-						contextMenu.style.borderRadius = '4px';
-						contextMenu.style.padding = '4px 0';
-						contextMenu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
-						contextMenu.style.minWidth = '120px';
-
-						const statuses: Array<{ status: TaskStatus; label: string }> = [
-							{ status: 'todo', label: 'Todo' },
-							{ status: 'done', label: 'Done' },
-							{ status: 'inprogress', label: 'In Progress' },
-							{ status: 'onhold', label: 'On Hold' },
-							{ status: 'canceled', label: 'Canceled' }
-						];
-
-						for (const { status, label } of statuses) {
-							const item = ownerDoc.createElement('div');
-							item.className = 'tlb-status-menu-item';
-							item.style.padding = '6px 12px';
-							item.style.cursor = 'pointer';
-							item.style.userSelect = 'none';
-							item.style.display = 'flex';
-							item.style.alignItems = 'center';
-							item.style.gap = '8px';
-
-							const iconContainer = ownerDoc.createElement('span');
-							iconContainer.style.display = 'inline-flex';
-							iconContainer.style.width = '16px';
-							iconContainer.style.height = '16px';
-							setIcon(iconContainer, getStatusIcon(status));
-
-							const labelSpan = ownerDoc.createElement('span');
-							labelSpan.textContent = label;
-
-							item.appendChild(iconContainer);
-							item.appendChild(labelSpan);
-
-							if (status === currentStatus) {
-								item.style.opacity = '0.5';
-								item.style.cursor = 'default';
-							} else {
-								item.addEventListener('mouseenter', () => {
-									item.style.backgroundColor = 'var(--background-modifier-hover)';
-								});
-								item.addEventListener('mouseleave', () => {
-									item.style.backgroundColor = '';
-								});
-								item.addEventListener('click', (e) => {
-									e.stopPropagation();
-									context?.onStatusChange?.(rowId, status);
-									contextMenu.remove();
-									ownerDoc.removeEventListener('click', hideMenu);
-									ownerDoc.removeEventListener('contextmenu', hideMenu);
-								});
-							}
-
-							contextMenu.appendChild(item);
-						}
-
-						// 定位菜单
-						const defaultView = ownerDoc.defaultView || window;
-						const viewportWidth = defaultView.innerWidth;
-						const viewportHeight = defaultView.innerHeight;
-
-						ownerDoc.body.appendChild(contextMenu);
-						const menuRect = contextMenu.getBoundingClientRect();
-
-						let left = event.clientX;
-						let top = event.clientY;
-
-						if (left + menuRect.width > viewportWidth - 8) {
-							left = viewportWidth - menuRect.width - 8;
-						}
-						if (top + menuRect.height > viewportHeight - 8) {
-							top = viewportHeight - menuRect.height - 8;
-						}
-						if (left < 8) left = 8;
-						if (top < 8) top = 8;
-
-						contextMenu.style.left = `${left}px`;
-						contextMenu.style.top = `${top}px`;
-
-						// 点击外部隐藏菜单
-						const hideMenu = (e: MouseEvent) => {
-							if (contextMenu && contextMenu.contains(e.target as Node)) {
-								return;
-							}
-							contextMenu.remove();
-							ownerDoc.removeEventListener('click', hideMenu);
-							ownerDoc.removeEventListener('contextmenu', hideMenu);
-						};
-
-						setTimeout(() => {
-							ownerDoc.addEventListener('click', hideMenu, { capture: true });
-							ownerDoc.addEventListener('contextmenu', hideMenu, { capture: true });
-						}, 0);
 					}
 				};
 			}
@@ -281,6 +427,10 @@ export class AgGridAdapter implements GridAdapter {
 			return mergedColDef;
 		});
 
+		// 获取容器所在的 document 和 body（支持 pop-out 窗口）
+		const ownerDoc = container.ownerDocument;
+		const popupParent = ownerDoc.body;
+
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
@@ -294,8 +444,10 @@ export class AgGridAdapter implements GridAdapter {
 			// 传递上下文（包含回调函数）
 			context: context || {},
 
+			// 设置弹出元素的父容器（支持 pop-out 窗口）
+
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
-			singleClickEdit: false, // 禁用单击编辑，需要双击或 F2
+			singleClickEdit: false, // 禁用单击编辑，双击或按键可以进入编辑
 			stopEditingWhenCellsLoseFocus: true, // 失焦时停止编辑
 
 			// Enter 键导航配置（Excel 风格）
@@ -304,40 +456,16 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
 			rowSelection: 'multiple',
-			suppressRowClickSelection: true,  // 阻止点击行时自动选择，改为手动控制
-
-			// 启用右键菜单
-			allowContextMenuWithControlKey: true,  // 允许 Ctrl+右键显示浏览器菜单
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
 				this.handleCellEdit(event);
 			},
-
-			// 单元格点击事件：手动处理行选择（排除状态列）
-			onCellClicked: (event: any) => {
-				const field = event.column?.getColId();
-				// 状态列由列配置中的 onCellClicked 处理，不在此选择行
-				if (field === 'status') {
-					return;
-				}
-
-				// 其他列：手动选择行（支持 Ctrl/Cmd 和 Shift 多选）
-				const mouseEvent = event.event as MouseEvent;
-				const isMultiKey = mouseEvent.ctrlKey || mouseEvent.metaKey;
-				const isShiftKey = mouseEvent.shiftKey;
-
-				if (isShiftKey) {
-					// Shift 范围选择由 AG Grid 内部处理
-					event.node.setSelected(true, false);
-				} else if (isMultiKey) {
-					// Ctrl/Cmd 切换选择
-					event.node.setSelected(!event.node.isSelected(), false);
-				} else {
-					// 单选：清除其他选择
-					event.api.deselectAll();
-					event.node.setSelected(true, false);
-				}
+			onCellEditingStarted: (_event: CellEditingStartedEvent) => {
+				this.handleCellEditingStarted();
+			},
+			onCellFocused: (event: CellFocusedEvent) => {
+				this.handleCellFocused(event);
 			},
 
 			// 默认列配置
@@ -346,8 +474,14 @@ export class AgGridAdapter implements GridAdapter {
 				sortable: true,
 				filter: true,
 				resizable: true,
+				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
 				suppressKeyboardEvent: (params: any) => {
 					const keyEvent = params.event as KeyboardEvent;
+
+					if (!params.editing) {
+						return false;
+					}
+
 					if (keyEvent.key !== 'Enter') {
 						return false;
 					}
@@ -358,37 +492,6 @@ export class AgGridAdapter implements GridAdapter {
 					const colId = params.column.getColId();
 					const isLastRow = rowIndex === totalRows - 1;
 
-					// 未进入编辑时，Enter 只导航行
-					if (!params.editing) {
-						if (isLastRow) {
-							// 最后一行：触发新增行逻辑（交由上层处理）
-							if (this.enterAtLastRowCallback) {
-								keyEvent.preventDefault();
-								setTimeout(() => {
-									this.enterAtLastRowCallback?.(colId);
-								}, 0);
-								return true;
-							}
-
-							return false;
-						}
-
-						// 普通行：移动到下一行同一列
-						keyEvent.preventDefault();
-						setTimeout(() => {
-							const nextIndex = Math.min(rowIndex + 1, totalRows - 1);
-							if (nextIndex !== rowIndex) {
-								api.ensureIndexVisible(nextIndex);
-							}
-							api.setFocusedCell(nextIndex, colId);
-							const nextNode = api.getDisplayedRowAtIndex(nextIndex);
-							nextNode?.setSelected(true, true);
-						}, 0);
-
-						return true;
-					}
-
-					// 编辑状态下的最后一行：提交并新增行
 					if (isLastRow && this.enterAtLastRowCallback) {
 						keyEvent.preventDefault();
 						setTimeout(() => {
@@ -401,75 +504,12 @@ export class AgGridAdapter implements GridAdapter {
 						return true;
 					}
 
-					// 交由 AG Grid 默认处理（例如继续向下导航）
 					return false;
 				}
 			},
 
-			// 自定义键盘事件处理（实现复制粘贴功能）
-			onCellKeyDown: (params: any) => {
-				const keyEvent = params.event as KeyboardEvent;
-				const api = params.api;
-				const isCtrlOrCmd = keyEvent.ctrlKey || keyEvent.metaKey;
-
-				// 处理 Ctrl+C / Cmd+C（复制）
-				if (isCtrlOrCmd && keyEvent.key === 'c') {
-					const focusedCell = api.getFocusedCell();
-					if (!focusedCell) return;
-
-					const rowNode = api.getDisplayedRowAtIndex(focusedCell.rowIndex);
-					if (!rowNode) return;
-
-					const colId = focusedCell.column.getColId();
-					const cellValue = rowNode.data?.[colId];
-					const textToCopy = String(cellValue ?? '');
-
-					// 使用 navigator.clipboard API 复制
-					if (navigator.clipboard && navigator.clipboard.writeText) {
-						navigator.clipboard.writeText(textToCopy).catch((err) => {
-							console.warn('TLB: Failed to copy to clipboard', err);
-						});
-					}
-
-					keyEvent.preventDefault();
-					keyEvent.stopPropagation();
-				}
-
-				// 处理 Ctrl+V / Cmd+V（粘贴）
-				if (isCtrlOrCmd && keyEvent.key === 'v') {
-					const focusedCell = api.getFocusedCell();
-					if (!focusedCell) return;
-
-					const rowNode = api.getDisplayedRowAtIndex(focusedCell.rowIndex);
-					if (!rowNode) return;
-
-					const colId = focusedCell.column.getColId();
-					const colDef = focusedCell.column.getColDef();
-
-					// 检查单元格是否可编辑
-					if (colDef.editable === false) {
-						// 不可编辑的列不允许粘贴
-						keyEvent.preventDefault();
-						keyEvent.stopPropagation();
-						return;
-					}
-
-					// 使用 navigator.clipboard API 读取剪贴板
-					if (navigator.clipboard && navigator.clipboard.readText) {
-						navigator.clipboard.readText().then((text) => {
-							// 更新单元格值（会自动触发 onCellValueChanged 事件）
-							rowNode.setDataValue(colId, text);
-							// 刷新单元格显示
-							api.refreshCells({ rowNodes: [rowNode], columns: [colId], force: true });
-						}).catch((err) => {
-							console.warn('TLB: Failed to read from clipboard', err);
-						});
-					}
-
-					keyEvent.preventDefault();
-					keyEvent.stopPropagation();
-				}
-			},
+			// 启用单元格复制粘贴
+			enableCellTextSelection: true,
 
 			// 性能优化：减少不必要的重绘
 			suppressAnimationFrame: false,  // 保留动画帧以提升流畅度
@@ -605,6 +645,9 @@ export class AgGridAdapter implements GridAdapter {
 	 * 处理单元格编辑事件
 	 */
 	private handleCellEdit(event: CellEditingStoppedEvent): void {
+		this.editing = false;
+		this.armProxyForCurrentCell();
+
 		if (!this.cellEditCallback) return;
 
 		// 获取编辑信息
@@ -629,6 +672,7 @@ export class AgGridAdapter implements GridAdapter {
 				});
 			}
 		}
+
 	}
 
 	/**
@@ -641,12 +685,14 @@ export class AgGridAdapter implements GridAdapter {
 			this.lastAutoSizeTimestamp = 0;
 			this.shouldAutoSizeOnNextResize = true;
 			this.queueRowHeightSync();
+			this.armProxyForCurrentCell();
 		}
 	}
 
 	markLayoutDirty(): void {
 		this.shouldAutoSizeOnNextResize = true;
 		this.queueRowHeightSync();
+		this.armProxyForCurrentCell();
 	}
 
 	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {

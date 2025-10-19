@@ -3,36 +3,33 @@ import path from 'path';
 
 // 目标插件目录
 const PLUGIN_DIR = "D:\\C\\obsidian-tile-line-base\\docs\\.obsidian\\plugins\\tile-line-base";
-
-// 需要复制的文件
-const FILES_TO_COPY = [
-  'main.js',
-  'manifest.json',
-  'styles.css'
-];
+const DIST_DIR = path.resolve(process.cwd(), 'dist');
 
 console.log('🚀 开始部署插件到 Obsidian...\n');
 
-// 1. 确保目标目录存在
-if (!fs.existsSync(PLUGIN_DIR)) {
-  console.log(`📁 创建插件目录: ${PLUGIN_DIR}`);
-  fs.mkdirSync(PLUGIN_DIR, { recursive: true });
+if (!fs.existsSync(DIST_DIR)) {
+  console.log(`⚠ 未找到 dist 目录: ${DIST_DIR}`);
+  console.log('💡 请先运行 npm run build 后再尝试部署。');
+  process.exit(1);
 }
 
-// 2. 复制文件
-console.log('📦 复制文件...');
-for (const file of FILES_TO_COPY) {
-  const sourcePath = path.join(process.cwd(), file);
-  const targetPath = path.join(PLUGIN_DIR, file);
-
-  if (fs.existsSync(sourcePath)) {
-    fs.copyFileSync(sourcePath, targetPath);
-    console.log(`  ✓ ${file}`);
+let pluginDirInfo = '未知';
+try {
+  if (!fs.existsSync(PLUGIN_DIR)) {
+    pluginDirInfo = '不存在';
   } else {
-    console.log(`  ⚠ ${file} 不存在，跳过`);
+    const realPluginPath = fs.realpathSync(PLUGIN_DIR);
+    if (realPluginPath.toLowerCase() === DIST_DIR.toLowerCase()) {
+      pluginDirInfo = `已链接到 dist: ${realPluginPath}`;
+    } else {
+      pluginDirInfo = `指向其他路径: ${realPluginPath}`;
+    }
   }
+} catch (error) {
+  pluginDirInfo = `读取失败: ${(error && error.message) || error}`;
 }
 
-console.log('\n✅ 文件复制完成！');
-
-console.log('\n🎉 部署完成！请使用 Ctrl+R 在 Obsidian 中重载插件。');
+console.log(`🔗 当前部署目录信息: ${pluginDirInfo}`);
+console.log('📦 检测到目录链接部署模式，跳过文件复制。');
+console.log('\n✅ 部署指令执行完毕（未复制文件）。');
+console.log('\n🎉 请在 Obsidian 中重载插件以应用最新构建。');

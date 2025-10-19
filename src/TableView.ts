@@ -521,6 +521,12 @@ export class TableView extends ItemView {
 					headerName: name,
 					editable: true
 				};
+				const normalizedName = name.trim().toLowerCase();
+				const isStatusColumn = normalizedName.includes('status') || name.includes('状态');
+				if (isStatusColumn) {
+					baseColDef.headerName = '';
+					baseColDef.headerTooltip = name.includes('状态') ? '状态' : 'Status';
+				}
 
 				// 应用头部配置块中的宽度配置
 				if (this.schema?.columnConfigs) {

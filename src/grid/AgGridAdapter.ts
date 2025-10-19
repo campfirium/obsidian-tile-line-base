@@ -363,9 +363,16 @@ export class AgGridAdapter implements GridAdapter {
 
 			// status 列特殊处理
 			if (col.field === 'status') {
+				const headerName = col.headerName ?? 'Status';
+				const tooltipFallback =
+					typeof headerName === 'string' && headerName.trim().length > 0
+						? headerName
+						: 'Status';
+
 				return {
 					field: col.field,
-					headerName: col.headerName || 'Status',
+					headerName,
+					headerTooltip: col.headerTooltip ?? tooltipFallback,
 					editable: false,  // 禁用编辑模式
 					width: 60,  // 固定宽度
 					resizable: false,
@@ -649,7 +656,12 @@ export class AgGridAdapter implements GridAdapter {
 		];
 
 		for (const config of configs) {
-			const headerCell = doc.querySelector<HTMLElement>(`.ag-header-cell[col-id="${config.field}"]`);
+			const selector = `.ag-header-cell[col-id="${config.field}"]`;
+			const scope = this.containerEl ?? doc;
+			const headerCell =
+				scope instanceof Element
+					? scope.querySelector<HTMLElement>(selector)
+					: doc.querySelector<HTMLElement>(selector);
 			if (!headerCell) {
 				continue;
 			}

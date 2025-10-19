@@ -576,20 +576,27 @@ export default class TileLineBasePlugin extends Plugin {
 
 	private async maybeSwitchToTableView(file: TFile): Promise<void> {
 		if (!this.shouldAutoOpenForFile(file)) {
+			debugLog('maybeSwitchToTableView: skipped (preference not table)', { file: file.path });
 			return;
 		}
 
 		const activeLeaf = this.app.workspace.activeLeaf;
 		if (!activeLeaf) {
+			debugLog('maybeSwitchToTableView: skipped (no active leaf)', { file: file.path });
 			return;
 		}
 
 		const viewType = activeLeaf.getViewState().type;
 		if (viewType === TABLE_VIEW_TYPE) {
+			debugLog('maybeSwitchToTableView: already table view', { file: file.path });
 			return;
 		}
 
 		if (viewType !== 'markdown' && viewType !== 'empty') {
+			debugLog('maybeSwitchToTableView: skipped (current view not markdown/empty)', {
+				file: file.path,
+				viewType
+			});
 			return;
 		}
 
@@ -597,6 +604,10 @@ export default class TileLineBasePlugin extends Plugin {
 		const workspace = this.getWorkspaceForLeaf(activeLeaf) ?? this.app.workspace;
 
 		try {
+			debugLog('maybeSwitchToTableView: switching to table view', {
+				file: file.path,
+				targetLeaf: this.describeLeaf(activeLeaf)
+			});
 			await this.openTableView(file, {
 				leaf: activeLeaf,
 				preferredWindow,
@@ -612,11 +623,13 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private async updateFileViewPreference(file: TFile, view: 'markdown' | 'table'): Promise<void> {
-		if (this.settings.fileViewPrefs[file.path] === view) {
+		const current = this.settings.fileViewPrefs[file.path];
+		if (current === view) {
 			return;
 		}
 		this.settings.fileViewPrefs[file.path] = view;
 		await this.saveSettings();
+		debugLog('updateFileViewPreference', { file: file.path, view });
 	}
 
 	private async loadSettings(): Promise<void> {

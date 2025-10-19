@@ -35,6 +35,9 @@ import { createTextCellEditor } from './editors/TextCellEditor';
 import { CompositionProxy } from './utils/CompositionProxy';
 import { setIcon } from 'obsidian';
 
+const DEFAULT_TEXT_MIN_WIDTH = 160;
+const DEFAULT_TEXT_MAX_WIDTH = 360;
+
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -399,6 +402,14 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 合并用户配置（width, flex 等）
 			const mergedColDef = { ...baseColDef, ...(col as any) };
+			if (typeof col.field === 'string' && col.field !== '#' && col.field !== 'status') {
+				if (typeof mergedColDef.minWidth !== 'number') {
+					mergedColDef.minWidth = DEFAULT_TEXT_MIN_WIDTH;
+				}
+				if (typeof mergedColDef.maxWidth !== 'number') {
+					mergedColDef.maxWidth = DEFAULT_TEXT_MAX_WIDTH;
+				}
+			}
 			const pinnedFields = new Set(['任务', '任务名称', '任务名', 'task', 'taskName', 'title', '标题']);
 			if (typeof col.field === 'string' && pinnedFields.has(col.field)) {
 				mergedColDef.pinned = 'left';

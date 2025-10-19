@@ -12,6 +12,7 @@ import {
 	CellEditingStoppedEvent,
 	CellEditingStartedEvent,
 	CellFocusedEvent,
+	CellKeyDownEvent,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode
@@ -449,6 +450,24 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 传递上下文（包含回调函数）
 			context: context || {},
+			enableBrowserTooltips: true,
+			tooltipShowDelay: 0,
+			tooltipHideDelay: 200,
+			onCellKeyDown: (event: CellKeyDownEvent) => {
+				if (!this.editing) {
+					return;
+				}
+				const keyEvent = event.event;
+				if (!(keyEvent instanceof KeyboardEvent)) {
+					return;
+				}
+				this.handleEnterAtLastRow(
+					event.api,
+					event.column.getColId(),
+					event.node?.rowIndex ?? null,
+					keyEvent
+				);
+			},
 
 			// 设置弹出元素的父容器（支持 pop-out 窗口）
 
@@ -498,35 +517,16 @@ export class AgGridAdapter implements GridAdapter {
 				resizable: true,
 				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
 				suppressKeyboardEvent: (params: any) => {
-					const keyEvent = params.event as KeyboardEvent;
-
 					if (!params.editing) {
 						return false;
 					}
-
-					if (keyEvent.key !== 'Enter') {
-						return false;
-					}
-
-					const api = params.api;
-					const rowIndex = params.node.rowIndex;
-					const totalRows = api.getDisplayedRowCount();
-					const colId = params.column.getColId();
-					const isLastRow = rowIndex === totalRows - 1;
-
-					if (isLastRow && this.enterAtLastRowCallback) {
-						keyEvent.preventDefault();
-						setTimeout(() => {
-							api.stopEditing();
-							setTimeout(() => {
-								this.enterAtLastRowCallback?.(colId);
-							}, 10);
-						}, 0);
-
-						return true;
-					}
-
-					return false;
+					const keyEvent = params.event as KeyboardEvent;
+					return this.handleEnterAtLastRow(
+						params.api,
+						params.column.getColId(),
+						params.node?.rowIndex ?? null,
+						keyEvent
+					);
 				}
 			},
 
@@ -789,6 +789,37 @@ export class AgGridAdapter implements GridAdapter {
 			this.queueRowHeightSync();
 			this.armProxyForCurrentCell();
 		}
+	}
+
+
+	private handleEnterAtLastRow(api: GridApi, columnId: string, rowIndex: number | null | undefined, keyEvent: KeyboardEvent): boolean {
+		if (!this.enterAtLastRowCallback) {
+			return false;
+		}
+
+		if (keyEvent.key !== 'Enter') {
+			return false;
+		}
+
+		if (rowIndex == null || rowIndex < 0) {
+			return false;
+		}
+
+		const totalRows = api.getDisplayedRowCount();
+		if (rowIndex !== totalRows - 1) {
+			return false;
+		}
+
+		keyEvent.preventDefault();
+		const colId = columnId;
+		setTimeout(() => {
+			api.stopEditing();
+			setTimeout(() => {
+				this.enterAtLastRowCallback?.(colId);
+			}, 10);
+		}, 0);
+
+		return true;
 	}
 
 	markLayoutDirty(): void {

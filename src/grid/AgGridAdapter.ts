@@ -350,6 +350,8 @@ export class AgGridAdapter implements GridAdapter {
 					field: col.field,
 					headerName: col.headerName,
 					editable: false,
+					pinned: 'left',
+					lockPinned: true,
 					width: 60,  // 固定宽度
 					maxWidth: 80,
 					sortable: true,
@@ -366,6 +368,8 @@ export class AgGridAdapter implements GridAdapter {
 					field: col.field,
 					headerName: col.headerName || 'Status',
 					editable: false,  // 禁用编辑模式
+				pinned: 'left',
+				lockPinned: true,
 					width: 60,  // 固定宽度
 					resizable: false,
 					sortable: true,
@@ -395,6 +399,11 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 合并用户配置（width, flex 等）
 			const mergedColDef = { ...baseColDef, ...(col as any) };
+			const pinnedFields = new Set(['任务', '任务名称', '任务名', 'task', 'taskName', 'title', '标题']);
+			if (typeof col.field === 'string' && pinnedFields.has(col.field)) {
+				mergedColDef.pinned = 'left';
+				mergedColDef.lockPinned = true;
+			}
 
 			// 检查用户是否配置了宽度
 			const hasWidth = (col as any).width !== undefined;

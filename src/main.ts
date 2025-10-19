@@ -44,6 +44,20 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.mainContext = this.registerWindow(window) ?? { window, app: this.app };
 		this.captureExistingWindows();
+		this.registerEvent(
+			this.app.workspace.on('file-open', (openedFile) => {
+				if (openedFile instanceof TFile) {
+					void this.maybeAutoOpenTableView(openedFile);
+				}
+			})
+		);
+
+		this.app.workspace.onLayoutReady(() => {
+			const currentFile = this.app.workspace.getActiveFile();
+			if (currentFile) {
+				void this.maybeAutoOpenTableView(currentFile);
+			}
+		});
 
 		// 全局注册一次 file-menu 事件（不在 registerWindow 里重复注册）
 		this.registerEvent(
@@ -561,6 +575,66 @@ export default class TileLineBasePlugin extends Plugin {
 			this.windowIds.set(win, id);
 		}
 		return id;
+	}
+
+	private async maybeAutoOpenTableView(file: TFile): Promise<void> {
+		if (!this.shouldAutoOpenTableView(file)) {
+			return;
+		}
+
+		const activeLeaf = this.app.workspace.activeLeaf;
+		if (!activeLeaf) {
+			return;
+		}
+
+		const viewType = activeLeaf.getViewState().type;
+		if (viewType === TABLE_VIEW_TYPE) {
+			return;
+		}
+
+		if (viewType !== 'markdown' && viewType !== 'empty') {
+			return;
+		}
+
+		const preferredWindow = this.getLeafWindow(activeLeaf);
+		const workspace = this.getWorkspaceForLeaf(activeLeaf) ?? this.app.workspace;
+
+		try {
+			await this.openTableView(file, {
+				leaf: activeLeaf,
+				preferredWindow,
+				workspace
+			});
+		} catch (error) {
+			console.error(LOG_PREFIX, '自动打开表格视图失败', error);
+		}
+	}
+
+	private shouldAutoOpenTableView(file: TFile): boolean {
+		if (file.extension.toLowerCase() !== 'md') {
+			return false;
+		}
+
+		const cache = this.app.metadataCache.getFileCache(file);
+		const tileLineBaseFlag = (cache?.frontmatter as Record<string, unknown> | undefined)?.tileLineBase as boolean | undefined;
+
+		if (tileLineBaseFlag === false) {
+			return false;
+		}
+
+		if (tileLineBaseFlag === true) {
+			return true;
+		}
+
+		if (file.path.startsWith('tasks/')) {
+			return true;
+		}
+
+		if (cache?.headings?.some((heading) => heading.level === 2)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private countLeaves(): number {

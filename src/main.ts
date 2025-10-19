@@ -347,7 +347,7 @@ export default class TileLineBasePlugin extends Plugin {
 				}
 			});
 			debugLog('openTableView setViewState 成功完成', this.describeLeaf(leaf));
-			void this.updateFileViewPreference(file, 'table');
+			await this.updateFileViewPreference(file, 'table');
 		} catch (error) {
 			console.error(LOG_PREFIX, 'openTableView setViewState 失败:', error);
 			throw error;

@@ -512,7 +512,8 @@ export class TableView extends ItemView {
 		const columns: ColumnDef[] = [
 			{
 				field: '#',
-				headerName: 'Index',
+				headerName: '',
+				headerTooltip: 'Index',
 				editable: false  // index column is read-only
 			},
 			...this.schema.columnNames.map(name => {
@@ -521,6 +522,10 @@ export class TableView extends ItemView {
 					headerName: name,
 					editable: true
 				};
+				if (name.toLowerCase() === 'status') {
+					baseColDef.headerName = '';
+					baseColDef.headerTooltip = 'Status';
+				}
 
 				// 应用头部配置块中的宽度配置
 				if (this.schema?.columnConfigs) {

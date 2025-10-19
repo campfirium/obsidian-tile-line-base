@@ -32,7 +32,8 @@
       "WebFetch(domain:www.ag-grid.com)",
       "Bash(node:*)",
       "WebFetch(domain:obsidian.md)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(首字符\"的方案都会面临相同的困境。\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

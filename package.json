@@ -2,7 +2,7 @@
   "name": "obsidian-tile-line-base",
   "version": "0.1.0",
   "description": "TileLineBase - A federated paragraph database for Obsidian",
-  "main": "main.js",
+  "main": "dist/main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "npx tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",

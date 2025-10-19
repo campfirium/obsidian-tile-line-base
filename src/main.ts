@@ -55,6 +55,16 @@ export default class TileLineBasePlugin extends Plugin {
 		this.mainContext = this.registerWindow(window) ?? { window, app: this.app };
 		this.captureExistingWindows();
 
+		this.registerEvent(
+			this.app.workspace.on('file-open', (openedFile) => {
+				debugLog('file-open event received', { file: openedFile?.path ?? null });
+				if (openedFile instanceof TFile) {
+					window.setTimeout(() => {
+						void this.maybeSwitchToTableView(openedFile);
+					}, 0);
+				}
+			})
+		);
 		// 全局注册一次 file-menu 事件（不在 registerWindow 里重复注册）
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu: Menu, file: TFile) => {

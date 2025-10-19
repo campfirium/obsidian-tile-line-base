@@ -14,9 +14,7 @@ import {
 	CellFocusedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
-	IRowNode,
-	GetContextMenuItemsParams,
-	MenuItemDef
+	IRowNode
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -58,6 +56,7 @@ export class AgGridAdapter implements GridAdapter {
 	private focusedColId: string | null = null;
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private editing = false;
+	private headerIconCleanup: (() => void) | null = null;
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -427,6 +426,13 @@ export class AgGridAdapter implements GridAdapter {
 			return mergedColDef;
 		});
 
+		const statusColDef = colDefs.find(def => def.field === 'status');
+		if (statusColDef) {
+			statusColDef.width = 80;
+			statusColDef.minWidth = 72;
+			statusColDef.maxWidth = 96;
+		}
+
 		// 获取容器所在的 document 和 body（支持 pop-out 窗口）
 		const ownerDoc = container.ownerDocument;
 		const popupParent = ownerDoc.body;
@@ -455,7 +461,23 @@ export class AgGridAdapter implements GridAdapter {
 			enterNavigatesVerticallyAfterEdit: true, // 编辑后 Enter 垂直导航
 
 			// 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
-			rowSelection: 'multiple',
+			rowSelection: {
+				mode: 'multiRow',
+				enableClickSelection: true,
+				enableSelectionWithoutKeys: true,
+				checkboxes: false,
+				checkboxLocation: 'autoGroupColumn'
+			},
+			selectionColumnDef: {
+				width: 0,
+				minWidth: 0,
+				maxWidth: 0,
+				resizable: false,
+				suppressSizeToFit: true,
+				headerName: '',
+				suppressHeaderMenuButton: true,
+				suppressHeaderContextMenu: true
+			},
 
 			// 事件监听
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
@@ -526,64 +548,6 @@ export class AgGridAdapter implements GridAdapter {
 			// 单元格样式规则：标题列添加删除线（假设第一个数据列是标题列）
 			// 注意：这里需要动态获取标题列的 colId
 			// 暂时使用通用选择器，后续在 TableView 中根据实际列名配置
-
-			// 右键菜单配置
-			getContextMenuItems: (params: GetContextMenuItemsParams) => {
-				const field = params.column?.getColId();
-
-				// 如果是 status 列，显示状态菜单
-				if (field === 'status') {
-					const rowId = params.node?.id;
-					if (!rowId) return ['copy', 'export'];
-
-					const currentStatus = normalizeStatus(params.node?.data?.status);
-
-					// 返回 5 种状态的菜单项
-					return [
-						{
-							name: '待办 ☐',
-							disabled: currentStatus === 'todo',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'todo');
-							}
-						},
-						{
-							name: '已完成 ☑',
-							disabled: currentStatus === 'done',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'done');
-							}
-						},
-						{
-							name: '进行中 ⊟',
-							disabled: currentStatus === 'inprogress',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'inprogress');
-							}
-						},
-						{
-							name: '已搁置 ⏸',
-							disabled: currentStatus === 'onhold',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'onhold');
-							}
-						},
-						{
-							name: '已放弃 ☒',
-							disabled: currentStatus === 'canceled',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'canceled');
-							}
-						},
-						'separator',
-						'copy',
-						'export'
-					];
-				}
-
-				// 其他列使用默认菜单
-				return ['copy', 'export'];
-			}
 		};
 
 		// 创建并挂载 AG Grid
@@ -591,12 +555,150 @@ export class AgGridAdapter implements GridAdapter {
 		this.lastAutoSizeTimestamp = 0;
 		this.shouldAutoSizeOnNextResize = false;
 		this.clearRowHeightResetHandle();
+		this.setupHeaderIcons(ownerDoc ?? document);
+
+		['ag-Grid-SelectionColumn', 'ag-Grid-AutoColumn'].forEach((colId) => {
+			if (this.gridApi?.getColumn(colId)) {
+				this.gridApi.setColumnsVisible([colId], false);
+			}
+		});
 
 		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
 		setTimeout(() => {
 			this.autoSizeShortTextColumns(colDefs);
 			this.shouldAutoSizeOnNextResize = false;
 		}, 100);
+	}
+
+	private setupHeaderIcons(doc: Document): void {
+		this.cleanupHeaderIcons();
+		const api = this.gridApi;
+		if (!api) {
+			return;
+		}
+
+		const update = () => {
+			this.updateHeaderIcons(doc);
+		};
+
+		const events = [
+			'firstDataRendered',
+			'columnEverythingChanged',
+			'displayedColumnsChanged',
+			'sortChanged',
+			'columnResized'
+		] as const;
+
+		events.forEach((eventName) => {
+			api.addEventListener(eventName, update);
+		});
+
+		const win = doc.defaultView ?? window;
+		win.setTimeout(() => update(), 0);
+
+		this.headerIconCleanup = () => {
+			events.forEach((eventName) => {
+				api.removeEventListener(eventName, update);
+			});
+		};
+	}
+
+	private updateHeaderIcons(doc: Document): void {
+		if (!this.gridApi) {
+			return;
+		}
+
+		type HeaderIconConfig = {
+			field: string;
+			cellClass: string;
+			labelClass: string;
+			iconClass: string;
+			icon: string;
+			fallbacks?: string[];
+			hideLabel?: boolean;
+			tooltip?: string;
+		};
+
+		const configs: HeaderIconConfig[] = [
+			{
+				field: '#',
+				cellClass: 'tlb-index-header-cell',
+				labelClass: 'tlb-index-header-label',
+				iconClass: 'tlb-index-header-icon',
+				icon: 'hashtag',
+				fallbacks: ['hash'],
+				hideLabel: true,
+				tooltip:
+					this.gridApi.getColumn('#')?.getColDef().headerTooltip ||
+					this.gridApi.getColumn('#')?.getColDef().headerName ||
+					'Index'
+			},
+			{
+				field: 'status',
+				cellClass: 'tlb-status-header-cell',
+				labelClass: 'tlb-status-header-label',
+				iconClass: 'tlb-status-header-icon',
+				icon: 'list-checks',
+				fallbacks: ['checklist', 'check-square'],
+				hideLabel: true,
+				tooltip:
+					this.gridApi.getColumn('status')?.getColDef().headerTooltip ||
+					this.gridApi.getColumn('status')?.getColDef().headerName ||
+					'Status'
+			}
+		];
+
+		for (const config of configs) {
+			const headerCell = doc.querySelector<HTMLElement>(`.ag-header-cell[col-id="${config.field}"]`);
+			if (!headerCell) {
+				continue;
+			}
+
+			headerCell.classList.add(config.cellClass);
+
+			const label = headerCell.querySelector<HTMLElement>('.ag-header-cell-label');
+			if (!label) {
+				continue;
+			}
+
+			label.classList.add(config.labelClass);
+
+			let iconEl = headerCell.querySelector<HTMLElement>(`.${config.iconClass}`);
+			if (!iconEl) {
+				iconEl = doc.createElement('div');
+				iconEl.className = config.iconClass;
+				label.insertBefore(iconEl, label.firstChild ?? null);
+			}
+
+			setIcon(iconEl, config.icon);
+			if (!iconEl.querySelector('svg') && config.fallbacks) {
+				for (const fallback of config.fallbacks) {
+					setIcon(iconEl, fallback);
+					if (iconEl.querySelector('svg')) {
+						break;
+					}
+				}
+			}
+			iconEl.setAttribute('aria-hidden', 'true');
+			iconEl.setAttribute('role', 'presentation');
+
+			const textEl = label.querySelector<HTMLElement>('.ag-header-cell-text');
+			if (textEl && config.hideLabel) {
+				textEl.textContent = '';
+			}
+
+			if (config.tooltip) {
+				headerCell.setAttribute('title', config.tooltip);
+				iconEl.setAttribute('aria-label', config.tooltip);
+			}
+		}
+	}
+
+	private cleanupHeaderIcons(): void {
+		if (this.headerIconCleanup) {
+			this.headerIconCleanup();
+			this.headerIconCleanup = null;
+		}
 	}
 
 	/**
@@ -735,6 +837,7 @@ export class AgGridAdapter implements GridAdapter {
 	 */
 	destroy(): void {
 		this.clearRowHeightResetHandle();
+		this.cleanupHeaderIcons();
 		if (this.gridApi) {
 			this.gridApi.destroy();
 			this.gridApi = null;
@@ -801,6 +904,14 @@ export class AgGridAdapter implements GridAdapter {
 		}
 
 		// 先触发一次布局刷新，确保网格识别最新容器尺寸（不同版本API兼容）
+		const containerWidth = this.containerEl?.clientWidth ?? 0;
+		const containerHeight = this.containerEl?.clientHeight ?? 0;
+		if (containerWidth <= 0 || containerHeight <= 0) {
+			// 网格尚未可见，延迟到下一次尺寸变化再调整
+			this.shouldAutoSizeOnNextResize = true;
+			return;
+		}
+
 		const gridApiAny = this.gridApi as any;
 		gridApiAny?.doLayout?.();
 		gridApiAny?.checkGridSize?.();

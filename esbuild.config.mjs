@@ -1,6 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { copyFile, mkdir } from "fs/promises";
+import path from "path";
 
 const banner =
 `/*
@@ -10,6 +12,31 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === 'production');
+
+const staticAssets = [
+	{ src: 'styles.css', dest: path.join('dist', 'styles.css') }
+];
+
+async function copyStaticAssets() {
+	await Promise.all(staticAssets.map(async ({ src, dest }) => {
+		await mkdir(path.dirname(dest), { recursive: true });
+		await copyFile(src, dest);
+	}));
+}
+
+const copyStaticPlugin = {
+	name: 'copy-static-assets',
+	setup(build) {
+		build.onEnd(async () => {
+			try {
+				await copyStaticAssets();
+				console.info('[esbuild] Static assets copied');
+			} catch (error) {
+				console.error('[esbuild] Failed to copy static assets', error);
+			}
+		});
+	}
+};
 
 const context = await esbuild.context({
 	banner: {
@@ -38,6 +65,7 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
 	outfile: 'dist/main.js',
+	plugins: [copyStaticPlugin],
 });
 
 if (prod) {

@@ -16,12 +16,22 @@ interface OpenContext {
 	workspace?: Workspace | null;
 }
 
+interface TileLineBaseSettings {
+	autoTableFiles: string[];
+}
+
+const DEFAULT_SETTINGS: TileLineBaseSettings = {
+	autoTableFiles: []
+};
+
 export default class TileLineBasePlugin extends Plugin {
 	private readonly windowContexts = new Map<Window, WindowContext>();
 	private readonly windowIds = new WeakMap<Window, string>();
 	private mainContext: WindowContext | null = null;
+	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
 
 	async onload() {
+		await this.loadSettings();
 		debugLog('========== Plugin onload 开始 ==========');
 		debugLog('Registering TableView view');
 		debugLog('TABLE_VIEW_TYPE =', TABLE_VIEW_TYPE);
@@ -76,6 +86,38 @@ export default class TileLineBasePlugin extends Plugin {
 					const leafWindow = this.getLeafWindow(activeLeaf);
 					const context = this.getWindowContext(leafWindow) ?? this.mainContext;
 					this.toggleTableView(activeLeaf, context);
+				}
+				return true;
+			}
+		});
+
+		this.addCommand({
+			id: 'remember-table-view',
+			name: '设置当前笔记默认使用表格视图',
+			checkCallback: (checking: boolean) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file) {
+					return false;
+				}
+
+				if (!checking) {
+					void this.rememberFileAsTableView(file);
+				}
+				return true;
+			}
+		});
+
+		this.addCommand({
+			id: 'forget-table-view',
+			name: '取消当前笔记的表格视图默认设置',
+			checkCallback: (checking: boolean) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file) {
+					return false;
+				}
+
+				if (!checking) {
+					void this.forgetFileTableViewPreference(file);
 				}
 				return true;
 			}
@@ -561,6 +603,68 @@ export default class TileLineBasePlugin extends Plugin {
 			this.windowIds.set(win, id);
 		}
 		return id;
+	}
+
+	private async maybeSwitchToTableView(file: TFile): Promise<void> {
+		if (!this.shouldAutoOpenForFile(file)) {
+			return;
+		}
+
+		const activeLeaf = this.app.workspace.activeLeaf;
+		if (!activeLeaf) {
+			return;
+		}
+
+		const viewType = activeLeaf.getViewState().type;
+		if (viewType === TABLE_VIEW_TYPE) {
+			return;
+		}
+
+		if (viewType !== 'markdown' && viewType !== 'empty') {
+			return;
+		}
+
+		const preferredWindow = this.getLeafWindow(activeLeaf);
+		const workspace = this.getWorkspaceForLeaf(activeLeaf) ?? this.app.workspace;
+
+		try {
+			await this.openTableView(file, {
+				leaf: activeLeaf,
+				preferredWindow,
+				workspace
+			});
+		} catch (error) {
+			console.error(LOG_PREFIX, '自动打开表格视图失败', error);
+		}
+	}
+
+	private shouldAutoOpenForFile(file: TFile): boolean {
+		return this.settings.autoTableFiles.includes(file.path);
+	}
+
+	private async rememberFileAsTableView(file: TFile): Promise<void> {
+		if (!this.settings.autoTableFiles.includes(file.path)) {
+			this.settings.autoTableFiles.push(file.path);
+			await this.saveSettings();
+		}
+		await this.maybeSwitchToTableView(file);
+	}
+
+	private async forgetFileTableViewPreference(file: TFile): Promise<void> {
+		const index = this.settings.autoTableFiles.indexOf(file.path);
+		if (index !== -1) {
+			this.settings.autoTableFiles.splice(index, 1);
+			await this.saveSettings();
+		}
+	}
+
+	private async loadSettings(): Promise<void> {
+		const data = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+	}
+
+	private async saveSettings(): Promise<void> {
+		await this.saveData(this.settings);
 	}
 
 	private countLeaves(): number {

@@ -101,7 +101,7 @@ export default class TileLineBasePlugin extends Plugin {
 				}
 
 				if (!checking) {
-					void this.rememberFileAsTableView(file);
+					void this.rememberFileAsTableView(file, true);
 				}
 				return true;
 			}
@@ -379,6 +379,7 @@ export default class TileLineBasePlugin extends Plugin {
 				}
 			});
 			debugLog('openTableView setViewState 成功完成', this.describeLeaf(leaf));
+			await this.ensureFileRemembered(file);
 		} catch (error) {
 			console.error(LOG_PREFIX, 'openTableView setViewState 失败:', error);
 			throw error;
@@ -642,18 +643,24 @@ export default class TileLineBasePlugin extends Plugin {
 		return this.settings.autoTableFiles.includes(file.path);
 	}
 
-	private async rememberFileAsTableView(file: TFile): Promise<void> {
-		if (!this.settings.autoTableFiles.includes(file.path)) {
-			this.settings.autoTableFiles.push(file.path);
-			await this.saveSettings();
+	private async rememberFileAsTableView(file: TFile, autoSwitch: boolean = false): Promise<void> {
+		await this.ensureFileRemembered(file);
+		if (autoSwitch) {
+			await this.maybeSwitchToTableView(file);
 		}
-		await this.maybeSwitchToTableView(file);
 	}
 
 	private async forgetFileTableViewPreference(file: TFile): Promise<void> {
 		const index = this.settings.autoTableFiles.indexOf(file.path);
 		if (index !== -1) {
 			this.settings.autoTableFiles.splice(index, 1);
+			await this.saveSettings();
+		}
+	}
+
+	private async ensureFileRemembered(file: TFile): Promise<void> {
+		if (!this.settings.autoTableFiles.includes(file.path)) {
+			this.settings.autoTableFiles.push(file.path);
 			await this.saveSettings();
 		}
 	}

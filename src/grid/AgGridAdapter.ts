@@ -369,7 +369,7 @@ export class AgGridAdapter implements GridAdapter {
 					width: 60,  // 固定宽度
 					resizable: false,
 					sortable: true,
-					filter: true,
+					filter: false,
 					suppressSizeToFit: true,  // 不参与自动调整
 					suppressNavigable: true,  // 禁止键盘导航
 					cellRenderer: StatusCellRenderer,  // 使用自定义渲染器
@@ -387,7 +387,7 @@ export class AgGridAdapter implements GridAdapter {
 				headerName: col.headerName,
 				editable: col.editable,
 				sortable: true, // 启用排序
-				filter: true, // 启用筛选
+				filter: false, // 关闭筛选
 				resizable: true, // 可调整列宽
 				wrapText: true, // 文本自动换行
 				autoHeight: true, // 行高自动适应内容
@@ -494,7 +494,7 @@ export class AgGridAdapter implements GridAdapter {
 			defaultColDef: {
 				editable: true,
 				sortable: true,
-				filter: true,
+				filter: false,
 				resizable: true,
 				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
 				suppressKeyboardEvent: (params: any) => {

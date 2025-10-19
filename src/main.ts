@@ -1,4 +1,4 @@
-import { App, Menu, Plugin, TFile, Workspace, WorkspaceLeaf, WorkspaceWindow } from 'obsidian';
+import { App, Menu, Plugin, TFile, Workspace, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { debugLog, isDebugEnabled } from './utils/logger';
 
@@ -63,6 +63,33 @@ export default class TileLineBasePlugin extends Plugin {
 						void this.maybeSwitchToTableView(openedFile);
 					}, 0);
 				}
+			})
+		);
+
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => {
+				const markdownView = leaf?.view instanceof MarkdownView ? leaf.view : null;
+				const file = markdownView?.file ?? null;
+				if (!file) {
+					return;
+				}
+
+				if (!this.shouldAutoOpenForFile(file)) {
+					return;
+				}
+
+				debugLog('active-leaf-change: auto switch candidate', {
+					file: file.path,
+					leaf: this.describeLeaf(leaf ?? null)
+				});
+
+				window.setTimeout(() => {
+					void this.openTableView(file, {
+						leaf: leaf ?? null,
+						preferredWindow: this.getLeafWindow(leaf ?? null),
+						workspace: this.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace
+					});
+				}, 0);
 			})
 		);
 		// 全局注册一次 file-menu 事件（不在 registerWindow 里重复注册）

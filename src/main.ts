@@ -1,5 +1,6 @@
 import { App, Menu, Plugin, TFile, Workspace, WorkspaceLeaf, WorkspaceWindow } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
+import { debugLog, isDebugEnabled } from './utils/logger';
 
 const LOG_PREFIX = '[TileLineBase]';
 
@@ -21,25 +22,25 @@ export default class TileLineBasePlugin extends Plugin {
 	private mainContext: WindowContext | null = null;
 
 	async onload() {
-		console.log(LOG_PREFIX, '========== Plugin onload 开始 ==========');
-		console.log(LOG_PREFIX, 'Registering TableView view');
-		console.log(LOG_PREFIX, 'TABLE_VIEW_TYPE =', TABLE_VIEW_TYPE);
+		debugLog('========== Plugin onload 开始 ==========');
+		debugLog('Registering TableView view');
+		debugLog('TABLE_VIEW_TYPE =', TABLE_VIEW_TYPE);
 
 		this.registerView(
 			TABLE_VIEW_TYPE,
 			(leaf) => {
 				const leafWindow = this.getLeafWindow(leaf);
-				console.log(LOG_PREFIX, '========== registerView 工厂函数被调用 ==========');
-				console.log(LOG_PREFIX, 'leaf:', this.describeLeaf(leaf));
-				console.log(LOG_PREFIX, 'leaf 所在窗口:', this.describeWindow(leafWindow));
-				console.log(LOG_PREFIX, 'leaf 所在窗口是否已注册:', this.windowContexts.has(leafWindow ?? window));
+				debugLog('========== registerView 工厂函数被调用 ==========');
+				debugLog('leaf:', this.describeLeaf(leaf));
+				debugLog('leaf 所在窗口:', this.describeWindow(leafWindow));
+				debugLog('leaf 所在窗口是否已注册:', this.windowContexts.has(leafWindow ?? window));
 
 				const view = new TableView(leaf);
-				console.log(LOG_PREFIX, 'TableView 实例已创建');
+				debugLog('TableView 实例已创建');
 				return view;
 			}
 		);
-		console.log(LOG_PREFIX, 'registerView 完成');
+		debugLog('registerView 完成');
 
 		this.mainContext = this.registerWindow(window) ?? { window, app: this.app };
 		this.captureExistingWindows();
@@ -52,7 +53,7 @@ export default class TileLineBasePlugin extends Plugin {
 				const activeWindow = this.getLeafWindow(activeLeaf) ?? window;
 				const context = this.getWindowContext(activeWindow) ?? this.mainContext ?? { window, app: this.app };
 
-				console.log(LOG_PREFIX, 'file-menu 事件触发 (main console)');
+				debugLog('file-menu 事件触发 (main console)');
 				this.handleFileMenu(menu, file, context);
 			})
 		);
@@ -62,7 +63,7 @@ export default class TileLineBasePlugin extends Plugin {
 			name: '切换 TileLineBase 表格视图',
 			checkCallback: (checking: boolean) => {
 				const activeLeaf = this.app.workspace.activeLeaf;
-				console.log(LOG_PREFIX, 'toggle-table-view command', {
+				debugLog('toggle-table-view command', {
 					checking,
 					activeLeaf: this.describeLeaf(activeLeaf)
 				});
@@ -82,49 +83,49 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on('window-open', (workspaceWindow: WorkspaceWindow, win: Window) => {
-				console.log(LOG_PREFIX, '========== WINDOW-OPEN EVENT ==========');
-				console.log(LOG_PREFIX, 'window:', this.describeWindow(win));
+				debugLog('========== WINDOW-OPEN EVENT ==========');
+				debugLog('window:', this.describeWindow(win));
 
 				// 探查 WorkspaceWindow 的 API
-				console.log(LOG_PREFIX, 'WorkspaceWindow 对象:', workspaceWindow);
-				console.log(LOG_PREFIX, 'WorkspaceWindow 可用属性:', Object.keys(workspaceWindow));
-				console.log(LOG_PREFIX, 'WorkspaceWindow 原型方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(workspaceWindow)));
+				debugLog('WorkspaceWindow 对象:', workspaceWindow);
+				debugLog('WorkspaceWindow 可用属性:', Object.keys(workspaceWindow));
+				debugLog('WorkspaceWindow 原型方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(workspaceWindow)));
 
 				// 验证 app 是否共享
 				const winApp = (win as any).app;
-				console.log(LOG_PREFIX, 'win.app === this.app:', winApp === this.app);
-				console.log(LOG_PREFIX, 'win.app 存在:', !!winApp);
+				debugLog('win.app === this.app:', winApp === this.app);
+				debugLog('win.app 存在:', !!winApp);
 
 				// 尝试访问可能的 API
 				if ('getRoot' in workspaceWindow) {
 					try {
 						const root = (workspaceWindow as any).getRoot();
-						console.log(LOG_PREFIX, 'workspaceWindow.getRoot() 成功:', root);
-						console.log(LOG_PREFIX, 'root 可用方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(root)));
+						debugLog('workspaceWindow.getRoot() 成功:', root);
+						debugLog('root 可用方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(root)));
 
 						// 尝试通过 root 获取 leaf
 						if (typeof (root as any).getLeaf === 'function') {
-							console.log(LOG_PREFIX, 'root.getLeaf 方法存在');
+							debugLog('root.getLeaf 方法存在');
 						}
 					} catch (e) {
 						console.warn(LOG_PREFIX, 'workspaceWindow.getRoot() 失败:', e);
 					}
 				} else {
-					console.log(LOG_PREFIX, 'workspaceWindow 没有 getRoot 方法');
+					debugLog('workspaceWindow 没有 getRoot 方法');
 				}
 
 				if ('activeLeaf' in workspaceWindow) {
-					console.log(LOG_PREFIX, 'workspaceWindow.activeLeaf:', (workspaceWindow as any).activeLeaf);
+					debugLog('workspaceWindow.activeLeaf:', (workspaceWindow as any).activeLeaf);
 				} else {
-					console.log(LOG_PREFIX, 'workspaceWindow 没有 activeLeaf 属性');
+					debugLog('workspaceWindow 没有 activeLeaf 属性');
 				}
 
 				// 测试 workspace.getLeaf 在哪个窗口创建 leaf
-				console.log(LOG_PREFIX, '测试 workspace.getLeaf(true) 行为:');
+				debugLog('测试 workspace.getLeaf(true) 行为:');
 				const beforeLeafCount = this.countLeaves();
-				console.log(LOG_PREFIX, '创建前 leaf 总数:', beforeLeafCount);
+				debugLog('创建前 leaf 总数:', beforeLeafCount);
 
-				console.log(LOG_PREFIX, '========================================');
+				debugLog('========================================');
 
 				this.registerWindow(win, workspaceWindow);
 			})
@@ -132,7 +133,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on('window-close', (_workspaceWindow: WorkspaceWindow, win: Window) => {
-				console.log(LOG_PREFIX, 'window-close', {
+				debugLog('window-close', {
 					window: this.describeWindow(win)
 				});
 				this.unregisterWindow(win);
@@ -141,7 +142,7 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	async onunload() {
-		console.log(LOG_PREFIX, 'Detaching all table views');
+		debugLog('Detaching all table views');
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 	}
 
@@ -149,7 +150,7 @@ export default class TileLineBasePlugin extends Plugin {
 		const existing = this.windowContexts.get(win);
 		if (existing) {
 			existing.workspaceWindow = workspaceWindow ?? existing.workspaceWindow;
-			console.log(LOG_PREFIX, 'registerWindow: 窗口已存在，更新 workspaceWindow', {
+			debugLog('registerWindow: 窗口已存在，更新 workspaceWindow', {
 				window: this.describeWindow(win)
 			});
 			return existing;
@@ -165,17 +166,17 @@ export default class TileLineBasePlugin extends Plugin {
 		const context: WindowContext = { window: win, app, workspaceWindow };
 		this.windowContexts.set(win, context);
 
-		console.log(LOG_PREFIX, '========== registerWindow 新窗口 ==========');
-		console.log(LOG_PREFIX, 'window:', this.describeWindow(win));
-		console.log(LOG_PREFIX, 'windowContexts.size:', this.windowContexts.size);
-		console.log(LOG_PREFIX, '==========================================');
+		debugLog('========== registerWindow 新窗口 ==========');
+		debugLog('window:', this.describeWindow(win));
+		debugLog('windowContexts.size:', this.windowContexts.size);
+		debugLog('==========================================');
 
 		return context;
 	}
 
 	private unregisterWindow(win: Window) {
 		if (this.windowContexts.delete(win)) {
-			console.log(LOG_PREFIX, 'unregisterWindow', {
+			debugLog('unregisterWindow', {
 				window: this.describeWindow(win)
 			});
 		}
@@ -195,43 +196,62 @@ export default class TileLineBasePlugin extends Plugin {
 	private handleFileMenu(menu: Menu, file: TFile, context: WindowContext): void {
 		// 使用正确的窗口上下文输出日志
 		const targetWindow = context.window;
-		const targetConsole = (targetWindow as any).console || console;
+		const debugEnabled = isDebugEnabled();
+		const targetConsole = debugEnabled ? ((targetWindow as any).console || console) : null;
 
 		// 在目标窗口的控制台输出（这样在弹出窗口右键时，日志会出现在弹出窗口的 DevTools）
-		targetConsole.log(LOG_PREFIX, '========== handleFileMenu 被调用 ==========');
-		targetConsole.log(LOG_PREFIX, 'file:', file.path);
-		targetConsole.log(LOG_PREFIX, 'context.window.isMain:', targetWindow === window);
+		if (debugEnabled) {
+			targetConsole?.log(LOG_PREFIX, '========== handleFileMenu 被调用 ==========');
+		}
+		if (debugEnabled) {
+			targetConsole?.log(LOG_PREFIX, 'file:', file.path);
+		}
+		if (debugEnabled) {
+			targetConsole?.log(LOG_PREFIX, 'context.window.isMain:', targetWindow === window);
+		}
 
 		// 同时在主窗口也输出一份（方便调试）
-		console.log(LOG_PREFIX, 'handleFileMenu 被调用 (context.window.isMain:', targetWindow === window, ')');
+		if (debugEnabled) {
+			debugLog('handleFileMenu 被调用 (context.window.isMain:', targetWindow === window, ')');
+		}
 
 		if (!(file instanceof TFile)) {
-			targetConsole.log(LOG_PREFIX, 'handleFileMenu: file is not TFile, returning');
+			if (debugEnabled) {
+				targetConsole?.log(LOG_PREFIX, 'handleFileMenu: file is not TFile, returning');
+			}
 			return;
 		}
 
 		menu.addItem((item) => {
-			targetConsole.log(LOG_PREFIX, 'menu.addItem: 正在添加菜单项...');
+			if (debugEnabled) {
+				targetConsole?.log(LOG_PREFIX, 'menu.addItem: 正在添加菜单项...');
+			}
 
 			const clickHandler = async (evt: MouseEvent) => {
 				// onClick 时使用事件所在窗口的 console
 				const eventWindow = (evt?.view as Window) || targetWindow;
-				const eventConsole = (eventWindow as any).console || console;
+				const eventConsole = debugEnabled ? ((eventWindow as any).console || console) : null;
 
-				eventConsole.log(LOG_PREFIX, '========== file-menu onClick 触发 ==========');
-				eventConsole.log(LOG_PREFIX, 'file:', file.path);
-				eventConsole.log(LOG_PREFIX, 'eventType:', evt?.type);
-				eventConsole.log(LOG_PREFIX, 'event.view === context.window:', evt?.view === context.window);
+				if (debugEnabled) {
+					eventConsole?.log(LOG_PREFIX, '========== file-menu onClick 触发 ==========');
+					eventConsole?.log(LOG_PREFIX, 'file:', file.path);
+					eventConsole?.log(LOG_PREFIX, 'eventType:', evt?.type);
+					eventConsole?.log(LOG_PREFIX, 'event.view === context.window:', evt?.view === context.window);
+				}
 
 				// 同时在主窗口也输出
-				console.log(LOG_PREFIX, 'onClick 触发 (event.view === context.window:', evt?.view === context.window, ')');
+				if (debugEnabled) {
+					debugLog('onClick 触发 (event.view === context.window:', evt?.view === context.window, ')');
+				}
 
 				const resolution = this.resolveLeafFromEvent(evt, context);
-				eventConsole.log(LOG_PREFIX, 'onClick: resolution 结果:', {
-					leaf: this.describeLeaf(resolution.leaf),
-					preferredWindow: this.describeWindow(resolution.preferredWindow),
-					workspace: resolution.workspace === this.app.workspace ? 'main' : 'other'
-				});
+				if (debugEnabled) {
+					eventConsole?.log(LOG_PREFIX, 'onClick: resolution 结果:', {
+						leaf: this.describeLeaf(resolution.leaf),
+						preferredWindow: this.describeWindow(resolution.preferredWindow),
+						workspace: resolution.workspace === this.app.workspace ? 'main' : 'other'
+					});
+				}
 
 				await this.openTableView(file, {
 					leaf: resolution.leaf,
@@ -239,7 +259,9 @@ export default class TileLineBasePlugin extends Plugin {
 					workspace: resolution.workspace ?? context.app.workspace
 				});
 
-				eventConsole.log(LOG_PREFIX, '========== file-menu onClick 完成 ==========');
+				if (debugEnabled) {
+					eventConsole?.log(LOG_PREFIX, '========== file-menu onClick 完成 ==========');
+				}
 			};
 
 			item
@@ -247,9 +269,13 @@ export default class TileLineBasePlugin extends Plugin {
 				.setIcon('table')
 				.onClick(clickHandler);
 
-			targetConsole.log(LOG_PREFIX, 'menu.addItem: 菜单项添加完成，onClick handler 已设置');
+			if (debugEnabled) {
+				targetConsole?.log(LOG_PREFIX, 'menu.addItem: 菜单项添加完成，onClick handler 已设置');
+			}
 		});
-		targetConsole.log(LOG_PREFIX, '========== handleFileMenu 完成 ==========');
+		if (debugEnabled) {
+			targetConsole?.log(LOG_PREFIX, '========== handleFileMenu 完成 ==========');
+		}
 	}
 
 	private async openTableView(file: TFile, options?: OpenContext) {
@@ -257,7 +283,7 @@ export default class TileLineBasePlugin extends Plugin {
 		const preferredWindow = options?.preferredWindow ?? this.getLeafWindow(requestedLeaf);
 		const workspace = options?.workspace ?? this.getWorkspaceForLeaf(requestedLeaf) ?? this.app.workspace;
 
-		console.log(LOG_PREFIX, 'openTableView start', {
+		debugLog('openTableView start', {
 			file: file.path,
 			requestedLeaf: this.describeLeaf(requestedLeaf),
 			preferredWindow: this.describeWindow(preferredWindow),
@@ -268,7 +294,7 @@ export default class TileLineBasePlugin extends Plugin {
 		if (leaf && preferredWindow) {
 			const leafWindow = this.getLeafWindow(leaf);
 			if (leafWindow && leafWindow !== preferredWindow) {
-				console.log(LOG_PREFIX, 'requested leaf window mismatch', {
+				debugLog('requested leaf window mismatch', {
 					requestedLeaf: this.describeLeaf(leaf),
 					targetWindow: this.describeWindow(preferredWindow)
 				});
@@ -278,17 +304,17 @@ export default class TileLineBasePlugin extends Plugin {
 
 		if (!leaf) {
 			leaf = this.selectLeaf(workspace, preferredWindow);
-			console.log(LOG_PREFIX, 'openTableView selectLeaf result', this.describeLeaf(leaf));
+			debugLog('openTableView selectLeaf result', this.describeLeaf(leaf));
 		}
 
 		if (!leaf && preferredWindow) {
 			leaf = this.createLeafInWindow(workspace, preferredWindow);
-			console.log(LOG_PREFIX, 'openTableView createLeafInWindow result', this.describeLeaf(leaf));
+			debugLog('openTableView createLeafInWindow result', this.describeLeaf(leaf));
 		}
 
 		if (!leaf) {
 			leaf = this.selectLeaf(this.app.workspace);
-			console.log(LOG_PREFIX, 'openTableView global fallback leaf', this.describeLeaf(leaf));
+			debugLog('openTableView global fallback leaf', this.describeLeaf(leaf));
 		}
 
 		if (!leaf) {
@@ -296,7 +322,7 @@ export default class TileLineBasePlugin extends Plugin {
 			return;
 		}
 
-		console.log(LOG_PREFIX, 'openTableView 即将调用 leaf.setViewState', {
+		debugLog('openTableView 即将调用 leaf.setViewState', {
 			leaf: this.describeLeaf(leaf),
 			viewType: TABLE_VIEW_TYPE,
 			filePath: file.path
@@ -310,19 +336,19 @@ export default class TileLineBasePlugin extends Plugin {
 					filePath: file.path
 				}
 			});
-			console.log(LOG_PREFIX, 'openTableView setViewState 成功完成', this.describeLeaf(leaf));
+			debugLog('openTableView setViewState 成功完成', this.describeLeaf(leaf));
 		} catch (error) {
 			console.error(LOG_PREFIX, 'openTableView setViewState 失败:', error);
 			throw error;
 		}
 
 		await workspace.revealLeaf(leaf);
-		console.log(LOG_PREFIX, 'openTableView finish');
+		debugLog('openTableView finish');
 	}
 
 	private async toggleTableView(leaf: WorkspaceLeaf, context: WindowContext | null) {
 		const currentView = leaf.view;
-		console.log(LOG_PREFIX, 'toggleTableView', this.describeLeaf(leaf));
+		debugLog('toggleTableView', this.describeLeaf(leaf));
 
 		if (currentView.getViewType() === TABLE_VIEW_TYPE) {
 			const tableView = currentView as TableView;
@@ -354,7 +380,7 @@ export default class TileLineBasePlugin extends Plugin {
 		const context = (targetWindow ? this.getWindowContext(targetWindow) : null) ?? fallbackContext ?? this.mainContext;
 		const workspace = context?.app.workspace ?? this.app.workspace;
 
-		console.log(LOG_PREFIX, 'resolveLeafFromEvent', {
+		debugLog('resolveLeafFromEvent', {
 			eventType: evt?.type,
 			targetWindow: this.describeWindow(targetWindow),
 			workspaceIsMain: workspace === this.app.workspace
@@ -362,18 +388,18 @@ export default class TileLineBasePlugin extends Plugin {
 
 		if (!targetWindow) {
 			const leaf = this.selectLeaf(workspace);
-			console.log(LOG_PREFIX, 'resolveLeafFromEvent default leaf', this.describeLeaf(leaf));
+			debugLog('resolveLeafFromEvent default leaf', this.describeLeaf(leaf));
 			return { leaf, preferredWindow: null, workspace };
 		}
 
 		const matched = this.findLeafForWindow(workspace, targetWindow);
 		if (matched) {
-			console.log(LOG_PREFIX, 'resolveLeafFromEvent matched leaf', this.describeLeaf(matched));
+			debugLog('resolveLeafFromEvent matched leaf', this.describeLeaf(matched));
 			return { leaf: matched, preferredWindow: targetWindow, workspace };
 		}
 
 		const fallback = this.selectLeaf(workspace, targetWindow);
-		console.log(LOG_PREFIX, 'resolveLeafFromEvent fallback leaf', this.describeLeaf(fallback));
+		debugLog('resolveLeafFromEvent fallback leaf', this.describeLeaf(fallback));
 		return { leaf: fallback, preferredWindow: targetWindow, workspace };
 	}
 
@@ -413,7 +439,7 @@ export default class TileLineBasePlugin extends Plugin {
 		try {
 			const newLeaf = workspace.getLeaf(true);
 			if (newLeaf) {
-				console.log(LOG_PREFIX, 'createLeafInWindow via workspace.getLeaf(true)', this.describeLeaf(newLeaf));
+				debugLog('createLeafInWindow via workspace.getLeaf(true)', this.describeLeaf(newLeaf));
 				const newLeafWindow = this.getLeafWindow(newLeaf);
 				if (newLeafWindow && newLeafWindow !== targetWindow) {
 					console.warn(LOG_PREFIX, 'createLeafInWindow leaf belongs to another window', {
@@ -427,7 +453,7 @@ export default class TileLineBasePlugin extends Plugin {
 			console.warn(LOG_PREFIX, 'createLeafInWindow workspace.getLeaf(true) failed', error);
 		}
 
-		console.log(LOG_PREFIX, 'createLeafInWindow unavailable', this.describeWindow(targetWindow));
+		debugLog('createLeafInWindow unavailable', this.describeWindow(targetWindow));
 		return null;
 	}
 
@@ -448,20 +474,20 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private selectLeaf(workspace: Workspace, preferredWindow?: Window | null): WorkspaceLeaf | null {
-		console.log(LOG_PREFIX, 'selectLeaf', {
+		debugLog('selectLeaf', {
 			preferredWindow: this.describeWindow(preferredWindow),
 			workspaceIsMain: workspace === this.app.workspace
 		});
 
 		const activeLeaf = workspace.activeLeaf;
 		if (activeLeaf && (!preferredWindow || this.getLeafWindow(activeLeaf) === preferredWindow)) {
-			console.log(LOG_PREFIX, 'selectLeaf -> activeLeaf');
+			debugLog('selectLeaf -> activeLeaf');
 			return activeLeaf;
 		}
 
 		const mostRecent = workspace.getMostRecentLeaf();
 		if (mostRecent && (!preferredWindow || this.getLeafWindow(mostRecent) === preferredWindow)) {
-			console.log(LOG_PREFIX, 'selectLeaf -> mostRecent');
+			debugLog('selectLeaf -> mostRecent');
 			return mostRecent;
 		}
 
@@ -476,14 +502,14 @@ export default class TileLineBasePlugin extends Plugin {
 				}
 			});
 			if (candidate) {
-				console.log(LOG_PREFIX, 'selectLeaf -> candidateFromIteration', this.describeLeaf(candidate));
+				debugLog('selectLeaf -> candidateFromIteration', this.describeLeaf(candidate));
 				return candidate;
 			}
 			return null;
 		}
 
 		const fallback = workspace.getLeaf(false);
-		console.log(LOG_PREFIX, 'selectLeaf -> workspace.getLeaf(false)', this.describeLeaf(fallback));
+		debugLog('selectLeaf -> workspace.getLeaf(false)', this.describeLeaf(fallback));
 		return fallback;
 	}
 

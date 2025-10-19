@@ -3,6 +3,7 @@ import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
 import { getCurrentLocalDateTime } from "./utils/datetime";
+import { debugLog } from "./utils/logger";
 
 const LOG_PREFIX = "[TileLineBase]";
 
@@ -59,10 +60,10 @@ export class TableView extends ItemView {
 	private pendingSizeUpdateHandle: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
-		console.log('=== TableView 构造函数开始 ===');
-		console.log('leaf:', leaf);
+		debugLog('=== TableView 构造函数开始 ===');
+		debugLog('leaf:', leaf);
 		super(leaf);
-		console.log('=== TableView 构造函数完成 ===');
+		debugLog('=== TableView 构造函数完成 ===');
 	}
 
 	getViewType(): string {
@@ -74,17 +75,17 @@ export class TableView extends ItemView {
 	}
 
 	async setState(state: TableViewState, result: any): Promise<void> {
-		console.log('=== TableView.setState 开始 ===');
-		console.log('state:', state);
+		debugLog('=== TableView.setState 开始 ===');
+		debugLog('state:', state);
 		try {
 			// 根据文件路径获取文件对象
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
-			console.log('file:', file);
+			debugLog('file:', file);
 			if (file instanceof TFile) {
 				this.file = file;
 				await this.render();
 			}
-			console.log('=== TableView.setState 完成 ===');
+			debugLog('=== TableView.setState 完成 ===');
 		} catch (e) {
 			console.error('=== TableView.setState 错误 ===', e);
 			throw e;
@@ -437,7 +438,7 @@ export class TableView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		console.log('=== TableView.onOpen 开始 ===');
+		debugLog('=== TableView.onOpen 开始 ===');
 		try {
 			// 初始化容器
 			const container = this.containerEl.children[1];
@@ -447,7 +448,7 @@ export class TableView extends ItemView {
 			// 当视图被拖动到不同窗口时，需要重新渲染
 			if (typeof (this.containerEl as any).onWindowMigrated === 'function') {
 				(this.containerEl as any).onWindowMigrated(() => {
-					console.log(LOG_PREFIX, 'Window migrated, rebuilding view');
+					debugLog('Window migrated, rebuilding view');
 					// 重新构建视图以使用新窗口的上下文
 					if (typeof (this.leaf as any).rebuildView === 'function') {
 						(this.leaf as any).rebuildView();
@@ -455,7 +456,7 @@ export class TableView extends ItemView {
 				});
 			}
 
-			console.log('=== TableView.onOpen 完成 ===');
+			debugLog('=== TableView.onOpen 完成 ===');
 		} catch (e) {
 			console.error('=== TableView.onOpen 错误 ===', e);
 			throw e;
@@ -468,7 +469,7 @@ export class TableView extends ItemView {
 
 		const ownerDoc = (container as HTMLElement).ownerDocument;
 		const ownerWindow = ownerDoc?.defaultView ?? null;
-		console.log(LOG_PREFIX, 'TableView.render start', {
+		debugLog('TableView.render start', {
 			file: this.file?.path,
 			containerTag: (container as HTMLElement).tagName,
 			containerClass: (container as HTMLElement).className,
@@ -511,8 +512,8 @@ export class TableView extends ItemView {
 		const columns: ColumnDef[] = [
 			{
 				field: '#',
-				headerName: '#',
-				editable: false  // 序号列只读
+				headerName: 'Index',
+				editable: false  // index column is read-only
 			},
 			...this.schema.columnNames.map(name => {
 				const baseColDef: ColumnDef = {
@@ -543,7 +544,7 @@ export class TableView extends ItemView {
 		// 销毁旧的表格实例（如果存在）
 
 		const containerWindow = ownerDoc?.defaultView ?? window;
-		console.log(LOG_PREFIX, 'TableView.render container window', this.describeWindow(containerWindow));
+		debugLog('TableView.render container window', this.describeWindow(containerWindow));
 
 		const mountGrid = () => {
 			// 销毁旧的表格实例（如果存在）
@@ -1536,3 +1537,4 @@ export class TableView extends ItemView {
 		this.tableContainer = null;
 	}
 }
+

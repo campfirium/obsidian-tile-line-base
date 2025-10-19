@@ -10,6 +10,8 @@ import {
 	GridOptions,
 	ColDef,
 	CellEditingStoppedEvent,
+	CellEditingStartedEvent,
+	CellFocusedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode,
@@ -50,8 +52,12 @@ export class AgGridAdapter implements GridAdapter {
 
 	// Composition Proxy：每个 Document 一个代理层
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
-	private capturing = false; // 标记是否正在捕获输入
-	private detachPrintableKeyInterceptor?: () => void;
+	private containerEl: HTMLElement | null = null;
+	private focusedDoc: Document | null = null;
+	private focusedRowIndex: number | null = null;
+	private focusedColId: string | null = null;
+	private pendingCaptureCancel?: (reason?: string) => void;
+	private editing = false;
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -72,83 +78,22 @@ export class AgGridAdapter implements GridAdapter {
 		return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
 	}
 
-	private attachPrintableKeyInterceptor(container: HTMLElement): void {
-		this.detachPrintableKeyInterceptor?.();
 
-		const handler = (event: KeyboardEvent) => {
-			if (!this.gridApi) return;
-			if (event.defaultPrevented) return;
+	private startEditingWithCapturedText(doc: Document, rowIndex: number, colKey: string, text: string): Promise<void> {
+		if (!this.gridApi) {
+			return Promise.resolve();
+		}
 
-			// 只处理可打印字符
-			if (!this.isPrintable(event)) return;
-
-			const target = event.target as HTMLElement | null;
-			if (!target) return;
-
-			// 不要在编辑状态下拦截，保持原有行为
-			const editingCells = this.gridApi.getEditingCells();
-			if (editingCells.length > 0) return;
-
-			// 已经在捕获流程中则拦截后续事件
-			if (this.capturing) {
-				event.stopImmediatePropagation();
-				event.stopPropagation();
-				return;
-			}
-
-			const cellEl = target.closest('.ag-cell') as HTMLElement | null;
-			if (!cellEl || cellEl.classList.contains('ag-cell-inline-editing')) {
-				return;
-			}
-
-			const focusedCell = this.gridApi.getFocusedCell();
-			if (!focusedCell) return;
-
-			const colKey = focusedCell.column.getColId();
-			const rowIndex = focusedCell.rowIndex;
-			if (rowIndex == null) return;
-
-			const doc = (cellEl.ownerDocument || document);
-			const rect = cellEl.getBoundingClientRect();
-
-			this.capturing = true;
-			event.stopImmediatePropagation();
-			event.stopPropagation();
-
-			this.getProxy(doc).captureOnceAt(rect)
-				.then((text) => {
-					window.setTimeout(() => {
-						this.startEditingWithCapturedText(doc, rowIndex, colKey, text);
-					}, 0);
-				})
-				.catch((err) => {
-					if (err === 'cancelled') {
-						return;
-					}
-
-					console.error('[AgGridAdapter] CompositionProxy 捕获失败', err);
-					window.setTimeout(() => {
-						this.startEditingWithCapturedText(doc, rowIndex, colKey, '');
-					}, 0);
-				})
-				.finally(() => {
-					this.capturing = false;
-				});
-		};
-
-		container.addEventListener('keydown', handler, true);
-		this.detachPrintableKeyInterceptor = () => {
-			container.removeEventListener('keydown', handler, true);
-		};
-	}
-
-	private startEditingWithCapturedText(doc: Document, rowIndex: number, colKey: string, text: string): void {
-		if (!this.gridApi) return;
+		this.editing = true;
+		this.focusedRowIndex = rowIndex;
+		this.focusedColId = colKey;
+		this.cancelPendingCapture('editing-started');
+		this.getProxy(doc).setKeyHandler(undefined);
 
 		this.gridApi.setFocusedCell(rowIndex, colKey);
 		this.gridApi.startEditingCell({ rowIndex, colKey });
 
-		this.waitForEditorInput(doc)
+		return this.waitForEditorInput(doc)
 			.then((input) => {
 				input.value = text ?? '';
 				const len = input.value.length;
@@ -161,8 +106,9 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	private waitForEditorInput(doc: Document): Promise<HTMLInputElement | HTMLTextAreaElement> {
+		const selector = '.ag-cell-editor input, .ag-cell-editor textarea, .ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-cell-edit-input';
 		return new Promise((resolve, reject) => {
-			const lookup = () => doc.querySelector('.ag-cell-editor input, .ag-cell-editor textarea') as HTMLInputElement | HTMLTextAreaElement | null;
+			const lookup = () => doc.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement | null;
 			const immediate = lookup();
 			if (immediate) {
 				resolve(immediate);
@@ -197,6 +143,192 @@ export class AgGridAdapter implements GridAdapter {
 		});
 	}
 
+	private cancelPendingCapture(reason?: string): void {
+		if (this.pendingCaptureCancel) {
+			const cancel = this.pendingCaptureCancel;
+			this.pendingCaptureCancel = undefined;
+			cancel(reason);
+		} else if (this.focusedDoc) {
+			this.getProxy(this.focusedDoc).cancel(reason);
+		}
+	}
+
+	private getCellElementFor(rowIndex: number, colKey: string, doc: Document): HTMLElement | null {
+		const root = (this.containerEl ?? doc) as Document | Element;
+		const selector = `.ag-center-cols-container [row-index="${rowIndex}"] [col-id="${colKey}"]`;
+		return root.querySelector(selector) as HTMLElement | null;
+	}
+
+	private armProxyForCurrentCell(): void {
+		if (!this.gridApi) return;
+		if (this.editing) return;
+		if (this.focusedDoc == null || this.focusedRowIndex == null || !this.focusedColId) {
+			this.cancelPendingCapture('focus-cleared');
+			return;
+		}
+
+		const doc = this.focusedDoc;
+		const rowIndex = this.focusedRowIndex;
+		const colKey = this.focusedColId;
+		const cellEl = this.getCellElementFor(rowIndex, colKey, doc);
+		if (!cellEl) {
+			this.cancelPendingCapture('cell-missing');
+			return;
+		}
+
+		const rect = cellEl.getBoundingClientRect();
+		const proxy = this.getProxy(doc);
+
+		this.cancelPendingCapture('rearm');
+		const capturePromise = proxy.captureOnceAt(rect);
+		proxy.setKeyHandler((event) => this.handleProxyKeyDown(event));
+		this.pendingCaptureCancel = (reason?: string) => proxy.cancel(reason);
+
+		capturePromise
+			.then((text) => {
+				this.pendingCaptureCancel = undefined;
+				if (this.editing) return;
+				if (this.focusedRowIndex == null || !this.focusedColId) return;
+				return this.startEditingWithCapturedText(doc, this.focusedRowIndex, this.focusedColId, text);
+			})
+			.catch((err) => {
+				this.pendingCaptureCancel = undefined;
+				if (err === 'cancelled' || err === 'rearm' || err === 'editing-started' || err === 'focus-cleared' || err === 'cell-missing' || err === 'destroyed' || err === 'focus-move') {
+					return;
+				}
+				console.error('[AgGridAdapter] CompositionProxy 捕获失败', err);
+			});
+	}
+
+	private handleProxyKeyDown(event: KeyboardEvent): void {
+		if (!this.gridApi) return;
+
+		if (this.isPrintable(event)) {
+			return;
+		}
+
+		switch (event.key) {
+			case 'Enter':
+				event.preventDefault();
+				event.stopPropagation();
+				this.handleProxyEnter(event.shiftKey);
+				break;
+			case 'Tab':
+				event.preventDefault();
+				event.stopPropagation();
+				if (event.shiftKey) {
+					this.moveFocus(0, -1);
+				} else {
+					this.moveFocus(0, 1);
+				}
+				break;
+			case 'ArrowUp':
+			case 'Up':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(-1, 0);
+				break;
+			case 'ArrowDown':
+			case 'Down':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(1, 0);
+				break;
+			case 'ArrowLeft':
+			case 'Left':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(0, -1);
+				break;
+			case 'ArrowRight':
+			case 'Right':
+				event.preventDefault();
+				event.stopPropagation();
+				this.moveFocus(0, 1);
+				break;
+			default:
+				break;
+		}
+	}
+
+	private handleProxyEnter(shift: boolean): void {
+		if (!this.gridApi) return;
+		if (this.focusedRowIndex == null || !this.focusedColId) return;
+
+		if (shift) {
+			this.moveFocus(-1, 0);
+			return;
+		}
+
+		const rowIndex = this.focusedRowIndex;
+		const totalRows = this.gridApi.getDisplayedRowCount();
+		if (totalRows === 0) return;
+		const colId = this.focusedColId;
+
+		if (rowIndex === totalRows - 1) {
+			if (this.enterAtLastRowCallback) {
+				this.enterAtLastRowCallback(colId);
+			}
+			return;
+		}
+
+		this.moveFocus(1, 0);
+	}
+
+	private moveFocus(rowDelta: number, colDelta: number): void {
+		if (!this.gridApi) return;
+		if (this.focusedRowIndex == null || !this.focusedColId) return;
+
+		const displayedColumns = this.gridApi.getAllDisplayedColumns();
+		if (!displayedColumns || displayedColumns.length === 0) return;
+
+		const currentColIndex = displayedColumns.findIndex(col => col.getColId() === this.focusedColId);
+		if (currentColIndex === -1) return;
+
+		const targetColIndex = Math.max(0, Math.min(displayedColumns.length - 1, currentColIndex + colDelta));
+		const targetCol = displayedColumns[targetColIndex];
+
+		const rowCount = this.gridApi.getDisplayedRowCount();
+		if (rowCount === 0) return;
+		const targetRowIndex = Math.max(0, Math.min(rowCount - 1, this.focusedRowIndex + rowDelta));
+
+		this.cancelPendingCapture('focus-move');
+		this.gridApi.ensureIndexVisible(targetRowIndex);
+		this.gridApi.setFocusedCell(targetRowIndex, targetCol.getColId());
+		this.focusedRowIndex = targetRowIndex;
+		this.focusedColId = targetCol.getColId();
+		this.armProxyForCurrentCell();
+	}
+
+	private handleCellFocused(event: CellFocusedEvent): void {
+		this.focusedDoc = this.containerEl?.ownerDocument || document;
+
+		if (event.rowIndex == null || !event.column) {
+			this.focusedRowIndex = null;
+			this.focusedColId = null;
+			this.cancelPendingCapture('focus-cleared');
+			return;
+		}
+
+		this.focusedRowIndex = event.rowIndex;
+		const colId = (event as any).column?.getColId?.() ?? (event as any).columnId ?? null;
+		this.focusedColId = colId;
+
+		if (this.editing) {
+			return;
+		}
+
+		this.armProxyForCurrentCell();
+	}
+
+	private handleCellEditingStarted(): void {
+		this.editing = true;
+		this.cancelPendingCapture('editing-started');
+		if (this.focusedDoc) {
+			this.getProxy(this.focusedDoc).setKeyHandler(undefined);
+		}
+	}
+
 	/**
 	 * 挂载表格到指定容器
 	 */
@@ -208,6 +340,9 @@ export class AgGridAdapter implements GridAdapter {
 			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 		}
 	): void {
+		this.containerEl = container;
+		this.focusedDoc = container.ownerDocument || document;
+
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
 			// 序号列特殊处理
@@ -296,15 +431,6 @@ export class AgGridAdapter implements GridAdapter {
 		const ownerDoc = container.ownerDocument;
 		const popupParent = ownerDoc.body;
 
-		// 🔍 调试：检查 AG Grid 初始化环境
-		console.log('=== AG Grid 初始化 ===');
-		console.log('container:', container);
-		console.log('container.ownerDocument:', ownerDoc);
-		console.log('ownerDoc === document:', ownerDoc === document);
-		console.log('popupParent:', popupParent);
-		console.log('=======================');
-
-
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
@@ -319,7 +445,6 @@ export class AgGridAdapter implements GridAdapter {
 			context: context || {},
 
 			// 设置弹出元素的父容器（支持 pop-out 窗口）
-			popupParent: popupParent,
 
 			// 编辑配置（使用单元格编辑模式而非整行编辑）
 			singleClickEdit: false, // 禁用单击编辑，双击或按键可以进入编辑
@@ -332,10 +457,16 @@ export class AgGridAdapter implements GridAdapter {
 			// 行选择配置（支持多行选择，Shift+点击范围选择，Ctrl+点击多选）
 			rowSelection: 'multiple',
 
-		// 事件监听
-		onCellEditingStopped: (event: CellEditingStoppedEvent) => {
-			this.handleCellEdit(event);
-		},
+			// 事件监听
+			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
+				this.handleCellEdit(event);
+			},
+			onCellEditingStarted: (_event: CellEditingStartedEvent) => {
+				this.handleCellEditingStarted();
+			},
+			onCellFocused: (event: CellFocusedEvent) => {
+				this.handleCellFocused(event);
+			},
 
 			// 默认列配置
 			defaultColDef: {
@@ -347,18 +478,10 @@ export class AgGridAdapter implements GridAdapter {
 				suppressKeyboardEvent: (params: any) => {
 					const keyEvent = params.event as KeyboardEvent;
 
-					// 合成期间一刀切：任何键都别给 AG Grid
-					// 避免方向键、Enter、Tab 被 AG Grid 抢走（它们会参与 IME 候选选择）
-					if (this.capturing) {
-						return true;
+					if (!params.editing) {
+						return false;
 					}
 
-				// 🔑 可打印字符的首键由捕获器接管，这里作为兜底直接让出
-				if (!params.editing && keyEvent.type === 'keydown' && this.isPrintable(keyEvent)) {
-					return true;
-				}
-
-					// Enter 键的特殊处理（最后一行等）
 					if (keyEvent.key !== 'Enter') {
 						return false;
 					}
@@ -369,37 +492,6 @@ export class AgGridAdapter implements GridAdapter {
 					const colId = params.column.getColId();
 					const isLastRow = rowIndex === totalRows - 1;
 
-					// 未进入编辑时，Enter 只导航行
-					if (!params.editing) {
-						if (isLastRow) {
-							// 最后一行：触发新增行逻辑（交由上层处理）
-							if (this.enterAtLastRowCallback) {
-								keyEvent.preventDefault();
-								setTimeout(() => {
-									this.enterAtLastRowCallback?.(colId);
-								}, 0);
-								return true;
-							}
-
-							return false;
-						}
-
-						// 普通行：移动到下一行同一列
-						keyEvent.preventDefault();
-						setTimeout(() => {
-							const nextIndex = Math.min(rowIndex + 1, totalRows - 1);
-							if (nextIndex !== rowIndex) {
-								api.ensureIndexVisible(nextIndex);
-							}
-							api.setFocusedCell(nextIndex, colId);
-							const nextNode = api.getDisplayedRowAtIndex(nextIndex);
-							nextNode?.setSelected(true, true);
-						}, 0);
-
-						return true;
-					}
-
-					// 编辑状态下的最后一行：提交并新增行
 					if (isLastRow && this.enterAtLastRowCallback) {
 						keyEvent.preventDefault();
 						setTimeout(() => {
@@ -412,7 +504,6 @@ export class AgGridAdapter implements GridAdapter {
 						return true;
 					}
 
-					// 交由 AG Grid 默认处理（例如继续向下导航）
 					return false;
 				}
 			},
@@ -497,7 +588,6 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
-		this.attachPrintableKeyInterceptor(container);
 		this.lastAutoSizeTimestamp = 0;
 		this.shouldAutoSizeOnNextResize = false;
 		this.clearRowHeightResetHandle();
@@ -555,6 +645,9 @@ export class AgGridAdapter implements GridAdapter {
 	 * 处理单元格编辑事件
 	 */
 	private handleCellEdit(event: CellEditingStoppedEvent): void {
+		this.editing = false;
+		this.armProxyForCurrentCell();
+
 		if (!this.cellEditCallback) return;
 
 		// 获取编辑信息
@@ -579,6 +672,7 @@ export class AgGridAdapter implements GridAdapter {
 				});
 			}
 		}
+
 	}
 
 	/**
@@ -591,12 +685,14 @@ export class AgGridAdapter implements GridAdapter {
 			this.lastAutoSizeTimestamp = 0;
 			this.shouldAutoSizeOnNextResize = true;
 			this.queueRowHeightSync();
+			this.armProxyForCurrentCell();
 		}
 	}
 
 	markLayoutDirty(): void {
 		this.shouldAutoSizeOnNextResize = true;
 		this.queueRowHeightSync();
+		this.armProxyForCurrentCell();
 	}
 
 	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {

@@ -17,11 +17,11 @@ interface OpenContext {
 }
 
 interface TileLineBaseSettings {
-	autoTableFiles: string[];
+	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 }
 
 const DEFAULT_SETTINGS: TileLineBaseSettings = {
-	autoTableFiles: []
+	fileViewPrefs: {}
 };
 
 export default class TileLineBasePlugin extends Plugin {
@@ -86,38 +86,6 @@ export default class TileLineBasePlugin extends Plugin {
 					const leafWindow = this.getLeafWindow(activeLeaf);
 					const context = this.getWindowContext(leafWindow) ?? this.mainContext;
 					this.toggleTableView(activeLeaf, context);
-				}
-				return true;
-			}
-		});
-
-		this.addCommand({
-			id: 'remember-table-view',
-			name: '设置当前笔记默认使用表格视图',
-			checkCallback: (checking: boolean) => {
-				const file = this.app.workspace.getActiveFile();
-				if (!file) {
-					return false;
-				}
-
-				if (!checking) {
-					void this.rememberFileAsTableView(file, true);
-				}
-				return true;
-			}
-		});
-
-		this.addCommand({
-			id: 'forget-table-view',
-			name: '取消当前笔记的表格视图默认设置',
-			checkCallback: (checking: boolean) => {
-				const file = this.app.workspace.getActiveFile();
-				if (!file) {
-					return false;
-				}
-
-				if (!checking) {
-					void this.forgetFileTableViewPreference(file);
 				}
 				return true;
 			}
@@ -379,7 +347,7 @@ export default class TileLineBasePlugin extends Plugin {
 				}
 			});
 			debugLog('openTableView setViewState 成功完成', this.describeLeaf(leaf));
-			await this.ensureFileRemembered(file);
+			void this.updateFileViewPreference(file, 'table');
 		} catch (error) {
 			console.error(LOG_PREFIX, 'openTableView setViewState 失败:', error);
 			throw error;
@@ -640,34 +608,30 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private shouldAutoOpenForFile(file: TFile): boolean {
-		return this.settings.autoTableFiles.includes(file.path);
+		return this.settings.fileViewPrefs[file.path] === 'table';
 	}
 
-	private async rememberFileAsTableView(file: TFile, autoSwitch: boolean = false): Promise<void> {
-		await this.ensureFileRemembered(file);
-		if (autoSwitch) {
-			await this.maybeSwitchToTableView(file);
+	private async updateFileViewPreference(file: TFile, view: 'markdown' | 'table'): Promise<void> {
+		if (this.settings.fileViewPrefs[file.path] === view) {
+			return;
 		}
-	}
-
-	private async forgetFileTableViewPreference(file: TFile): Promise<void> {
-		const index = this.settings.autoTableFiles.indexOf(file.path);
-		if (index !== -1) {
-			this.settings.autoTableFiles.splice(index, 1);
-			await this.saveSettings();
-		}
-	}
-
-	private async ensureFileRemembered(file: TFile): Promise<void> {
-		if (!this.settings.autoTableFiles.includes(file.path)) {
-			this.settings.autoTableFiles.push(file.path);
-			await this.saveSettings();
-		}
+		this.settings.fileViewPrefs[file.path] = view;
+		await this.saveSettings();
 	}
 
 	private async loadSettings(): Promise<void> {
 		const data = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
+		if (Array.isArray(legacyList)) {
+			for (const path of legacyList) {
+				if (typeof path === 'string') {
+					this.settings.fileViewPrefs[path] = 'table';
+				}
+			}
+			await this.saveData(this.settings);
+		}
 	}
 
 	private async saveSettings(): Promise<void> {

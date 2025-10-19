@@ -463,6 +463,9 @@ export class AgGridAdapter implements GridAdapter {
 			rowData: rows,
 
 			// 提供稳定的行 ID（用于增量更新和状态管理）
+			enableBrowserTooltips: true,
+			tooltipShowDelay: 0,
+			tooltipHideDelay: 200,
 			getRowId: (params) => {
 				return String(params.data[ROW_ID_FIELD]);
 			},
@@ -512,6 +515,10 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 默认列配置
 			defaultColDef: {
+				tooltipValueGetter: (params) => {
+					const value = params.value;
+					return value == null ? '' : String(value);
+				},
 				editable: true,
 				sortable: true,
 				filter: false,

@@ -1,8 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-const FILES_TO_COPY = ['main.js', 'manifest.json', 'styles.css'];
-const WINDOWS_PLUGIN_DIR = 'D:\\X\\Dropbox\\obt\\.obsidian\\plugins\\tile-line-base';
+const FILES_TO_COPY = [
+	{ source: 'dist/main.js', target: 'main.js' },
+	{ source: 'manifest.json', target: 'manifest.json' },
+	{ source: 'styles.css', target: 'styles.css' },
+];
+const WINDOWS_PLUGIN_DIR = 'D:\\C\\obsidian-tile-line-base\\docs\\.obsidian\\plugins\\tile-line-base';
 
 function isWSL() {
 	if (process.platform !== 'linux') return false;
@@ -50,15 +54,15 @@ if (!fs.existsSync(pluginDir)) {
 }
 
 console.log('📦 复制文件...');
-for (const file of FILES_TO_COPY) {
-	const sourcePath = path.join(process.cwd(), file);
-	const targetPath = path.join(pluginDir, file);
+for (const { source, target } of FILES_TO_COPY) {
+	const sourcePath = path.join(process.cwd(), source);
+	const targetPath = path.join(pluginDir, target);
 
 	if (fs.existsSync(sourcePath)) {
 		fs.copyFileSync(sourcePath, targetPath);
-		console.log(`  ✓ ${file}`);
+		console.log(`  ✓ ${target} ← ${source}`);
 	} else {
-		console.log(`  ⚠ ${file} 不存在，跳过`);
+		console.log(`  ⚠ ${source} 不存在，跳过`);
 	}
 }
 

@@ -25,5 +25,4 @@ npm-debug.log*
 .env
 .env.local
 
-# Testing files (frequently modified during testing)
-docs/tasks/T0000.md
+

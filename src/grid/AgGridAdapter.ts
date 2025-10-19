@@ -14,9 +14,7 @@ import {
 	CellFocusedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
-	IRowNode,
-	GetContextMenuItemsParams,
-	MenuItemDef
+	IRowNode
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -526,64 +524,6 @@ export class AgGridAdapter implements GridAdapter {
 			// 单元格样式规则：标题列添加删除线（假设第一个数据列是标题列）
 			// 注意：这里需要动态获取标题列的 colId
 			// 暂时使用通用选择器，后续在 TableView 中根据实际列名配置
-
-			// 右键菜单配置
-			getContextMenuItems: (params: GetContextMenuItemsParams) => {
-				const field = params.column?.getColId();
-
-				// 如果是 status 列，显示状态菜单
-				if (field === 'status') {
-					const rowId = params.node?.id;
-					if (!rowId) return ['copy', 'export'];
-
-					const currentStatus = normalizeStatus(params.node?.data?.status);
-
-					// 返回 5 种状态的菜单项
-					return [
-						{
-							name: '待办 ☐',
-							disabled: currentStatus === 'todo',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'todo');
-							}
-						},
-						{
-							name: '已完成 ☑',
-							disabled: currentStatus === 'done',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'done');
-							}
-						},
-						{
-							name: '进行中 ⊟',
-							disabled: currentStatus === 'inprogress',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'inprogress');
-							}
-						},
-						{
-							name: '已搁置 ⏸',
-							disabled: currentStatus === 'onhold',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'onhold');
-							}
-						},
-						{
-							name: '已放弃 ☒',
-							disabled: currentStatus === 'canceled',
-							action: () => {
-								context?.onStatusChange?.(rowId, 'canceled');
-							}
-						},
-						'separator',
-						'copy',
-						'export'
-					];
-				}
-
-				// 其他列使用默认菜单
-				return ['copy', 'export'];
-			}
 		};
 
 		// 创建并挂载 AG Grid

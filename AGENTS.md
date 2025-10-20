@@ -65,6 +65,40 @@ Hard Requirement: call binaries directly in functions.shell, always set workdir,
 ### Git 分支策略
 
 - `main`: 生产稳定版本
+- `dev`: 开发集成分支
+- `feat/T000X-name`: 任务功能分支
+- 缺陷/紧急修复统一从 `dev` 切出 `fix/TXXXX-topic` 分支
+- 回到 `dev` 时使用 `git merge --no-ff`；不对公共分支（尤其是 `dev`）执行 rebase
+
+### 任务驱动开发
+
+1. **创建任务**：在 `.claude/tasks/T000X_描述` 创建任务文件
+
+2. **开发实现**：在 `feat/T000X-name` 分支完成功能
+
+3. **合并集成**：合并到 `dev` 分支，但保留 feat 分支
+
+4. **版本发布**：定期从 `dev` 合并到 `main`
+
+### 提交规范
+
+- 每次提交前必须执行 `npm run build`，构建通过后再提交/合并
+- 提交前确认 `git status -sb` 干净；若有非本次任务的临时改动，使用 `git stash push` 暂存
+- `docs/`、`specs/` 等文档属于正式成果，修改后直接随任务提交，不要长时间留在工作区
+- 不添加 AI 协作者信息
+- `main` 仅通过 squash merge 接收来自 `dev` 的提交
+- 禁止直接在 `main` 分支进行提交
+
+### 手工回归检查（表格基础交互）
+
+- `Enter`：最后一行触发时必须自动新增新行并聚焦到新行同列
+- `Delete` / `Backspace`：清空当前聚焦单元格的值，不触发整行删除
+- 行选择：单击保持单选；多选依赖 `Shift` / `Ctrl` / `Cmd`
+## 工作流程
+
+### Git 分支策略
+
+- `main`: 生产稳定版本
 
 - `dev`: 开发集成分支
 

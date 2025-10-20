@@ -159,8 +159,36 @@ export class AgGridAdapter implements GridAdapter {
 
 	private getCellElementFor(rowIndex: number, colKey: string, doc: Document): HTMLElement | null {
 		const root = (this.containerEl ?? doc) as Document | Element;
-		const selector = `.ag-center-cols-container [row-index="${rowIndex}"] [col-id="${colKey}"]`;
-		return root.querySelector(selector) as HTMLElement | null;
+		const column = this.gridApi?.getColumn(colKey);
+		const pinned = column?.getPinned?.() ?? column?.isPinned?.();
+
+		const containers: string[] = [];
+		if (pinned === 'left') {
+			containers.push('.ag-pinned-left-cols-container');
+		} else if (pinned === 'right') {
+			containers.push('.ag-pinned-right-cols-container');
+		}
+		containers.push('.ag-center-cols-container');
+
+		for (const container of containers) {
+			const selector = `${container} [row-index="${rowIndex}"] [col-id="${colKey}"]`;
+			const match = (root as any).querySelector?.(selector) as HTMLElement | null;
+			if (match) {
+				return match;
+			}
+		}
+
+		// 兜底：搜索所有 pinned 容器，防止 pinned 状态变更时遗漏
+		const fallbackContainers = ['.ag-pinned-left-cols-container', '.ag-pinned-right-cols-container'];
+		for (const container of fallbackContainers) {
+			const selector = `${container} [row-index="${rowIndex}"] [col-id="${colKey}"]`;
+			const match = (root as any).querySelector?.(selector) as HTMLElement | null;
+			if (match) {
+				return match;
+			}
+		}
+
+		return null;
 	}
 
 	private armProxyForCurrentCell(): void {

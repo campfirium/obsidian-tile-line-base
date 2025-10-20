@@ -23,6 +23,7 @@ export class CompositionProxy {
 		el.setAttribute('autocorrect', 'off');
 		el.setAttribute('autocapitalize', 'off');
 		el.setAttribute('spellcheck', 'false');
+		el.className = 'tlb-ime-capture';
 		el.rows = 1;
 		el.cols = 1;
 
@@ -34,15 +35,18 @@ export class CompositionProxy {
 			background: 'transparent',
 			outline: 'none',
 			pointerEvents: 'none',
-			border: 'none',
 			margin: '0',
 			padding: '0',
 			resize: 'none',
 			overflow: 'hidden',
 			lineHeight: '1',
+			opacity: '0',
+			transition: 'opacity 120ms ease',
+			boxSizing: 'border-box'
 		} as CSSStyleDeclaration);
 
 		this.host = el;
+		this.host.dataset.visible = 'false';
 		ownerDocument.body.appendChild(el);
 
 		this.host.addEventListener('keydown', (event) => {
@@ -110,6 +114,9 @@ export class CompositionProxy {
 		this.cancelAsciiFallback();
 		this.composing = false;
 		this.host.value = '';
+		this.host.dataset.visible = 'false';
+		this.host.style.left = '-9999px';
+		this.host.style.top = '-9999px';
 
 		const activeEl = this.ownerDocument.activeElement as HTMLElement | null;
 		if (activeEl === this.host) {
@@ -137,6 +144,7 @@ export class CompositionProxy {
 				lineHeight: `${h}px`,
 			});
 
+			this.host.dataset.visible = 'true';
 
 			this.composing = false;
 			this.host.value = '';

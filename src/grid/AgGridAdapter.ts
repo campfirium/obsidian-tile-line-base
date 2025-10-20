@@ -278,6 +278,12 @@ export class AgGridAdapter implements GridAdapter {
 				event.stopPropagation();
 				this.moveFocus(0, 1);
 				break;
+			case 'Delete':
+			case 'Backspace':
+				event.preventDefault();
+				event.stopPropagation();
+				this.handleDeleteKey();
+				break;
 			default:
 				break;
 		}
@@ -305,6 +311,45 @@ export class AgGridAdapter implements GridAdapter {
 		}
 
 		this.moveFocus(1, 0);
+	}
+
+	private handleDeleteKey(): void {
+		if (!this.gridApi) return;
+		if (this.focusedRowIndex == null || !this.focusedColId) return;
+
+		const field = this.focusedColId;
+		if (field === '#' || field === ROW_ID_FIELD || field === 'status') {
+			return;
+		}
+
+		const rowNode = this.findRowNodeByBlockIndex(this.focusedRowIndex);
+		if (!rowNode) return;
+
+		const data = rowNode.data as RowData | undefined;
+		if (!data) return;
+
+		const oldValue = String(data[field] ?? '');
+		if (oldValue.length === 0) {
+			return;
+		}
+
+		if (typeof rowNode.setDataValue === 'function') {
+			rowNode.setDataValue(field, '');
+		} else {
+			data[field] = '';
+		}
+
+		if (this.cellEditCallback) {
+			this.cellEditCallback({
+				rowIndex: this.focusedRowIndex,
+				field,
+				newValue: '',
+				oldValue,
+				rowData: rowNode.data as RowData
+			});
+		}
+
+		this.armProxyForCurrentCell();
 	}
 
 	private moveFocus(rowDelta: number, colDelta: number): void {

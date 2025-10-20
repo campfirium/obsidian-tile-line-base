@@ -2,6 +2,8 @@ import { ItemView, WorkspaceLeaf, TFile, EventRef } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
+import { getPluginContext } from "./pluginContext";
+import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
 
@@ -42,6 +44,7 @@ export class TableView extends ItemView {
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
 	private contextMenu: HTMLElement | null = null;
+	private columnWidthPrefs: Record<string, number> | null = null;
 
 	// 事件监听器引用（用于清理）
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
@@ -173,6 +176,39 @@ export class TableView extends ItemView {
 			(colDef as any).width = num;
 		}
 	}
+
+	private ensureColumnWidthPrefs(): Record<string, number> {
+		if (this.columnWidthPrefs) {
+			return this.columnWidthPrefs;
+		}
+
+		const plugin = getPluginContext();
+		const filePath = this.file?.path;
+		this.columnWidthPrefs = plugin && filePath ? { ...(plugin.getColumnLayout(filePath) ?? {}) } : {};
+		return this.columnWidthPrefs;
+	}
+
+	private getStoredColumnWidth(field: string): number | undefined {
+		const prefs = this.ensureColumnWidthPrefs();
+		return prefs[field];
+	}
+
+	private handleColumnResize(field: string, width: number): void {
+		if (!this.file) {
+			return;
+		}
+		if (field === '#' || field === 'status') {
+			return;
+		}
+
+		const clamped = clampColumnWidth(width);
+		const prefs = this.ensureColumnWidthPrefs();
+		prefs[field] = clamped;
+
+		const plugin = getPluginContext();
+		plugin?.updateColumnWidthPreference(this.file.path, field, clamped);
+	}
+
 
 	/**
 	 * 解析单行列定义
@@ -481,6 +517,7 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		this.columnWidthPrefs = null;
 		// 读取文件内容
 		const content = await this.app.vault.read(this.file);
 
@@ -536,7 +573,14 @@ export class TableView extends ItemView {
 					}
 				}
 
-				return baseColDef;
+				
+				const storedWidth = this.getStoredColumnWidth(name);
+				if (typeof storedWidth === "number" && name !== "#" && name !== "status") {
+					const clamped = clampColumnWidth(storedWidth);
+					(baseColDef as any).width = clamped;
+					(baseColDef as any).__tlbStoredWidth = clamped;
+					(baseColDef as any).suppressSizeToFit = true;
+				}return baseColDef;
 			})
 		]
 
@@ -563,6 +607,9 @@ export class TableView extends ItemView {
 			this.gridAdapter.mount(tableContainer, columns, data, {
 				onStatusChange: (rowId: string, newStatus: TaskStatus) => {
 					this.onStatusChange(rowId, newStatus);
+				},
+				onColumnResize: (field: string, width: number) => {
+					this.handleColumnResize(field, width);
 				}
 			});
 			this.tableContainer = tableContainer;

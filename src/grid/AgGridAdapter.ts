@@ -51,6 +51,7 @@ export class AgGridAdapter implements GridAdapter {
 	private lastAutoSizeTimestamp = 0;
 	private shouldAutoSizeOnNextResize = false;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
+	private pendingEnterAtLastRow = false;
 
 	// Composition Proxy：每个 Document 一个代理层
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
@@ -481,16 +482,13 @@ export class AgGridAdapter implements GridAdapter {
 			tooltipShowDelay: 0,
 			tooltipHideDelay: 200,
 			onCellKeyDown: (event: CellKeyDownEvent) => {
-				if (!this.editing) {
-					return;
-				}
 				const keyEvent = event.event;
 				if (!(keyEvent instanceof KeyboardEvent)) {
 					return;
 				}
 				this.handleEnterAtLastRow(
 					event.api,
-					event.column.getColId(),
+					event.column?.getColId?.() ?? null,
 					event.node?.rowIndex ?? null,
 					keyEvent
 				);
@@ -548,13 +546,10 @@ export class AgGridAdapter implements GridAdapter {
 				resizable: true,
 				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
 				suppressKeyboardEvent: (params: any) => {
-					if (!params.editing) {
-						return false;
-					}
 					const keyEvent = params.event as KeyboardEvent;
 					return this.handleEnterAtLastRow(
 						params.api,
-						params.column.getColId(),
+						params.column?.getColId?.() ?? null,
 						params.node?.rowIndex ?? null,
 						keyEvent
 					);
@@ -825,31 +820,82 @@ export class AgGridAdapter implements GridAdapter {
 		}
 	}
 
-
-	private handleEnterAtLastRow(api: GridApi, columnId: string, rowIndex: number | null | undefined, keyEvent: KeyboardEvent): boolean {
-		if (!this.enterAtLastRowCallback) {
-			return false;
-		}
-
+	private handleEnterAtLastRow(
+		api: GridApi,
+		columnId: string | null | undefined,
+		rowIndex: number | null | undefined,
+		keyEvent: KeyboardEvent
+	): boolean {
 		if (keyEvent.key !== 'Enter') {
 			return false;
 		}
 
-		if (rowIndex == null || rowIndex < 0) {
+		if (!this.enterAtLastRowCallback) {
+			return false;
+		}
+
+		const editingCells = typeof api.getEditingCells === 'function' ? api.getEditingCells() : [];
+		const activeEditingCell = editingCells.length > 0 ? editingCells[0] : undefined;
+		const focusedCell = api.getFocusedCell();
+
+		const effectiveRowIndex =
+			(rowIndex ?? undefined) ??
+			(activeEditingCell?.rowIndex ?? undefined) ??
+			(focusedCell?.rowIndex ?? undefined) ??
+			this.focusedRowIndex ??
+			null;
+
+		if (effectiveRowIndex == null || effectiveRowIndex < 0) {
 			return false;
 		}
 
 		const totalRows = api.getDisplayedRowCount();
-		if (rowIndex !== totalRows - 1) {
+		if (totalRows <= 0 || effectiveRowIndex !== totalRows - 1) {
 			return false;
 		}
 
 		keyEvent.preventDefault();
-		const colId = columnId;
+
+		if (this.pendingEnterAtLastRow) {
+			return true;
+		}
+		this.pendingEnterAtLastRow = true;
+
+		const resolvedColId =
+			columnId ??
+			activeEditingCell?.column?.getColId?.() ??
+			focusedCell?.column.getColId() ??
+			this.focusedColId ??
+			null;
+
+		const fallbackColId = (() => {
+			if (!this.gridApi) {
+				return null;
+			}
+			const displayed = typeof this.gridApi.getAllDisplayedColumns === 'function'
+				? this.gridApi.getAllDisplayedColumns()
+				: [];
+			for (const col of displayed) {
+				const field = col.getColDef().field;
+				if (field && field !== '#') {
+					return col.getColId?.() ?? field;
+				}
+			}
+			return null;
+		})();
+
+		const nextColId = resolvedColId ?? fallbackColId ?? '#';
+
 		setTimeout(() => {
-			api.stopEditing();
+			if (typeof api.stopEditing === 'function') {
+				api.stopEditing();
+			}
 			setTimeout(() => {
-				this.enterAtLastRowCallback?.(colId);
+				try {
+					this.enterAtLastRowCallback?.(nextColId);
+				} finally {
+					this.pendingEnterAtLastRow = false;
+				}
 			}, 10);
 		}, 0);
 

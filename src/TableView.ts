@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, EventRef, Menu } from "obsidian";
+import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
@@ -1585,7 +1585,7 @@ export class TableView extends ItemView {
 		const actions = bar.createDiv({ cls: 'tlb-filter-view-actions' });
 		const addButton = actions.createEl('button', { cls: 'tlb-filter-view-button tlb-filter-view-button--add', text: '+' });
 		addButton.addEventListener('click', () => {
-			this.promptCreateFilterView();
+			void this.promptCreateFilterView();
 		});
 	}
 
@@ -1820,6 +1820,22 @@ export class TableView extends ItemView {
 		}
 	}
 
+	private openFilterViewNameModal(options: { title: string; placeholder: string; defaultValue?: string }): Promise<string | null> {
+		return new Promise((resolve) => {
+			const modal = new FilterViewNameModal(this.app, {
+				title: options.title,
+				placeholder: options.placeholder,
+				defaultValue: options.defaultValue ?? '',
+				onSubmit: (value) => {
+					const trimmed = value.trim();
+					resolve(trimmed.length > 0 ? trimmed : null);
+				},
+				onCancel: () => resolve(null)
+			});
+			modal.open();
+		});
+	}
+
 	async onClose(): Promise<void> {
 		// 清理事件监听器
 		this.cleanupEventListeners();
@@ -1847,6 +1863,71 @@ export class TableView extends ItemView {
 
 		// 清理容器引用
 		this.tableContainer = null;
+	}
+}
+
+interface FilterViewNameModalOptions {
+	title: string;
+	placeholder: string;
+	defaultValue: string;
+	onSubmit: (value: string) => void;
+	onCancel: () => void;
+}
+
+class FilterViewNameModal extends Modal {
+	private readonly options: FilterViewNameModalOptions;
+	private inputEl!: HTMLInputElement;
+
+	constructor(app: App, options: FilterViewNameModalOptions) {
+		super(app);
+		this.options = options;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		this.titleEl.setText(this.options.title);
+
+		const setting = new Setting(contentEl);
+		setting.setClass('tlb-filter-view-modal');
+		setting.addText((text) => {
+			text.setPlaceholder(this.options.placeholder);
+			text.setValue(this.options.defaultValue);
+			text.inputEl.addEventListener('keydown', (event) => {
+				if (event.key === 'Enter') {
+					event.preventDefault();
+					event.stopPropagation();
+					this.submit();
+				}
+			});
+			this.inputEl = text.inputEl;
+		});
+
+		setting.addButton((button) => {
+			button.setButtonText('保存');
+			button.setCta();
+			button.onClick(() => this.submit());
+		});
+
+		const cancelBtn = contentEl.createEl('button', { text: '取消' });
+		cancelBtn.addClass('mod-cta-secondary');
+		cancelBtn.addEventListener('click', () => {
+			this.close();
+		});
+	}
+
+	onClose(): void {
+		if (this.inputEl) {
+			this.inputEl.blur();
+		}
+		this.options.onCancel();
+	}
+
+	private submit(): void {
+		const value = this.inputEl?.value ?? '';
+		this.options.onSubmit(value);
+		this.options.onCancel = () => {};
+		this.close();
 	}
 }
 

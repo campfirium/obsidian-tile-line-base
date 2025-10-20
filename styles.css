@@ -94,6 +94,58 @@
   font-weight: 600;
 }
 
+/* 过滤编辑器模态框 */
+.tlb-filter-editor-modal .modal-content {
+  max-width: 600px;
+}
+
+.tlb-filter-conditions {
+  margin: 12px 0;
+}
+
+.tlb-filter-condition-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.tlb-filter-select {
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.tlb-filter-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.tlb-filter-empty-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+.modal-button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 /* 自定义右键菜单样式 */
 .tlb-context-menu {
   position: fixed;

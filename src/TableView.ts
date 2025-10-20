@@ -1,4 +1,4 @@
-import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting } from "obsidian";
+import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting, Notice } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
@@ -7,7 +7,7 @@ import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
 import type { ColumnState } from "ag-grid-community";
-import type { FileFilterViewState, FilterViewDefinition } from "./types/filterView";
+import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondition, FilterOperator } from "./types/filterView";
 
 const LOG_PREFIX = "[TileLineBase]";
 
@@ -45,6 +45,7 @@ export class TableView extends ItemView {
 	private schema: Schema | null = null;
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
+	private allRowData: any[] = []; // 保存全部行数据
 	private contextMenu: HTMLElement | null = null;
 	private columnWidthPrefs: Record<string, number> | null = null;
 
@@ -550,6 +551,7 @@ export class TableView extends ItemView {
 
 		// 提取数据
 		const data = this.extractTableData(this.blocks, this.schema);
+		this.allRowData = data; // 保存全部数据供过滤使用
 
 		// 准备列定义（添加序号列）
 		this.filterViewState = this.loadFilterViewState();
@@ -1604,7 +1606,7 @@ export class TableView extends ItemView {
 			views: stored.views.map((view) => ({
 				id: view.id,
 				name: view.name,
-				filterModel: view.filterModel ?? null,
+				filterRule: view.filterRule ?? null,
 				columnState: view.columnState ? this.cloneColumnState(view.columnState as ColumnState[]) : null,
 				quickFilter: view.quickFilter ?? null
 			}))
@@ -1653,54 +1655,108 @@ export class TableView extends ItemView {
 		const targetId = this.filterViewState.activeViewId;
 		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
 
+		// 应用过滤规则
 		this.gridAdapter.runWhenReady?.(() => {
 			if (!this.gridAdapter) {
 				return;
 			}
-			if (!this.initialColumnState) {
-				const baseState = this.gridAdapter.getColumnState?.();
-				this.initialColumnState = baseState ? this.cloneColumnState(baseState) : null;
+
+			let dataToShow: any[];
+			if (!targetView || !targetView.filterRule) {
+				// 没有激活视图,显示全部数据
+				dataToShow = this.allRowData;
+			} else {
+				// 应用过滤规则
+				dataToShow = this.applyFilterRule(this.allRowData, targetView.filterRule);
 			}
 
-			if (targetView) {
-				this.gridAdapter.setFilterModel?.(this.deepClone(targetView.filterModel ?? null));
-				if (targetView.columnState) {
-					this.gridAdapter.applyColumnState?.(this.cloneColumnState(targetView.columnState as ColumnState[]));
-				}
-			} else {
-				this.gridAdapter.setFilterModel?.(null);
-				if (this.initialColumnState) {
-					this.gridAdapter.applyColumnState?.(this.cloneColumnState(this.initialColumnState));
-				} else {
-					this.gridAdapter.applyColumnState?.(null);
-				}
+			// 使用 AG Grid API 更新数据
+			const api = (this.gridAdapter as any).gridApi;
+			if (api && typeof api.setGridOption === 'function') {
+				api.setGridOption('rowData', dataToShow);
 			}
 		});
 	}
 
-	private promptCreateFilterView(): void {
+	private applyFilterRule(rows: any[], rule: FilterRule): any[] {
+		return rows.filter((row) => {
+			const results = rule.conditions.map((condition) => this.evaluateCondition(row, condition));
+
+			if (rule.combineMode === 'AND') {
+				return results.every((r) => r);
+			} else {
+				return results.some((r) => r);
+			}
+		});
+	}
+
+	private evaluateCondition(row: any, condition: FilterCondition): boolean {
+		const cellValue = row[condition.column];
+		const cellStr = cellValue == null ? '' : String(cellValue).toLowerCase();
+		const compareStr = (condition.value ?? '').toLowerCase();
+
+		switch (condition.operator) {
+			case 'equals':
+				return cellStr === compareStr;
+			case 'notEquals':
+				return cellStr !== compareStr;
+			case 'contains':
+				return cellStr.includes(compareStr);
+			case 'notContains':
+				return !cellStr.includes(compareStr);
+			case 'startsWith':
+				return cellStr.startsWith(compareStr);
+			case 'endsWith':
+				return cellStr.endsWith(compareStr);
+			case 'isEmpty':
+				return cellStr === '';
+			case 'isNotEmpty':
+				return cellStr !== '';
+			case 'greaterThan':
+				return parseFloat(cellStr) > parseFloat(compareStr);
+			case 'lessThan':
+				return parseFloat(cellStr) < parseFloat(compareStr);
+			case 'greaterOrEqual':
+				return parseFloat(cellStr) >= parseFloat(compareStr);
+			case 'lessOrEqual':
+				return parseFloat(cellStr) <= parseFloat(compareStr);
+			default:
+				return false;
+		}
+	}
+
+	private async promptCreateFilterView(): Promise<void> {
 		if (!this.gridAdapter) {
 			return;
 		}
-		const ownerWindow = this.tableContainer?.ownerDocument?.defaultView ?? window;
-		const name = ownerWindow.prompt('输入视图名称', '新建视图');
-		if (!name) {
+
+		// 获取可用的列名
+		const columns = this.getAvailableColumns();
+		if (columns.length === 0) {
+			new Notice('无法获取列信息，请稍后重试');
 			return;
 		}
-		const trimmed = name.trim();
-		if (!trimmed) {
-			return;
-		}
-		this.saveCurrentFilterAsView(trimmed);
+
+		return new Promise((resolve) => {
+			const modal = new FilterViewEditorModal(this.app, {
+				title: '新建过滤视图',
+				columns,
+				onSubmit: (name, rule) => {
+					this.saveFilterView(name, rule);
+					resolve();
+				},
+				onCancel: () => resolve()
+			});
+			modal.open();
+		});
 	}
 
-	private saveCurrentFilterAsView(name: string): void {
-		const snapshot = this.getCurrentFilterSnapshot();
+	private saveFilterView(name: string, rule: FilterRule): void {
 		const newView: FilterViewDefinition = {
 			id: this.generateFilterViewId(),
 			name,
-			filterModel: snapshot.filterModel,
-			columnState: snapshot.columnState,
+			filterRule: rule,
+			columnState: null,
 			quickFilter: null
 		};
 		this.filterViewState.views.push(newView);
@@ -1710,32 +1766,70 @@ export class TableView extends ItemView {
 		this.applyActiveFilterView();
 	}
 
-	private updateFilterView(viewId: string): void {
-		const target = this.filterViewState.views.find((view) => view.id === viewId);
-		if (!target) {
-			return;
+	private getAvailableColumns(): string[] {
+		// 优先使用 schema 中的列名
+		if (this.schema?.columnNames) {
+			return this.schema.columnNames;
 		}
-		const snapshot = this.getCurrentFilterSnapshot();
-		target.filterModel = snapshot.filterModel;
-		target.columnState = snapshot.columnState;
-		void this.persistFilterViews();
+
+		// 备用方案: 从 GridAdapter 获取列状态
+		const columnState = this.gridAdapter?.getColumnState?.();
+		if (!columnState) {
+			return [];
+		}
+
+		// 过滤掉内部列(如状态列、索引列)
+		return columnState
+			.filter((col) => col.colId && !col.colId.startsWith('ag-Grid'))
+			.map((col) => col.colId!)
+			.filter((colId) => colId !== '__tlb_status' && colId !== '__tlb_index' && colId !== '#' && colId !== 'status');
 	}
 
-	private renameFilterView(viewId: string): void {
+	private async updateFilterView(viewId: string): Promise<void> {
+		const target = this.filterViewState.views.find((view) => view.id === viewId);
+		if (!target || !this.gridAdapter) {
+			return;
+		}
+
+		// 获取可用的列名
+		const columns = this.getAvailableColumns();
+		if (columns.length === 0) {
+			return;
+		}
+
+		return new Promise((resolve) => {
+			const modal = new FilterViewEditorModal(this.app, {
+				title: `编辑视图: ${target.name}`,
+				columns,
+				initialRule: target.filterRule,
+				onSubmit: (name, rule) => {
+					target.name = name;
+					target.filterRule = rule;
+					this.rebuildFilterViewButtons();
+					void this.persistFilterViews();
+					this.applyActiveFilterView();
+					resolve();
+				},
+				onCancel: () => resolve()
+			});
+			modal.open();
+		});
+	}
+
+	private async renameFilterView(viewId: string): Promise<void> {
 		const target = this.filterViewState.views.find((view) => view.id === viewId);
 		if (!target) {
 			return;
 		}
-		const ownerWindow = this.tableContainer?.ownerDocument?.defaultView ?? window;
-		const name = ownerWindow.prompt('重命名视图', target.name);
-		if (!name) {
+		const name = await this.openFilterViewNameModal({
+			title: '重命名视图',
+			placeholder: '输入新名称',
+			defaultValue: target.name
+		});
+		if (!name || name === target.name) {
 			return;
 		}
-		const trimmed = name.trim();
-		if (!trimmed || trimmed === target.name) {
-			return;
-		}
-		target.name = trimmed;
+		target.name = name;
 		this.rebuildFilterViewButtons();
 		void this.persistFilterViews();
 	}
@@ -1781,15 +1875,6 @@ export class TableView extends ItemView {
 			return crypto.randomUUID();
 		}
 		return `fv-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-	}
-
-	private getCurrentFilterSnapshot(): { filterModel: any | null; columnState: ColumnState[] | null } {
-		const filterModel = this.gridAdapter?.getFilterModel?.() ?? null;
-		const columnState = this.gridAdapter?.getColumnState?.() ?? null;
-		return {
-			filterModel: this.deepClone(filterModel),
-			columnState: columnState ? this.cloneColumnState(columnState) : null
-		};
 	}
 
 	private persistFilterViews(): Promise<void> | void {
@@ -1863,6 +1948,190 @@ export class TableView extends ItemView {
 
 		// 清理容器引用
 		this.tableContainer = null;
+	}
+}
+
+interface FilterViewEditorModalOptions {
+	title: string;
+	columns: string[];  // 可用的列名列表
+	initialRule?: FilterRule | null;  // 初始规则(用于编辑)
+	onSubmit: (name: string, rule: FilterRule) => void;
+	onCancel: () => void;
+}
+
+class FilterViewEditorModal extends Modal {
+	private readonly options: FilterViewEditorModalOptions;
+	private nameInputEl!: HTMLInputElement;
+	private conditionsContainer!: HTMLElement;
+	private combineModeSelect!: HTMLSelectElement;
+	private conditions: FilterCondition[] = [];
+	private combineMode: 'AND' | 'OR' = 'AND';
+
+	constructor(app: App, options: FilterViewEditorModalOptions) {
+		super(app);
+		this.options = options;
+		if (options.initialRule) {
+			this.conditions = [...options.initialRule.conditions];
+			this.combineMode = options.initialRule.combineMode;
+		}
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass('tlb-filter-editor-modal');
+		this.titleEl.setText(this.options.title);
+
+		// 视图名称输入
+		const nameSetting = new Setting(contentEl);
+		nameSetting.setName('视图名称');
+		nameSetting.addText((text) => {
+			text.setPlaceholder('输入视图名称');
+			this.nameInputEl = text.inputEl;
+		});
+
+		// 组合模式选择
+		const modeSetting = new Setting(contentEl);
+		modeSetting.setName('条件组合方式');
+		modeSetting.addDropdown((dropdown) => {
+			dropdown.addOption('AND', '满足所有条件 (AND)');
+			dropdown.addOption('OR', '满足任一条件 (OR)');
+			dropdown.setValue(this.combineMode);
+			dropdown.onChange((value) => {
+				this.combineMode = value as 'AND' | 'OR';
+			});
+			this.combineModeSelect = dropdown.selectEl;
+		});
+
+		// 过滤条件列表
+		contentEl.createEl('h3', { text: '过滤条件' });
+		this.conditionsContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions' });
+		this.renderConditions();
+
+		// 添加条件按钮
+		const addButton = contentEl.createEl('button', { text: '+ 添加条件' });
+		addButton.addClass('mod-cta');
+		addButton.addEventListener('click', () => {
+			this.addCondition();
+		});
+
+		// 底部按钮
+		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+
+		const saveButton = buttonContainer.createEl('button', { text: '保存' });
+		saveButton.addClass('mod-cta');
+		saveButton.addEventListener('click', () => this.submit());
+
+		const cancelButton = buttonContainer.createEl('button', { text: '取消' });
+		cancelButton.addEventListener('click', () => this.close());
+	}
+
+	private renderConditions(): void {
+		this.conditionsContainer.empty();
+
+		if (this.conditions.length === 0) {
+			this.conditionsContainer.createEl('p', {
+				text: '暂无过滤条件,点击下方"添加条件"按钮开始',
+				cls: 'tlb-filter-empty-hint'
+			});
+			return;
+		}
+
+		this.conditions.forEach((condition, index) => {
+			const row = this.conditionsContainer.createDiv({ cls: 'tlb-filter-condition-row' });
+
+			// 列选择
+			const columnSelect = row.createEl('select', { cls: 'tlb-filter-select' });
+			this.options.columns.forEach((col) => {
+				const option = columnSelect.createEl('option', { text: col, value: col });
+				if (col === condition.column) {
+					option.selected = true;
+				}
+			});
+			columnSelect.addEventListener('change', () => {
+				condition.column = columnSelect.value;
+			});
+
+			// 运算符选择
+			const operatorSelect = row.createEl('select', { cls: 'tlb-filter-select' });
+			const operators: { value: FilterOperator; label: string }[] = [
+				{ value: 'equals', label: '等于' },
+				{ value: 'notEquals', label: '不等于' },
+				{ value: 'contains', label: '包含' },
+				{ value: 'notContains', label: '不包含' },
+				{ value: 'startsWith', label: '开头是' },
+				{ value: 'endsWith', label: '结尾是' },
+				{ value: 'isEmpty', label: '为空' },
+				{ value: 'isNotEmpty', label: '不为空' },
+			];
+			operators.forEach((op) => {
+				const option = operatorSelect.createEl('option', { text: op.label, value: op.value });
+				if (op.value === condition.operator) {
+					option.selected = true;
+				}
+			});
+			operatorSelect.addEventListener('change', () => {
+				condition.operator = operatorSelect.value as FilterOperator;
+				this.renderConditions(); // 重新渲染以显示/隐藏值输入框
+			});
+
+			// 值输入(某些运算符不需要)
+			const needsValue = !['isEmpty', 'isNotEmpty'].includes(condition.operator);
+			if (needsValue) {
+				const valueInput = row.createEl('input', {
+					type: 'text',
+					cls: 'tlb-filter-input',
+					placeholder: '输入值'
+				});
+				valueInput.value = condition.value ?? '';
+				valueInput.addEventListener('input', () => {
+					condition.value = valueInput.value;
+				});
+			}
+
+			// 删除按钮
+			const deleteButton = row.createEl('button', { text: '删除', cls: 'mod-warning' });
+			deleteButton.addEventListener('click', () => {
+				this.conditions.splice(index, 1);
+				this.renderConditions();
+			});
+		});
+	}
+
+	private addCondition(): void {
+		const firstColumn = this.options.columns[0] ?? 'status';
+		this.conditions.push({
+			column: firstColumn,
+			operator: 'equals',
+			value: ''
+		});
+		this.renderConditions();
+	}
+
+	private submit(): void {
+		const name = this.nameInputEl?.value?.trim();
+		if (!name) {
+			// TODO: 显示错误提示
+			return;
+		}
+
+		if (this.conditions.length === 0) {
+			// TODO: 显示错误提示
+			return;
+		}
+
+		const rule: FilterRule = {
+			conditions: this.conditions,
+			combineMode: this.combineMode
+		};
+
+		this.options.onSubmit(name, rule);
+		this.options.onCancel = () => {}; // 防止重复调用
+		this.close();
+	}
+
+	onClose(): void {
+		this.options.onCancel();
 	}
 }
 

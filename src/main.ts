@@ -759,7 +759,7 @@ export default class TileLineBasePlugin extends Plugin {
 		return {
 			id: source.id,
 			name: source.name,
-			filterModel: source.filterModel != null ? this.deepClone(source.filterModel) : null,
+			filterRule: source.filterRule != null ? this.deepClone(source.filterRule) : null,
 			columnState: source.columnState != null ? this.deepClone(source.columnState) : null,
 			quickFilter: source.quickFilter ?? null
 		};

@@ -36,6 +36,10 @@ import { createTextCellEditor } from './editors/TextCellEditor';
 import { CompositionProxy } from './utils/CompositionProxy';
 import { setIcon } from 'obsidian';
 
+const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_TEXT_MIN_WIDTH = 160;
+const DEFAULT_TEXT_MAX_WIDTH = 360;
+
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -46,7 +50,6 @@ export class AgGridAdapter implements GridAdapter {
 	private enterAtLastRowCallback?: (field: string) => void;
 	private lastAutoSizeTimestamp = 0;
 	private shouldAutoSizeOnNextResize = false;
-	private rowHeightResetHandle: number | null = null;
 	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
 
 	// Composition Proxy：每个 Document 一个代理层
@@ -351,6 +354,8 @@ export class AgGridAdapter implements GridAdapter {
 					field: col.field,
 					headerName: col.headerName,
 					editable: false,
+					pinned: 'left',
+					lockPinned: true,
 					width: 60,  // 固定宽度
 					maxWidth: 80,
 					sortable: true,
@@ -374,10 +379,12 @@ export class AgGridAdapter implements GridAdapter {
 					headerName,
 					headerTooltip: col.headerTooltip ?? tooltipFallback,
 					editable: false,  // 禁用编辑模式
+					pinned: 'left',
+					lockPinned: true,
 					width: 60,  // 固定宽度
 					resizable: false,
 					sortable: true,
-					filter: true,
+					filter: false,
 					suppressSizeToFit: true,  // 不参与自动调整
 					suppressNavigable: true,  // 禁止键盘导航
 					cellRenderer: StatusCellRenderer,  // 使用自定义渲染器
@@ -395,14 +402,26 @@ export class AgGridAdapter implements GridAdapter {
 				headerName: col.headerName,
 				editable: col.editable,
 				sortable: true, // 启用排序
-				filter: true, // 启用筛选
+				filter: false, // 关闭筛选
 				resizable: true, // 可调整列宽
-				wrapText: true, // 文本自动换行
-				autoHeight: true, // 行高自动适应内容
+				cellClass: 'tlb-cell-truncate'
 			};
 
 			// 合并用户配置（width, flex 等）
 			const mergedColDef = { ...baseColDef, ...(col as any) };
+			if (typeof col.field === 'string' && col.field !== '#' && col.field !== 'status') {
+				if (typeof mergedColDef.minWidth !== 'number') {
+					mergedColDef.minWidth = DEFAULT_TEXT_MIN_WIDTH;
+				}
+				if (typeof mergedColDef.maxWidth !== 'number') {
+					mergedColDef.maxWidth = DEFAULT_TEXT_MAX_WIDTH;
+				}
+			}
+			const pinnedFields = new Set(['任务', '任务名称', '任务名', 'task', 'taskName', 'title', '标题']);
+			if (typeof col.field === 'string' && pinnedFields.has(col.field)) {
+				mergedColDef.pinned = 'left';
+				mergedColDef.lockPinned = true;
+			}
 
 			// 检查用户是否配置了宽度
 			const hasWidth = (col as any).width !== undefined;
@@ -449,9 +468,10 @@ export class AgGridAdapter implements GridAdapter {
 		const gridOptions: GridOptions = {
 			columnDefs: colDefs,
 			rowData: rows,
+			rowHeight: DEFAULT_ROW_HEIGHT,
 
-			// 提供稳定的行 ID（用于增量更新和状态管理）
-			getRowId: (params) => {
+		// 提供稳定的行 ID（用于增量更新和状态管理）
+		getRowId: (params) => {
 				return String(params.data[ROW_ID_FIELD]);
 			},
 
@@ -518,9 +538,13 @@ export class AgGridAdapter implements GridAdapter {
 
 			// 默认列配置
 			defaultColDef: {
+				tooltipValueGetter: (params) => {
+					const value = params.value;
+					return value == null ? '' : String(value);
+				},
 				editable: true,
 				sortable: true,
-				filter: true,
+				filter: false,
 				resizable: true,
 				cellEditor: createTextCellEditor(), // 🔑 使用工厂函数创建编辑器，支持 pop-out 窗口
 				suppressKeyboardEvent: (params: any) => {
@@ -561,7 +585,6 @@ export class AgGridAdapter implements GridAdapter {
 		this.gridApi = createGrid(container, gridOptions);
 		this.lastAutoSizeTimestamp = 0;
 		this.shouldAutoSizeOnNextResize = false;
-		this.clearRowHeightResetHandle();
 		this.setupHeaderIcons(ownerDoc ?? document);
 
 		['ag-Grid-SelectionColumn', 'ag-Grid-AutoColumn'].forEach((colId) => {
@@ -798,7 +821,6 @@ export class AgGridAdapter implements GridAdapter {
 			// 允许下一次 resizeColumns 重启 autoSize，确保新数据也能触发宽度调整
 			this.lastAutoSizeTimestamp = 0;
 			this.shouldAutoSizeOnNextResize = true;
-			this.queueRowHeightSync();
 			this.armProxyForCurrentCell();
 		}
 	}
@@ -836,7 +858,6 @@ export class AgGridAdapter implements GridAdapter {
 
 	markLayoutDirty(): void {
 		this.shouldAutoSizeOnNextResize = true;
-		this.queueRowHeightSync();
 		this.armProxyForCurrentCell();
 	}
 
@@ -879,7 +900,6 @@ export class AgGridAdapter implements GridAdapter {
 	 * 销毁表格实例
 	 */
 	destroy(): void {
-		this.clearRowHeightResetHandle();
 		this.cleanupHeaderIcons();
 		if (this.gridApi) {
 			this.gridApi.destroy();
@@ -1001,64 +1021,8 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.sizeColumnsToFit();
 		}
 
-		// 3. 在下一帧重算行高，确保 wrapText + autoHeight 及时响应宽度变化
-		this.queueRowHeightSync();
-
 		// 额外刷新单元格，帮助立即应用新宽度
 		this.gridApi.refreshCells({ force: true });
-	}
-
-	private queueRowHeightSync(): void {
-		if (!this.gridApi) return;
-
-		this.clearRowHeightResetHandle();
-
-		const api = this.gridApi;
-
-		const resetNodeHeights = () => {
-			if (!this.gridApi) return;
-			this.gridApi.forEachNode(node => node.setRowHeight(undefined));
-		};
-
-		const runReset = () => {
-			if (!this.gridApi) return;
-			resetNodeHeights();
-			api.stopEditing();
-			// 注意：autoHeight 模式下不需要调用 resetRowHeights()
-			api.onRowHeightChanged();
-			api.refreshCells({ force: true });
-			api.refreshClientSideRowModel?.('nothing');
-			api.redrawRows();
-		};
-
-		const first = () => runReset();
-		const second = () => runReset();
-		const third = () => runReset();
-		const fourth = () => runReset();
-		const fifth = () => runReset();
-
-		if (typeof requestAnimationFrame === 'function') {
-			this.rowHeightResetHandle = requestAnimationFrame(() => {
-				this.rowHeightResetHandle = null;
-				first();
-			});
-		} else {
-			setTimeout(first, 0);
-		}
-
-		setTimeout(second, 120);
-		setTimeout(third, 300);
-		setTimeout(fourth, 600);
-		setTimeout(fifth, 900);
-	}
-
-	private clearRowHeightResetHandle(): void {
-		if (this.rowHeightResetHandle !== null) {
-			if (typeof cancelAnimationFrame === 'function') {
-				cancelAnimationFrame(this.rowHeightResetHandle);
-			}
-			this.rowHeightResetHandle = null;
-		}
 	}
 
 	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {

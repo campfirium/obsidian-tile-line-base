@@ -660,8 +660,18 @@ export class AgGridAdapter implements GridAdapter {
 			return;
 		}
 
-		const update = () => {
-			this.updateHeaderIcons(doc);
+		const win = doc.defaultView ?? window;
+
+		// 使用防抖，避免短时间内多次更新
+		let debounceTimer: number | null = null;
+		const debouncedUpdate = () => {
+			if (debounceTimer) {
+				win.clearTimeout(debounceTimer);
+			}
+			debounceTimer = win.setTimeout(() => {
+				this.updateHeaderIcons(doc);
+				debounceTimer = null;
+			}, 50);
 		};
 
 		const events = [
@@ -672,15 +682,15 @@ export class AgGridAdapter implements GridAdapter {
 		] as const;
 
 		events.forEach((eventName) => {
-			api.addEventListener(eventName, update);
+			api.addEventListener(eventName, debouncedUpdate);
 		});
 
 		// 添加节流，防止 columnResized 时频繁更新
 		let throttleTimer: number | null = null;
 		const throttledUpdate = () => {
 			if (throttleTimer) return;
-			throttleTimer = window.setTimeout(() => {
-				update();
+			throttleTimer = win.setTimeout(() => {
+				this.updateHeaderIcons(doc);
 				throttleTimer = null;
 			}, 100);
 		};
@@ -688,21 +698,21 @@ export class AgGridAdapter implements GridAdapter {
 		// columnResized 使用节流更新
 		api.addEventListener('columnResized', throttledUpdate);
 
-		const win = doc.defaultView ?? window;
-		win.setTimeout(() => update(), 0);
-
 		// 添加定期检查，确保图标持久显示
 		const intervalId = win.setInterval(() => {
-			update();
+			this.updateHeaderIcons(doc);
 		}, 1000);
 
 		this.headerIconCleanup = () => {
 			events.forEach((eventName) => {
-				api.removeEventListener(eventName, update);
+				api.removeEventListener(eventName, debouncedUpdate);
 			});
 			api.removeEventListener('columnResized', throttledUpdate);
+			if (debounceTimer) {
+				win.clearTimeout(debounceTimer);
+			}
 			if (throttleTimer) {
-				window.clearTimeout(throttleTimer);
+				win.clearTimeout(throttleTimer);
 			}
 			win.clearInterval(intervalId);
 		};

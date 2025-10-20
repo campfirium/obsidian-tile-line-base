@@ -14,7 +14,10 @@
       "Bash(git commit -m \"style: add proper CSS for custom header icons\n\n添加 .tlb-header-icon 的 CSS 样式，修复图标对齐问题：\n- 图标容器使用 flex 布局，居中对齐\n- 图标大小固定为 16px × 16px\n- 保留旧的 .tlb-index-header-icon 和 .tlb-status-header-icon 样式以兼容\")",
       "Bash(npm run build)",
       "Bash(git add -A)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: implement custom filter view with condition editor\n\n实现自定义过滤视图功能，支持灵活的条件组合：\n\n核心功能：\n- 过滤条件编辑器模态框\n  - 支持添加/删除多个过滤条件\n  - 12种运算符：等于、不等于、包含、不包含、开头是、结尾是、为空、不为空、大于、小于、大于等于、小于等于\n  - 支持 AND/OR 条件组合模式\n  - 视图命名功能\n\n- 过滤逻辑实现\n  - 基于自定义规则的数据过滤\n  - 支持文本、数字、空值比较\n  - 使用 AG Grid API 动态更新显示数据\n\n- 数据结构设计\n  - FilterCondition: 单个过滤条件（列、运算符、值）\n  - FilterRule: 过滤规则（条件列表 + AND/OR）\n  - FilterViewDefinition: 使用 filterRule 替代 filterModel\n\n- 视图管理\n  - 右键菜单支持编辑/重命名/删除\n  - 视图持久化存储\n  - 自动应用激活视图的过滤条件\n\n文件修改：\n- src/types/filterView.ts: 新增过滤类型定义\n- src/TableView.ts: 实现过滤编辑器和应用逻辑\n- src/main.ts: 更新视图定义克隆逻辑\n- styles.css: 添加过滤编辑器样式\n\n技术要点：\n- 使用 schema.columnNames 获取可用列\n- 通过 AG Grid setGridOption API 更新数据\n- 保存全部数据 (allRowData) 供过滤使用\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: implement custom filter view with condition editor\n\n实现自定义过滤视图功能，支持灵活的条件组合：\n\n核心功能：\n- 过滤条件编辑器模态框\n  - 支持添加/删除多个过滤条件\n  - 12种运算符：等于、不等于、包含、不包含、开头是、结尾是、为空、不为空、大于、小于、大于等于、小于等于\n  - 支持 AND/OR 条件组合模式\n  - 视图命名功能\n\n- 过滤逻辑实现\n  - 基于自定义规则的数据过滤\n  - 支持文本、数字、空值比较\n  - 使用 AG Grid API 动态更新显示数据\n\n- 数据结构设计\n  - FilterCondition: 单个过滤条件（列、运算符、值）\n  - FilterRule: 过滤规则（条件列表 + AND/OR）\n  - FilterViewDefinition: 使用 filterRule 替代 filterModel\n\n- 视图管理\n  - 右键菜单支持编辑/重命名/删除\n  - 视图持久化存储\n  - 自动应用激活视图的过滤条件\n\n文件修改：\n- src/types/filterView.ts: 新增过滤类型定义\n- src/TableView.ts: 实现过滤编辑器和应用逻辑\n- src/main.ts: 更新视图定义克隆逻辑\n- styles.css: 添加过滤编辑器样式\n\n技术要点：\n- 使用 schema.columnNames 获取可用列\n- 通过 AG Grid setGridOption API 更新数据\n- 保存全部数据 (allRowData) 供过滤使用\nEOF\n)\")",
+      "Bash(git checkout dev)",
+      "Bash(git add .claude/settings.local.json)",
+      "Bash(git commit -m \"chore: update local settings\")"
     ],
     "deny": [],
     "ask": []

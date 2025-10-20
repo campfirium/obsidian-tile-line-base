@@ -668,8 +668,7 @@ export class AgGridAdapter implements GridAdapter {
 			'firstDataRendered',
 			'columnEverythingChanged',
 			'displayedColumnsChanged',
-			'sortChanged',
-			'columnResized'
+			'sortChanged'
 		] as const;
 
 		events.forEach((eventName) => {
@@ -752,23 +751,28 @@ export class AgGridAdapter implements GridAdapter {
 			label.classList.add(config.labelClass);
 
 			let iconEl = headerCell.querySelector<HTMLElement>(`.${config.iconClass}`);
-			if (!iconEl) {
+			const needsIconCreation = !iconEl;
+
+			if (needsIconCreation) {
 				iconEl = doc.createElement('div');
 				iconEl.className = config.iconClass;
 				label.insertBefore(iconEl, label.firstChild ?? null);
 			}
 
-			setIcon(iconEl, config.icon);
-			if (!iconEl.querySelector('svg') && config.fallbacks) {
-				for (const fallback of config.fallbacks) {
-					setIcon(iconEl, fallback);
-					if (iconEl.querySelector('svg')) {
-						break;
+			// 只在图标不存在或 SVG 丢失时才重新设置图标
+			if (needsIconCreation || !iconEl!.querySelector('svg')) {
+				setIcon(iconEl!, config.icon);
+				if (!iconEl!.querySelector('svg') && config.fallbacks) {
+					for (const fallback of config.fallbacks) {
+						setIcon(iconEl!, fallback);
+						if (iconEl!.querySelector('svg')) {
+							break;
+						}
 					}
 				}
+				iconEl!.setAttribute('aria-hidden', 'true');
+				iconEl!.setAttribute('role', 'presentation');
 			}
-			iconEl.setAttribute('aria-hidden', 'true');
-			iconEl.setAttribute('role', 'presentation');
 
 			const textEl = label.querySelector<HTMLElement>('.ag-header-cell-text');
 			if (textEl && config.hideLabel) {
@@ -777,7 +781,7 @@ export class AgGridAdapter implements GridAdapter {
 
 			if (config.tooltip) {
 				headerCell.setAttribute('title', config.tooltip);
-				iconEl.setAttribute('aria-label', config.tooltip);
+				iconEl!.setAttribute('aria-label', config.tooltip);
 			}
 		}
 	}

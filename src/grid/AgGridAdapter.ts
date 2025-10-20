@@ -675,13 +675,36 @@ export class AgGridAdapter implements GridAdapter {
 			api.addEventListener(eventName, update);
 		});
 
+		// 添加节流，防止 columnResized 时频繁更新
+		let throttleTimer: number | null = null;
+		const throttledUpdate = () => {
+			if (throttleTimer) return;
+			throttleTimer = window.setTimeout(() => {
+				update();
+				throttleTimer = null;
+			}, 100);
+		};
+
+		// columnResized 使用节流更新
+		api.addEventListener('columnResized', throttledUpdate);
+
 		const win = doc.defaultView ?? window;
 		win.setTimeout(() => update(), 0);
+
+		// 添加定期检查，确保图标持久显示
+		const intervalId = win.setInterval(() => {
+			update();
+		}, 1000);
 
 		this.headerIconCleanup = () => {
 			events.forEach((eventName) => {
 				api.removeEventListener(eventName, update);
 			});
+			api.removeEventListener('columnResized', throttledUpdate);
+			if (throttleTimer) {
+				window.clearTimeout(throttleTimer);
+			}
+			win.clearInterval(intervalId);
 		};
 	}
 

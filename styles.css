@@ -172,6 +172,21 @@
   height: 100%;
 }
 
+.tlb-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: currentColor;
+}
+
+.tlb-header-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 旧的图标样式（保留兼容性） */
 .tlb-index-header-icon,
 .tlb-status-header-icon {
   display: inline-flex;

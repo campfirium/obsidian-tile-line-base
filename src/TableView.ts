@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, EventRef } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, EventRef, Menu } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
@@ -6,6 +6,8 @@ import { getPluginContext } from "./pluginContext";
 import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
+import type { ColumnState } from "ag-grid-community";
+import type { FileFilterViewState, FilterViewDefinition } from "./types/filterView";
 
 const LOG_PREFIX = "[TileLineBase]";
 
@@ -61,6 +63,10 @@ export class TableView extends ItemView {
 	private lastContainerWidth: number = 0;
 	private lastContainerHeight: number = 0;
 	private pendingSizeUpdateHandle: number | null = null;
+	private filterViewBar: HTMLElement | null = null;
+	private filterViewTabsEl: HTMLElement | null = null;
+	private filterViewState: FileFilterViewState = { views: [], activeViewId: null };
+	private initialColumnState: ColumnState[] | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		debugLog('=== TableView 构造函数开始 ===');
@@ -546,6 +552,12 @@ export class TableView extends ItemView {
 		const data = this.extractTableData(this.blocks, this.schema);
 
 		// 准备列定义（添加序号列）
+		this.filterViewState = this.loadFilterViewState();
+		this.initialColumnState = null;
+		this.filterViewBar = null;
+		this.filterViewTabsEl = null;
+		this.renderFilterViewControls(container);
+
 		const columns: ColumnDef[] = [
 			{
 				field: '#',
@@ -657,6 +669,8 @@ export class TableView extends ItemView {
 
 				setTimeout(() => tryEdit(), 50);
 			});
+
+			this.applyActiveFilterView();
 
 			// 添加右键菜单监听
 			this.setupContextMenu(tableContainer);
@@ -1559,6 +1573,251 @@ export class TableView extends ItemView {
 			href,
 			isMain: win === window
 		};
+	}
+
+	private renderFilterViewControls(container: Element): void {
+		const bar = container.createDiv({ cls: 'tlb-filter-view-bar' });
+		const tabs = bar.createDiv({ cls: 'tlb-filter-view-tabs' });
+		this.filterViewBar = bar;
+		this.filterViewTabsEl = tabs;
+		this.rebuildFilterViewButtons();
+
+		const actions = bar.createDiv({ cls: 'tlb-filter-view-actions' });
+		const addButton = actions.createEl('button', { cls: 'tlb-filter-view-button tlb-filter-view-button--add', text: '+' });
+		addButton.addEventListener('click', () => {
+			this.promptCreateFilterView();
+		});
+	}
+
+	private loadFilterViewState(): FileFilterViewState {
+		const plugin = getPluginContext();
+		if (!plugin || !this.file || typeof plugin.getFilterViewsForFile !== 'function') {
+			return { views: [], activeViewId: null };
+		}
+		const stored = plugin.getFilterViewsForFile(this.file.path);
+		const availableIds = new Set(stored.views.map((view) => view.id));
+		const activeId = stored.activeViewId && availableIds.has(stored.activeViewId)
+			? stored.activeViewId
+			: null;
+		return {
+			activeViewId: activeId,
+			views: stored.views.map((view) => ({
+				id: view.id,
+				name: view.name,
+				filterModel: view.filterModel ?? null,
+				columnState: view.columnState ? this.cloneColumnState(view.columnState as ColumnState[]) : null,
+				quickFilter: view.quickFilter ?? null
+			}))
+		};
+	}
+
+	private rebuildFilterViewButtons(): void {
+		if (!this.filterViewTabsEl) {
+			return;
+		}
+		this.clearElement(this.filterViewTabsEl);
+
+		const defaultButton = this.filterViewTabsEl.createEl('button', { cls: 'tlb-filter-view-button', text: '全部' });
+		defaultButton.addEventListener('click', () => {
+			this.activateFilterView(null);
+		});
+		if (!this.filterViewState.activeViewId) {
+			defaultButton.classList.add('is-active');
+		}
+
+		for (const view of this.filterViewState.views) {
+			const button = this.filterViewTabsEl.createEl('button', { cls: 'tlb-filter-view-button', text: view.name });
+			if (view.id === this.filterViewState.activeViewId) {
+				button.classList.add('is-active');
+			}
+			button.addEventListener('click', () => {
+				this.activateFilterView(view.id);
+			});
+			button.addEventListener('contextmenu', (event) => {
+				this.openFilterViewMenu(event, view);
+			});
+		}
+	}
+
+	private activateFilterView(viewId: string | null): void {
+		this.filterViewState.activeViewId = viewId;
+		this.rebuildFilterViewButtons();
+		void this.persistFilterViews();
+		this.applyActiveFilterView();
+	}
+
+	private applyActiveFilterView(): void {
+		if (!this.gridAdapter) {
+			return;
+		}
+		const targetId = this.filterViewState.activeViewId;
+		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
+
+		this.gridAdapter.runWhenReady?.(() => {
+			if (!this.gridAdapter) {
+				return;
+			}
+			if (!this.initialColumnState) {
+				const baseState = this.gridAdapter.getColumnState?.();
+				this.initialColumnState = baseState ? this.cloneColumnState(baseState) : null;
+			}
+
+			if (targetView) {
+				this.gridAdapter.setFilterModel?.(this.deepClone(targetView.filterModel ?? null));
+				if (targetView.columnState) {
+					this.gridAdapter.applyColumnState?.(this.cloneColumnState(targetView.columnState as ColumnState[]));
+				}
+			} else {
+				this.gridAdapter.setFilterModel?.(null);
+				if (this.initialColumnState) {
+					this.gridAdapter.applyColumnState?.(this.cloneColumnState(this.initialColumnState));
+				} else {
+					this.gridAdapter.applyColumnState?.(null);
+				}
+			}
+		});
+	}
+
+	private promptCreateFilterView(): void {
+		if (!this.gridAdapter) {
+			return;
+		}
+		const ownerWindow = this.tableContainer?.ownerDocument?.defaultView ?? window;
+		const name = ownerWindow.prompt('输入视图名称', '新建视图');
+		if (!name) {
+			return;
+		}
+		const trimmed = name.trim();
+		if (!trimmed) {
+			return;
+		}
+		this.saveCurrentFilterAsView(trimmed);
+	}
+
+	private saveCurrentFilterAsView(name: string): void {
+		const snapshot = this.getCurrentFilterSnapshot();
+		const newView: FilterViewDefinition = {
+			id: this.generateFilterViewId(),
+			name,
+			filterModel: snapshot.filterModel,
+			columnState: snapshot.columnState,
+			quickFilter: null
+		};
+		this.filterViewState.views.push(newView);
+		this.filterViewState.activeViewId = newView.id;
+		this.rebuildFilterViewButtons();
+		void this.persistFilterViews();
+		this.applyActiveFilterView();
+	}
+
+	private updateFilterView(viewId: string): void {
+		const target = this.filterViewState.views.find((view) => view.id === viewId);
+		if (!target) {
+			return;
+		}
+		const snapshot = this.getCurrentFilterSnapshot();
+		target.filterModel = snapshot.filterModel;
+		target.columnState = snapshot.columnState;
+		void this.persistFilterViews();
+	}
+
+	private renameFilterView(viewId: string): void {
+		const target = this.filterViewState.views.find((view) => view.id === viewId);
+		if (!target) {
+			return;
+		}
+		const ownerWindow = this.tableContainer?.ownerDocument?.defaultView ?? window;
+		const name = ownerWindow.prompt('重命名视图', target.name);
+		if (!name) {
+			return;
+		}
+		const trimmed = name.trim();
+		if (!trimmed || trimmed === target.name) {
+			return;
+		}
+		target.name = trimmed;
+		this.rebuildFilterViewButtons();
+		void this.persistFilterViews();
+	}
+
+	private deleteFilterView(viewId: string): void {
+		const index = this.filterViewState.views.findIndex((view) => view.id === viewId);
+		if (index === -1) {
+			return;
+		}
+		this.filterViewState.views.splice(index, 1);
+		if (this.filterViewState.activeViewId === viewId) {
+			this.filterViewState.activeViewId = null;
+		}
+		this.rebuildFilterViewButtons();
+		void this.persistFilterViews();
+		this.applyActiveFilterView();
+	}
+
+	private openFilterViewMenu(event: MouseEvent, view: FilterViewDefinition): void {
+		event.preventDefault();
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle('重命名').onClick(() => {
+				this.renameFilterView(view.id);
+			});
+		});
+		menu.addItem((item) => {
+			item.setTitle('更新为当前过滤条件').onClick(() => {
+				this.updateFilterView(view.id);
+			});
+		});
+		menu.addSeparator();
+		menu.addItem((item) => {
+			item.setTitle('删除').setIcon('trash').onClick(() => {
+				this.deleteFilterView(view.id);
+			});
+		});
+		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+	}
+
+	private generateFilterViewId(): string {
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			return crypto.randomUUID();
+		}
+		return `fv-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+	}
+
+	private getCurrentFilterSnapshot(): { filterModel: any | null; columnState: ColumnState[] | null } {
+		const filterModel = this.gridAdapter?.getFilterModel?.() ?? null;
+		const columnState = this.gridAdapter?.getColumnState?.() ?? null;
+		return {
+			filterModel: this.deepClone(filterModel),
+			columnState: columnState ? this.cloneColumnState(columnState) : null
+		};
+	}
+
+	private persistFilterViews(): Promise<void> | void {
+		const plugin = getPluginContext();
+		if (!plugin || !this.file || typeof plugin.saveFilterViewsForFile !== 'function') {
+			return;
+		}
+		return plugin.saveFilterViewsForFile(this.file.path, this.filterViewState);
+	}
+
+	private cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
+		if (!state) {
+			return null;
+		}
+		return state.map((item) => ({ ...item }));
+	}
+
+	private deepClone<T>(value: T): T {
+		if (value == null) {
+			return value;
+		}
+		return JSON.parse(JSON.stringify(value)) as T;
+	}
+
+	private clearElement(element: HTMLElement): void {
+		while (element.firstChild) {
+			element.removeChild(element.firstChild);
+		}
 	}
 
 	async onClose(): Promise<void> {

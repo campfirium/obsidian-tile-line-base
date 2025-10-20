@@ -141,6 +141,23 @@
   text-decoration: line-through;
 }
 
+.ag-theme-alpine .ag-cell.tlb-cell-truncate,
+.ag-theme-alpine-dark .ag-cell.tlb-cell-truncate {
+  align-items: center;
+}
+
+.ag-theme-alpine .ag-cell.tlb-cell-truncate .ag-cell-wrapper,
+.ag-theme-alpine-dark .ag-cell.tlb-cell-truncate .ag-cell-wrapper {
+  overflow: hidden;
+}
+
+.ag-theme-alpine .ag-cell.tlb-cell-truncate .ag-cell-value,
+.ag-theme-alpine-dark .ag-cell.tlb-cell-truncate .ag-cell-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tlb-index-header-cell,
 .tlb-status-header-cell {
   font-size: inherit;

@@ -508,7 +508,7 @@ export class AgGridAdapter implements GridAdapter {
 			rowSelection: {
 				mode: 'multiRow',
 				enableClickSelection: true,
-				enableSelectionWithoutKeys: true,
+				enableSelectionWithoutKeys: false,
 				checkboxes: false,
 				checkboxLocation: 'autoGroupColumn'
 			},

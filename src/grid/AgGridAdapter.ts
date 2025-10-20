@@ -15,7 +15,9 @@ import {
 	CellKeyDownEvent,
 	ModuleRegistry,
 	AllCommunityModule,
-	IRowNode
+	IRowNode,
+	Column,
+	ColumnResizedEvent
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -35,10 +37,9 @@ import {
 import { createTextCellEditor } from './editors/TextCellEditor';
 import { CompositionProxy } from './utils/CompositionProxy';
 import { setIcon } from 'obsidian';
+import { COLUMN_MIN_WIDTH, COLUMN_MAX_WIDTH, clampColumnWidth } from './columnSizing';
 
 const DEFAULT_ROW_HEIGHT = 40;
-const DEFAULT_TEXT_MIN_WIDTH = 160;
-const DEFAULT_TEXT_MAX_WIDTH = 360;
 
 // 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -48,9 +49,8 @@ export class AgGridAdapter implements GridAdapter {
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
-	private lastAutoSizeTimestamp = 0;
-	private shouldAutoSizeOnNextResize = false;
-	private static readonly AUTO_SIZE_COOLDOWN_MS = 800;
+	private columnResizeCallback?: (field: string, width: number) => void;
+	private columnLayoutInitialized = false;
 	private pendingEnterAtLastRow = false;
 
 	// Composition Proxy：每个 Document 一个代理层
@@ -415,10 +415,13 @@ export class AgGridAdapter implements GridAdapter {
 		rows: RowData[],
 		context?: {
 			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
+			onColumnResize?: (field: string, width: number) => void;
 		}
 	): void {
 		this.containerEl = container;
 		this.focusedDoc = container.ownerDocument || document;
+		this.columnResizeCallback = context?.onColumnResize;
+		this.columnLayoutInitialized = false;
 
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
@@ -484,44 +487,24 @@ export class AgGridAdapter implements GridAdapter {
 			// 合并用户配置（width, flex 等）
 			const mergedColDef = { ...baseColDef, ...(col as any) };
 			if (typeof col.field === 'string' && col.field !== '#' && col.field !== 'status') {
-				if (typeof mergedColDef.minWidth !== 'number') {
-					mergedColDef.minWidth = DEFAULT_TEXT_MIN_WIDTH;
-				}
-				if (typeof mergedColDef.maxWidth !== 'number') {
-					mergedColDef.maxWidth = DEFAULT_TEXT_MAX_WIDTH;
-				}
+				mergedColDef.minWidth = typeof mergedColDef.minWidth === 'number'
+					? clampColumnWidth(mergedColDef.minWidth)
+					: COLUMN_MIN_WIDTH;
+				mergedColDef.maxWidth = typeof mergedColDef.maxWidth === 'number'
+					? clampColumnWidth(mergedColDef.maxWidth)
+					: COLUMN_MAX_WIDTH;
 			}
-			const pinnedFields = new Set(['任务', '任务名称', '任务名', 'task', 'taskName', 'title', '标题']);
+			const pinnedFields = new Set(['任务', '任务名称', '任务', 'task', 'taskName', 'title', '标题']);
 			if (typeof col.field === 'string' && pinnedFields.has(col.field)) {
 				mergedColDef.pinned = 'left';
 				mergedColDef.lockPinned = true;
 			}
 
-			// 检查用户是否配置了宽度
-			const hasWidth = (col as any).width !== undefined;
-			const hasFlex = (col as any).flex !== undefined;
-			const hasExplicitWidth = hasWidth && !hasFlex;
-
-			// 保留显式宽度配置（像素值）
-			if (hasExplicitWidth) {
-				mergedColDef.suppressSizeToFit = true;
-			}
-
-			if (!hasWidth && !hasFlex) {
-				// 没有用户配置，使用智能策略：
-				// 根据内容长度判断是短文本列还是长文本列
-				const isLongTextColumn = this.isLongTextColumn(col.field!, rows);
-
-				if (isLongTextColumn) {
-					// 长文本列：使用 flex 分配剩余空间
-					mergedColDef.flex = 1;
-					mergedColDef.minWidth = 200;
-				} else {
-					// 短文本列：不设置 width/flex，后续通过 autoSize 一次性计算
-					// 设置最大宽度避免过宽
-					mergedColDef.maxWidth = 300;
-					mergedColDef.suppressSizeToFit = true; // 避免 sizeColumnsToFit 拉伸短文本列
-				}
+			const explicitWidth = (mergedColDef as any).width;
+			if (typeof explicitWidth === 'number') {
+				const clamped = clampColumnWidth(explicitWidth);
+				(mergedColDef as any).width = clamped;
+				(mergedColDef as any).suppressSizeToFit = true;
 			}
 
 			return mergedColDef;
@@ -543,6 +526,9 @@ export class AgGridAdapter implements GridAdapter {
 			columnDefs: colDefs,
 			rowData: rows,
 			rowHeight: DEFAULT_ROW_HEIGHT,
+			onFirstDataRendered: () => {
+				this.resizeColumns();
+			},
 
 		// 提供稳定的行 ID（用于增量更新和状态管理）
 		getRowId: (params) => {
@@ -606,6 +592,9 @@ export class AgGridAdapter implements GridAdapter {
 			onCellFocused: (event: CellFocusedEvent) => {
 				this.handleCellFocused(event);
 			},
+			onColumnResized: (event: ColumnResizedEvent) => {
+				this.handleColumnResized(event);
+			},
 
 			// 默认列配置
 			defaultColDef: {
@@ -651,9 +640,7 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
-		this.lastAutoSizeTimestamp = 0;
-		this.shouldAutoSizeOnNextResize = false;
-		this.setupHeaderIcons(ownerDoc ?? document);
+				this.setupHeaderIcons(ownerDoc ?? document);
 
 		['ag-Grid-SelectionColumn', 'ag-Grid-AutoColumn'].forEach((colId) => {
 			if (this.gridApi?.getColumn(colId)) {
@@ -663,9 +650,7 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
 		setTimeout(() => {
-			this.autoSizeShortTextColumns(colDefs);
-			this.shouldAutoSizeOnNextResize = false;
-		}, 100);
+					}, 100);
 	}
 
 	private setupHeaderIcons(doc: Document): void {
@@ -808,47 +793,7 @@ export class AgGridAdapter implements GridAdapter {
 	 * 判断是否为长文本列
 	 * 策略：扫描该列所有数据，计算最大内容长度
 	 */
-	private isLongTextColumn(field: string, rows: RowData[]): boolean {
-		const LONG_TEXT_THRESHOLD = 30; // 字符数阈值
-
-		// 计算该列所有行的最大内容长度
-		let maxLength = 0;
-		for (const row of rows) {
-			const value = String(row[field] || '');
-			maxLength = Math.max(maxLength, value.length);
-		}
-
-		return maxLength > LONG_TEXT_THRESHOLD;
-	}
-
-	/**
-	 * 对短文本列执行一次性 autoSize
-	 */
-	private autoSizeShortTextColumns(colDefs: ColDef[]): void {
-		if (!this.gridApi) return;
-
-		// 找出所有短文本列（没有 width/flex 的列）
-		const shortTextColumnIds: string[] = [];
-		for (const colDef of colDefs) {
-			// 跳过序号列
-			if (colDef.field === '#') continue;
-
-			const hasWidth = (colDef as any).width !== undefined;
-			const hasFlex = (colDef as any).flex !== undefined;
-
-			if (!hasWidth && !hasFlex && colDef.field) {
-				shortTextColumnIds.push(colDef.field);
-			}
-		}
-
-		if (shortTextColumnIds.length > 0) {
-			this.gridApi.autoSizeColumns(shortTextColumnIds, false); // false = 不跳过 header
-		}
-	}
-
-	/**
-	 * 处理单元格编辑事件
-	 */
+	
 	private handleCellEdit(event: CellEditingStoppedEvent): void {
 		this.editing = false;
 		this.armProxyForCurrentCell();
@@ -886,10 +831,7 @@ export class AgGridAdapter implements GridAdapter {
 	updateData(rows: RowData[]): void {
 		if (this.gridApi) {
 			this.gridApi.setGridOption('rowData', rows);
-			// 允许下一次 resizeColumns 重启 autoSize，确保新数据也能触发宽度调整
-			this.lastAutoSizeTimestamp = 0;
-			this.shouldAutoSizeOnNextResize = true;
-			this.armProxyForCurrentCell();
+			this.gridApi.refreshCells({ force: true });
 		}
 	}
 
@@ -976,7 +918,7 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	markLayoutDirty(): void {
-		this.shouldAutoSizeOnNextResize = true;
+		this.columnLayoutInitialized = false;
 		this.armProxyForCurrentCell();
 	}
 
@@ -1024,6 +966,10 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.destroy();
 			this.gridApi = null;
 		}
+		this.columnResizeCallback = undefined;
+		this.columnLayoutInitialized = false;
+		this.containerEl = null;
+		this.focusedDoc = null;
 	}
 
 	/**
@@ -1085,12 +1031,16 @@ export class AgGridAdapter implements GridAdapter {
 			return;
 		}
 
-		// 先触发一次布局刷新，确保网格识别最新容器尺寸（不同版本API兼容）
-		const containerWidth = this.containerEl?.clientWidth ?? 0;
-		const containerHeight = this.containerEl?.clientHeight ?? 0;
+		if (!this.containerEl) {
+			if (!this.columnLayoutInitialized) {
+				this.initializeColumnSizing();
+			}
+			return;
+		}
+
+		const containerWidth = this.containerEl.clientWidth ?? 0;
+		const containerHeight = this.containerEl.clientHeight ?? 0;
 		if (containerWidth <= 0 || containerHeight <= 0) {
-			// 网格尚未可见，延迟到下一次尺寸变化再调整
-			this.shouldAutoSizeOnNextResize = true;
 			return;
 		}
 
@@ -1098,50 +1048,200 @@ export class AgGridAdapter implements GridAdapter {
 		gridApiAny?.doLayout?.();
 		gridApiAny?.checkGridSize?.();
 
-		// 获取当前容器信息
 		const allColumns = this.gridApi.getAllDisplayedColumns() || [];
 
-		// 分类列：flex 列、固定宽度列、短文本列
-		const flexColumnIds: string[] = [];
-		const fixedWidthColumnIds: string[] = [];
-		const shortTextColumnIds: string[] = [];
+		if (!this.columnLayoutInitialized) {
+			this.initializeColumnSizing();
+			return;
+		}
 
-		for (const col of allColumns) {
-			const colDef = col.getColDef();
-			const field = colDef.field;
+		this.applyWidthClamping(allColumns);
+		this.distributeSparseSpace(allColumns);
+		this.gridApi.refreshHeader();
+		this.gridApi.refreshCells({ force: true });
+	}
 
-			// 跳过序号列
-			if (field === '#') continue;
+	private applyWidthClamping(columns: Column[]): void {
+		if (!this.gridApi) return;
 
-			const hasWidth = (colDef as any).width !== undefined;
-			const hasFlex = (colDef as any).flex !== undefined;
+		for (const column of columns) {
+			const colId = column.getColId();
+			if (!colId || colId === '#' || colId === 'status') {
+				continue;
+			}
 
-			if (hasFlex) {
-				flexColumnIds.push(field!);
-			} else if (hasWidth) {
-				fixedWidthColumnIds.push(field!);
+			const current = column.getActualWidth();
+			const clamped = clampColumnWidth(current);
+			if (Math.abs(clamped - current) > 0.5) {
+				this.gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
+			}
+		}
+	}
+
+	private distributeSparseSpace(columns: Column[]): void {
+		if (!this.containerEl) {
+			return;
+		}
+
+		const viewportWidth = this.containerEl.clientWidth ?? 0;
+		if (viewportWidth <= 0) {
+			return;
+		}
+
+		const totalWidth = columns.reduce((sum, column) => sum + column.getActualWidth(), 0);
+		let deficit = viewportWidth - totalWidth;
+		if (deficit <= 1) {
+			return;
+		}
+
+		let adjustable = columns.filter((column) => {
+			const id = column.getColId();
+			return id && id !== '#' && id !== 'status' && column.isResizable();
+		});
+
+		if (adjustable.length === 0) {
+			return;
+		}
+
+		const tolerance = 0.5;
+
+		while (deficit > tolerance && adjustable.length > 0) {
+			const share = deficit / adjustable.length;
+			let consumed = 0;
+			const nextRound: Column[] = [];
+
+			for (const column of adjustable) {
+				const current = column.getActualWidth();
+				const target = clampColumnWidth(current + share);
+				const delta = target - current;
+
+				if (delta > tolerance) {
+					const colId = column.getColId();
+					if (colId) {
+						this.gridApi!.setColumnWidths([{ key: colId, newWidth: target }]);
+					}
+					consumed += delta;
+				}
+
+				if (target < COLUMN_MAX_WIDTH - tolerance) {
+					nextRound.push(column);
+				}
+			}
+
+			if (consumed <= tolerance) {
+				break;
+			}
+
+			deficit -= consumed;
+			adjustable = nextRound.length > 0
+				? nextRound
+				: adjustable.filter((column) => column.getActualWidth() < COLUMN_MAX_WIDTH - tolerance);
+		}
+	}
+
+	private initializeColumnSizing(): void {
+		if (!this.gridApi || !this.containerEl) {
+			return;
+		}
+
+		const containerWidth = this.containerEl.clientWidth ?? 0;
+		const containerHeight = this.containerEl.clientHeight ?? 0;
+		if (containerWidth <= 0 || containerHeight <= 0) {
+			return;
+		}
+
+		const columns = this.gridApi.getAllDisplayedColumns() || [];
+		if (columns.length === 0) {
+			this.columnLayoutInitialized = true;
+			return;
+		}
+
+		const storedWidths = new Map<string, number>();
+		const explicitWidths = new Map<string, number>();
+		let requiresAutoSize = false;
+
+		for (const column of columns) {
+			const colId = column.getColId();
+			if (!colId || colId === '#' || colId === 'status') {
+				continue;
+			}
+
+			const colDef = column.getColDef() as any;
+			const stored = colDef.__tlbStoredWidth;
+			const explicit = colDef.width;
+
+			if (typeof stored === 'number') {
+				storedWidths.set(colId, clampColumnWidth(stored));
+			} else if (typeof explicit === 'number') {
+				const clamped = clampColumnWidth(explicit);
+				explicitWidths.set(colId, clamped);
+				colDef.width = clamped;
+				colDef.suppressSizeToFit = true;
 			} else {
-				shortTextColumnIds.push(field!);
+				requiresAutoSize = true;
 			}
 		}
 
-		// 1. 先对短文本列执行 autoSize（计算内容宽度）
-		const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
-		const shouldAutoSize = now - this.lastAutoSizeTimestamp >= AgGridAdapter.AUTO_SIZE_COOLDOWN_MS;
-
-		if (shortTextColumnIds.length > 0 && shouldAutoSize && this.shouldAutoSizeOnNextResize) {
-			this.gridApi.autoSizeColumns(shortTextColumnIds, false);
-			this.lastAutoSizeTimestamp = now;
-			this.shouldAutoSizeOnNextResize = false;
+		if (requiresAutoSize) {
+			this.gridApi.autoSizeAllColumns();
 		}
 
-		// 2. 如果存在 flex 列，让它们分配剩余空间
-		if (flexColumnIds.length > 0) {
-			this.gridApi.sizeColumnsToFit();
+		for (const column of columns) {
+			const colId = column.getColId();
+			if (!colId || colId === '#' || colId === 'status') {
+				continue;
+			}
+
+			const stored = storedWidths.get(colId);
+			const explicit = explicitWidths.get(colId);
+
+			if (stored !== undefined) {
+				this.gridApi.setColumnWidths([{ key: colId, newWidth: stored }]);
+				(column.getColDef() as any).__tlbStoredWidth = stored;
+				continue;
+			}
+
+			if (explicit !== undefined) {
+				this.gridApi.setColumnWidths([{ key: colId, newWidth: explicit }]);
+				const colDef = column.getColDef() as any;
+				colDef.width = explicit;
+				colDef.suppressSizeToFit = true;
+			}
 		}
 
-		// 额外刷新单元格，帮助立即应用新宽度
+		this.applyWidthClamping(columns);
+		this.distributeSparseSpace(columns);
+		this.gridApi.refreshHeader();
 		this.gridApi.refreshCells({ force: true });
+		this.columnLayoutInitialized = true;
+	}
+
+	private handleColumnResized(event: ColumnResizedEvent): void {
+		if (!event.finished || !event.column) {
+			return;
+		}
+
+		const source = event.source as string | undefined;
+		if (source !== 'uiColumnDragged' && source !== 'uiColumnResized') {
+			return;
+		}
+
+		const colId = event.column.getColId();
+		if (!colId || colId === '#' || colId === 'status') {
+			return;
+		}
+
+		const clamped = clampColumnWidth(event.column.getActualWidth());
+		if (Math.abs(clamped - event.column.getActualWidth()) > 0.5) {
+			this.gridApi!.setColumnWidths([{ key: colId, newWidth: clamped }]);
+		}
+
+		const colDef = event.column.getColDef() as any;
+		colDef.__tlbStoredWidth = clamped;
+
+		if (this.columnResizeCallback) {
+			this.columnResizeCallback(colId, clamped);
+		}
 	}
 
 	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {

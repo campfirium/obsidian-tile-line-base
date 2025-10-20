@@ -1,6 +1,7 @@
 import { App, Menu, Plugin, TFile, Workspace, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { debugLog, isDebugEnabled } from './utils/logger';
+import { setPluginContext } from './pluginContext';
 
 const LOG_PREFIX = '[TileLineBase]';
 
@@ -18,10 +19,12 @@ interface OpenContext {
 
 interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
+	columnLayouts: Record<string, Record<string, number>>;
 }
 
 const DEFAULT_SETTINGS: TileLineBaseSettings = {
-	fileViewPrefs: {}
+	fileViewPrefs: {},
+	columnLayouts: {}
 };
 
 export default class TileLineBasePlugin extends Plugin {
@@ -32,6 +35,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private suppressAutoSwitchUntil = new Map<string, number>();
 
 	async onload() {
+		setPluginContext(this);
 		await this.loadSettings();
 		debugLog('========== Plugin onload 开始 ==========');
 		debugLog('Registering TableView view');
@@ -190,6 +194,7 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	async onunload() {
+		setPluginContext(null);
 		debugLog('Detaching all table views');
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 	}
@@ -698,6 +703,28 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settings.fileViewPrefs[file.path] = view;
 		await this.saveSettings();
 		debugLog('updateFileViewPreference', { file: file.path, view });
+	}
+
+	getColumnLayout(filePath: string): Record<string, number> | undefined {
+		const layout = this.settings.columnLayouts[filePath];
+		return layout ? { ...layout } : undefined;
+	}
+
+	updateColumnWidthPreference(filePath: string, field: string, width: number): void {
+		if (!filePath || !field || Number.isNaN(width)) {
+			return;
+		}
+		const rounded = Math.round(width);
+		const layout = this.settings.columnLayouts[filePath] ?? {};
+		if (layout[field] === rounded) {
+			return;
+		}
+		layout[field] = rounded;
+		this.settings.columnLayouts[filePath] = layout;
+		this.saveSettings().catch((error) => {
+			console.error(LOG_PREFIX, 'Failed to persist column width preference', error);
+		});
+		debugLog('updateColumnWidthPreference', { filePath, field, width: rounded });
 	}
 
 	private findLeafForFile(file: TFile, type?: string, preferredWindow?: Window | null): WorkspaceLeaf | null {

@@ -514,7 +514,7 @@ export class TableView extends ItemView {
 				field: '#',
 				headerName: '',
 				headerTooltip: 'Index',
-				editable: false  // index column is read-only
+				editable: false  // 序号列只读
 			},
 			...this.schema.columnNames.map(name => {
 				const baseColDef: ColumnDef = {
@@ -522,12 +522,13 @@ export class TableView extends ItemView {
 					headerName: name,
 					editable: true
 				};
-				if (name.toLowerCase() === 'status') {
+				const normalizedName = name.trim().toLowerCase();
+				if (normalizedName === 'status') {
 					baseColDef.headerName = '';
 					baseColDef.headerTooltip = 'Status';
 				}
 
-				// 应用头部配置块中的宽度配置
+				// 应用头部配置对每列的定制
 				if (this.schema?.columnConfigs) {
 					const config = this.schema.columnConfigs.find(c => c.name === name);
 					if (config) {
@@ -537,7 +538,7 @@ export class TableView extends ItemView {
 
 				return baseColDef;
 			})
-		];
+		]
 
 		// 根据 Obsidian 主题选择 AG Grid 主题（支持新窗口）
 		const isDarkMode = ownerDoc.body.classList.contains('theme-dark');

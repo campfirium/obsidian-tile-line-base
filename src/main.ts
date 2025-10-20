@@ -331,6 +331,28 @@ export default class TileLineBasePlugin extends Plugin {
 		const preferredWindow = options?.preferredWindow ?? this.getLeafWindow(requestedLeaf);
 		const workspace = options?.workspace ?? this.getWorkspaceForLeaf(requestedLeaf) ?? this.app.workspace;
 
+		if (requestedLeaf?.view instanceof TableView && requestedLeaf.view.file?.path === file.path) {
+			debugLog('openTableView reuse requested table leaf', this.describeLeaf(requestedLeaf));
+			await this.updateFileViewPreference(file, 'table');
+			await workspace.revealLeaf(requestedLeaf);
+			return;
+		}
+
+		const existingTableLeaf = this.findLeafForFile(file, TABLE_VIEW_TYPE, preferredWindow);
+		if (existingTableLeaf) {
+			debugLog('openTableView reuse existing table leaf', this.describeLeaf(existingTableLeaf));
+			await this.updateFileViewPreference(file, 'table');
+			if (requestedLeaf && requestedLeaf !== existingTableLeaf) {
+				try {
+					requestedLeaf.detach?.();
+				} catch (err) {
+					console.warn(LOG_PREFIX, 'Failed to detach redundant leaf', this.describeLeaf(requestedLeaf), err);
+				}
+			}
+			await workspace.revealLeaf(existingTableLeaf);
+			return;
+		}
+
 		debugLog('openTableView start', {
 			file: file.path,
 			requestedLeaf: this.describeLeaf(requestedLeaf),
@@ -338,7 +360,7 @@ export default class TileLineBasePlugin extends Plugin {
 			workspaceIsMain: workspace === this.app.workspace
 		});
 
-		let leaf = requestedLeaf;
+		let leaf = requestedLeaf ?? this.findLeafForFile(file, undefined, preferredWindow) ?? null;
 		if (leaf && preferredWindow) {
 			const leafWindow = this.getLeafWindow(leaf);
 			if (leafWindow && leafWindow !== preferredWindow) {
@@ -676,6 +698,40 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settings.fileViewPrefs[file.path] = view;
 		await this.saveSettings();
 		debugLog('updateFileViewPreference', { file: file.path, view });
+	}
+
+	private findLeafForFile(file: TFile, type?: string, preferredWindow?: Window | null): WorkspaceLeaf | null {
+		let match: WorkspaceLeaf | null = null;
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (match) {
+				return;
+			}
+			let viewType: string | undefined;
+			try {
+				viewType = leaf.getViewState().type;
+			} catch (err) {
+				viewType = undefined;
+			}
+			if (type && viewType !== type) {
+				return;
+			}
+			if (preferredWindow && this.getLeafWindow(leaf) !== preferredWindow) {
+				return;
+			}
+
+			let leafFile: TFile | null = null;
+			const view = leaf.view;
+			if (view instanceof TableView) {
+				leafFile = view.file;
+			} else if ((view as any)?.file instanceof TFile) {
+				leafFile = (view as any).file as TFile;
+			}
+
+			if (leafFile?.path === file.path) {
+				match = leaf;
+			}
+		});
+		return match;
 	}
 
 	private async loadSettings(): Promise<void> {

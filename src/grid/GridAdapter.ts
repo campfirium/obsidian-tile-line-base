@@ -5,6 +5,7 @@
  * 这样我们可以在未来轻松替换表格库（AG Grid → TanStack Table → 其他）
  * 而不需要修改业务逻辑代码。
  */
+import type { ColumnState } from 'ag-grid-community';
 
 export const ROW_ID_FIELD = '__tlb_row_id';
 
@@ -135,4 +136,14 @@ export interface GridAdapter {
 	 * @param callback 回调函数，参数为当前列字段名
 	 */
 	onEnterAtLastRow?(callback: (field: string) => void): void;
+
+	/**
+	 * 在表格初始化完成后执行回调
+	 */
+	runWhenReady?(callback: () => void): void;
+
+	getFilterModel?(): any | null;
+	setFilterModel?(model: any | null): void;
+	getColumnState?(): ColumnState[] | null;
+	applyColumnState?(state: ColumnState[] | null): void;
 }

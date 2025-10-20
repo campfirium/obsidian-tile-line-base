@@ -43,6 +43,57 @@
   opacity: 1;
 }
 
+.tlb-filter-view-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tlb-filter-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tlb-filter-view-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.tlb-filter-view-button {
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  border-radius: 14px;
+  padding: 2px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.tlb-filter-view-button:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.tlb-filter-view-button.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
+  border-color: var(--interactive-accent);
+}
+
+.theme-dark .tlb-filter-view-button.is-active {
+  color: var(--text-on-accent, #fff);
+}
+
+.tlb-filter-view-button--add {
+  font-weight: 600;
+}
+
 /* 自定义右键菜单样式 */
 .tlb-context-menu {
   position: fixed;

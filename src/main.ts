@@ -2,6 +2,7 @@ import { App, Menu, Plugin, TFile, Workspace, WorkspaceLeaf, WorkspaceWindow, Ma
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { debugLog, isDebugEnabled } from './utils/logger';
 import { setPluginContext } from './pluginContext';
+import type { FileFilterViewState, FilterViewDefinition } from './types/filterView';
 
 const LOG_PREFIX = '[TileLineBase]';
 
@@ -20,11 +21,13 @@ interface OpenContext {
 interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 	columnLayouts: Record<string, Record<string, number>>;
+	filterViews: Record<string, FileFilterViewState>;
 }
 
 const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	fileViewPrefs: {},
-	columnLayouts: {}
+	columnLayouts: {},
+	filterViews: {}
 };
 
 export default class TileLineBasePlugin extends Plugin {
@@ -727,6 +730,53 @@ export default class TileLineBasePlugin extends Plugin {
 		debugLog('updateColumnWidthPreference', { filePath, field, width: rounded });
 	}
 
+	getFilterViewsForFile(filePath: string): FileFilterViewState {
+		const stored = this.settings.filterViews[filePath];
+		if (!stored) {
+			return { views: [], activeViewId: null };
+		}
+		return {
+			activeViewId: stored.activeViewId ?? null,
+			views: stored.views.map((view) => this.cloneFilterViewDefinition(view))
+		};
+	}
+
+	async saveFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<void> {
+		const sanitized: FileFilterViewState = {
+			activeViewId: state.activeViewId ?? null,
+			views: state.views.map((view) => this.cloneFilterViewDefinition(view))
+		};
+		this.settings.filterViews[filePath] = sanitized;
+		await this.saveSettings();
+		debugLog('saveFilterViewsForFile', {
+			filePath,
+			viewCount: sanitized.views.length,
+			activeView: sanitized.activeViewId
+		});
+	}
+
+	private cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {
+		return {
+			id: source.id,
+			name: source.name,
+			filterModel: source.filterModel != null ? this.deepClone(source.filterModel) : null,
+			columnState: source.columnState != null ? this.deepClone(source.columnState) : null,
+			quickFilter: source.quickFilter ?? null
+		};
+	}
+
+	private deepClone<T>(value: T): T {
+		if (value == null) {
+			return value;
+		}
+		try {
+			return JSON.parse(JSON.stringify(value)) as T;
+		} catch (error) {
+			console.warn(LOG_PREFIX, 'deepClone fallback failed, returning original reference', error);
+			return value;
+		}
+	}
+
 	private findLeafForFile(file: TFile, type?: string, preferredWindow?: Window | null): WorkspaceLeaf | null {
 		let match: WorkspaceLeaf | null = null;
 		this.app.workspace.iterateAllLeaves((leaf) => {
@@ -764,6 +814,9 @@ export default class TileLineBasePlugin extends Plugin {
 	private async loadSettings(): Promise<void> {
 		const data = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		this.settings.fileViewPrefs = { ...DEFAULT_SETTINGS.fileViewPrefs, ...(this.settings.fileViewPrefs ?? {}) };
+		this.settings.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(this.settings.columnLayouts ?? {}) };
+		this.settings.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(this.settings.filterViews ?? {}) };
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {

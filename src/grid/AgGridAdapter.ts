@@ -61,6 +61,8 @@ export class AgGridAdapter implements GridAdapter {
 	private focusedColId: string | null = null;
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private editing = false;
+	private proxyRealignTimer: number | null = null;
+	private viewportListenerCleanup: (() => void) | null = null;
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -153,6 +155,65 @@ export class AgGridAdapter implements GridAdapter {
 			cancel(reason);
 		} else if (this.focusedDoc) {
 			this.getProxy(this.focusedDoc).cancel(reason);
+		}
+	}
+
+	private requestProxyRealign(reason: string): void {
+		if (this.editing) {
+			return;
+		}
+
+		this.cancelPendingCapture(reason);
+		if (this.proxyRealignTimer != null) {
+			window.clearTimeout(this.proxyRealignTimer);
+		}
+
+		this.proxyRealignTimer = window.setTimeout(() => {
+			this.proxyRealignTimer = null;
+			this.armProxyForCurrentCell();
+		}, 80);
+	}
+
+	private bindViewportListeners(container: HTMLElement): void {
+		this.unbindViewportListeners();
+
+		const onScroll = () => this.requestProxyRealign('scroll');
+		const onWheel = () => this.requestProxyRealign('scroll');
+		const ownerWin = container.ownerDocument?.defaultView ?? window;
+		const onResize = () => this.requestProxyRealign('resize');
+
+		const viewports = Array.from(
+			container.querySelectorAll<HTMLElement>(
+				'.ag-center-cols-viewport, .ag-pinned-left-cols-viewport, .ag-pinned-right-cols-viewport, .ag-body-viewport'
+			)
+		);
+		if (!viewports.includes(container)) {
+			viewports.push(container);
+		}
+
+		const removers: Array<() => void> = [];
+		const attach = (el: EventTarget, type: string, handler: EventListenerOrEventListenerObject, options?: boolean) => {
+			el.addEventListener(type, handler, options);
+			removers.push(() => el.removeEventListener(type, handler, options));
+		};
+
+		for (const viewport of viewports) {
+			attach(viewport, 'scroll', onScroll, false);
+			attach(viewport, 'wheel', onWheel, true);
+		}
+		attach(ownerWin, 'resize', onResize, false);
+
+		this.viewportListenerCleanup = () => {
+			for (const remove of removers) {
+				remove();
+			}
+		};
+	}
+
+	private unbindViewportListeners(): void {
+		if (this.viewportListenerCleanup) {
+			this.viewportListenerCleanup();
+			this.viewportListenerCleanup = null;
 		}
 	}
 
@@ -421,6 +482,11 @@ export class AgGridAdapter implements GridAdapter {
 		this.focusedDoc = container.ownerDocument || document;
 		this.columnResizeCallback = context?.onColumnResize;
 		this.columnLayoutInitialized = false;
+		if (this.proxyRealignTimer != null) {
+			window.clearTimeout(this.proxyRealignTimer);
+			this.proxyRealignTimer = null;
+		}
+		this.unbindViewportListeners();
 
 		// 转换列定义为 AG Grid 格式
 		const colDefs: ColDef[] = columns.map(col => {
@@ -651,6 +717,7 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
+		this.bindViewportListeners(container);
 
 		['ag-Grid-SelectionColumn', 'ag-Grid-AutoColumn'].forEach((colId) => {
 			if (this.gridApi?.getColumn(colId)) {
@@ -839,6 +906,12 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.destroy();
 			this.gridApi = null;
 		}
+		this.cancelPendingCapture('destroy');
+		if (this.proxyRealignTimer != null) {
+			window.clearTimeout(this.proxyRealignTimer);
+			this.proxyRealignTimer = null;
+		}
+		this.unbindViewportListeners();
 		this.columnResizeCallback = undefined;
 		this.columnLayoutInitialized = false;
 		this.containerEl = null;

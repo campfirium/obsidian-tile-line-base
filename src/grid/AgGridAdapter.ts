@@ -36,8 +36,8 @@ import {
 } from '../renderers/StatusCellRenderer';
 import { createTextCellEditor } from './editors/TextCellEditor';
 import { CompositionProxy } from './utils/CompositionProxy';
-import { setIcon } from 'obsidian';
 import { COLUMN_MIN_WIDTH, COLUMN_MAX_WIDTH, clampColumnWidth } from './columnSizing';
+import { IconHeaderComponent } from './headers/IconHeaderComponent';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -61,7 +61,6 @@ export class AgGridAdapter implements GridAdapter {
 	private focusedColId: string | null = null;
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private editing = false;
-	private headerIconCleanup: (() => void) | null = null;
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -439,7 +438,13 @@ export class AgGridAdapter implements GridAdapter {
 					filter: false,
 					resizable: false,
 					suppressSizeToFit: true,  // 不参与自动调整
-					cellStyle: { textAlign: 'center' }  // 居中显示
+					cellStyle: { textAlign: 'center' },  // 居中显示
+					headerComponent: IconHeaderComponent,
+					headerComponentParams: {
+						icon: 'hashtag',
+						fallbacks: ['hash'],
+						tooltip: col.headerTooltip || col.headerName || 'Index'
+					}
 				};
 			}
 
@@ -469,6 +474,12 @@ export class AgGridAdapter implements GridAdapter {
 						textAlign: 'center',
 						cursor: 'pointer',
 						padding: '10px var(--ag-cell-horizontal-padding)'  // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
+					},
+					headerComponent: IconHeaderComponent,
+					headerComponentParams: {
+						icon: 'list-checks',
+						fallbacks: ['checklist', 'check-square'],
+						tooltip: col.headerTooltip ?? tooltipFallback
 					}
 				};
 			}
@@ -640,7 +651,6 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建并挂载 AG Grid
 		this.gridApi = createGrid(container, gridOptions);
-				this.setupHeaderIcons(ownerDoc ?? document);
 
 		['ag-Grid-SelectionColumn', 'ag-Grid-AutoColumn'].forEach((colId) => {
 			if (this.gridApi?.getColumn(colId)) {
@@ -653,184 +663,11 @@ export class AgGridAdapter implements GridAdapter {
 					}, 100);
 	}
 
-	private setupHeaderIcons(doc: Document): void {
-		this.cleanupHeaderIcons();
-		const api = this.gridApi;
-		if (!api) {
-			return;
-		}
-
-		const win = doc.defaultView ?? window;
-
-		// 使用防抖，避免短时间内多次更新
-		let debounceTimer: number | null = null;
-		const debouncedUpdate = () => {
-			if (debounceTimer) {
-				win.clearTimeout(debounceTimer);
-			}
-			debounceTimer = win.setTimeout(() => {
-				this.updateHeaderIcons(doc);
-				debounceTimer = null;
-			}, 50);
-		};
-
-		const events = [
-			'firstDataRendered',
-			'columnEverythingChanged',
-			'displayedColumnsChanged',
-			'sortChanged'
-		] as const;
-
-		events.forEach((eventName) => {
-			api.addEventListener(eventName, debouncedUpdate);
-		});
-
-		// 添加节流，防止 columnResized 时频繁更新
-		let throttleTimer: number | null = null;
-		const throttledUpdate = () => {
-			if (throttleTimer) return;
-			throttleTimer = win.setTimeout(() => {
-				this.updateHeaderIcons(doc);
-				throttleTimer = null;
-			}, 100);
-		};
-
-		// columnResized 使用节流更新
-		api.addEventListener('columnResized', throttledUpdate);
-
-		// 添加定期检查，确保图标持久显示
-		const intervalId = win.setInterval(() => {
-			this.updateHeaderIcons(doc);
-		}, 1000);
-
-		this.headerIconCleanup = () => {
-			events.forEach((eventName) => {
-				api.removeEventListener(eventName, debouncedUpdate);
-			});
-			api.removeEventListener('columnResized', throttledUpdate);
-			if (debounceTimer) {
-				win.clearTimeout(debounceTimer);
-			}
-			if (throttleTimer) {
-				win.clearTimeout(throttleTimer);
-			}
-			win.clearInterval(intervalId);
-		};
-	}
-
-	private updateHeaderIcons(doc: Document): void {
-		if (!this.gridApi) {
-			return;
-		}
-
-		type HeaderIconConfig = {
-			field: string;
-			cellClass: string;
-			labelClass: string;
-			iconClass: string;
-			icon: string;
-			fallbacks?: string[];
-			hideLabel?: boolean;
-			tooltip?: string;
-		};
-
-		const configs: HeaderIconConfig[] = [
-			{
-				field: '#',
-				cellClass: 'tlb-index-header-cell',
-				labelClass: 'tlb-index-header-label',
-				iconClass: 'tlb-index-header-icon',
-				icon: 'hashtag',
-				fallbacks: ['hash'],
-				hideLabel: true,
-				tooltip:
-					this.gridApi.getColumn('#')?.getColDef().headerTooltip ||
-					this.gridApi.getColumn('#')?.getColDef().headerName ||
-					'Index'
-			},
-			{
-				field: 'status',
-				cellClass: 'tlb-status-header-cell',
-				labelClass: 'tlb-status-header-label',
-				iconClass: 'tlb-status-header-icon',
-				icon: 'list-checks',
-				fallbacks: ['checklist', 'check-square'],
-				hideLabel: true,
-				tooltip:
-					this.gridApi.getColumn('status')?.getColDef().headerTooltip ||
-					this.gridApi.getColumn('status')?.getColDef().headerName ||
-					'Status'
-			}
-		];
-
-		for (const config of configs) {
-			const selector = `.ag-header-cell[col-id="${config.field}"]`;
-			const scope = this.containerEl ?? doc;
-			const headerCell =
-				scope instanceof Element
-					? scope.querySelector<HTMLElement>(selector)
-					: doc.querySelector<HTMLElement>(selector);
-			if (!headerCell) {
-				continue;
-			}
-
-			headerCell.classList.add(config.cellClass);
-
-			const label = headerCell.querySelector<HTMLElement>('.ag-header-cell-label');
-			if (!label) {
-				continue;
-			}
-
-			label.classList.add(config.labelClass);
-
-			let iconEl = headerCell.querySelector<HTMLElement>(`.${config.iconClass}`);
-			const needsIconCreation = !iconEl;
-
-			if (needsIconCreation) {
-				iconEl = doc.createElement('div');
-				iconEl.className = config.iconClass;
-				label.insertBefore(iconEl, label.firstChild ?? null);
-			}
-
-			// 只在图标不存在或 SVG 丢失时才重新设置图标
-			if (needsIconCreation || !iconEl!.querySelector('svg')) {
-				setIcon(iconEl!, config.icon);
-				if (!iconEl!.querySelector('svg') && config.fallbacks) {
-					for (const fallback of config.fallbacks) {
-						setIcon(iconEl!, fallback);
-						if (iconEl!.querySelector('svg')) {
-							break;
-						}
-					}
-				}
-				iconEl!.setAttribute('aria-hidden', 'true');
-				iconEl!.setAttribute('role', 'presentation');
-			}
-
-			const textEl = label.querySelector<HTMLElement>('.ag-header-cell-text');
-			if (textEl && config.hideLabel) {
-				textEl.textContent = '';
-			}
-
-			if (config.tooltip) {
-				headerCell.setAttribute('title', config.tooltip);
-				iconEl!.setAttribute('aria-label', config.tooltip);
-			}
-		}
-	}
-
-	private cleanupHeaderIcons(): void {
-		if (this.headerIconCleanup) {
-			this.headerIconCleanup();
-			this.headerIconCleanup = null;
-		}
-	}
-
 	/**
 	 * 判断是否为长文本列
 	 * 策略：扫描该列所有数据，计算最大内容长度
 	 */
-	
+
 	private handleCellEdit(event: CellEditingStoppedEvent): void {
 		this.editing = false;
 		this.armProxyForCurrentCell();
@@ -998,7 +835,6 @@ export class AgGridAdapter implements GridAdapter {
 	 * 销毁表格实例
 	 */
 	destroy(): void {
-		this.cleanupHeaderIcons();
 		if (this.gridApi) {
 			this.gridApi.destroy();
 			this.gridApi = null;

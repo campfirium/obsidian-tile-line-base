@@ -299,6 +299,11 @@ export class AgGridAdapter implements GridAdapter {
 			return;
 		}
 
+		if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
+			this.handleCopyShortcut(event);
+			return;
+		}
+
 		switch (event.key) {
 			case 'Enter':
 				event.preventDefault();
@@ -347,6 +352,75 @@ export class AgGridAdapter implements GridAdapter {
 			default:
 				break;
 		}
+	}
+
+	private handleCopyShortcut(event: KeyboardEvent): void {
+		if (!this.gridApi) {
+			return;
+		}
+
+		const text = this.extractFocusedCellText();
+		if (text == null) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		const doc = this.focusedDoc || document;
+		this.copyTextToClipboard(doc, text);
+	}
+
+	private extractFocusedCellText(): string | null {
+		if (!this.gridApi) return null;
+
+		const focusedCell = this.gridApi.getFocusedCell();
+		if (!focusedCell) return null;
+
+		const rowNode = this.gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
+		if (!rowNode) return null;
+
+		const colId = focusedCell.column.getColId();
+		const field = focusedCell.column.getColDef().field ?? colId;
+		const rowData = rowNode.data as RowData | undefined;
+		const raw = rowData ? (rowData[field] ?? rowData[colId]) : undefined;
+		return raw == null ? '' : String(raw);
+	}
+
+	private copyTextToClipboard(doc: Document, text: string): void {
+		const nav = doc.defaultView?.navigator;
+		if (nav?.clipboard?.writeText) {
+			nav.clipboard.writeText(text).catch(() => {
+				this.copyViaHiddenTextarea(doc, text);
+			});
+			return;
+		}
+
+		this.copyViaHiddenTextarea(doc, text);
+	}
+
+	private copyViaHiddenTextarea(doc: Document, text: string): void {
+		const textarea = doc.createElement('textarea');
+		textarea.value = text;
+		textarea.setAttribute('readonly', 'true');
+		Object.assign(textarea.style, {
+			position: 'fixed',
+			left: '-9999px',
+			top: '0',
+			width: '1px',
+			height: '1px',
+			opacity: '0'
+		});
+
+		doc.body.appendChild(textarea);
+		textarea.focus();
+		textarea.select();
+		try {
+			doc.execCommand('copy');
+		} catch (error) {
+			console.warn('[AgGridAdapter] execCommand 复制失败', error);
+		}
+		textarea.blur();
+		doc.body.removeChild(textarea);
 	}
 
 	private handleProxyEnter(shift: boolean): void {

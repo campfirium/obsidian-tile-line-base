@@ -1707,11 +1707,46 @@ export class TableView extends ItemView {
 			defaultButton.classList.add('is-active');
 		}
 
-		for (const view of this.filterViewState.views) {
+		for (let i = 0; i < this.filterViewState.views.length; i++) {
+			const view = this.filterViewState.views[i];
 			const button = this.filterViewTabsEl.createEl('button', { cls: 'tlb-filter-view-button', text: view.name });
 			if (view.id === this.filterViewState.activeViewId) {
 				button.classList.add('is-active');
 			}
+
+			// 设置拖拽属性
+			button.draggable = true;
+			button.setAttribute('data-view-id', view.id);
+			button.setAttribute('data-view-index', String(i));
+
+			// 拖拽事件
+			button.addEventListener('dragstart', (event) => {
+				if (event.dataTransfer) {
+					event.dataTransfer.effectAllowed = 'move';
+					event.dataTransfer.setData('text/plain', view.id);
+					button.classList.add('is-dragging');
+				}
+			});
+
+			button.addEventListener('dragend', () => {
+				button.classList.remove('is-dragging');
+			});
+
+			button.addEventListener('dragover', (event) => {
+				event.preventDefault();
+				if (event.dataTransfer) {
+					event.dataTransfer.dropEffect = 'move';
+				}
+			});
+
+			button.addEventListener('drop', (event) => {
+				event.preventDefault();
+				const draggedId = event.dataTransfer?.getData('text/plain');
+				if (draggedId && draggedId !== view.id) {
+					this.reorderFilterViews(draggedId, view.id);
+				}
+			});
+
 			button.addEventListener('click', () => {
 				this.activateFilterView(view.id);
 			});
@@ -1719,6 +1754,23 @@ export class TableView extends ItemView {
 				this.openFilterViewMenu(event, view);
 			});
 		}
+	}
+
+	private reorderFilterViews(draggedId: string, targetId: string): void {
+		const draggedIndex = this.filterViewState.views.findIndex((v) => v.id === draggedId);
+		const targetIndex = this.filterViewState.views.findIndex((v) => v.id === targetId);
+
+		if (draggedIndex === -1 || targetIndex === -1) {
+			return;
+		}
+
+		// 移动视图
+		const [draggedView] = this.filterViewState.views.splice(draggedIndex, 1);
+		this.filterViewState.views.splice(targetIndex, 0, draggedView);
+
+		// 重新渲染并保存
+		this.rebuildFilterViewButtons();
+		void this.persistFilterViews();
 	}
 
 	private activateFilterView(viewId: string | null): void {
@@ -1914,6 +1966,39 @@ export class TableView extends ItemView {
 		void this.persistFilterViews();
 	}
 
+	private duplicateFilterView(viewId: string): void {
+		const sourceView = this.filterViewState.views.find((v) => v.id === viewId);
+		if (!sourceView) {
+			return;
+		}
+
+		// 创建副本
+		const duplicatedView: FilterViewDefinition = {
+			id: this.generateFilterViewId(),
+			name: `${sourceView.name} 副本`,
+			filterRule: sourceView.filterRule ? {
+				conditions: [...sourceView.filterRule.conditions.map(c => ({ ...c }))],
+				combineMode: sourceView.filterRule.combineMode
+			} : null,
+			columnState: this.cloneColumnState(sourceView.columnState),
+			quickFilter: sourceView.quickFilter
+		};
+
+		// 在源视图之后插入
+		const sourceIndex = this.filterViewState.views.findIndex((v) => v.id === viewId);
+		this.filterViewState.views.splice(sourceIndex + 1, 0, duplicatedView);
+
+		// 激活新视图
+		this.filterViewState.activeViewId = duplicatedView.id;
+
+		// 重新渲染并保存
+		this.rebuildFilterViewButtons();
+		void this.persistFilterViews();
+		this.applyActiveFilterView();
+
+		new Notice(`已复制视图: ${duplicatedView.name}`);
+	}
+
 	private deleteFilterView(viewId: string): void {
 		const index = this.filterViewState.views.findIndex((view) => view.id === viewId);
 		if (index === -1) {
@@ -1931,22 +2016,30 @@ export class TableView extends ItemView {
 	private openFilterViewMenu(event: MouseEvent, view: FilterViewDefinition): void {
 		event.preventDefault();
 		const menu = new Menu();
+
+		// 编辑（进入编辑过滤条件对话框）
 		menu.addItem((item) => {
-			item.setTitle('重命名').onClick(() => {
-				this.renameFilterView(view.id);
+			item.setTitle('编辑').setIcon('pencil').onClick(() => {
+				void this.updateFilterView(view.id);
 			});
 		});
+
+		// 复制（创建视图副本）
 		menu.addItem((item) => {
-			item.setTitle('更新为当前过滤条件').onClick(() => {
-				this.updateFilterView(view.id);
+			item.setTitle('复制').setIcon('copy').onClick(() => {
+				this.duplicateFilterView(view.id);
 			});
 		});
+
 		menu.addSeparator();
+
+		// 删除
 		menu.addItem((item) => {
 			item.setTitle('删除').setIcon('trash').onClick(() => {
 				this.deleteFilterView(view.id);
 			});
 		});
+
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });
 	}
 

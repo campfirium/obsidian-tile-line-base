@@ -43,6 +43,109 @@
   opacity: 1;
 }
 
+.tlb-filter-view-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tlb-filter-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tlb-filter-view-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.tlb-filter-view-button {
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  border-radius: 14px;
+  padding: 2px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.tlb-filter-view-button:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.tlb-filter-view-button.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
+  border-color: var(--interactive-accent);
+}
+
+.theme-dark .tlb-filter-view-button.is-active {
+  color: var(--text-on-accent, #fff);
+}
+
+.tlb-filter-view-button--add {
+  font-weight: 600;
+}
+
+/* 过滤编辑器模态框 */
+.tlb-filter-editor-modal .modal-content {
+  max-width: 600px;
+}
+
+.tlb-filter-conditions {
+  margin: 12px 0;
+}
+
+.tlb-filter-condition-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.tlb-filter-select {
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.tlb-filter-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.tlb-filter-empty-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+.modal-button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 /* 自定义右键菜单样式 */
 .tlb-context-menu {
   position: fixed;

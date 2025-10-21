@@ -764,7 +764,7 @@ export class TableView extends ItemView {
 
 		// 移除键盘监听器
 		if (this.tableContainer && this.keydownHandler) {
-			this.tableContainer.removeEventListener('keydown', this.keydownHandler);
+			this.tableContainer.removeEventListener('keydown', this.keydownHandler, true);
 			this.keydownHandler = null;
 		}
 
@@ -1062,6 +1062,8 @@ export class TableView extends ItemView {
 				const focusedCell = this.gridAdapter?.getFocusedCell?.();
 				if (focusedCell?.field === '#' && hasSelection) {
 					event.preventDefault();
+					event.stopPropagation();
+					event.stopImmediatePropagation();
 					// 只复制第一个选中行的整段内容
 					this.copyH2Section(selectedRows[0]);
 					return;
@@ -1087,8 +1089,8 @@ export class TableView extends ItemView {
 			// Delete / Backspace 快捷键禁用：保留原生删除行为，通过上下文菜单删除整行
 		};
 
-		// 绑定事件监听器
-		tableContainer.addEventListener('keydown', this.keydownHandler);
+		// 绑定事件监听器，使用捕获阶段以确保优先处理
+		tableContainer.addEventListener('keydown', this.keydownHandler, true);
 	}
 
 	/**

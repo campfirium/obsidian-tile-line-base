@@ -619,6 +619,7 @@ export class AgGridAdapter implements GridAdapter {
 		context?: {
 			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 			onColumnResize?: (field: string, width: number) => void;
+			onCopyH2Section?: (rowIndex: number) => void;
 		}
 	): void {
 		this.containerEl = container;
@@ -781,6 +782,25 @@ export class AgGridAdapter implements GridAdapter {
 				if (!(keyEvent instanceof KeyboardEvent)) {
 					return;
 				}
+
+				// 处理序号列的 Ctrl+C 复制整段
+				if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === 'c') {
+					const colId = event.column?.getColId?.() ?? null;
+					if (colId === '#') {
+						const rowData = event.node?.data as RowData | undefined;
+						if (rowData) {
+							const blockIndex = parseInt(String(rowData[ROW_ID_FIELD]), 10);
+							if (!isNaN(blockIndex) && context?.onCopyH2Section) {
+								console.log('[AgGrid] 序号列 Ctrl+C，复制整段', blockIndex);
+								keyEvent.preventDefault();
+								keyEvent.stopPropagation();
+								context.onCopyH2Section(blockIndex);
+								return;
+							}
+						}
+					}
+				}
+
 				this.handleEnterAtLastRow(
 					event.api,
 					event.column?.getColId?.() ?? null,

@@ -453,6 +453,7 @@ export class TableView extends ItemView {
 
 	/**
 	 * 将单个 H2 块转换为 Markdown 格式
+	 * 用于复制整段功能，过滤掉空字段和系统字段
 	 */
 	private blockToMarkdown(block: H2Block): string {
 		if (!this.schema) return '';
@@ -460,8 +461,21 @@ export class TableView extends ItemView {
 		const lines: string[] = [];
 		let isFirstKey = true;
 
+		// 系统字段列表（不复制这些字段）
+		const systemFields = new Set(['status', 'statusChanged']);
+
 		for (const key of this.schema.columnNames) {
+			// 跳过系统字段
+			if (systemFields.has(key)) {
+				continue;
+			}
+
 			const value = block.data[key] || '';
+
+			// 跳过空字段
+			if (!value.trim()) {
+				continue;
+			}
 
 			if (isFirstKey) {
 				// 第一个 key:value 作为 H2 标题
@@ -469,18 +483,8 @@ export class TableView extends ItemView {
 				isFirstKey = false;
 			} else {
 				// 其他 key:value 作为正文
-				if (value.trim()) {
-					lines.push(`${key}：${value}`);
-				} else {
-					// 空值也要保留，确保 Schema 完整性
-					lines.push(`${key}：`);
-				}
+				lines.push(`${key}：${value}`);
 			}
-		}
-
-		// 输出压缩属性（不在 columnNames 中的属性）
-		if (block.data['statusChanged']) {
-			lines.push(`statusChanged：${block.data['statusChanged']}`);
 		}
 
 		return lines.join('\n');
@@ -659,6 +663,9 @@ export class TableView extends ItemView {
 				},
 				onColumnResize: (field: string, width: number) => {
 					this.handleColumnResize(field, width);
+				},
+				onCopyH2Section: (rowIndex: number) => {
+					this.copyH2Section(rowIndex);
 				}
 			});
 			this.tableContainer = tableContainer;

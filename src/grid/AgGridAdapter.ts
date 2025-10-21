@@ -53,6 +53,11 @@ export class AgGridAdapter implements GridAdapter {
 	private columnResizeCallback?: (field: string, width: number) => void;
 	private columnLayoutInitialized = false;
 	private pendingEnterAtLastRow = false;
+	private gridContext?: {
+		onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
+		onColumnResize?: (field: string, width: number) => void;
+		onCopyH2Section?: (rowIndex: number) => void;
+	};
 
 	// Composition Proxy：每个 Document 一个代理层
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
@@ -371,6 +376,30 @@ export class AgGridAdapter implements GridAdapter {
 			return;
 		}
 
+		// 检查是否在序号列上
+		const focusedCell = this.gridApi.getFocusedCell();
+		if (focusedCell) {
+			const colId = focusedCell.column.getColId();
+
+			if (colId === '#') {
+				const rowNode = this.gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
+				if (rowNode) {
+					const rowData = rowNode.data as RowData | undefined;
+					if (rowData) {
+						const blockIndex = parseInt(String(rowData[ROW_ID_FIELD]), 10);
+
+						if (!isNaN(blockIndex) && this.gridContext?.onCopyH2Section) {
+							event.preventDefault();
+							event.stopPropagation();
+							this.gridContext.onCopyH2Section(blockIndex);
+							return;
+						}
+					}
+				}
+			}
+		}
+
+		// 默认行为：复制单元格文本
 		const text = this.extractFocusedCellText();
 		if (text == null) {
 			return;
@@ -624,6 +653,7 @@ export class AgGridAdapter implements GridAdapter {
 	): void {
 		this.containerEl = container;
 		this.focusedDoc = container.ownerDocument || document;
+		this.gridContext = context;
 		this.columnResizeCallback = context?.onColumnResize;
 		this.columnLayoutInitialized = false;
 		if (this.proxyRealignTimer != null) {
@@ -779,31 +809,23 @@ export class AgGridAdapter implements GridAdapter {
 			tooltipHideDelay: 200,
 			onCellKeyDown: (event: CellKeyDownEvent) => {
 				const keyEvent = event.event;
-				console.log('[AgGrid] onCellKeyDown 触发', {
-					key: keyEvent instanceof KeyboardEvent ? keyEvent.key : 'not KeyboardEvent',
-					ctrl: keyEvent instanceof KeyboardEvent ? keyEvent.ctrlKey : false,
-					meta: keyEvent instanceof KeyboardEvent ? keyEvent.metaKey : false,
-					colId: event.column?.getColId?.() ?? null
-				});
 
 				if (!(keyEvent instanceof KeyboardEvent)) {
 					return;
 				}
 
 				// 处理序号列的 Ctrl+C 复制整段
+				// 注意：此代码不会被触发，因为 Ctrl+C 在 CompositionProxy 层就被拦截了
+				// 保留此代码作为备用处理逻辑
 				if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === 'c') {
 					const colId = event.column?.getColId?.() ?? null;
-					console.log('[AgGrid] 检测到 Ctrl+C，列ID:', colId);
 
 					if (colId === '#') {
-						console.log('[AgGrid] 确认是序号列');
 						const rowData = event.node?.data as RowData | undefined;
 						if (rowData) {
 							const blockIndex = parseInt(String(rowData[ROW_ID_FIELD]), 10);
-							console.log('[AgGrid] blockIndex:', blockIndex, 'context.onCopyH2Section:', !!context?.onCopyH2Section);
 
 							if (!isNaN(blockIndex) && context?.onCopyH2Section) {
-								console.log('[AgGrid] 序号列 Ctrl+C，复制整段', blockIndex);
 								keyEvent.preventDefault();
 								keyEvent.stopPropagation();
 								context.onCopyH2Section(blockIndex);

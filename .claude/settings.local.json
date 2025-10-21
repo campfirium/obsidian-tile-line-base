@@ -23,7 +23,9 @@
       "Bash(git merge --no-ff feat/T0041-filter-view -m \"$(cat <<''EOF''\nMerge branch ''feat/T0041-filter-view'' into dev\n\n实现自定义过滤视图功能\nEOF\n)\")",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

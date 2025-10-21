@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 // 目标插件目录
-const PLUGIN_DIR = "D:\\C\\obsidian-tile-line-base\\docs\\.obsidian\\plugins\\tile-line-base";
+const PLUGIN_DIR = "D:\\X\\Dropbox\\obt\\.obsidian\\plugins\\tile-line-base";
 const DIST_DIR = path.resolve(process.cwd(), 'dist');
 
 console.log('🚀 开始部署插件到 Obsidian...\n');

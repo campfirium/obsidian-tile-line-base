@@ -26,7 +26,8 @@
       "Bash(git add:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Bash(git merge --no-ff feat/T0043-filter-view-tabs -m \"$(cat <<''EOF''\nMerge branch ''feat/T0043-filter-view-tabs'' into dev\n\n实现过滤视图标签拖拽排序和菜单改进\nEOF\n)\")"
+      "Bash(git merge --no-ff feat/T0043-filter-view-tabs -m \"$(cat <<''EOF''\nMerge branch ''feat/T0043-filter-view-tabs'' into dev\n\n实现过滤视图标签拖拽排序和菜单改进\nEOF\n)\")",
+      "Bash(git merge --no-ff feat/T0044-filter-view-refresh -m \"$(cat <<''EOF''\nMerge branch ''feat/T0044-filter-view-refresh'' into dev\n\n修复过滤视图数据刷新问题\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

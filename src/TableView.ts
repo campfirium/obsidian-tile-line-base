@@ -452,6 +452,41 @@ export class TableView extends ItemView {
 	}
 
 	/**
+	 * 将单个 H2 块转换为 Markdown 格式
+	 */
+	private blockToMarkdown(block: H2Block): string {
+		if (!this.schema) return '';
+
+		const lines: string[] = [];
+		let isFirstKey = true;
+
+		for (const key of this.schema.columnNames) {
+			const value = block.data[key] || '';
+
+			if (isFirstKey) {
+				// 第一个 key:value 作为 H2 标题
+				lines.push(`## ${key}：${value}`);
+				isFirstKey = false;
+			} else {
+				// 其他 key:value 作为正文
+				if (value.trim()) {
+					lines.push(`${key}：${value}`);
+				} else {
+					// 空值也要保留，确保 Schema 完整性
+					lines.push(`${key}：`);
+				}
+			}
+		}
+
+		// 输出压缩属性（不在 columnNames 中的属性）
+		if (block.data['statusChanged']) {
+			lines.push(`statusChanged：${block.data['statusChanged']}`);
+		}
+
+		return lines.join('\n');
+	}
+
+	/**
 	 * 调度保存（500ms 防抖）
 	 */
 	private scheduleSave(): void {
@@ -981,8 +1016,8 @@ export class TableView extends ItemView {
 				this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
 			}
 
-			// 显示自定义菜单
-			this.showContextMenu(event, blockIndex);
+			// 显示自定义菜单，传递列ID信息
+			this.showContextMenu(event, blockIndex, colId || undefined);
 		};
 
 		// 创建并保存点击处理器（点击其他地方隐藏菜单）
@@ -1017,6 +1052,19 @@ export class TableView extends ItemView {
 			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
 			const hasSelection = selectedRows.length > 0;
 
+			// Ctrl+C / Cmd+C: 如果在序号列上，复制整段
+			if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
+				// 检查当前聚焦的单元格是否是序号列
+				const focusedCell = this.gridAdapter?.getFocusedCell?.();
+				if (focusedCell?.field === '#' && hasSelection) {
+					event.preventDefault();
+					// 只复制第一个选中行的整段内容
+					this.copyH2Section(selectedRows[0]);
+					return;
+				}
+				// 否则让默认的复制行为继续（AG Grid 会处理单元格内容复制）
+			}
+
 			// Cmd+D / Ctrl+D: 复制行（支持单行和多行）
 			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
 				event.preventDefault();
@@ -1040,11 +1088,34 @@ export class TableView extends ItemView {
 	}
 
 	/**
+	 * 复制 H2 段落到剪贴板
+	 */
+	private async copyH2Section(blockIndex: number): Promise<void> {
+		if (blockIndex < 0 || blockIndex >= this.blocks.length) {
+			return;
+		}
+
+		const block = this.blocks[blockIndex];
+		const markdown = this.blockToMarkdown(block);
+
+		try {
+			await navigator.clipboard.writeText(markdown);
+			new Notice('已复制整段内容');
+		} catch (error) {
+			console.error('复制失败:', error);
+			new Notice('复制失败');
+		}
+	}
+
+	/**
 	 * 显示右键菜单
 	 */
-	private showContextMenu(event: MouseEvent, blockIndex: number): void {
+	private showContextMenu(event: MouseEvent, blockIndex: number, colId?: string): void {
 		// 移除旧菜单
 		this.hideContextMenu();
+
+		// 检查是否在序号列上
+		const isIndexColumn = colId === '#';
 
 		// 获取当前选中的所有行
 		const selectedRows = this.gridAdapter?.getSelectedRows() || [];
@@ -1056,6 +1127,19 @@ export class TableView extends ItemView {
 		this.contextMenu.style.visibility = 'hidden';
 		this.contextMenu.style.left = '0px';
 		this.contextMenu.style.top = '0px';
+
+		// 如果在序号列上，显示"复制整段"菜单
+		if (isIndexColumn) {
+			const copySection = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
+			copySection.createSpan({ text: '复制整段' });
+			copySection.addEventListener('click', () => {
+				this.copyH2Section(blockIndex);
+				this.hideContextMenu();
+			});
+
+			// 分隔线
+			this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
+		}
 
 		// 在上方插入行
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });

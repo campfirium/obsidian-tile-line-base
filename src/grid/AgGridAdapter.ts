@@ -547,14 +547,18 @@ export class AgGridAdapter implements GridAdapter {
 
 	private handleDeleteKey(): void {
 		if (!this.gridApi) return;
-		if (this.focusedRowIndex == null || !this.focusedColId) return;
 
-		const field = this.focusedColId;
+		// 直接使用 getFocusedCell 获取当前聚焦的单元格（支持过滤视图）
+		const focusedCell = this.gridApi.getFocusedCell();
+		if (!focusedCell) return;
+
+		const field = focusedCell.column.getColId();
 		if (field === '#' || field === ROW_ID_FIELD || field === 'status') {
 			return;
 		}
 
-		const rowNode = this.findRowNodeByBlockIndex(this.focusedRowIndex);
+		// 使用 getDisplayedRowAtIndex 获取当前显示的行节点（支持过滤视图）
+		const rowNode = this.gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
 		if (!rowNode) return;
 
 		const data = rowNode.data as RowData | undefined;
@@ -565,19 +569,23 @@ export class AgGridAdapter implements GridAdapter {
 			return;
 		}
 
+		// 清空单元格内容
 		if (typeof rowNode.setDataValue === 'function') {
 			rowNode.setDataValue(field, '');
 		} else {
 			data[field] = '';
 		}
 
-		if (this.cellEditCallback) {
+		// 触发单元格编辑回调（需要使用 blockIndex）
+		const raw = data[ROW_ID_FIELD];
+		const blockIndex = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+		if (!Number.isNaN(blockIndex) && this.cellEditCallback) {
 			this.cellEditCallback({
-				rowIndex: this.focusedRowIndex,
+				rowIndex: blockIndex,
 				field,
 				newValue: '',
 				oldValue,
-				rowData: rowNode.data as RowData
+				rowData: data
 			});
 		}
 

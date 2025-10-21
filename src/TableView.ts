@@ -663,6 +663,9 @@ export class TableView extends ItemView {
 				},
 				onColumnResize: (field: string, width: number) => {
 					this.handleColumnResize(field, width);
+				},
+				onCopyH2Section: (rowIndex: number) => {
+					this.copyH2Section(rowIndex);
 				}
 			});
 			this.tableContainer = tableContainer;
@@ -764,7 +767,7 @@ export class TableView extends ItemView {
 
 		// 移除键盘监听器
 		if (this.tableContainer && this.keydownHandler) {
-			this.tableContainer.removeEventListener('keydown', this.keydownHandler, true);
+			this.tableContainer.removeEventListener('keydown', this.keydownHandler);
 			this.keydownHandler = null;
 		}
 
@@ -1056,23 +1059,7 @@ export class TableView extends ItemView {
 			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
 			const hasSelection = selectedRows.length > 0;
 
-			// Ctrl+C / Cmd+C: 如果在序号列上，复制整段
-			if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
-				// 使用和右键菜单相同的方式检测当前列
-				const target = event.target as HTMLElement;
-				const cellElement = target.closest('.ag-cell');
-				const colId = cellElement?.getAttribute('col-id');
-
-				if (colId === '#' && hasSelection) {
-					event.preventDefault();
-					event.stopPropagation();
-					event.stopImmediatePropagation();
-					// 只复制第一个选中行的整段内容
-					this.copyH2Section(selectedRows[0]);
-					return;
-				}
-				// 否则让默认的复制行为继续（AG Grid 会处理单元格内容复制）
-			}
+			// 注意：Ctrl+C 在序号列的处理已移至 AgGridAdapter 的 onCellKeyDown 中
 
 			// Cmd+D / Ctrl+D: 复制行（支持单行和多行）
 			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
@@ -1092,8 +1079,8 @@ export class TableView extends ItemView {
 			// Delete / Backspace 快捷键禁用：保留原生删除行为，通过上下文菜单删除整行
 		};
 
-		// 绑定事件监听器，使用捕获阶段以确保优先处理
-		tableContainer.addEventListener('keydown', this.keydownHandler, true);
+		// 绑定事件监听器
+		tableContainer.addEventListener('keydown', this.keydownHandler);
 	}
 
 	/**

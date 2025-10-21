@@ -1308,6 +1308,9 @@ export class TableView extends ItemView {
 		// 所有列都更新 data[key]
 		block.data[field] = newValue;
 
+		// 刷新数据缓存和视图
+		this.refreshGridData();
+
 		// 触发保存
 		this.scheduleSave();
 	}
@@ -1414,9 +1417,8 @@ export class TableView extends ItemView {
 			this.blocks.push(newBlock);
 		}
 
-		// 更新 AG Grid 显示
-		const data = this.extractTableData(this.blocks, this.schema);
-		this.gridAdapter?.updateData(data);
+		// 刷新数据缓存和视图
+		this.refreshGridData();
 
 		const insertIndex = (beforeRowIndex !== undefined && beforeRowIndex !== null)
 			? beforeRowIndex
@@ -1474,9 +1476,8 @@ export class TableView extends ItemView {
 		// 删除块
 		this.blocks.splice(rowIndex, 1);
 
-		// 更新 AG Grid 显示
-		const data = this.extractTableData(this.blocks, this.schema);
-		this.gridAdapter?.updateData(data);
+		// 刷新数据缓存和视图
+		this.refreshGridData();
 
 		const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
 		if (nextIndex >= 0) {
@@ -1511,9 +1512,8 @@ export class TableView extends ItemView {
 			}
 		}
 
-		// 更新 AG Grid 显示
-		const data = this.extractTableData(this.blocks, this.schema);
-		this.gridAdapter?.updateData(data);
+		// 刷新数据缓存和视图
+		this.refreshGridData();
 
 		// 聚焦到最小索引位置的下一行
 		const minIndex = Math.min(...rowIndexes);
@@ -1559,9 +1559,8 @@ export class TableView extends ItemView {
 			}
 		}
 
-		// 更新 AG Grid 显示
-		const data = this.extractTableData(this.blocks, this.schema);
-		this.gridAdapter?.updateData(data);
+		// 刷新数据缓存和视图
+		this.refreshGridData();
 
 		// 聚焦到最小索引对应的复制行（最小索引 + 1）
 		const minIndex = Math.min(...rowIndexes);
@@ -1600,9 +1599,8 @@ export class TableView extends ItemView {
 		// 在源块之后插入复制的块
 		this.blocks.splice(rowIndex + 1, 0, duplicatedBlock);
 
-		// 更新 AG Grid 显示
-		const data = this.extractTableData(this.blocks, this.schema);
-		this.gridAdapter?.updateData(data);
+		// 刷新数据缓存和视图
+		this.refreshGridData();
 
 		const newIndex = rowIndex + 1;
 		this.focusRow(newIndex, focusedCell?.field);
@@ -1778,6 +1776,35 @@ export class TableView extends ItemView {
 		this.rebuildFilterViewButtons();
 		void this.persistFilterViews();
 		this.applyActiveFilterView();
+	}
+
+	/**
+	 * 刷新表格数据（同步 allRowData 并重新应用过滤视图）
+	 * 所有数据修改操作（增删改）后都应该调用此方法
+	 */
+	private refreshGridData(): void {
+		if (!this.schema || !this.gridAdapter) {
+			return;
+		}
+
+		// 从 blocks 重新提取完整数据
+		this.allRowData = this.extractTableData(this.blocks, this.schema);
+
+		// 根据当前激活的过滤视图决定显示哪些数据
+		const targetId = this.filterViewState.activeViewId;
+		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
+
+		let dataToShow: any[];
+		if (!targetView || !targetView.filterRule) {
+			// 没有激活视图，显示全部数据
+			dataToShow = this.allRowData;
+		} else {
+			// 应用过滤规则
+			dataToShow = this.applyFilterRule(this.allRowData, targetView.filterRule);
+		}
+
+		// 更新 AG Grid 显示
+		this.gridAdapter.updateData(dataToShow);
 	}
 
 	private applyActiveFilterView(): void {

@@ -24,8 +24,8 @@
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
       "Bash(git add:*)",
-      "Bash(git merge --no-ff feat/T0042-copy-h2-section -m \"$(cat <<''EOF''\nMerge branch ''feat/T0042-copy-h2-section'' into dev\n\n实现序号列复制原文段落功能\nEOF\n)\")",
-      "Bash(git merge --no-ff feat/T0042-copy-h2-section -m \"$(cat <<''EOF''\nMerge branch ''feat/T0042-copy-h2-section'' into dev\n\n实现序号列 Ctrl+C 复制整段功能\n\n功能特性：\n- 在序号列按 Ctrl+C 复制完整 H2 段落内容\n- 过滤空字段和系统字段（status、statusChanged）\n- 支持右键菜单和快捷键两种方式\n\n技术实现：\n- 通过 CompositionProxy 层的 handleCopyShortcut 处理\n- 使用回调机制（onCopyH2Section）在 AgGridAdapter 和 TableView 之间通信\n- 新增技术文档记录 AG Grid 键盘事件处理机制\n\n文档更新：\n- docs/tech/AG Grid 键盘事件处理机制.md\nEOF\n)\")"
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

@@ -72,7 +72,7 @@
   font-size: 12px;
   line-height: 1.6;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
 .tlb-filter-view-button:hover {
@@ -92,6 +92,20 @@
 
 .tlb-filter-view-button--add {
   font-weight: 600;
+}
+
+/* 拖拽状态样式 */
+.tlb-filter-view-button.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.tlb-filter-view-button[draggable="true"] {
+  cursor: grab;
+}
+
+.tlb-filter-view-button[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 /* 过滤编辑器模态框 */

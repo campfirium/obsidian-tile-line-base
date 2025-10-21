@@ -11,7 +11,8 @@
       "Bash(git add src/grid/headers/IconHeaderComponent.ts src/grid/AgGridAdapter.ts)",
       "Bash(git commit -m \"refactor: use AG Grid headerComponent for stable icon display\n\n使用 AG Grid 原生 headerComponent 机制显示图标，彻底解决闪烁问题：\n\n根本原因：\n- 之前使用 JavaScript 动态添加图标，导致多次事件触发时图标被重复创建\n- AG Grid 在某些操作时会重新渲染表头 DOM，导致动态添加的图标丢失\n\n解决方案：\n- 创建自定义 IconHeaderComponent 组件\n- 在列定义时通过 headerComponent 配置图标\n- 图标由 AG Grid 原生渲染，与表头生命周期同步\n- 移除所有动态添加图标的代码（setupHeaderIcons、updateHeaderIcons 等）\n\n优势：\n- 图标从一开始就稳定显示，无闪烁\n- 无需事件监听和定时器\n- 符合 AG Grid 官方推荐做法\n- 代码更简洁，性能更好\n\n修改文件：\n- src/grid/headers/IconHeaderComponent.ts（新增）\n- src/grid/AgGridAdapter.ts（重构）\")",
       "Bash(git add styles.css)",
-      "Bash(git commit -m \"style: add proper CSS for custom header icons\n\n添加 .tlb-header-icon 的 CSS 样式，修复图标对齐问题：\n- 图标容器使用 flex 布局，居中对齐\n- 图标大小固定为 16px × 16px\n- 保留旧的 .tlb-index-header-icon 和 .tlb-status-header-icon 样式以兼容\")"
+      "Bash(git commit -m \"style: add proper CSS for custom header icons\n\n添加 .tlb-header-icon 的 CSS 样式，修复图标对齐问题：\n- 图标容器使用 flex 布局，居中对齐\n- 图标大小固定为 16px × 16px\n- 保留旧的 .tlb-index-header-icon 和 .tlb-status-header-icon 样式以兼容\")",
+      "Bash(git merge --no-ff feat/T0041-filter-view -m \"$(cat <<''EOF''\nMerge branch ''feat/T0041-filter-view'' into dev\n\n实现自定义过滤视图功能\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

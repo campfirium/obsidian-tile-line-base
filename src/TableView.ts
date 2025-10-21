@@ -1058,9 +1058,12 @@ export class TableView extends ItemView {
 
 			// Ctrl+C / Cmd+C: 如果在序号列上，复制整段
 			if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
-				// 检查当前聚焦的单元格是否是序号列
-				const focusedCell = this.gridAdapter?.getFocusedCell?.();
-				if (focusedCell?.field === '#' && hasSelection) {
+				// 使用和右键菜单相同的方式检测当前列
+				const target = event.target as HTMLElement;
+				const cellElement = target.closest('.ag-cell');
+				const colId = cellElement?.getAttribute('col-id');
+
+				if (colId === '#' && hasSelection) {
 					event.preventDefault();
 					event.stopPropagation();
 					event.stopImmediatePropagation();

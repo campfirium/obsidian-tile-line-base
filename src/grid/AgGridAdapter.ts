@@ -619,6 +619,7 @@ export class AgGridAdapter implements GridAdapter {
 		context?: {
 			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 			onColumnResize?: (field: string, width: number) => void;
+			onCopyH2Section?: (rowIndex: number) => void;
 		}
 	): void {
 		this.containerEl = container;
@@ -778,9 +779,40 @@ export class AgGridAdapter implements GridAdapter {
 			tooltipHideDelay: 200,
 			onCellKeyDown: (event: CellKeyDownEvent) => {
 				const keyEvent = event.event;
+				console.log('[AgGrid] onCellKeyDown 触发', {
+					key: keyEvent instanceof KeyboardEvent ? keyEvent.key : 'not KeyboardEvent',
+					ctrl: keyEvent instanceof KeyboardEvent ? keyEvent.ctrlKey : false,
+					meta: keyEvent instanceof KeyboardEvent ? keyEvent.metaKey : false,
+					colId: event.column?.getColId?.() ?? null
+				});
+
 				if (!(keyEvent instanceof KeyboardEvent)) {
 					return;
 				}
+
+				// 处理序号列的 Ctrl+C 复制整段
+				if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === 'c') {
+					const colId = event.column?.getColId?.() ?? null;
+					console.log('[AgGrid] 检测到 Ctrl+C，列ID:', colId);
+
+					if (colId === '#') {
+						console.log('[AgGrid] 确认是序号列');
+						const rowData = event.node?.data as RowData | undefined;
+						if (rowData) {
+							const blockIndex = parseInt(String(rowData[ROW_ID_FIELD]), 10);
+							console.log('[AgGrid] blockIndex:', blockIndex, 'context.onCopyH2Section:', !!context?.onCopyH2Section);
+
+							if (!isNaN(blockIndex) && context?.onCopyH2Section) {
+								console.log('[AgGrid] 序号列 Ctrl+C，复制整段', blockIndex);
+								keyEvent.preventDefault();
+								keyEvent.stopPropagation();
+								context.onCopyH2Section(blockIndex);
+								return;
+							}
+						}
+					}
+				}
+
 				this.handleEnterAtLastRow(
 					event.api,
 					event.column?.getColId?.() ?? null,

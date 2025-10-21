@@ -1933,6 +1933,7 @@ export class TableView extends ItemView {
 			const modal = new FilterViewEditorModal(this.app, {
 				title: `编辑视图: ${target.name}`,
 				columns,
+				initialName: target.name,  // 传递当前视图名称
 				initialRule: target.filterRule,
 				onSubmit: (name, rule) => {
 					target.name = name;
@@ -2127,6 +2128,7 @@ export class TableView extends ItemView {
 interface FilterViewEditorModalOptions {
 	title: string;
 	columns: string[];  // 可用的列名列表
+	initialName?: string;  // 初始视图名称(用于编辑)
 	initialRule?: FilterRule | null;  // 初始规则(用于编辑)
 	onSubmit: (name: string, rule: FilterRule) => void;
 	onCancel: () => void;
@@ -2160,6 +2162,10 @@ class FilterViewEditorModal extends Modal {
 		nameSetting.setName('视图名称');
 		nameSetting.addText((text) => {
 			text.setPlaceholder('输入视图名称');
+			// 设置初始名称（用于编辑模式）
+			if (this.options.initialName) {
+				text.setValue(this.options.initialName);
+			}
 			this.nameInputEl = text.inputEl;
 		});
 

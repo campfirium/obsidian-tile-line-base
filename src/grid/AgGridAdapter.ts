@@ -17,7 +17,8 @@ import {
 	AllCommunityModule,
 	IRowNode,
 	Column,
-	ColumnResizedEvent
+	ColumnResizedEvent,
+	ColumnState
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -61,6 +62,9 @@ export class AgGridAdapter implements GridAdapter {
 	private focusedColId: string | null = null;
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private editing = false;
+	private columnApi: any = null;
+	private ready = false;
+	private readyCallbacks: Array<() => void> = [];
 	private proxyRealignTimer: number | null = null;
 	private viewportListenerCleanup: (() => void) | null = null;
 
@@ -156,6 +160,14 @@ export class AgGridAdapter implements GridAdapter {
 		} else if (this.focusedDoc) {
 			this.getProxy(this.focusedDoc).cancel(reason);
 		}
+	}
+
+	runWhenReady(callback: () => void): void {
+		if (this.ready) {
+			callback();
+			return;
+		}
+		this.readyCallbacks.push(callback);
 	}
 
 	private requestProxyRealign(reason: string): void {
@@ -423,6 +435,63 @@ export class AgGridAdapter implements GridAdapter {
 		doc.body.removeChild(textarea);
 	}
 
+	getFilterModel(): any | null {
+		if (!this.gridApi || typeof this.gridApi.getFilterModel !== 'function') {
+			return null;
+		}
+		return this.deepClone(this.gridApi.getFilterModel());
+	}
+
+	setFilterModel(model: any | null): void {
+		this.runWhenReady(() => {
+			if (!this.gridApi || typeof this.gridApi.setFilterModel !== 'function') {
+				return;
+			}
+			const cloned = model == null ? null : this.deepClone(model);
+			this.gridApi.setFilterModel(cloned);
+			if (typeof this.gridApi.onFilterChanged === 'function') {
+				this.gridApi.onFilterChanged();
+			}
+		});
+	}
+
+	getColumnState(): ColumnState[] | null {
+		if (!this.columnApi || typeof this.columnApi.getColumnState !== 'function') {
+			return null;
+		}
+		return this.cloneColumnState(this.columnApi.getColumnState());
+	}
+
+	applyColumnState(state: ColumnState[] | null): void {
+		this.runWhenReady(() => {
+			if (!this.columnApi || typeof this.columnApi.applyColumnState !== 'function') {
+				return;
+			}
+			if (!state) {
+				this.columnApi.resetColumnState();
+				return;
+			}
+			this.columnApi.applyColumnState({
+				state: this.cloneColumnState(state) ?? undefined,
+				applyOrder: true
+			});
+		});
+	}
+
+	private cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
+		if (!state) {
+			return null;
+		}
+		return state.map((item) => ({ ...item }));
+	}
+
+	private deepClone<T>(value: T): T {
+		if (value == null) {
+			return value;
+		}
+		return JSON.parse(JSON.stringify(value)) as T;
+	}
+
 	private handleProxyEnter(shift: boolean): void {
 		if (!this.gridApi) return;
 		if (this.focusedRowIndex == null || !this.focusedColId) return;
@@ -674,6 +743,22 @@ export class AgGridAdapter implements GridAdapter {
 
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
+			onGridReady: (params: any) => {
+				this.gridApi = params.api;
+				this.columnApi = params.columnApi ?? null;
+				this.ready = true;
+				if (this.readyCallbacks.length > 0) {
+					const queue = [...this.readyCallbacks];
+					this.readyCallbacks.length = 0;
+					for (const callback of queue) {
+						try {
+							callback();
+						} catch (error) {
+							console.error('[AgGridAdapter] runWhenReady callback failed', error);
+						}
+					}
+				}
+			},
 			columnDefs: colDefs,
 			rowData: rows,
 			rowHeight: DEFAULT_ROW_HEIGHT,
@@ -980,6 +1065,9 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.destroy();
 			this.gridApi = null;
 		}
+		this.ready = false;
+		this.readyCallbacks = [];
+		this.columnApi = null;
 		this.cancelPendingCapture('destroy');
 		if (this.proxyRealignTimer != null) {
 			window.clearTimeout(this.proxyRealignTimer);

@@ -1,0 +1,11 @@
+model:
+  version: 1
+  kind: Table
+  columns: []
+pluginVersion: 1.0.0
+views:
+  - type: table
+    name: 表格
+    filters:
+      and:
+        - file.hasLink("specs/251007 H2 段落解析")

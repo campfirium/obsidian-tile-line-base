@@ -48,6 +48,7 @@ export class TableView extends ItemView {
 	private allRowData: any[] = []; // 保存全部行数据
 	private contextMenu: HTMLElement | null = null;
 	private columnWidthPrefs: Record<string, number> | null = null;
+	private fileId: string | null = null; // 文件唯一ID（8位UUID）
 
 	// 事件监听器引用（用于清理）
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
@@ -212,6 +213,12 @@ export class TableView extends ItemView {
 		const prefs = this.ensureColumnWidthPrefs();
 		prefs[field] = clamped;
 
+		// 保存到配置块（带缓存）
+		this.saveConfigBlock().catch((error) => {
+			console.error('[TileLineBase] Failed to save config block:', error);
+		});
+
+		// 同时保存到插件设置（向后兼容）
 		const plugin = getPluginContext();
 		plugin?.updateColumnWidthPreference(this.file.path, field, clamped);
 	}
@@ -269,7 +276,11 @@ export class TableView extends ItemView {
 	 * H2 标题本身也可能是 Key:Value 格式
 	 */
 	private parseH2Blocks(content: string): H2Block[] {
-		const lines = content.split('\n');
+		// 首先移除配置块（## tlb ... 到文件末尾）
+		const configBlockRegex = /## tlb \w+ \d+[\s\S]*$/;
+		const contentWithoutConfig = content.replace(configBlockRegex, '');
+
+		const lines = contentWithoutConfig.split('\n');
 		const blocks: H2Block[] = [];
 		let currentBlock: H2Block | null = null;
 
@@ -567,6 +578,19 @@ export class TableView extends ItemView {
 		// 读取文件内容
 		const content = await this.app.vault.read(this.file);
 
+		// 尝试加载配置块（带缓存）
+		const configBlock = await this.loadConfig();
+
+		// 如果有配置块，应用配置
+		if (configBlock) {
+			if (configBlock.filterViews) {
+				this.filterViewState = configBlock.filterViews;
+			}
+			if (configBlock.columnWidths) {
+				this.columnWidthPrefs = configBlock.columnWidths;
+			}
+		}
+
 		// 解析头部配置块
 		const columnConfigs = this.parseHeaderConfigBlock(content);
 
@@ -593,7 +617,10 @@ export class TableView extends ItemView {
 		this.allRowData = data; // 保存全部数据供过滤使用
 
 		// 准备列定义（添加序号列）
-		this.filterViewState = this.loadFilterViewState();
+		// 如果没有从配置块加载 filterViewState，则从插件设置加载
+		if (!this.filterViewState) {
+			this.filterViewState = this.loadFilterViewState();
+		}
 		this.initialColumnState = null;
 		this.filterViewBar = null;
 		this.filterViewTabsEl = null;
@@ -2083,6 +2110,13 @@ export class TableView extends ItemView {
 		if (!plugin || !this.file || typeof plugin.saveFilterViewsForFile !== 'function') {
 			return;
 		}
+
+		// 保存到配置块（带缓存）
+		this.saveConfigBlock().catch((error) => {
+			console.error('[TileLineBase] Failed to save config block:', error);
+		});
+
+		// 同时保存到插件设置（向后兼容）
 		return plugin.saveFilterViewsForFile(this.file.path, this.filterViewState);
 	}
 
@@ -2120,6 +2154,214 @@ export class TableView extends ItemView {
 			});
 			modal.open();
 		});
+	}
+
+	/**
+	 * 生成文件唯一ID（UUID前8位）
+	 */
+	private generateFileId(): string {
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			const uuid = crypto.randomUUID();
+			return uuid.split('-')[0]; // 取前8位
+		}
+		// 备用方案
+		return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+	}
+
+	/**
+	 * 从 metadataCache.headings 提取元数据
+	 * 格式：## tlb <fileId> <version>
+	 */
+	private extractMetadataFromHeadings(file: TFile): { fileId: string; version: number } | null {
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache?.headings) return null;
+
+		// 找到最后一个 "## tlb ..." 标题
+		const tlbHeading = cache.headings
+			.filter(h => h.level === 2 && h.heading.startsWith('tlb '))
+			.pop();
+
+		if (!tlbHeading) return null;
+
+		// 解析：## tlb 550e8400 1705123456789
+		const parts = tlbHeading.heading.split(' ');
+		if (parts.length !== 3) return null;
+
+		const fileId = parts[1];
+		const version = parseInt(parts[2], 10);
+
+		if (!fileId || isNaN(version)) return null;
+
+		return { fileId, version };
+	}
+
+	/**
+	 * 解析完整配置块
+	 * 查找最后一个 "## tlb <fileId> <version>" 后的 ```tlb ... ``` 块
+	 */
+	private parseConfigBlock(content: string, fileId: string): Record<string, any> | null {
+		// 找到最后一个 "## tlb <fileId> <version>" 的位置
+		const headerRegex = new RegExp(`^## tlb ${fileId} \\d+$`, 'gm');
+		let lastMatch: RegExpExecArray | null = null;
+		let match: RegExpExecArray | null;
+
+		while ((match = headerRegex.exec(content)) !== null) {
+			lastMatch = match;
+		}
+
+		if (!lastMatch) return null;
+
+		// 从该位置开始，找到下一个 ```tlb ... ``` 块
+		const afterHeader = content.substring(lastMatch.index);
+		const blockRegex = /```tlb\s*\n([\s\S]*?)\n```/;
+		const blockMatch = afterHeader.match(blockRegex);
+
+		if (!blockMatch) return null;
+
+		// 逐行解析配置
+		const lines = blockMatch[1].split(/\r?\n/); // 兼容 CRLF
+		const config: any = {};
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (!trimmed) continue;
+
+			const colonIndex = trimmed.indexOf(':');
+			if (colonIndex === -1) continue;
+
+			const key = trimmed.substring(0, colonIndex);
+			const valueJson = trimmed.substring(colonIndex + 1);
+
+			try {
+				config[key] = JSON.parse(valueJson);
+			} catch (error) {
+				console.error(`[TileLineBase] Failed to parse config line: ${key}`, error);
+			}
+		}
+
+		return config;
+	}
+
+	/**
+	 * 加载配置（带缓存机制）
+	 */
+	private async loadConfig(): Promise<Record<string, any> | null> {
+		if (!this.file) return null;
+
+		// 1. 从 metadataCache.headings 快速提取元数据
+		const meta = this.extractMetadataFromHeadings(this.file);
+
+		if (!meta) {
+			// 无配置块标题，返回 null（稍后自动迁移）
+			return null;
+		}
+
+		this.fileId = meta.fileId;
+
+		// 2. 查询缓存
+		const plugin = getPluginContext();
+		const cacheManager = plugin?.cacheManager;
+		const cachedVersion = cacheManager?.getCachedVersion(meta.fileId);
+
+		if (cachedVersion === meta.version) {
+			// 缓存命中，直接返回 ✨
+			const cached = cacheManager?.getCache(meta.fileId);
+			if (cached) {
+				console.log('[TileLineBase] Cache hit for file:', this.file.path);
+				return cached as Record<string, any>;
+			}
+		}
+
+		// 3. 缓存失效，读取文件并解析配置块
+		console.log('[TileLineBase] Cache miss, parsing config block...');
+		const content = await this.app.vault.read(this.file);
+		const config = this.parseConfigBlock(content, meta.fileId);
+
+		if (!config) {
+			console.warn('[TileLineBase] Failed to parse config block');
+			return null;
+		}
+
+		// 4. 更新缓存
+		if (cacheManager) {
+			cacheManager.setCache(meta.fileId, this.file.path, meta.version, config);
+		}
+
+		return config;
+	}
+
+	/**
+	 * 保存配置块（二级标题 + 配置块）
+	 */
+	private async saveConfigBlock(): Promise<void> {
+		if (!this.file) return;
+
+		// 确保有 fileId
+		if (!this.fileId) {
+			this.fileId = this.generateFileId();
+		}
+
+		// 更新版本号
+		const version = Date.now();
+
+		// 构造配置块内容
+		const lines: string[] = [];
+
+		if (this.filterViewState) {
+			lines.push(`filterViews:${JSON.stringify(this.filterViewState)}`);
+		}
+		if (this.columnWidthPrefs && Object.keys(this.columnWidthPrefs).length > 0) {
+			lines.push(`columnWidths:${JSON.stringify(this.columnWidthPrefs)}`);
+		}
+		lines.push(`viewPreference:table`);
+
+		const configBlock = `\`\`\`tlb\n${lines.join('\n')}\n\`\`\``;
+
+		// 读取当前文件内容
+		const content = await this.app.vault.read(this.file);
+
+		// 移除旧的配置块（包括标题和代码块）
+		// 匹配：## tlb <id> <version> 后跟 ```tlb ... ```
+		const oldConfigRegex = new RegExp(
+			`## tlb ${this.fileId} \\d+\\s*\\n\`\`\`tlb\\s*\\n[\\s\\S]*?\\n\`\`\``,
+			'g'
+		);
+		let newContent = content.replace(oldConfigRegex, '');
+
+		// 如果没找到旧配置块，尝试移除任意配置块
+		if (newContent === content) {
+			newContent = content.replace(/## tlb \w+ \d+\s*\n```tlb\s*\n[\s\S]*?\n```/g, '');
+		}
+
+		// 在文件末尾添加新配置块
+		const fullConfigBlock = `## tlb ${this.fileId} ${version}\n${configBlock}`;
+		newContent = `${newContent.trimEnd()}\n\n${fullConfigBlock}\n`;
+
+		await this.app.vault.modify(this.file, newContent);
+
+		// 更新缓存
+		const plugin = getPluginContext();
+		const cacheManager = plugin?.cacheManager;
+		if (cacheManager) {
+			const config: Record<string, any> = {
+				filterViews: this.filterViewState,
+				columnWidths: this.columnWidthPrefs ?? {},
+				viewPreference: 'table'
+			};
+			cacheManager.setCache(this.fileId, this.file.path, version, config);
+		}
+
+		// 同步到插件设置（向后兼容）
+		if (plugin) {
+			if (this.filterViewState) {
+				await plugin.saveFilterViewsForFile(this.file.path, this.filterViewState);
+			}
+			if (this.columnWidthPrefs) {
+				for (const [field, width] of Object.entries(this.columnWidthPrefs)) {
+					plugin.updateColumnWidthPreference(this.file.path, field, width);
+				}
+			}
+		}
 	}
 
 	async onClose(): Promise<void> {

@@ -74,6 +74,7 @@ export class AgGridAdapter implements GridAdapter {
 	private modelUpdatedCallbacks: Array<() => void> = [];
 	private proxyRealignTimer: number | null = null;
 	private viewportListenerCleanup: (() => void) | null = null;
+	private quickFilterText: string = '';
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -527,6 +528,13 @@ export class AgGridAdapter implements GridAdapter {
 		});
 	}
 
+	setQuickFilter(value: string | null): void {
+		this.quickFilterText = value?.trim() ?? '';
+		this.runWhenReady(() => {
+			this.applyQuickFilterText();
+		});
+	}
+
 	getColumnState(): ColumnState[] | null {
 		if (!this.columnApi || typeof this.columnApi.getColumnState !== 'function') {
 			return null;
@@ -547,6 +555,7 @@ export class AgGridAdapter implements GridAdapter {
 				state: this.cloneColumnState(state) ?? undefined,
 				applyOrder: true
 			});
+			this.applyQuickFilterText();
 		});
 	}
 
@@ -1519,6 +1528,55 @@ export class AgGridAdapter implements GridAdapter {
 			rowIndex: blockIndex,
 			field: focusedCell.column.getColId()
 		};
+	}
+
+	private applyQuickFilterText(): void {
+		if (!this.gridApi) {
+			return;
+		}
+		const api = this.gridApi as GridApi;
+		const anyApi = api as GridApi & {
+			setQuickFilter?: (value: string) => void;
+			setQuickFilterColumns?: (columns: string[]) => void;
+			getColumns?: () => Column[] | null;
+			setGridOption?: (key: string, value: unknown) => void;
+			onFilterChanged?: () => void;
+		};
+
+		if (typeof anyApi.setQuickFilterColumns === 'function' && typeof anyApi.getColumns === 'function') {
+			const columns = anyApi.getColumns() ?? [];
+			const filterable: string[] = [];
+			for (const column of columns) {
+				if (!column) {
+					continue;
+				}
+				const colId = typeof column.getColId === 'function'
+					? column.getColId()
+					: typeof (column as any).getId === 'function'
+						? (column as any).getId()
+						: null;
+				if (!colId) {
+					continue;
+				}
+				if (colId === '#' || colId === ROW_ID_FIELD || colId === 'status') {
+					continue;
+				}
+				if (typeof column.isVisible === 'function' && !column.isVisible()) {
+					continue;
+				}
+				filterable.push(colId);
+			}
+			anyApi.setQuickFilterColumns(filterable);
+		}
+
+		if (typeof anyApi.setQuickFilter === 'function') {
+			anyApi.setQuickFilter(this.quickFilterText);
+		} else if (typeof anyApi.setGridOption === 'function') {
+			anyApi.setGridOption('quickFilterText', this.quickFilterText);
+			if (typeof anyApi.onFilterChanged === 'function') {
+				anyApi.onFilterChanged();
+			}
+		}
 	}
 
 	/**

@@ -60,6 +60,12 @@
 .tlb-filter-view-actions {
   display: flex;
   gap: 6px;
+}
+
+.tlb-filter-view-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
 }
 

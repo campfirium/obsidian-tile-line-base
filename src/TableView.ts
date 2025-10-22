@@ -113,32 +113,77 @@ export class TableView extends ItemView {
 	 * 解析头部配置块（```tlb）
 	 */
 	private parseHeaderConfigBlock(content: string): ColumnConfig[] | null {
-		// 匹配 ```tlb ... ``` 代码块
-		const configBlockRegex = /```tlb\s*\n([\s\S]*?)\n```/;
-		const match = content.match(configBlockRegex);
+		// 支持 ```tlb / ```tilelinebase 代码块，逐个尝试
+		const blockRegex = /```(?:tlb|tilelinebase)\s*\n([\s\S]*?)\n```/gi;
+		let match: RegExpExecArray | null;
 
-		if (!match) {
-			return null; // 没有头部配置块
-		}
+		while ((match = blockRegex.exec(content)) !== null) {
+			const blockContent = match[1];
+			const blockStartIndex = match.index ?? 0;
 
-		const configContent = match[1];
-		const lines = configContent.split('\n');
-		const columnConfigs: ColumnConfig[] = [];
-
-		for (const line of lines) {
-			const trimmed = line.trim();
-			if (trimmed.length === 0 || trimmed.startsWith('#')) {
-				continue; // 跳过空行和注释
+			// 跳过运行时配置块（filterViews、columnWidths 等）
+			if (this.isRuntimeConfigBlock(content, blockStartIndex, blockContent)) {
+				continue;
 			}
 
-			// 解析列定义：列名 (配置1) (配置2: 值)
-			const config = this.parseColumnDefinition(trimmed);
-			if (config) {
-				columnConfigs.push(config);
+			const lines = blockContent.split(/\r?\n/);
+			const columnConfigs: ColumnConfig[] = [];
+
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (trimmed.length === 0 || trimmed.startsWith('#')) {
+					continue; // 跳过空行和注释
+				}
+
+				// 解析列定义：列名 (配置1) (配置2: 值)
+				const config = this.parseColumnDefinition(trimmed);
+				if (config) {
+					columnConfigs.push(config);
+				}
+			}
+
+			if (columnConfigs.length > 0) {
+				return columnConfigs;
 			}
 		}
 
-		return columnConfigs;
+		return null; // 未找到有效的头部配置块
+	}
+
+	private isRuntimeConfigBlock(content: string, blockStartIndex: number, blockContent: string): boolean {
+		const preceding = content.slice(0, blockStartIndex).replace(/\r/g, '');
+		let headingLine = '';
+		const lastHeadingStart = preceding.lastIndexOf('\n## ');
+
+		if (lastHeadingStart >= 0) {
+			const headingStart = lastHeadingStart + 1;
+			const headingEnd = preceding.indexOf('\n', headingStart);
+			headingLine = preceding
+				.slice(headingStart, headingEnd === -1 ? preceding.length : headingEnd)
+				.trim();
+		} else if (preceding.startsWith('## ')) {
+			const firstLineEnd = preceding.indexOf('\n');
+			headingLine = (firstLineEnd === -1 ? preceding : preceding.slice(0, firstLineEnd)).trim();
+		}
+
+		// 运行时配置块会以 "## tlb <fileId> <version>" 作为标题
+		const runtimeHeadingPattern = /^##\s+tlb\s+[A-Za-z0-9-]{4,}\s+\d+$/;
+		if (headingLine && runtimeHeadingPattern.test(headingLine)) {
+			return true;
+		}
+
+		// 若首个有效行命中运行时配置关键字，同样跳过
+		const firstContentLine = blockContent
+			.split(/\r?\n/)
+			.map(line => line.trim())
+			.find(line => line.length > 0 && !line.startsWith('#'));
+
+		if (!firstContentLine) {
+			return false;
+		}
+
+		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
+		return runtimeKeyPattern.test(firstContentLine);
 	}
 
 	/**
@@ -276,8 +321,9 @@ export class TableView extends ItemView {
 	 * H2 标题本身也可能是 Key:Value 格式
 	 */
 	private parseH2Blocks(content: string): H2Block[] {
-		// 首先移除配置块（## tlb ... 到文件末尾）
-		const configBlockRegex = /## tlb \w+ \d+[\s\S]*$/;
+		// 首先移除配置块（## tlb <id> <version> + ```tlb ... ```）
+		// 使用多行模式，从 ## tlb 开始到文件末尾
+		const configBlockRegex = /^## tlb \w+ \d+[\s\S]*$/m;
 		const contentWithoutConfig = content.replace(configBlockRegex, '');
 
 		const lines = contentWithoutConfig.split('\n');

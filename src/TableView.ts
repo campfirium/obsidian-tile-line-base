@@ -14,6 +14,7 @@ import { GridController } from "./table-view/GridController";
 import { MarkdownBlockParser, ColumnConfig, H2Block } from "./table-view/MarkdownBlockParser";
 import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 import { FilterStateStore } from "./table-view/filter/FilterStateStore";
+import { FilterViewBar } from "./table-view/filter/FilterViewBar";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -69,8 +70,7 @@ export class TableView extends ItemView {
 	private lastContainerWidth: number = 0;
 	private lastContainerHeight: number = 0;
 	private pendingSizeUpdateHandle: number | null = null;
-	private filterViewBar: HTMLElement | null = null;
-	private filterViewTabsEl: HTMLElement | null = null;
+	private filterViewBar: FilterViewBar | null = null;
 	private filterStateStore = new FilterStateStore(null);
 	private filterViewState: FileFilterViewState = this.filterStateStore.getState();
 	private initialColumnState: ColumnState[] | null = null;
@@ -853,8 +853,10 @@ export class TableView extends ItemView {
 			this.filterViewState = this.filterStateStore.getState();
 		}
 		this.initialColumnState = null;
-		this.filterViewBar = null;
-		this.filterViewTabsEl = null;
+		if (this.filterViewBar) {
+			this.filterViewBar.destroy();
+			this.filterViewBar = null;
+		}
 		this.renderFilterViewControls(container);
 
 		const primaryField = this.schema.columnNames[0] ?? null;
@@ -2515,20 +2517,26 @@ export class TableView extends ItemView {
 	}
 
 	private renderFilterViewControls(container: Element): void {
-		const bar = container.createDiv({ cls: 'tlb-filter-view-bar' });
-		const tabs = bar.createDiv({ cls: 'tlb-filter-view-tabs' });
-		this.filterViewBar = bar;
-		this.filterViewTabsEl = tabs;
-		this.rebuildFilterViewButtons();
-
-		const actions = bar.createDiv({ cls: 'tlb-filter-view-actions' });
-		const addButton = actions.createEl('button', { cls: 'tlb-filter-view-button tlb-filter-view-button--add', text: '+' });
-		addButton.addEventListener('click', () => {
-			void this.promptCreateFilterView();
+		this.filterViewBar = new FilterViewBar({
+			app: this.app,
+			container,
+			renderQuickFilter: (searchContainer) => this.renderGlobalQuickFilter(searchContainer),
+			callbacks: {
+				onCreate: () => {
+					void this.promptCreateFilterView();
+				},
+				onActivate: (viewId) => {
+					this.activateFilterView(viewId);
+				},
+				onContextMenu: (view, event) => {
+					this.openFilterViewMenu(event, view);
+				},
+				onReorder: (draggedId, targetId) => {
+					this.reorderFilterViews(draggedId, targetId);
+				}
+			}
 		});
-
-		const search = bar.createDiv({ cls: 'tlb-filter-view-search' });
-		this.renderGlobalQuickFilter(search);
+		this.filterViewBar.render(this.filterViewState);
 	}
 
 	private renderGlobalQuickFilter(container: HTMLElement): void {
@@ -2695,66 +2703,7 @@ export class TableView extends ItemView {
 	}
 
 	private rebuildFilterViewButtons(): void {
-		if (!this.filterViewTabsEl) {
-			return;
-		}
-		this.clearElement(this.filterViewTabsEl);
-
-		const defaultButton = this.filterViewTabsEl.createEl('button', { cls: 'tlb-filter-view-button', text: '全部' });
-		defaultButton.addEventListener('click', () => {
-			this.activateFilterView(null);
-		});
-		if (!this.filterViewState.activeViewId) {
-			defaultButton.classList.add('is-active');
-		}
-
-		for (let i = 0; i < this.filterViewState.views.length; i++) {
-			const view = this.filterViewState.views[i];
-			const button = this.filterViewTabsEl.createEl('button', { cls: 'tlb-filter-view-button', text: view.name });
-			if (view.id === this.filterViewState.activeViewId) {
-				button.classList.add('is-active');
-			}
-
-			// 设置拖拽属性
-			button.draggable = true;
-			button.setAttribute('data-view-id', view.id);
-			button.setAttribute('data-view-index', String(i));
-
-			// 拖拽事件
-			button.addEventListener('dragstart', (event) => {
-				if (event.dataTransfer) {
-					event.dataTransfer.effectAllowed = 'move';
-					event.dataTransfer.setData('text/plain', view.id);
-					button.classList.add('is-dragging');
-				}
-			});
-
-			button.addEventListener('dragend', () => {
-				button.classList.remove('is-dragging');
-			});
-
-			button.addEventListener('dragover', (event) => {
-				event.preventDefault();
-				if (event.dataTransfer) {
-					event.dataTransfer.dropEffect = 'move';
-				}
-			});
-
-			button.addEventListener('drop', (event) => {
-				event.preventDefault();
-				const draggedId = event.dataTransfer?.getData('text/plain');
-				if (draggedId && draggedId !== view.id) {
-					this.reorderFilterViews(draggedId, view.id);
-				}
-			});
-
-			button.addEventListener('click', () => {
-				this.activateFilterView(view.id);
-			});
-			button.addEventListener('contextmenu', (event) => {
-				this.openFilterViewMenu(event, view);
-			});
-		}
+		this.filterViewBar?.render(this.filterViewState);
 	}
 
 	private reorderFilterViews(draggedId: string, targetId: string): void {
@@ -3293,14 +3242,6 @@ export class TableView extends ItemView {
 		return this.filterStateStore.sanitizeSortRules(input);
 	}
 
-	private clearElement(element: HTMLElement): void {
-		while (element.firstChild) {
-			element.removeChild(element.firstChild);
-		}
-	}
-
-	
-
 	/**
 	 * 生成文件唯一ID（UUID前8位）
 	 */
@@ -3525,6 +3466,10 @@ export class TableView extends ItemView {
 
 	async onClose(): Promise<void> {
 		this.cleanupGlobalQuickFilter();
+		if (this.filterViewBar) {
+			this.filterViewBar.destroy();
+			this.filterViewBar = null;
+		}
 
 		// 清理事件监听器
 		this.cleanupEventListeners();

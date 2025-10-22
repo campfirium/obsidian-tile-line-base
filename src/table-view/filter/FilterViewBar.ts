@@ -1,4 +1,3 @@
-import type { App } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
 
 export interface FilterViewBarCallbacks {
@@ -9,7 +8,6 @@ export interface FilterViewBarCallbacks {
 }
 
 interface FilterViewBarOptions {
-	app: App;
 	container: Element;
 	renderQuickFilter: (container: HTMLElement) => void;
 	callbacks: FilterViewBarCallbacks;

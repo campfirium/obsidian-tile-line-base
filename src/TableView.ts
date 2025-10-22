@@ -7,14 +7,14 @@ import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
 import { compileFormula, evaluateFormula, CompiledFormula } from "./formula/FormulaEngine";
 import type { ColumnState } from "ag-grid-community";
-import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
-import { FilterViewEditorModal, openFilterViewNameModal } from "./table-view/filter/FilterViewModals";
+import type { FileFilterViewState, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
 import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
 import { GridController } from "./table-view/GridController";
 import { MarkdownBlockParser, ColumnConfig, H2Block } from "./table-view/MarkdownBlockParser";
 import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 import { FilterViewBar } from "./table-view/filter/FilterViewBar";
+import { FilterViewController } from "./table-view/filter/FilterViewController";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -71,6 +71,7 @@ export class TableView extends ItemView {
 	private lastContainerHeight: number = 0;
 	private pendingSizeUpdateHandle: number | null = null;
 	private filterViewBar: FilterViewBar | null = null;
+	private filterViewController: FilterViewController;
 	private filterStateStore = new FilterStateStore(null);
 	private filterViewState: FileFilterViewState = this.filterStateStore.getState();
 	private initialColumnState: ColumnState[] | null = null;
@@ -92,6 +93,19 @@ export class TableView extends ItemView {
 		debugLog('=== TableView 构造函数开始 ===');
 		debugLog('leaf:', leaf);
 		super(leaf);
+		this.filterViewController = new FilterViewController({
+			app: this.app,
+			stateStore: this.filterStateStore,
+			getAvailableColumns: () => this.getAvailableColumns(),
+			persist: () => this.persistFilterViews(),
+			applyActiveFilterView: () => this.applyActiveFilterView(),
+			syncState: () => this.syncFilterViewState(),
+			renderBar: () => {
+				if (this.filterViewBar) {
+					this.filterViewBar.render(this.filterViewState);
+				}
+			}
+		});
 		debugLog('=== TableView 构造函数完成 ===');
 	}
 
@@ -2518,21 +2532,20 @@ export class TableView extends ItemView {
 
 	private renderFilterViewControls(container: Element): void {
 		this.filterViewBar = new FilterViewBar({
-			app: this.app,
 			container,
 			renderQuickFilter: (searchContainer) => this.renderGlobalQuickFilter(searchContainer),
 			callbacks: {
 				onCreate: () => {
-					void this.promptCreateFilterView();
+					void this.filterViewController.promptCreateFilterView();
 				},
 				onActivate: (viewId) => {
-					this.activateFilterView(viewId);
+					this.filterViewController.activateFilterView(viewId);
 				},
 				onContextMenu: (view, event) => {
-					this.openFilterViewMenu(event, view);
+					this.filterViewController.openFilterViewMenu(view, event);
 				},
 				onReorder: (draggedId, targetId) => {
-					this.reorderFilterViews(draggedId, targetId);
+					this.filterViewController.reorderFilterViews(draggedId, targetId);
 				}
 			}
 		});
@@ -2702,41 +2715,6 @@ export class TableView extends ItemView {
 		this.filterViewState = this.filterStateStore.getState();
 	}
 
-	private rebuildFilterViewButtons(): void {
-		this.filterViewBar?.render(this.filterViewState);
-	}
-
-	private reorderFilterViews(draggedId: string, targetId: string): void {
-		let moved = false;
-		this.filterStateStore.updateState((state) => {
-			const draggedIndex = state.views.findIndex((v) => v.id === draggedId);
-			const targetIndex = state.views.findIndex((v) => v.id === targetId);
-			if (draggedIndex === -1 || targetIndex === -1) {
-				return;
-			}
-			const [draggedView] = state.views.splice(draggedIndex, 1);
-			state.views.splice(targetIndex, 0, draggedView);
-			moved = true;
-		});
-		if (!moved) {
-			return;
-		}
-		this.syncFilterViewState();
-
-		// 重新渲染并保存
-		this.rebuildFilterViewButtons();
-		void this.persistFilterViews();
-	}
-
-	private activateFilterView(viewId: string | null): void {
-		this.filterStateStore.updateState((state) => {
-			state.activeViewId = viewId;
-		});
-		this.syncFilterViewState();
-		this.rebuildFilterViewButtons();
-		void this.persistFilterViews();
-		this.applyActiveFilterView();
-	}
 
 	/**
 	 * 刷新表格数据（同步 allRowData 并重新应用过滤视图）
@@ -2959,51 +2937,6 @@ export class TableView extends ItemView {
 		}
 	}
 
-	private async promptCreateFilterView(): Promise<void> {
-		if (!this.gridAdapter) {
-			return;
-		}
-
-		// 获取可用的列名
-		const columns = this.getAvailableColumns();
-		if (columns.length === 0) {
-			new Notice('无法获取列信息，请稍后重试');
-			return;
-		}
-
-		return new Promise((resolve) => {
-			const modal = new FilterViewEditorModal(this.app, {
-				title: '新建过滤视图',
-				columns,
-				onSubmit: (name, rule, sortRules) => {
-					this.saveFilterView(name, rule, sortRules);
-					resolve();
-				},
-				onCancel: () => resolve()
-			});
-			modal.open();
-		});
-	}
-
-	private saveFilterView(name: string, rule: FilterRule, sortRules: SortRule[]): void {
-		const newView: FilterViewDefinition = {
-			id: this.generateFilterViewId(),
-			name,
-			filterRule: rule,
-			sortRules: this.sanitizeSortRules(sortRules),
-			columnState: null,
-			quickFilter: null
-		};
-		this.filterStateStore.updateState((state) => {
-			state.views.push(newView);
-			state.activeViewId = newView.id;
-		});
-		this.syncFilterViewState();
-		this.rebuildFilterViewButtons();
-		void this.persistFilterViews();
-		this.applyActiveFilterView();
-	}
-
 	private getAvailableColumns(): string[] {
 		const result: string[] = [];
 		const seen = new Set<string>();
@@ -3046,180 +2979,6 @@ export class TableView extends ItemView {
 		return result;
 	}
 
-	private async updateFilterView(viewId: string): Promise<void> {
-		const target = this.filterViewState.views.find((view) => view.id === viewId);
-		if (!target || !this.gridAdapter) {
-			return;
-		}
-
-		// 获取可用的列名
-		const columns = this.getAvailableColumns();
-		if (columns.length === 0) {
-			return;
-		}
-
-		return new Promise((resolve) => {
-			const modal = new FilterViewEditorModal(this.app, {
-				title: `编辑视图: ${target.name}`,
-				columns,
-				initialName: target.name,  // 传递当前视图名称
-				initialRule: target.filterRule,
-				initialSortRules: target.sortRules,
-				onSubmit: (name, rule, sortRules) => {
-					this.filterStateStore.updateState((state) => {
-						const current = state.views.find((view) => view.id === viewId);
-						if (!current) {
-							return;
-						}
-						current.name = name;
-						current.filterRule = rule;
-						current.sortRules = this.sanitizeSortRules(sortRules);
-					});
-					this.syncFilterViewState();
-					this.rebuildFilterViewButtons();
-					void this.persistFilterViews();
-					this.applyActiveFilterView();
-					resolve();
-				},
-				onCancel: () => resolve()
-			});
-			modal.open();
-		});
-	}
-
-	private async renameFilterView(viewId: string): Promise<void> {
-		const targetExists = this.filterViewState.views.some((view) => view.id === viewId);
-		if (!targetExists) {
-			return;
-		}
-		const name = await openFilterViewNameModal(this.app, {
-			title: '重命名视图',
-			placeholder: '输入新名称',
-			defaultValue: this.filterViewState.views.find((view) => view.id === viewId)?.name ?? ''
-		});
-		const currentName = this.filterViewState.views.find((view) => view.id === viewId)?.name ?? '';
-		if (!name || name === currentName) {
-			return;
-		}
-		let renamed = false;
-		this.filterStateStore.updateState((state) => {
-			const current = state.views.find((view) => view.id === viewId);
-			if (!current) {
-				return;
-			}
-			current.name = name;
-			renamed = true;
-		});
-		if (!renamed) {
-			return;
-		}
-		this.syncFilterViewState();
-		this.rebuildFilterViewButtons();
-		void this.persistFilterViews();
-	}
-
-	private duplicateFilterView(viewId: string): void {
-		const sourceView = this.filterViewState.views.find((v) => v.id === viewId);
-		if (!sourceView) {
-			return;
-		}
-
-		const duplicatedView: FilterViewDefinition = {
-			id: this.generateFilterViewId(),
-			name: `${sourceView.name} 副本`,
-			filterRule: sourceView.filterRule
-				? {
-					conditions: sourceView.filterRule.conditions.map((c) => ({ ...c })),
-					combineMode: sourceView.filterRule.combineMode
-				}
-				: null,
-			sortRules: this.sanitizeSortRules(sourceView.sortRules),
-			columnState: this.cloneColumnState(sourceView.columnState),
-			quickFilter: sourceView.quickFilter
-		};
-
-		let inserted = false;
-		this.filterStateStore.updateState((state) => {
-			const sourceIndex = state.views.findIndex((v) => v.id === viewId);
-			if (sourceIndex === -1) {
-				return;
-			}
-			state.views.splice(sourceIndex + 1, 0, duplicatedView);
-			state.activeViewId = duplicatedView.id;
-			inserted = true;
-		});
-		if (!inserted) {
-			return;
-		}
-		this.syncFilterViewState();
-
-		// 重新渲染并保存
-		this.rebuildFilterViewButtons();
-		void this.persistFilterViews();
-		this.applyActiveFilterView();
-
-		new Notice(`已复制视图: ${duplicatedView.name}`);
-	}
-
-	private deleteFilterView(viewId: string): void {
-		let removed = false;
-		this.filterStateStore.updateState((state) => {
-			const index = state.views.findIndex((view) => view.id === viewId);
-			if (index === -1) {
-				return;
-			}
-			state.views.splice(index, 1);
-			if (state.activeViewId === viewId) {
-				state.activeViewId = null;
-			}
-			removed = true;
-		});
-		if (!removed) {
-			return;
-		}
-		this.syncFilterViewState();
-		this.rebuildFilterViewButtons();
-		void this.persistFilterViews();
-		this.applyActiveFilterView();
-	}
-
-	private openFilterViewMenu(event: MouseEvent, view: FilterViewDefinition): void {
-		event.preventDefault();
-		const menu = new Menu();
-
-		// 编辑（进入编辑过滤条件对话框）
-		menu.addItem((item) => {
-			item.setTitle('编辑').setIcon('pencil').onClick(() => {
-				void this.updateFilterView(view.id);
-			});
-		});
-
-		// 复制（创建视图副本）
-		menu.addItem((item) => {
-			item.setTitle('复制').setIcon('copy').onClick(() => {
-				this.duplicateFilterView(view.id);
-			});
-		});
-
-		menu.addSeparator();
-
-		// 删除
-		menu.addItem((item) => {
-			item.setTitle('删除').setIcon('trash').onClick(() => {
-				this.deleteFilterView(view.id);
-			});
-		});
-
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
-	}
-
-	private generateFilterViewId(): string {
-		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-			return crypto.randomUUID();
-		}
-		return `fv-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-	}
-
 	private persistFilterViews(): Promise<void> | void {
 		if (!this.file) {
 			return;
@@ -3232,14 +2991,6 @@ export class TableView extends ItemView {
 
 		// 同步到插件设置（向后兼容）
 		return this.filterStateStore.persist();
-	}
-
-	private cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
-		return this.filterStateStore.cloneColumnState(state);
-	}
-
-	private sanitizeSortRules(input: unknown): SortRule[] {
-		return this.filterStateStore.sanitizeSortRules(input);
 	}
 
 	/**

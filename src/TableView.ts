@@ -1,11 +1,10 @@
-import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting, Notice, setIcon } from "obsidian";
+import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Notice, setIcon } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD, SortModelEntry, HeaderEditEvent } from "./grid/GridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
 import { getPluginContext } from "./pluginContext";
 import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
-import { compileFormula } from "./formula/FormulaEngine";
 import type { ColumnState } from "ag-grid-community";
 import type { FileFilterViewState, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
 import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
@@ -19,6 +18,7 @@ import { FilterDataProcessor } from "./table-view/filter/FilterDataProcessor";
 import { globalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterManager";
 import { TableDataStore } from "./table-view/TableDataStore";
 import { TableConfigManager } from "./table-view/TableConfigManager";
+import { ColumnInteractionController } from "./table-view/ColumnInteractionController";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -64,6 +64,7 @@ export class TableView extends ItemView {
                 tooltipPrefix: FORMULA_TOOLTIP_PREFIX
         });
         private configManager: TableConfigManager;
+        private columnInteractionController: ColumnInteractionController;
 
         // 事件监听器引用（用于清理）
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
@@ -91,15 +92,30 @@ export class TableView extends ItemView {
         private hasRegisteredGlobalQuickFilter = false;
 
 
-        constructor(leaf: WorkspaceLeaf) {
-                debugLog('=== TableView 构造函数开始 ===');
-                debugLog('leaf:', leaf);
-                super(leaf);
-                this.configManager = new TableConfigManager(this.app);
-                this.filterViewController = new FilterViewController({
-                        app: this.app,
-                        stateStore: this.filterStateStore,
-                        getAvailableColumns: () => this.getAvailableColumns(),
+	constructor(leaf: WorkspaceLeaf) {
+		debugLog('=== TableView 构造函数开始 ===');
+		debugLog('leaf:', leaf);
+		super(leaf);
+		this.configManager = new TableConfigManager(this.app);
+		this.columnInteractionController = new ColumnInteractionController({
+			app: this.app,
+			dataStore: this.dataStore,
+			columnLayoutStore: this.columnLayoutStore,
+			getSchema: () => this.schema,
+			renameColumnInFilterViews: (oldName, newName) => {
+				this.renameColumnInFilterViews(oldName, newName);
+			},
+			removeColumnFromFilterViews: (name) => {
+				this.removeColumnFromFilterViews(name);
+			},
+			persistColumnStructureChange: (options) => {
+				this.persistColumnStructureChange(options);
+			}
+		});
+		this.filterViewController = new FilterViewController({
+			app: this.app,
+			stateStore: this.filterStateStore,
+			getAvailableColumns: () => this.getAvailableColumns(),
 			persist: () => this.persistFilterViews(),
 			applyActiveFilterView: () => this.applyActiveFilterView(),
 			syncState: () => this.syncFilterViewState(),
@@ -246,127 +262,6 @@ export class TableView extends ItemView {
 		return `${FORMULA_TOOLTIP_PREFIX}${columnName}`;
 	}
 
-	private handleColumnHeaderContextMenu(field: string, event: MouseEvent): void {
-		if (!this.schema) {
-			return;
-		}
-		if (!field || field === '#' || field === ROW_ID_FIELD || field === 'status') {
-			return;
-		}
-		event.preventDefault();
-		event.stopPropagation();
-		this.openColumnHeaderMenu(field, event);
-	}
-
-	private openColumnHeaderMenu(field: string, event: MouseEvent): void {
-		const menu = new Menu();
-		menu.addItem((item) => {
-			item.setTitle('编辑列').setIcon('pencil').onClick(() => {
-				this.openColumnEditModal(field);
-			});
-		});
-		menu.addItem((item) => {
-			item.setTitle('复制列').setIcon('copy').onClick(() => {
-				this.duplicateColumn(field);
-			});
-		});
-		menu.addItem((item) => {
-			item.setTitle('插入列').setIcon('plus').onClick(() => {
-				this.insertColumnAfter(field);
-			});
-		});
-		menu.addSeparator();
-		menu.addItem((item) => {
-			item.setTitle('删除列').setIcon('trash').onClick(() => {
-				this.removeColumn(field);
-			});
-		});
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
-	}
-
-	private openColumnEditModal(field: string): void {
-		if (!this.schema) {
-			return;
-		}
-		const configs = this.schema.columnConfigs ?? [];
-		const existing = configs.find((config) => config.name === field);
-		const initialType: ColumnFieldType = existing?.formula?.trim() ? 'formula' : 'text';
-		const initialFormula = existing?.formula ?? '';
-		const validateName = (name: string): string | null => {
-			const trimmed = name.trim();
-			if (trimmed.length === 0) {
-				return '列名称不能为空';
-			}
-			if (trimmed === field) {
-				return null;
-			}
-			if (trimmed === '#' || trimmed === ROW_ID_FIELD || trimmed === 'status') {
-				return '该名称已被系统保留';
-			}
-			if (this.schema?.columnNames?.some((item) => item === trimmed)) {
-				return '列名称已存在';
-			}
-			return null;
-		};
-		const modal = new ColumnEditorModal(this.app, {
-			columnName: field,
-			initialType,
-			initialFormula,
-			validateName,
-			onSubmit: (result) => {
-				this.applyColumnEditResult(field, result);
-			},
-			onCancel: () => {}
-		});
-		modal.open();
-	}
-
-	private applyColumnEditResult(field: string, result: ColumnEditorResult): void {
-		if (!this.schema) {
-			return;
-		}
-
-		const trimmedName = result.name.trim();
-		const targetName = trimmedName.length > 0 ? trimmedName : field;
-		const nameChanged = targetName !== field;
-		let activeField = field;
-                if (nameChanged) {
-                        const renamed = this.dataStore.renameColumn(field, targetName);
-                        if (!renamed) {
-                                new Notice(`重命名列失败：${targetName}`);
-                                return;
-                        }
-                        this.columnLayoutStore.rename(field, targetName);
-                        this.renameColumnInFilterViews(field, targetName);
-                        activeField = targetName;
-                }
-
-                const existingConfigs = this.schema.columnConfigs ?? [];
-		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
-		let config = nextConfigs.find((item) => item.name === activeField);
-		if (!config) {
-			config = { name: activeField };
-			nextConfigs.push(config);
-		}
-
-		if (result.type === 'formula') {
-			config.formula = result.formula;
-		} else {
-			delete config.formula;
-		}
-
-                if (!this.dataStore.hasColumnConfigContent(config)) {
-                        const index = nextConfigs.findIndex((item) => item.name === activeField);
-                        if (index !== -1) {
-                                nextConfigs.splice(index, 1);
-                        }
-                }
-
-                const normalized = this.normalizeColumnConfigs(nextConfigs);
-                this.schema.columnConfigs = normalized;
-                this.dataStore.setColumnConfigs(normalized);
-                this.persistColumnStructureChange();
-        }
 
 	/**
 	 * 调度保存（500ms 防抖）
@@ -612,7 +507,7 @@ export class TableView extends ItemView {
 					this.handleHeaderEditEvent(event);
 				},
 				onColumnHeaderContextMenu: (field: string, event: MouseEvent) => {
-					this.handleColumnHeaderContextMenu(field, event);
+					this.columnInteractionController.handleColumnHeaderContextMenu(field, event);
 				},
 				onEnterAtLastRow: (field: string | null) => {
 					const oldRowCount = this.blocks.length;
@@ -897,7 +792,7 @@ export class TableView extends ItemView {
 				if (headerColId && headerColId !== 'status' && headerColId !== '#') {
 					event.preventDefault();
 					event.stopPropagation();
-					this.handleColumnHeaderContextMenu(headerColId, event);
+					this.columnInteractionController.handleColumnHeaderContextMenu(headerColId, event);
 				}
 				return;
 			}
@@ -1753,50 +1648,6 @@ export class TableView extends ItemView {
 		this.scheduleSave();
 	}
 
-        private duplicateColumn(field: string): void {
-                if (!this.schema) {
-                        return;
-                }
-                const newName = this.dataStore.duplicateColumn(field);
-                if (!newName) {
-                        new Notice('复制列失败，请稍后重试');
-                        return;
-                }
-                this.columnLayoutStore.clone(field, newName);
-                this.persistColumnStructureChange({ notice: `已复制列：${newName}` });
-                this.openColumnEditModal(newName);
-        }
-
-	private insertColumnAfter(field: string): void {
-		if (!this.schema) {
-			return;
-		}
-                const newName = this.dataStore.insertColumnAfter(field);
-                if (!newName) {
-                        new Notice('插入新列失败，请稍后重试');
-                        return;
-                }
-                this.persistColumnStructureChange({ notice: `已插入列：${newName}` });
-                this.openColumnEditModal(newName);
-	}
-
-	private removeColumn(field: string): void {
-		if (!this.schema) {
-			return;
-		}
-		const target = field.trim();
-		if (!target || target === '#' || target === 'status' || target === ROW_ID_FIELD) {
-			return;
-		}
-                const removed = this.dataStore.removeColumn(target);
-                if (!removed) {
-                        return;
-                }
-                this.columnLayoutStore.remove(target);
-                this.removeColumnFromFilterViews(target);
-                this.persistColumnStructureChange({ notice: `已删除列：${target}` });
-        }
-
         private persistColumnStructureChange(options?: { notice?: string }): void {
                 if (!this.schema) {
                         return;
@@ -1821,22 +1672,6 @@ export class TableView extends ItemView {
 		})();
 	}
 
-	private normalizeColumnConfigs(configs: ColumnConfig[] | undefined): ColumnConfig[] | undefined {
-		if (!configs || configs.length === 0) {
-			return undefined;
-		}
-		if (!this.schema) {
-			return configs;
-		}
-		const orderMap = new Map<string, number>();
-		this.schema.columnNames.forEach((name, index) => orderMap.set(name, index));
-		const filtered = configs.filter((config) => orderMap.has(config.name));
-		if (filtered.length === 0) {
-			return undefined;
-		}
-		filtered.sort((a, b) => (orderMap.get(a.name) ?? 0) - (orderMap.get(b.name) ?? 0));
-		return filtered;
-	}
 
 	private renameColumnInFilterViews(oldName: string, newName: string): void {
 		if (!this.filterViewState || !Array.isArray(this.filterViewState.views)) {
@@ -2363,170 +2198,4 @@ export class TableView extends ItemView {
 	}
 }
 
-type ColumnFieldType = 'text' | 'formula';
-
-interface ColumnEditorResult {
-	name: string;
-	type: ColumnFieldType;
-	formula: string;
-}
-
-interface ColumnEditorModalOptions {
-	columnName: string;
-	initialType: ColumnFieldType;
-	initialFormula: string;
-	validateName?: (name: string) => string | null;
-	onSubmit: (result: ColumnEditorResult) => void;
-	onCancel: () => void;
-}
-
-class ColumnEditorModal extends Modal {
-	private readonly options: ColumnEditorModalOptions;
-	private type: ColumnFieldType;
-	private nameValue: string;
-	private formulaSetting!: Setting;
-	private formulaInput!: HTMLTextAreaElement;
-	private nameInput!: HTMLInputElement;
-	private errorEl!: HTMLElement;
-	private submitted = false;
-
-	constructor(app: App, options: ColumnEditorModalOptions) {
-		super(app);
-		this.options = options;
-		this.type = options.initialType;
-		this.nameValue = options.columnName;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass('tlb-column-editor-modal');
-		this.titleEl.setText(`编辑列：${this.options.columnName}`);
-
-		const nameSetting = new Setting(contentEl);
-		nameSetting.setName('列名称');
-		nameSetting.addText((text) => {
-			text.setPlaceholder('请输入列名称');
-			text.setValue(this.nameValue);
-			this.nameInput = text.inputEl;
-			text.onChange((value) => {
-				this.nameValue = value;
-			});
-		});
-
-		const typeSetting = new Setting(contentEl);
-		typeSetting.setName('列类型');
-		typeSetting.addDropdown((dropdown) => {
-			dropdown.addOption('text', '文本');
-			dropdown.addOption('formula', '公式');
-			dropdown.setValue(this.type);
-			dropdown.onChange((value) => {
-				this.type = value === 'formula' ? 'formula' : 'text';
-				this.updateFormulaVisibility();
-			});
-		});
-
-		this.formulaSetting = new Setting(contentEl);
-		this.formulaSetting.setName('公式');
-		this.formulaSetting.setDesc('使用 {字段} 引用列，仅支持 + - * / 与括号。');
-		this.formulaSetting.controlEl.empty();
-		const textarea = document.createElement('textarea');
-		textarea.className = 'tlb-column-formula-input';
-		textarea.rows = 4;
-		textarea.placeholder = '{points} + {cost}';
-		textarea.value = this.options.initialFormula;
-		this.formulaSetting.controlEl.appendChild(textarea);
-		this.formulaInput = textarea;
-
-		this.errorEl = contentEl.createDiv({ cls: 'tlb-column-editor-error' });
-		this.errorEl.style.display = 'none';
-		this.errorEl.style.color = 'var(--text-error, #ff4d4f)';
-
-		const actionSetting = new Setting(contentEl);
-		actionSetting.addButton((button) => {
-			button.setButtonText('保存').setCta().onClick(() => {
-				this.submit();
-			});
-		});
-		actionSetting.addButton((button) => {
-			button.setButtonText('取消').onClick(() => {
-				this.close();
-			});
-		});
-
-		this.updateFormulaVisibility();
-	}
-
-	onClose(): void {
-		if (!this.submitted) {
-			this.options.onCancel();
-		}
-	}
-
-	private updateFormulaVisibility(): void {
-		const hidden = this.type !== 'formula';
-		if (this.formulaSetting) {
-			const el = this.formulaSetting.settingEl as HTMLElement;
-			el.style.display = hidden ? 'none' : '';
-		}
-		if (this.formulaInput) {
-			this.formulaInput.disabled = hidden;
-		}
-	}
-
-	private setError(message: string | null): void {
-		if (!this.errorEl) {
-			return;
-		}
-		if (message && message.trim().length > 0) {
-			this.errorEl.style.display = '';
-			this.errorEl.setText(message);
-		} else {
-			this.errorEl.style.display = 'none';
-			this.errorEl.empty();
-		}
-	}
-
-	private submit(): void {
-		this.setError(null);
-		const trimmedName = this.nameValue.trim();
-		if (trimmedName.length === 0) {
-			this.setError('列名称不能为空');
-			this.nameInput?.focus();
-			return;
-		}
-		if (this.options.validateName) {
-			const validationMessage = this.options.validateName(trimmedName);
-			if (validationMessage) {
-				this.setError(validationMessage);
-				this.nameInput?.focus();
-				return;
-			}
-		}
-		if (this.type === 'formula') {
-			const formula = this.formulaInput.value.trim();
-			if (formula.length === 0) {
-				this.setError('公式不能为空');
-				this.formulaInput.focus();
-				return;
-			}
-			try {
-				compileFormula(formula);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				this.setError(`公式错误：${message}`);
-				this.formulaInput.focus();
-				return;
-			}
-			this.options.onSubmit({ name: trimmedName, type: 'formula', formula });
-			this.submitted = true;
-			this.close();
-			return;
-		}
-
-		this.options.onSubmit({ name: trimmedName, type: 'text', formula: '' });
-		this.submitted = true;
-		this.close();
-	}
-}
 

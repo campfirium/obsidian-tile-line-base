@@ -726,7 +726,7 @@ export class TableDataStore {
                 return true;
         }
 
-        private normalizeColumnConfigs(configs: ColumnConfig[] | undefined): ColumnConfig[] | undefined {
+        public normalizeColumnConfigs(configs: ColumnConfig[] | undefined): ColumnConfig[] | undefined {
                 if (!configs || configs.length === 0) {
                         return undefined;
                 }

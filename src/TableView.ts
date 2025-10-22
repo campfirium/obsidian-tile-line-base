@@ -5,7 +5,7 @@ import { getPluginContext } from "./pluginContext";
 import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
-import { compileFormula, evaluateFormula, CompiledFormula } from "./formula/FormulaEngine";
+import { compileFormula } from "./formula/FormulaEngine";
 import type { ColumnState } from "ag-grid-community";
 import type { FileFilterViewState, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
 import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
@@ -17,6 +17,8 @@ import { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import { FilterViewController } from "./table-view/filter/FilterViewController";
 import { FilterDataProcessor } from "./table-view/filter/FilterDataProcessor";
 import { globalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterManager";
+import { TableDataStore } from "./table-view/TableDataStore";
+import { TableConfigManager } from "./table-view/TableConfigManager";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -40,24 +42,30 @@ interface PendingFocusRequest {
 
 export class TableView extends ItemView {
 	file: TFile | null = null;
-	private blocks: H2Block[] = [];
-	private schema: Schema | null = null;
-	private schemaDirty: boolean = false;
-	private sparseCleanupRequired: boolean = false;
-	private saveTimeout: NodeJS.Timeout | null = null;
-	private gridAdapter: GridAdapter | null = null;
-	private gridController = new GridController();
-	private pendingFocusRequest: PendingFocusRequest | null = null;
-	private focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
-	private allRowData: any[] = []; // 保存全部行数据
-	private visibleRowData: RowData[] = [];
-	private contextMenu: HTMLElement | null = null;
-	private columnLayoutStore = new ColumnLayoutStore(null);
-	private markdownParser = new MarkdownBlockParser();
-	private schemaBuilder = new SchemaBuilder();
-	private fileId: string | null = null; // 文件唯一ID（8位UUID）
+        private blocks: H2Block[] = [];
+        private schema: Schema | null = null;
+        private schemaDirty: boolean = false;
+        private sparseCleanupRequired: boolean = false;
+        private hiddenSortableFields: Set<string> = new Set();
+        private saveTimeout: NodeJS.Timeout | null = null;
+        private gridAdapter: GridAdapter | null = null;
+        private gridController = new GridController();
+        private pendingFocusRequest: PendingFocusRequest | null = null;
+        private focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
+        private allRowData: RowData[] = [];
+        private visibleRowData: RowData[] = [];
+        private contextMenu: HTMLElement | null = null;
+        private columnLayoutStore = new ColumnLayoutStore(null);
+        private markdownParser = new MarkdownBlockParser();
+        private schemaBuilder = new SchemaBuilder();
+        private dataStore = new TableDataStore({
+                rowLimit: FORMULA_ROW_LIMIT,
+                errorValue: FORMULA_ERROR_VALUE,
+                tooltipPrefix: FORMULA_TOOLTIP_PREFIX
+        });
+        private configManager: TableConfigManager;
 
-	// 事件监听器引用（用于清理）
+        // 事件监听器引用（用于清理）
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
 	private documentClickHandler: (() => void) | null = null;
 	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -75,27 +83,23 @@ export class TableView extends ItemView {
 	private filterViewBar: FilterViewBar | null = null;
 	private filterViewController: FilterViewController;
 	private filterStateStore = new FilterStateStore(null);
-	private filterViewState: FileFilterViewState = this.filterStateStore.getState();
-	private initialColumnState: ColumnState[] | null = null;
-	private hiddenSortableFields: Set<string> = new Set();
-	private globalQuickFilterInputEl: HTMLInputElement | null = null;
-	private globalQuickFilterClearEl: HTMLElement | null = null;
-	private globalQuickFilterUnsubscribe: (() => void) | null = null;
-	private hasRegisteredGlobalQuickFilter = false;
-	private formulaColumns: Map<string, CompiledFormula> = new Map();
-	private formulaCompileErrors: Map<string, string> = new Map();
-	private formulaColumnOrder: string[] = [];
-	private formulaLimitNoticeIssued = false;
+        private filterViewState: FileFilterViewState = this.filterStateStore.getState();
+        private initialColumnState: ColumnState[] | null = null;
+        private globalQuickFilterInputEl: HTMLInputElement | null = null;
+        private globalQuickFilterClearEl: HTMLElement | null = null;
+        private globalQuickFilterUnsubscribe: (() => void) | null = null;
+        private hasRegisteredGlobalQuickFilter = false;
 
 
-	constructor(leaf: WorkspaceLeaf) {
-		debugLog('=== TableView 构造函数开始 ===');
-		debugLog('leaf:', leaf);
-		super(leaf);
-		this.filterViewController = new FilterViewController({
-			app: this.app,
-			stateStore: this.filterStateStore,
-			getAvailableColumns: () => this.getAvailableColumns(),
+        constructor(leaf: WorkspaceLeaf) {
+                debugLog('=== TableView 构造函数开始 ===');
+                debugLog('leaf:', leaf);
+                super(leaf);
+                this.configManager = new TableConfigManager(this.app);
+                this.filterViewController = new FilterViewController({
+                        app: this.app,
+                        stateStore: this.filterStateStore,
+                        getAvailableColumns: () => this.getAvailableColumns(),
 			persist: () => this.persistFilterViews(),
 			applyActiveFilterView: () => this.applyActiveFilterView(),
 			syncState: () => this.syncFilterViewState(),
@@ -212,113 +216,13 @@ export class TableView extends ItemView {
 		});
 	}
 
-	private handleColumnOrderChange(orderedFields: string[]): void {
-		if (!this.schema) {
-			return;
-		}
-
-		const currentOrder = this.schema.columnNames;
-		if (currentOrder.length === 0) {
-			return;
-		}
-
-		const primaryField = currentOrder[0] ?? null;
-		const fixedFields = new Set<string>();
-		if (primaryField) {
-			fixedFields.add(primaryField);
-		}
-		if (currentOrder.includes('status')) {
-			fixedFields.add('status');
-		}
-
-		const movableFields = currentOrder.filter((field) => !fixedFields.has(field));
-		if (movableFields.length === 0) {
-			return;
-		}
-
-		const normalizedOrder = orderedFields
-			.map((field) => (typeof field === 'string' ? field.trim() : ''))
-			.filter((field) => field.length > 0 && field !== '#' && field !== ROW_ID_FIELD);
-
-		const reorderedMovable: string[] = [];
-		for (const field of normalizedOrder) {
-			if (fixedFields.has(field)) {
-				continue;
-			}
-			if (!movableFields.includes(field)) {
-				continue;
-			}
-			if (!reorderedMovable.includes(field)) {
-				reorderedMovable.push(field);
-			}
-		}
-
-		for (const field of movableFields) {
-			if (!reorderedMovable.includes(field)) {
-				reorderedMovable.push(field);
-			}
-		}
-
-		const nextOrder: string[] = [];
-		const appendUnique = (field: string | null) => {
-			if (!field) return;
-			if (!nextOrder.includes(field)) {
-				nextOrder.push(field);
-			}
-		};
-
-		appendUnique(primaryField);
-		if (fixedFields.has('status')) {
-			appendUnique('status');
-		}
-
-		for (const field of reorderedMovable) {
-			appendUnique(field);
-		}
-
-		if (nextOrder.length !== currentOrder.length) {
-			return;
-		}
-
-		let changed = false;
-		for (let i = 0; i < nextOrder.length; i++) {
-			if (nextOrder[i] !== currentOrder[i]) {
-				changed = true;
-				break;
-			}
-		}
-
-		if (!changed) {
-			return;
-		}
-
-		this.schema.columnNames.splice(0, this.schema.columnNames.length, ...nextOrder);
-
-		if (this.schema.columnConfigs && this.schema.columnConfigs.length > 0) {
-			const configMap = new Map(this.schema.columnConfigs.map((config) => [config.name, config]));
-			const orderedConfigs: ColumnConfig[] = [];
-			const seen = new Set<string>();
-
-			for (const field of nextOrder) {
-				const config = configMap.get(field);
-				if (config && !seen.has(config.name)) {
-					orderedConfigs.push(config);
-					seen.add(config.name);
-				}
-			}
-
-			for (const config of this.schema.columnConfigs) {
-				if (!seen.has(config.name)) {
-					orderedConfigs.push(config);
-					seen.add(config.name);
-				}
-			}
-
-			this.schema.columnConfigs = orderedConfigs.length > 0 ? orderedConfigs : undefined;
-		}
-
-		this.scheduleSave();
-	}
+        private handleColumnOrderChange(orderedFields: string[]): void {
+                const changed = this.dataStore.reorderColumns(orderedFields);
+                if (!changed) {
+                        return;
+                }
+                this.scheduleSave();
+        }
 
 
 	private deserializeColumnConfigs(raw: unknown): ColumnConfig[] | null {
@@ -338,112 +242,8 @@ export class TableView extends ItemView {
 		return result.length > 0 ? result : null;
 	}
 
-	private hasColumnConfigContent(config: ColumnConfig): boolean {
-		return Boolean(
-			(config.width && config.width.trim().length > 0) ||
-			(config.unit && config.unit.trim().length > 0) ||
-			config.hide ||
-			(config.formula && config.formula.trim().length > 0)
-		);
-	}
-
-	private serializeColumnConfig(config: ColumnConfig): string {
-		const segments: string[] = [];
-		if (config.width && config.width.trim().length > 0) {
-			segments.push(`width: ${config.width.trim()}`);
-		}
-		if (config.unit && config.unit.trim().length > 0) {
-			segments.push(`unit: ${config.unit.trim()}`);
-		}
-		if (config.formula && config.formula.trim().length > 0) {
-			segments.push(`formula: ${config.formula.trim()}`);
-		}
-		if (config.hide) {
-			segments.push('hide');
-		}
-
-		const name = config.name.trim();
-		if (segments.length === 0) {
-			return name;
-		}
-		return `${name} ${segments.map((segment) => `(${segment})`).join(' ')}`;
-	}
-
 	private getFormulaTooltipField(columnName: string): string {
 		return `${FORMULA_TOOLTIP_PREFIX}${columnName}`;
-	}
-
-	private prepareFormulaColumns(columnConfigs: ColumnConfig[] | null): void {
-		this.formulaColumns.clear();
-		this.formulaCompileErrors.clear();
-		this.formulaColumnOrder = [];
-		this.formulaLimitNoticeIssued = false;
-
-		if (!columnConfigs) {
-			return;
-		}
-
-		for (const config of columnConfigs) {
-			const rawFormula = config.formula?.trim();
-			if (!rawFormula) {
-				continue;
-			}
-			this.formulaColumnOrder.push(config.name);
-			try {
-				const compiled = compileFormula(rawFormula);
-				if (compiled.dependencies.includes(config.name)) {
-					this.formulaCompileErrors.set(config.name, '公式不允许引用自身');
-					continue;
-				}
-				this.formulaColumns.set(config.name, compiled);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				this.formulaCompileErrors.set(config.name, message);
-				debugLog('公式解析失败', { column: config.name, message });
-			}
-		}
-	}
-
-	private applyFormulaResults(row: RowData, rowCount: number): void {
-		if (this.formulaColumnOrder.length === 0) {
-			return;
-		}
-
-		const formulasEnabled = rowCount <= FORMULA_ROW_LIMIT;
-		if (!formulasEnabled && !this.formulaLimitNoticeIssued) {
-			new Notice(`公式列已停用（行数超过 ${FORMULA_ROW_LIMIT}）`);
-			this.formulaLimitNoticeIssued = true;
-		}
-
-		for (const columnName of this.formulaColumnOrder) {
-			const tooltipField = this.getFormulaTooltipField(columnName);
-			const compileError = this.formulaCompileErrors.get(columnName);
-			if (compileError) {
-				row[columnName] = FORMULA_ERROR_VALUE;
-				row[tooltipField] = `公式解析失败：${compileError}`;
-				continue;
-			}
-
-			if (!formulasEnabled) {
-				row[tooltipField] = `公式列已停用（行数超过 ${FORMULA_ROW_LIMIT}）`;
-				continue;
-			}
-
-			const compiled = this.formulaColumns.get(columnName);
-			if (!compiled) {
-				continue;
-			}
-
-			const { value, error } = evaluateFormula(compiled, row);
-			if (error) {
-				row[columnName] = FORMULA_ERROR_VALUE;
-				row[tooltipField] = `公式错误：${error}`;
-				debugLog('公式运行失败', { column: columnName, formula: compiled.original, error });
-			} else {
-				row[columnName] = value;
-				row[tooltipField] = '';
-			}
-		}
 	}
 
 	private handleColumnHeaderContextMenu(field: string, event: MouseEvent): void {
@@ -530,16 +330,18 @@ export class TableView extends ItemView {
 		const targetName = trimmedName.length > 0 ? trimmedName : field;
 		const nameChanged = targetName !== field;
 		let activeField = field;
-		if (nameChanged) {
-			const renamed = this.renameColumnField(field, targetName);
-			if (!renamed) {
-				new Notice(`重命名列失败：${targetName}`);
-				return;
-			}
-			activeField = targetName;
-		}
+                if (nameChanged) {
+                        const renamed = this.dataStore.renameColumn(field, targetName);
+                        if (!renamed) {
+                                new Notice(`重命名列失败：${targetName}`);
+                                return;
+                        }
+                        this.columnLayoutStore.rename(field, targetName);
+                        this.renameColumnInFilterViews(field, targetName);
+                        activeField = targetName;
+                }
 
-		const existingConfigs = this.schema.columnConfigs ?? [];
+                const existingConfigs = this.schema.columnConfigs ?? [];
 		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
 		let config = nextConfigs.find((item) => item.name === activeField);
 		if (!config) {
@@ -553,148 +355,18 @@ export class TableView extends ItemView {
 			delete config.formula;
 		}
 
-		if (!this.hasColumnConfigContent(config)) {
-			const index = nextConfigs.findIndex((item) => item.name === activeField);
-			if (index !== -1) {
-				nextConfigs.splice(index, 1);
-			}
-		}
+                if (!this.dataStore.hasColumnConfigContent(config)) {
+                        const index = nextConfigs.findIndex((item) => item.name === activeField);
+                        if (index !== -1) {
+                                nextConfigs.splice(index, 1);
+                        }
+                }
 
-		this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
-		this.persistColumnStructureChange();
-	}
-
-	/**
-	 * 从 H2 块提取表格数据（转换为 RowData 格式）
-	 */
-	private extractTableData(blocks: H2Block[], schema: Schema): RowData[] {
-		const data: RowData[] = [];
-		const rowCount = blocks.length;
-
-		// 所有块都是数据（没有模板H2）
-		for (let i = 0; i < blocks.length; i++) {
-			const block = blocks[i];
-			const row: RowData = {};
-
-			// 序号列（从 1 开始）
-			row['#'] = String(i + 1);
-			row[ROW_ID_FIELD] = String(i);
-
-			// 所有列都从 block.data 提取
-			for (const key of schema.columnNames) {
-				// 如果是 status 列，确保有默认值
-				if (key === 'status' && !block.data[key]) {
-					block.data[key] = 'todo';
-					// 如果没有 statusChanged，也初始化
-					if (!block.data['statusChanged']) {
-						block.data['statusChanged'] = getCurrentLocalDateTime();
-					}
-				}
-
-				row[key] = block.data[key] || '';
-			}
-
-			for (const hiddenField of this.hiddenSortableFields) {
-				if (hiddenField === '#') {
-					continue;
-				}
-				row[hiddenField] = block.data[hiddenField] || '';
-			}
-
-			this.applyFormulaResults(row, rowCount);
-
-			data.push(row);
-		}
-
-		return data;
-	}
-
-	/**
-	 * 将 blocks 数组转换回 Markdown 格式（Key:Value）
-	 * 第一个 key:value 作为 H2 标题，其余作为正文
-	 * 输出压缩属性（statusChanged 等）
-	 */
-	private blocksToMarkdown(): string {
-		if (!this.schema) return '';
-
-		const lines: string[] = [];
-
-		for (let blockIndex = 0; blockIndex < this.blocks.length; blockIndex++) {
-			const block = this.blocks[blockIndex];
-			const isSchemaBlock = blockIndex === 0;
-			// 按照 schema 顺序输出
-			let isFirstKey = true;
-
-			for (const key of this.schema.columnNames) {
-				const rawValue = block.data[key];
-				const value = rawValue ?? '';
-				const hasValue = value.trim().length > 0;
-
-				if (isFirstKey) {
-					// 第一个 key:value 作为 H2 标题
-					lines.push(`## ${key}：${value}`);
-					isFirstKey = false;
-				} else {
-					// 其他 key:value 作为正文
-					if (hasValue) {
-						lines.push(`${key}：${value}`);
-					} else if (isSchemaBlock) {
-						// schema 块需要保留空字段以维持列定义
-						lines.push(`${key}：`);
-					}
-				}
-			}
-
-			// 输出压缩属性（不在 columnNames 中的属性）
-			if (block.data['statusChanged']) {
-				lines.push(`statusChanged：${block.data['statusChanged']}`);
-			}
-
-			// H2 块之间空一行
-			lines.push('');
-		}
-
-		return lines.join('\n');
-	}
-
-	/**
-	 * 将单个 H2 块转换为 Markdown 格式
-	 * 用于复制整段功能，过滤掉空字段和系统字段
-	 */
-	private blockToMarkdown(block: H2Block): string {
-		if (!this.schema) return '';
-
-		const lines: string[] = [];
-		let isFirstKey = true;
-
-		// 系统字段列表（不复制这些字段）
-		const systemFields = new Set(['status', 'statusChanged']);
-
-		for (const key of this.schema.columnNames) {
-			// 跳过系统字段
-			if (systemFields.has(key)) {
-				continue;
-			}
-
-			const value = block.data[key] || '';
-
-			// 跳过空字段
-			if (!value.trim()) {
-				continue;
-			}
-
-			if (isFirstKey) {
-				// 第一个 key:value 作为 H2 标题
-				lines.push(`## ${key}：${value}`);
-				isFirstKey = false;
-			} else {
-				// 其他 key:value 作为正文
-				lines.push(`${key}：${value}`);
-			}
-		}
-
-		return lines.join('\n');
-	}
+                const normalized = this.normalizeColumnConfigs(nextConfigs);
+                this.schema.columnConfigs = normalized;
+                this.dataStore.setColumnConfigs(normalized);
+                this.persistColumnStructureChange();
+        }
 
 	/**
 	 * 调度保存（500ms 防抖）
@@ -714,17 +386,17 @@ export class TableView extends ItemView {
 	/**
 	 * 保存到文件
 	 */
-	private async saveToFile(): Promise<void> {
-		if (!this.file) return;
+        private async saveToFile(): Promise<void> {
+                if (!this.file) return;
 
-		try {
-			const markdown = this.blocksToMarkdown().trimEnd();
-			await this.app.vault.modify(this.file, `${markdown}\n`);
-			await this.saveConfigBlock();
-		} catch (error) {
-			console.error('❌ 保存失败:', error);
-		}
-	}
+                try {
+                        const markdown = this.dataStore.blocksToMarkdown().trimEnd();
+                        await this.app.vault.modify(this.file, `${markdown}\n`);
+                        await this.saveConfigBlock();
+                } catch (error) {
+                        console.error('❌ 保存失败:', error);
+                }
+        }
 
 	async onOpen(): Promise<void> {
 		debugLog('=== TableView.onOpen 开始 ===');
@@ -770,11 +442,12 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		this.columnLayoutStore.reset(this.file.path);
-		this.filterStateStore.setFilePath(this.file.path);
-		this.filterStateStore.resetState();
-		// 读取文件内容
-		const content = await this.app.vault.read(this.file);
+                this.columnLayoutStore.reset(this.file.path);
+                this.configManager.reset();
+                this.filterStateStore.setFilePath(this.file.path);
+                this.filterStateStore.resetState();
+                // 读取文件内容
+                const content = await this.app.vault.read(this.file);
 
 		// 尝试加载配置块（带缓存）
 		const configBlock = await this.loadConfig();
@@ -806,30 +479,34 @@ export class TableView extends ItemView {
 			});
 			return;
 		}
-		this.blocks = parsedBlocks;
+                this.blocks = parsedBlocks;
 
-		// 提取 Schema
-		const schemaResult = this.schemaBuilder.buildSchema(this.blocks, columnConfigs ?? null);
-		this.schema = schemaResult.schema;
-		this.hiddenSortableFields = schemaResult.hiddenSortableFields;
-		this.schemaDirty = schemaResult.schemaDirty;
-		this.sparseCleanupRequired = schemaResult.sparseCleanupRequired;
+                // 提取 Schema
+                const schemaResult = this.schemaBuilder.buildSchema(this.blocks, columnConfigs ?? null);
+                this.dataStore.initialise(schemaResult, columnConfigs ?? null);
+                this.schema = this.dataStore.getSchema();
+                this.hiddenSortableFields = this.dataStore.getHiddenSortableFields();
+                const dirtyFlags = this.dataStore.consumeDirtyFlags();
+                this.schemaDirty = dirtyFlags.schemaDirty;
+                this.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;
 
-		if (!this.schema) {
-			container.createDiv({ text: "无法提取表格结构" });
-			return;
-		}
+                if (!this.schema) {
+                        container.createDiv({ text: "无法提取表格结构" });
+                        return;
+                }
+                if (this.schemaDirty || this.sparseCleanupRequired) {
+                        this.scheduleSave();
+                        this.schemaDirty = false;
+                        this.sparseCleanupRequired = false;
+                }
 
-		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
-		if (this.schemaDirty || this.sparseCleanupRequired) {
-			this.scheduleSave();
-			this.schemaDirty = false;
-			this.sparseCleanupRequired = false;
-		}
-
-		// 提取数据
-		const data = this.extractTableData(this.blocks, this.schema);
-		this.allRowData = data; // 保存全部数据供过滤使用
+                // 提取数据
+                const data = this.dataStore.extractRowData({
+                        onFormulaLimitExceeded: (limit) => {
+                                new Notice(`公式列已停用（行数超过 ${limit}）`);
+                        }
+                });
+                this.allRowData = data; // 保存全部数据供过滤使用
 
 		// 准备列定义（添加序号列）
 		// 如果没有从配置块加载 filterViewState，则从插件设置加载
@@ -885,11 +562,11 @@ export class TableView extends ItemView {
 					}
 				}
 
-				const isFormulaColumn = this.formulaColumns.has(name) || this.formulaCompileErrors.has(name);
-				if (isFormulaColumn) {
-					baseColDef.editable = false;
-					(baseColDef as any).tooltipField = this.getFormulaTooltipField(name);
-				}
+                                const isFormulaColumn = this.dataStore.isFormulaColumn(name);
+                                if (isFormulaColumn) {
+                                        baseColDef.editable = false;
+                                        (baseColDef as any).tooltipField = this.dataStore.getFormulaTooltipField(name);
+                                }
 
 				const storedWidth = this.getStoredColumnWidth(name);
 				if (typeof storedWidth === "number" && name !== "#" && name !== "status") {
@@ -1324,7 +1001,7 @@ export class TableView extends ItemView {
 			if (!block) {
 				continue;
 			}
-			segments.push(this.blockToMarkdown(block));
+                        segments.push(this.dataStore.blockToMarkdown(block));
 		}
 
 		if (segments.length === 0) {
@@ -1582,7 +1259,7 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		const blockIndex = this.getBlockIndexFromRowData(rowData);
+                const blockIndex = this.dataStore.getBlockIndexFromRow(rowData);
 		if (blockIndex === null) {
 			console.error('无法解析行对应的块索引', { rowData });
 			return;
@@ -1604,28 +1281,6 @@ export class TableView extends ItemView {
 
 		// 触发保存
 		this.scheduleSave();
-	}
-
-	private getBlockIndexFromRowData(rowData: RowData | undefined): number | null {
-		if (!rowData) return null;
-
-		const direct = rowData[ROW_ID_FIELD];
-		if (direct !== undefined) {
-			const parsed = parseInt(String(direct), 10);
-			if (!Number.isNaN(parsed)) {
-				return parsed;
-			}
-		}
-
-		const fallback = rowData['#'];
-		if (fallback !== undefined) {
-			const parsedFallback = parseInt(String(fallback), 10) - 1;
-			if (!Number.isNaN(parsedFallback)) {
-				return parsedFallback;
-			}
-		}
-
-		return null;
 	}
 
 	private handleHeaderEditEvent(event: HeaderEditEvent): void {
@@ -1653,14 +1308,16 @@ export class TableView extends ItemView {
 		if (!trimmed || trimmed === oldName) {
 			return;
 		}
-		const renamed = this.renameColumnField(oldName, trimmed);
-		if (!renamed) {
-			new Notice(`重命名列失败：${trimmed}`);
-			return;
-		}
-		this.refreshGridData();
-		this.scheduleSave();
-	}
+                const renamed = this.dataStore.renameColumn(oldName, trimmed);
+                if (!renamed) {
+                        new Notice(`重命名列失败：${trimmed}`);
+                        return;
+                }
+                this.columnLayoutStore.rename(oldName, trimmed);
+                this.renameColumnInFilterViews(oldName, trimmed);
+                this.refreshGridData();
+                this.scheduleSave();
+        }
 
 	// ==================== 预留：CRUD 操作接口（SchemaStore 架构） ====================
 	// 这些方法签名为未来的 SchemaStore 集成预留接口，减少后续重构成本
@@ -1669,64 +1326,30 @@ export class TableView extends ItemView {
 	 * 添加新行（Key:Value 格式）
 	 * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
 	 */
-	private addRow(beforeRowIndex?: number, options?: { focusField?: string | null }): void {
-		if (!this.schema) {
-			console.error('Schema not initialized');
-			return;
-		}
+        private addRow(beforeRowIndex?: number, options?: { focusField?: string | null }): void {
+                if (!this.schema) {
+                        console.error('Schema not initialized');
+                        return;
+                }
 
-		const focusedCell = this.gridAdapter?.getFocusedCell?.();
-		const focusField = options?.focusField !== undefined
-			? options.focusField ?? null
-			: focusedCell?.field ?? null;
-		// 计算新条目编号
-		const entryNumber = this.blocks.length + 1;
-		const filterPrefills = this.getActiveFilterPrefills();
+                const focusedCell = this.gridAdapter?.getFocusedCell?.();
+                const focusField = options?.focusField !== undefined
+                        ? options.focusField ?? null
+                        : focusedCell?.field ?? null;
+                const filterPrefills = this.getActiveFilterPrefills();
 
-		// 创建新 H2Block（初始化所有 key）
-		const newBlock: H2Block = {
-			title: '',  // title 会在 blocksToMarkdown 时重新生成
-			data: {}
-		};
+                const insertIndex = this.dataStore.addRow(beforeRowIndex, filterPrefills);
+                if (insertIndex < 0) {
+                        console.error('Failed to add new row');
+                        return;
+                }
 
-		// 为所有列初始化值
-		for (let i = 0; i < this.schema.columnNames.length; i++) {
-			const key = this.schema.columnNames[i];
-			const prefilledValue = filterPrefills[key];
+                this.refreshGridData();
+                this.focusRow(insertIndex, focusField ?? undefined);
 
-			if (prefilledValue !== undefined) {
-				newBlock.data[key] = prefilledValue;
-			} else if (key === 'status') {
-				newBlock.data[key] = 'todo';
-			} else if (i === 0) {
-				newBlock.data[key] = `新条目 ${entryNumber}`;
-			} else {
-				newBlock.data[key] = '';
-			}
-		}
-
-		// 初始化 statusChanged 时间戳
-		newBlock.data['statusChanged'] = getCurrentLocalDateTime();
-
-		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
-			// 在指定行之前插入（rowIndex 直接对应 blocks 索引）
-			this.blocks.splice(beforeRowIndex, 0, newBlock);
-		} else {
-			// 在末尾插入
-			this.blocks.push(newBlock);
-		}
-
-		// 刷新数据缓存和视图
-		this.refreshGridData();
-
-		const insertIndex = (beforeRowIndex !== undefined && beforeRowIndex !== null)
-			? beforeRowIndex
-			: this.blocks.length - 1;
-		this.focusRow(insertIndex, focusField ?? undefined);
-
-		// 触发保存
-		this.scheduleSave();
-	}
+                // 触发保存
+                this.scheduleSave();
+        }
 
 	/**
 	 * 聚焦并选中指定行，保持视图位置
@@ -2029,33 +1652,22 @@ export class TableView extends ItemView {
 	 * 删除指定行（Key:Value 格式）
 	 * @param rowIndex 数据行索引
 	 */
-	private deleteRow(rowIndex: number): void {
-		if (!this.schema) {
-			console.error('Schema not initialized');
-			return;
-		}
+        private deleteRow(rowIndex: number): void {
+                if (!this.schema) {
+                        console.error('Schema not initialized');
+                        return;
+                }
 
-		// 边界检查（rowIndex 直接对应 blocks 索引）
-		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-			console.error('Invalid row index:', rowIndex);
-			return;
-		}
+                const focusedCell = this.gridAdapter?.getFocusedCell?.();
+                const nextIndex = this.dataStore.deleteRow(rowIndex);
+                this.refreshGridData();
 
-		const focusedCell = this.gridAdapter?.getFocusedCell?.();
+                if (nextIndex !== null && nextIndex >= 0) {
+                        this.focusRow(nextIndex, focusedCell?.field);
+                }
 
-		// 删除块
-		this.blocks.splice(rowIndex, 1);
-
-		// 刷新数据缓存和视图
-		this.refreshGridData();
-
-		const nextIndex = Math.min(rowIndex, this.blocks.length - 1);
-		if (nextIndex >= 0) {
-			this.focusRow(nextIndex, focusedCell?.field);
-		}
-
-		// 触发保存
-		this.scheduleSave();
+                // 触发保存
+                this.scheduleSave();
 	}
 
 	/**
@@ -2068,32 +1680,19 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		if (rowIndexes.length === 0) {
-			return;
-		}
+                if (rowIndexes.length === 0) {
+                        return;
+                }
 
-		// 排序索引（从大到小），避免删除时索引偏移
-		const sortedIndexes = [...rowIndexes].sort((a, b) => b - a);
+                const nextIndex = this.dataStore.deleteRows(rowIndexes);
+                this.refreshGridData();
 
-		// 删除所有选中的行
-		for (const index of sortedIndexes) {
-			if (index >= 0 && index < this.blocks.length) {
-				this.blocks.splice(index, 1);
-			}
-		}
+                if (nextIndex !== null && nextIndex >= 0) {
+                        this.focusRow(nextIndex);
+                }
 
-		// 刷新数据缓存和视图
-		this.refreshGridData();
-
-		// 聚焦到最小索引位置的下一行
-		const minIndex = Math.min(...rowIndexes);
-		const nextIndex = Math.min(minIndex, this.blocks.length - 1);
-		if (nextIndex >= 0) {
-			this.focusRow(nextIndex);
-		}
-
-		// 触发保存
-		this.scheduleSave();
+                // 触发保存
+                this.scheduleSave();
 	}
 
 	/**
@@ -2113,29 +1712,12 @@ export class TableView extends ItemView {
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 
 		// 排序索引（从大到小），避免插入时索引偏移
-		const sortedIndexes = [...rowIndexes].sort((a, b) => b - a);
+                const newIndex = this.dataStore.duplicateRows(rowIndexes);
+                this.refreshGridData();
 
-		// 复制所有选中的行（从高索引到低索引，保持插入位置正确）
-		for (const index of sortedIndexes) {
-			if (index >= 0 && index < this.blocks.length) {
-				const sourceBlock = this.blocks[index];
-				const duplicatedBlock: H2Block = {
-					title: sourceBlock.title,
-					data: { ...sourceBlock.data }
-				};
-
-				// 在源块之后插入复制的块
-				this.blocks.splice(index + 1, 0, duplicatedBlock);
-			}
-		}
-
-		// 刷新数据缓存和视图
-		this.refreshGridData();
-
-		// 聚焦到最小索引对应的复制行（最小索引 + 1）
-		const minIndex = Math.min(...rowIndexes);
-		const newIndex = minIndex + 1;
-		this.focusRow(newIndex, focusedCell?.field);
+                if (newIndex !== null && newIndex >= 0) {
+                        this.focusRow(newIndex, focusedCell?.field);
+                }
 
 		// 触发保存
 		this.scheduleSave();
@@ -2160,65 +1742,42 @@ export class TableView extends ItemView {
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
 
 		// 深拷贝目标块
-		const sourceBlock = this.blocks[rowIndex];
-		const duplicatedBlock: H2Block = {
-			title: sourceBlock.title,
-			data: { ...sourceBlock.data }
-		};
+                const newIndex = this.dataStore.duplicateRow(rowIndex);
+                this.refreshGridData();
 
-		// 在源块之后插入复制的块
-		this.blocks.splice(rowIndex + 1, 0, duplicatedBlock);
-
-		// 刷新数据缓存和视图
-		this.refreshGridData();
-
-		const newIndex = rowIndex + 1;
-		this.focusRow(newIndex, focusedCell?.field);
+                if (newIndex !== null && newIndex >= 0) {
+                        this.focusRow(newIndex, focusedCell?.field);
+                }
 
 		// 触发保存
 		this.scheduleSave();
 	}
 
-	private duplicateColumn(field: string): void {
-		if (!this.schema) {
-			return;
-		}
-		const baseName = `${field} (副本)`;
-		let candidate = baseName;
-		let counter = 2;
-		while (this.schema.columnNames.includes(candidate)) {
-			candidate = `${baseName} ${counter}`;
-			counter++;
-		}
-		const created = this.insertColumnInternal({
-			newName: candidate,
-			afterField: field,
-			templateField: field,
-			copyData: true
-		});
-		if (!created) {
-			new Notice('复制列失败，请稍后重试');
-			return;
-		}
-		this.persistColumnStructureChange({ notice: `已复制列：${candidate}` });
-		this.openColumnEditModal(candidate);
-	}
+        private duplicateColumn(field: string): void {
+                if (!this.schema) {
+                        return;
+                }
+                const newName = this.dataStore.duplicateColumn(field);
+                if (!newName) {
+                        new Notice('复制列失败，请稍后重试');
+                        return;
+                }
+                this.columnLayoutStore.clone(field, newName);
+                this.persistColumnStructureChange({ notice: `已复制列：${newName}` });
+                this.openColumnEditModal(newName);
+        }
 
 	private insertColumnAfter(field: string): void {
 		if (!this.schema) {
 			return;
 		}
-		const newName = this.generateUniqueColumnName('新列');
-		const created = this.insertColumnInternal({
-			newName,
-			afterField: field
-		});
-		if (!created) {
-			new Notice('插入新列失败，请稍后重试');
-			return;
-		}
-		this.persistColumnStructureChange({ notice: `已插入列：${newName}` });
-		this.openColumnEditModal(newName);
+                const newName = this.dataStore.insertColumnAfter(field);
+                if (!newName) {
+                        new Notice('插入新列失败，请稍后重试');
+                        return;
+                }
+                this.persistColumnStructureChange({ notice: `已插入列：${newName}` });
+                this.openColumnEditModal(newName);
 	}
 
 	private removeColumn(field: string): void {
@@ -2229,103 +1788,25 @@ export class TableView extends ItemView {
 		if (!target || target === '#' || target === 'status' || target === ROW_ID_FIELD) {
 			return;
 		}
-		const index = this.schema.columnNames.indexOf(target);
-		if (index === -1) {
-			return;
-		}
-		this.schema.columnNames.splice(index, 1);
+                const removed = this.dataStore.removeColumn(target);
+                if (!removed) {
+                        return;
+                }
+                this.columnLayoutStore.remove(target);
+                this.removeColumnFromFilterViews(target);
+                this.persistColumnStructureChange({ notice: `已删除列：${target}` });
+        }
 
-		if (this.schema.columnConfigs && this.schema.columnConfigs.length > 0) {
-			const nextConfigs = this.schema.columnConfigs.filter((config) => config.name !== target);
-			this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
-		}
-
-		this.columnLayoutStore.remove(target);
-
-		this.hiddenSortableFields.delete(target);
-		this.formulaColumns.delete(target);
-		this.formulaCompileErrors.delete(target);
-		const orderIndex = this.formulaColumnOrder.indexOf(target);
-		if (orderIndex !== -1) {
-			this.formulaColumnOrder.splice(orderIndex, 1);
-		}
-
-		for (const block of this.blocks) {
-			if (Object.prototype.hasOwnProperty.call(block.data, target)) {
-				delete block.data[target];
-			}
-		}
-
-		this.removeColumnFromFilterViews(target);
-		this.persistColumnStructureChange({ notice: `已删除列：${target}` });
-	}
-
-	private insertColumnInternal(options: {
-		newName: string;
-		afterField?: string | null;
-		templateField?: string | null;
-		copyData?: boolean;
-	}): boolean {
-		if (!this.schema) {
-			return false;
-		}
-		const trimmedName = options.newName.trim();
-		if (!trimmedName || this.schema.columnNames.includes(trimmedName)) {
-			return false;
-		}
-		let insertIndex = this.schema.columnNames.length;
-		if (options.afterField) {
-			const idx = this.schema.columnNames.indexOf(options.afterField);
-			if (idx !== -1) {
-				insertIndex = idx + 1;
-			}
-		}
-		this.schema.columnNames.splice(insertIndex, 0, trimmedName);
-
-		const templateField = options.templateField ?? null;
-		const currentConfigs = this.schema.columnConfigs ?? [];
-		const clonedConfigs = currentConfigs.map((config) => ({ ...config }));
-		if (templateField) {
-			const sourceConfig = currentConfigs.find((config) => config.name === templateField) ?? null;
-			if (sourceConfig) {
-				clonedConfigs.push({ ...sourceConfig, name: trimmedName });
-			} else {
-				const compiled = this.formulaColumns.get(templateField);
-				if (compiled) {
-					clonedConfigs.push({ name: trimmedName, formula: compiled.original });
-				}
-			}
-		}
-		this.schema.columnConfigs = this.normalizeColumnConfigs(clonedConfigs);
-
-		const shouldCopyData = Boolean(options.copyData && templateField);
-		for (const block of this.blocks) {
-			const baseValue = shouldCopyData && templateField
-				? block.data[templateField] ?? ''
-				: '';
-			block.data[trimmedName] = baseValue;
-		}
-
-		if (templateField) {
-			this.columnLayoutStore.clone(templateField, trimmedName);
-		}
-
-		if (templateField && this.hiddenSortableFields.has(templateField)) {
-			this.hiddenSortableFields.add(trimmedName);
-		}
-
-		return true;
-	}
-
-	private persistColumnStructureChange(options?: { notice?: string }): void {
-		if (!this.schema) {
-			return;
-		}
-		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
-		this.refreshGridData();
-		if (options?.notice) {
-			new Notice(options.notice);
-		}
+        private persistColumnStructureChange(options?: { notice?: string }): void {
+                if (!this.schema) {
+                        return;
+                }
+                this.schema = this.dataStore.getSchema();
+                this.hiddenSortableFields = this.dataStore.getHiddenSortableFields();
+                this.refreshGridData();
+                if (options?.notice) {
+                        new Notice(options.notice);
+                }
 		if (this.saveTimeout) {
 			clearTimeout(this.saveTimeout);
 			this.saveTimeout = null;
@@ -2355,74 +1836,6 @@ export class TableView extends ItemView {
 		}
 		filtered.sort((a, b) => (orderMap.get(a.name) ?? 0) - (orderMap.get(b.name) ?? 0));
 		return filtered;
-	}
-
-	private generateUniqueColumnName(base: string): string {
-		const normalizedBase = base.trim().length > 0 ? base.trim() : '新列';
-		if (!this.schema) {
-			return normalizedBase;
-		}
-		const existing = new Set(this.schema.columnNames);
-		if (!existing.has(normalizedBase)) {
-			return normalizedBase;
-		}
-		let counter = 2;
-		let candidate = `${normalizedBase} ${counter}`;
-		while (existing.has(candidate)) {
-			counter++;
-			candidate = `${normalizedBase} ${counter}`;
-		}
-		return candidate;
-	}
-
-	private renameColumnField(oldName: string, newName: string): boolean {
-		if (!this.schema) {
-			return false;
-		}
-		const trimmed = newName.trim();
-		if (!trimmed || trimmed === '#' || trimmed === 'status' || trimmed === ROW_ID_FIELD) {
-			return false;
-		}
-		if (trimmed === oldName) {
-			return true;
-		}
-		if (this.schema.columnNames.includes(trimmed)) {
-			return false;
-		}
-		const index = this.schema.columnNames.indexOf(oldName);
-		if (index === -1) {
-			return false;
-		}
-		this.schema.columnNames[index] = trimmed;
-
-		if (this.schema.columnConfigs && this.schema.columnConfigs.length > 0) {
-			const nextConfigs = this.schema.columnConfigs.map((config) => ({ ...config }));
-			for (const config of nextConfigs) {
-				if (config.name === oldName) {
-					config.name = trimmed;
-				}
-			}
-			this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
-		}
-
-		this.columnLayoutStore.rename(oldName, trimmed);
-
-		if (this.hiddenSortableFields.has(oldName)) {
-			this.hiddenSortableFields.delete(oldName);
-			this.hiddenSortableFields.add(trimmed);
-		}
-
-		this.renameColumnInFilterViews(oldName, trimmed);
-
-		for (const block of this.blocks) {
-			if (Object.prototype.hasOwnProperty.call(block.data, oldName)) {
-				const value = block.data[oldName];
-				delete block.data[oldName];
-				block.data[trimmed] = value;
-			}
-		}
-
-		return true;
 	}
 
 	private renameColumnInFilterViews(oldName: string, newName: string): void {
@@ -2696,8 +2109,12 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		// 从 blocks 重新提取完整数据
-		this.allRowData = this.extractTableData(this.blocks, this.schema);
+                // 从 blocks 重新提取完整数据
+                this.allRowData = this.dataStore.extractRowData({
+                        onFormulaLimitExceeded: (limit) => {
+                                new Notice(`公式列已停用（行数超过 ${limit}）`);
+                        }
+                });
 
 		// 根据当前激活的过滤视图决定显示哪些数据
 		const targetId = this.filterViewState.activeViewId;
@@ -2881,224 +2298,34 @@ export class TableView extends ItemView {
 	/**
 	 * 生成文件唯一ID（UUID前8位）
 	 */
-	private generateFileId(): string {
-		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-			const uuid = crypto.randomUUID();
-			return uuid.split('-')[0]; // 取前8位
-		}
-		// 备用方案
-		return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-	}
-
-	/**
-	 * 从 metadataCache.headings 提取元数据
-	 * 格式：## tlb <fileId> <version>
-	 */
-	private extractMetadataFromHeadings(file: TFile): { fileId: string; version: number } | null {
-		const cache = this.app.metadataCache.getFileCache(file);
-		if (!cache?.headings) return null;
-
-		// 找到最后一个 "## tlb ..." 标题
-		const tlbHeading = cache.headings
-			.filter(h => h.level === 2 && h.heading.startsWith('tlb '))
-			.pop();
-
-		if (!tlbHeading) return null;
-
-		// 解析：## tlb 550e8400 1705123456789
-		const parts = tlbHeading.heading.split(' ');
-		if (parts.length !== 3) return null;
-
-		const fileId = parts[1];
-		const version = parseInt(parts[2], 10);
-
-		if (!fileId || isNaN(version)) return null;
-
-		return { fileId, version };
-	}
-
-	/**
-	 * 解析完整配置块
-	 * 查找最后一个 "## tlb <fileId> <version>" 后的 ```tlb ... ``` 块
-	 */
-	private parseConfigBlock(content: string, fileId: string): Record<string, any> | null {
-		// 找到最后一个 "## tlb <fileId> <version>" 的位置
-		const headerRegex = new RegExp(`^## tlb ${fileId} \\d+$`, 'gm');
-		let lastMatch: RegExpExecArray | null = null;
-		let match: RegExpExecArray | null;
-
-		while ((match = headerRegex.exec(content)) !== null) {
-			lastMatch = match;
-		}
-
-		if (!lastMatch) return null;
-
-		// 从该位置开始，找到下一个 ```tlb ... ``` 块
-		const afterHeader = content.substring(lastMatch.index);
-		const blockRegex = /```tlb\s*\n([\s\S]*?)\n```/;
-		const blockMatch = afterHeader.match(blockRegex);
-
-		if (!blockMatch) return null;
-
-		// 逐行解析配置
-		const lines = blockMatch[1].split(/\r?\n/); // 兼容 CRLF
-		const config: any = {};
-
-		for (const line of lines) {
-			const trimmed = line.trim();
-			if (!trimmed) continue;
-
-			const colonIndex = trimmed.indexOf(':');
-			if (colonIndex === -1) continue;
-
-			const key = trimmed.substring(0, colonIndex);
-			const valueJson = trimmed.substring(colonIndex + 1);
-
-			try {
-				config[key] = JSON.parse(valueJson);
-			} catch (error) {
-				console.error(`[TileLineBase] Failed to parse config line: ${key}`, error);
-			}
-		}
-
-		return config;
-	}
-
 	/**
 	 * 加载配置（带缓存机制）
 	 */
-	private async loadConfig(): Promise<Record<string, any> | null> {
-		if (!this.file) return null;
-
-		// 1. 从 metadataCache.headings 快速提取元数据
-		const meta = this.extractMetadataFromHeadings(this.file);
-
-		if (!meta) {
-			// 无配置块标题，返回 null（稍后自动迁移）
-			return null;
-		}
-
-		this.fileId = meta.fileId;
-
-		// 2. 查询缓存
-		const plugin = getPluginContext();
-		const cacheManager = plugin?.cacheManager;
-		const cachedVersion = cacheManager?.getCachedVersion(meta.fileId);
-
-		if (cachedVersion === meta.version) {
-			// 缓存命中，直接返回 ✨
-			const cached = cacheManager?.getCache(meta.fileId);
-			if (cached) {
-				console.log('[TileLineBase] Cache hit for file:', this.file.path);
-				return cached as Record<string, any>;
-			}
-		}
-
-		// 3. 缓存失效，读取文件并解析配置块
-		console.log('[TileLineBase] Cache miss, parsing config block...');
-		const content = await this.app.vault.read(this.file);
-		const config = this.parseConfigBlock(content, meta.fileId);
-
-		if (!config) {
-			console.warn('[TileLineBase] Failed to parse config block');
-			return null;
-		}
-
-		// 4. 更新缓存
-		if (cacheManager) {
-			cacheManager.setCache(meta.fileId, this.file.path, meta.version, config);
-		}
-
-		return config;
-	}
+        private async loadConfig(): Promise<Record<string, any> | null> {
+                if (!this.file) return null;
+                return this.configManager.load(this.file);
+        }
 
 	/**
 	 * 保存配置块（二级标题 + 配置块）
 	 */
-	private async saveConfigBlock(): Promise<void> {
-		if (!this.file) return;
+        private async saveConfigBlock(): Promise<void> {
+                if (!this.file) return;
 
-		// 确保有 fileId
-		if (!this.fileId) {
-			this.fileId = this.generateFileId();
-		}
+                const columnConfigs = this.schema?.columnConfigs
+                        ? this.schema.columnConfigs
+                                .filter((config) => this.dataStore.hasColumnConfigContent(config))
+                                .map((config) => this.dataStore.serializeColumnConfig(config))
+                        : [];
+                const widthPrefs = this.columnLayoutStore.exportPreferences();
 
-		// 更新版本号
-		const version = Date.now();
-
-		// 构造配置块内容
-		const lines: string[] = [];
-
-		if (this.filterViewState) {
-			lines.push(`filterViews:${JSON.stringify(this.filterViewState)}`);
-		}
-		const widthPrefs = this.columnLayoutStore.exportPreferences();
-		if (Object.keys(widthPrefs).length > 0) {
-			lines.push(`columnWidths:${JSON.stringify(widthPrefs)}`);
-		}
-		if (this.schema?.columnConfigs && this.schema.columnConfigs.length > 0) {
-			const serializedColumns = this.schema.columnConfigs
-				.filter((config) => this.hasColumnConfigContent(config))
-				.map((config) => this.serializeColumnConfig(config));
-			if (serializedColumns.length > 0) {
-				lines.push(`columnConfigs:${JSON.stringify(serializedColumns)}`);
-			}
-		}
-		lines.push(`viewPreference:table`);
-
-		const configBlock = `\`\`\`tlb\n${lines.join('\n')}\n\`\`\``;
-
-		// 读取当前文件内容
-		const content = await this.app.vault.read(this.file);
-
-		// 移除旧的配置块（包括标题和代码块）
-		// 匹配：## tlb <id> <version> 后跟 ```tlb ... ```
-		const oldConfigRegex = new RegExp(
-			`## tlb ${this.fileId} \\d+\\s*\\n\`\`\`tlb\\s*\\n[\\s\\S]*?\\n\`\`\``,
-			'g'
-		);
-		let newContent = content.replace(oldConfigRegex, '');
-
-		// 如果没找到旧配置块，尝试移除任意配置块
-		if (newContent === content) {
-			newContent = content.replace(/## tlb \w+ \d+\s*\n```tlb\s*\n[\s\S]*?\n```/g, '');
-		}
-
-		// 在文件末尾添加新配置块
-		const fullConfigBlock = `## tlb ${this.fileId} ${version}\n${configBlock}`;
-		newContent = `${newContent.trimEnd()}\n\n${fullConfigBlock}\n`;
-
-		await this.app.vault.modify(this.file, newContent);
-
-		// 更新缓存
-		const plugin = getPluginContext();
-		const cacheManager = plugin?.cacheManager;
-		if (cacheManager) {
-			const config: Record<string, any> = {
-				filterViews: this.filterViewState,
-				columnWidths: widthPrefs,
-				columnConfigs: this.schema?.columnConfigs
-					? this.schema.columnConfigs
-						.filter((cfg) => this.hasColumnConfigContent(cfg))
-						.map((cfg) => this.serializeColumnConfig(cfg))
-					: [],
-				viewPreference: 'table'
-			};
-			cacheManager.setCache(this.fileId, this.file.path, version, config);
-		}
-
-		// 同步到插件设置（向后兼容）
-		if (plugin) {
-			if (this.filterViewState) {
-				await plugin.saveFilterViewsForFile(this.file.path, this.filterViewState);
-			}
-			if (Object.keys(widthPrefs).length > 0) {
-				for (const [field, width] of Object.entries(widthPrefs)) {
-					plugin.updateColumnWidthPreference(this.file.path, field, width);
-				}
-			}
-		}
-	}
+                await this.configManager.save(this.file, {
+                        filterViews: this.filterViewState,
+                        columnWidths: widthPrefs,
+                        columnConfigs,
+                        viewPreference: 'table'
+                });
+        }
 
 	async onClose(): Promise<void> {
 		this.cleanupGlobalQuickFilter();

@@ -26,10 +26,16 @@ export interface FilterRule {
 	combineMode: 'AND' | 'OR';     // 组合方式
 }
 
+export interface SortRule {
+	column: string;
+	direction: 'asc' | 'desc';
+}
+
 export interface FilterViewDefinition {
 	id: string;
 	name: string;
 	filterRule: FilterRule | null;  // 改用自定义过滤规则
+	sortRules: SortRule[];
 	columnState?: any[] | null;
 	quickFilter?: string | null;
 }

@@ -4,27 +4,33 @@ const STORAGE_FLAG_KEY = 'tileLineBaseDebug';
 let cachedDebugState: boolean | null = null;
 
 function readDebugFlag(): boolean {
-	if (cachedDebugState != null) {
-		return cachedDebugState;
-	}
-
 	try {
 		const globalObj = typeof globalThis !== 'undefined' ? (globalThis as Record<string, any>) : {};
 		if (typeof globalObj[GLOBAL_FLAG_KEY] === 'boolean') {
-			cachedDebugState = globalObj[GLOBAL_FLAG_KEY];
-			return cachedDebugState;
+			const current = globalObj[GLOBAL_FLAG_KEY];
+			if (cachedDebugState !== current) {
+				cachedDebugState = current;
+			}
+			return current;
 		}
 
 		const storage = globalObj?.localStorage;
 		if (storage && typeof storage.getItem === 'function') {
 			const value = storage.getItem(STORAGE_FLAG_KEY);
 			if (value != null) {
-				cachedDebugState = value === '1' || value.toLowerCase() === 'true';
-				return cachedDebugState;
+				const current = value === '1' || value.toLowerCase() === 'true';
+				if (cachedDebugState !== current) {
+					cachedDebugState = current;
+				}
+				return current;
 			}
 		}
 	} catch (error) {
-		// ignore storage/security errors and fall back to disabled
+		// ignore storage/security errors and fall back to cached state
+	}
+
+	if (cachedDebugState != null) {
+		return cachedDebugState;
 	}
 
 	cachedDebugState = false;

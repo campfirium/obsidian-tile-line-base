@@ -70,6 +70,7 @@ export class AgGridAdapter implements GridAdapter {
 	private columnApi: any = null;
 	private ready = false;
 	private readyCallbacks: Array<() => void> = [];
+	private modelUpdatedCallbacks: Array<() => void> = [];
 	private proxyRealignTimer: number | null = null;
 	private viewportListenerCleanup: (() => void) | null = null;
 
@@ -167,12 +168,29 @@ export class AgGridAdapter implements GridAdapter {
 		}
 	}
 
+	private emitModelUpdated(): void {
+		if (this.modelUpdatedCallbacks.length === 0) {
+			return;
+		}
+		for (const callback of this.modelUpdatedCallbacks) {
+			try {
+				callback();
+			} catch (error) {
+				console.error('[AgGridAdapter] onModelUpdated callback failed', error);
+			}
+		}
+	}
+
 	runWhenReady(callback: () => void): void {
 		if (this.ready) {
 			callback();
 			return;
 		}
 		this.readyCallbacks.push(callback);
+	}
+
+	onModelUpdated(callback: () => void): void {
+		this.modelUpdatedCallbacks.push(callback);
 	}
 
 	private requestProxyRealign(reason: string): void {
@@ -804,6 +822,12 @@ export class AgGridAdapter implements GridAdapter {
 			onFirstDataRendered: () => {
 				this.resizeColumns();
 			},
+			onModelUpdated: () => {
+				this.emitModelUpdated();
+			},
+			onRowDataUpdated: () => {
+				this.emitModelUpdated();
+			},
 
 		// 提供稳定的行 ID（用于增量更新和状态管理）
 		getRowId: (params) => {
@@ -1129,6 +1153,7 @@ export class AgGridAdapter implements GridAdapter {
 		}
 		this.ready = false;
 		this.readyCallbacks = [];
+		this.modelUpdatedCallbacks = [];
 		this.columnApi = null;
 		this.cancelPendingCapture('destroy');
 		if (this.proxyRealignTimer != null) {

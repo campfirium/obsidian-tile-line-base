@@ -447,43 +447,49 @@ export class TableView extends ItemView {
 	 * 格式：列名 (width: 30%) (unit: 分钟) (hide)
 	 */
 	private parseColumnDefinition(line: string): ColumnConfig | null {
-		const nameMatch = line.match(/^([^(]+)/);
-		if (!nameMatch) return null;
+		const trimmed = line.trim();
+		if (trimmed.length === 0) {
+			return null;
+		}
 
-		const name = nameMatch[1].trim();
-		const config: ColumnConfig = { name };
-		let index = nameMatch[0].length;
-		const length = line.length;
+		const config: ColumnConfig = { name: '' };
+		const length = trimmed.length;
+		let index = 0;
+		let nameBuilder = '';
 
 		while (index < length) {
-			const char = line[index];
+			const char = trimmed[index];
 			if (char !== '(') {
+				nameBuilder += char;
 				index++;
 				continue;
 			}
 
-			let depth = 1;
-			let cursor = index + 1;
-			while (cursor < length && depth > 0) {
-				const current = line[cursor];
-				if (current === '(') {
-					depth++;
-				} else if (current === ')') {
-					depth--;
-				}
-				cursor++;
-			}
-
-			if (depth !== 0) {
+			const closingIndex = this.findMatchingParenthesis(trimmed, index);
+			if (closingIndex === -1) {
+				nameBuilder += trimmed.slice(index);
 				break;
 			}
 
-			const segment = line.slice(index + 1, cursor - 1).trim();
-			if (segment.length > 0) {
+			const segment = trimmed.slice(index + 1, closingIndex).trim();
+			if (this.isConfigSegment(segment)) {
 				this.applyColumnConfigSegment(config, segment);
+			} else {
+				nameBuilder += trimmed.slice(index, closingIndex + 1);
 			}
 
-			index = cursor;
+			index = closingIndex + 1;
+		}
+
+		const normalizedName = nameBuilder.trim();
+		if (normalizedName.length === 0) {
+			config.name = trimmed;
+		} else {
+			config.name = normalizedName.replace(/\s+/g, ' ');
+		}
+
+		if (config.name.length === 0) {
+			return null;
 		}
 
 		return config;
@@ -661,6 +667,22 @@ export class TableView extends ItemView {
 				this.openColumnEditModal(field);
 			});
 		});
+		menu.addItem((item) => {
+			item.setTitle('复制列').setIcon('copy').onClick(() => {
+				this.duplicateColumn(field);
+			});
+		});
+		menu.addItem((item) => {
+			item.setTitle('插入列').setIcon('plus').onClick(() => {
+				this.insertColumnAfter(field);
+			});
+		});
+		menu.addSeparator();
+		menu.addItem((item) => {
+			item.setTitle('删除列').setIcon('trash').onClick(() => {
+				this.removeColumn(field);
+			});
+		});
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });
 	}
 
@@ -672,10 +694,27 @@ export class TableView extends ItemView {
 		const existing = configs.find((config) => config.name === field);
 		const initialType: ColumnFieldType = existing?.formula?.trim() ? 'formula' : 'text';
 		const initialFormula = existing?.formula ?? '';
+		const validateName = (name: string): string | null => {
+			const trimmed = name.trim();
+			if (trimmed.length === 0) {
+				return '列名称不能为空';
+			}
+			if (trimmed === field) {
+				return null;
+			}
+			if (trimmed === '#' || trimmed === ROW_ID_FIELD || trimmed === 'status') {
+				return '该名称已被系统保留';
+			}
+			if (this.schema?.columnNames?.some((item) => item === trimmed)) {
+				return '列名称已存在';
+			}
+			return null;
+		};
 		const modal = new ColumnEditorModal(this.app, {
 			columnName: field,
 			initialType,
 			initialFormula,
+			validateName,
 			onSubmit: (result) => {
 				this.applyColumnEditResult(field, result);
 			},
@@ -689,11 +728,24 @@ export class TableView extends ItemView {
 			return;
 		}
 
+		const trimmedName = result.name.trim();
+		const targetName = trimmedName.length > 0 ? trimmedName : field;
+		const nameChanged = targetName !== field;
+		let activeField = field;
+		if (nameChanged) {
+			const renamed = this.renameColumnField(field, targetName);
+			if (!renamed) {
+				new Notice(`重命名列失败：${targetName}`);
+				return;
+			}
+			activeField = targetName;
+		}
+
 		const existingConfigs = this.schema.columnConfigs ?? [];
 		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
-		let config = nextConfigs.find((item) => item.name === field);
+		let config = nextConfigs.find((item) => item.name === activeField);
 		if (!config) {
-			config = { name: field };
+			config = { name: activeField };
 			nextConfigs.push(config);
 		}
 
@@ -704,26 +756,14 @@ export class TableView extends ItemView {
 		}
 
 		if (!this.hasColumnConfigContent(config)) {
-			const index = nextConfigs.findIndex((item) => item.name === field);
+			const index = nextConfigs.findIndex((item) => item.name === activeField);
 			if (index !== -1) {
 				nextConfigs.splice(index, 1);
 			}
 		}
 
-		this.schema.columnConfigs = nextConfigs.length > 0 ? nextConfigs : undefined;
-
-		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
-		this.refreshGridData();
-
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout);
-			this.saveTimeout = null;
-		}
-
-		void (async () => {
-			await this.saveToFile();
-			await this.render();
-		})();
+		this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
+		this.persistColumnStructureChange();
 	}
 
 	/**
@@ -1991,26 +2031,21 @@ export class TableView extends ItemView {
 	 * 重命名列名（key）
 	 */
 	private onHeaderEdit(colIndex: number, newValue: string): void {
-		if (!this.schema || this.blocks.length === 0) {
-			console.error('Invalid schema or blocks');
+		if (!this.schema || colIndex < 0 || colIndex >= this.schema.columnNames.length) {
+			console.error('Invalid schema or column index');
 			return;
 		}
-
-		const oldKey = this.schema.columnNames[colIndex];
-
-		// 更新 schema
-		this.schema.columnNames[colIndex] = newValue;
-
-		// 遍历所有 blocks，重命名 key
-		for (const block of this.blocks) {
-			if (oldKey in block.data) {
-				const value = block.data[oldKey];
-				delete block.data[oldKey];
-				block.data[newValue] = value;
-			}
+		const oldName = this.schema.columnNames[colIndex];
+		const trimmed = newValue.trim();
+		if (!trimmed || trimmed === oldName) {
+			return;
 		}
-
-		// 触发保存
+		const renamed = this.renameColumnField(oldName, trimmed);
+		if (!renamed) {
+			new Notice(`重命名列失败：${trimmed}`);
+			return;
+		}
+		this.refreshGridData();
 		this.scheduleSave();
 	}
 
@@ -2531,32 +2566,350 @@ export class TableView extends ItemView {
 		this.scheduleSave();
 	}
 
-	/**
-	 * 添加新列
-	 * @param afterColumnId 在指定列后插入
-	 * TODO: T0010+ - 实现添加列功能（需要 columnId 系统）
-	 */
-	private addColumn(afterColumnId?: string): void {
-		console.warn('addColumn not implemented yet. Coming in T0010+.');
+	private duplicateColumn(field: string): void {
+		if (!this.schema) {
+			return;
+		}
+		const baseName = `${field} (副本)`;
+		let candidate = baseName;
+		let counter = 2;
+		while (this.schema.columnNames.includes(candidate)) {
+			candidate = `${baseName} ${counter}`;
+			counter++;
+		}
+		const created = this.insertColumnInternal({
+			newName: candidate,
+			afterField: field,
+			templateField: field,
+			copyData: true
+		});
+		if (!created) {
+			new Notice('复制列失败，请稍后重试');
+			return;
+		}
+		this.persistColumnStructureChange({ notice: `已复制列：${candidate}` });
+		this.openColumnEditModal(candidate);
 	}
 
-	/**
-	 * 删除指定列
-	 * @param columnId 列的稳定 ID
-	 * TODO: T0010+ - 实现删除列功能（需要 columnId 系统）
-	 */
-	private deleteColumn(columnId: string): void {
-		console.warn('deleteColumn not implemented yet. Coming in T0010+.');
+	private insertColumnAfter(field: string): void {
+		if (!this.schema) {
+			return;
+		}
+		const newName = this.generateUniqueColumnName('新列');
+		const created = this.insertColumnInternal({
+			newName,
+			afterField: field
+		});
+		if (!created) {
+			new Notice('插入新列失败，请稍后重试');
+			return;
+		}
+		this.persistColumnStructureChange({ notice: `已插入列：${newName}` });
+		this.openColumnEditModal(newName);
 	}
 
-	/**
-	 * 重命名列（通过 columnId）
-	 * @param columnId 列的稳定 ID
-	 * @param newName 新的列名
-	 * TODO: T0010+ - 实现列重命名功能（需要 columnId 系统）
-	 */
-	private renameColumn(columnId: string, newName: string): void {
-		console.warn('renameColumn not implemented yet. Coming in T0010+.');
+	private removeColumn(field: string): void {
+		if (!this.schema) {
+			return;
+		}
+		const target = field.trim();
+		if (!target || target === '#' || target === 'status' || target === ROW_ID_FIELD) {
+			return;
+		}
+		const index = this.schema.columnNames.indexOf(target);
+		if (index === -1) {
+			return;
+		}
+		this.schema.columnNames.splice(index, 1);
+
+		if (this.schema.columnConfigs && this.schema.columnConfigs.length > 0) {
+			const nextConfigs = this.schema.columnConfigs.filter((config) => config.name !== target);
+			this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
+		}
+
+		const widthPrefs = this.ensureColumnWidthPrefs();
+		if (Object.prototype.hasOwnProperty.call(widthPrefs, target)) {
+			delete widthPrefs[target];
+		}
+
+		this.hiddenSortableFields.delete(target);
+		this.formulaColumns.delete(target);
+		this.formulaCompileErrors.delete(target);
+		const orderIndex = this.formulaColumnOrder.indexOf(target);
+		if (orderIndex !== -1) {
+			this.formulaColumnOrder.splice(orderIndex, 1);
+		}
+
+		for (const block of this.blocks) {
+			if (Object.prototype.hasOwnProperty.call(block.data, target)) {
+				delete block.data[target];
+			}
+		}
+
+		this.removeColumnFromFilterViews(target);
+		this.persistColumnStructureChange({ notice: `已删除列：${target}` });
+	}
+
+	private insertColumnInternal(options: {
+		newName: string;
+		afterField?: string | null;
+		templateField?: string | null;
+		copyData?: boolean;
+	}): boolean {
+		if (!this.schema) {
+			return false;
+		}
+		const trimmedName = options.newName.trim();
+		if (!trimmedName || this.schema.columnNames.includes(trimmedName)) {
+			return false;
+		}
+		let insertIndex = this.schema.columnNames.length;
+		if (options.afterField) {
+			const idx = this.schema.columnNames.indexOf(options.afterField);
+			if (idx !== -1) {
+				insertIndex = idx + 1;
+			}
+		}
+		this.schema.columnNames.splice(insertIndex, 0, trimmedName);
+
+		const templateField = options.templateField ?? null;
+		const currentConfigs = this.schema.columnConfigs ?? [];
+		const clonedConfigs = currentConfigs.map((config) => ({ ...config }));
+		if (templateField) {
+			const sourceConfig = currentConfigs.find((config) => config.name === templateField) ?? null;
+			if (sourceConfig) {
+				clonedConfigs.push({ ...sourceConfig, name: trimmedName });
+			} else {
+				const compiled = this.formulaColumns.get(templateField);
+				if (compiled) {
+					clonedConfigs.push({ name: trimmedName, formula: compiled.original });
+				}
+			}
+		}
+		this.schema.columnConfigs = this.normalizeColumnConfigs(clonedConfigs);
+
+		const shouldCopyData = Boolean(options.copyData && templateField);
+		for (const block of this.blocks) {
+			const baseValue = shouldCopyData && templateField
+				? block.data[templateField] ?? ''
+				: '';
+			block.data[trimmedName] = baseValue;
+		}
+
+		if (templateField) {
+			const widthPrefs = this.ensureColumnWidthPrefs();
+			if (Object.prototype.hasOwnProperty.call(widthPrefs, templateField)) {
+				widthPrefs[trimmedName] = widthPrefs[templateField];
+			}
+		}
+
+		if (templateField && this.hiddenSortableFields.has(templateField)) {
+			this.hiddenSortableFields.add(trimmedName);
+		}
+
+		return true;
+	}
+
+	private persistColumnStructureChange(options?: { notice?: string }): void {
+		if (!this.schema) {
+			return;
+		}
+		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
+		this.refreshGridData();
+		if (options?.notice) {
+			new Notice(options.notice);
+		}
+		if (this.saveTimeout) {
+			clearTimeout(this.saveTimeout);
+			this.saveTimeout = null;
+		}
+		void (async () => {
+			try {
+				await this.saveToFile();
+				await this.render();
+			} catch (error) {
+				console.error(`${LOG_PREFIX} Failed to persist column change`, error);
+			}
+		})();
+	}
+
+	private normalizeColumnConfigs(configs: ColumnConfig[] | undefined): ColumnConfig[] | undefined {
+		if (!configs || configs.length === 0) {
+			return undefined;
+		}
+		if (!this.schema) {
+			return configs;
+		}
+		const orderMap = new Map<string, number>();
+		this.schema.columnNames.forEach((name, index) => orderMap.set(name, index));
+		const filtered = configs.filter((config) => orderMap.has(config.name));
+		if (filtered.length === 0) {
+			return undefined;
+		}
+		filtered.sort((a, b) => (orderMap.get(a.name) ?? 0) - (orderMap.get(b.name) ?? 0));
+		return filtered;
+	}
+
+	private generateUniqueColumnName(base: string): string {
+		const normalizedBase = base.trim().length > 0 ? base.trim() : '新列';
+		if (!this.schema) {
+			return normalizedBase;
+		}
+		const existing = new Set(this.schema.columnNames);
+		if (!existing.has(normalizedBase)) {
+			return normalizedBase;
+		}
+		let counter = 2;
+		let candidate = `${normalizedBase} ${counter}`;
+		while (existing.has(candidate)) {
+			counter++;
+			candidate = `${normalizedBase} ${counter}`;
+		}
+		return candidate;
+	}
+
+	private renameColumnField(oldName: string, newName: string): boolean {
+		if (!this.schema) {
+			return false;
+		}
+		const trimmed = newName.trim();
+		if (!trimmed || trimmed === '#' || trimmed === 'status' || trimmed === ROW_ID_FIELD) {
+			return false;
+		}
+		if (trimmed === oldName) {
+			return true;
+		}
+		if (this.schema.columnNames.includes(trimmed)) {
+			return false;
+		}
+		const index = this.schema.columnNames.indexOf(oldName);
+		if (index === -1) {
+			return false;
+		}
+		this.schema.columnNames[index] = trimmed;
+
+		if (this.schema.columnConfigs && this.schema.columnConfigs.length > 0) {
+			const nextConfigs = this.schema.columnConfigs.map((config) => ({ ...config }));
+			for (const config of nextConfigs) {
+				if (config.name === oldName) {
+					config.name = trimmed;
+				}
+			}
+			this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
+		}
+
+		const widthPrefs = this.ensureColumnWidthPrefs();
+		if (Object.prototype.hasOwnProperty.call(widthPrefs, oldName)) {
+			widthPrefs[trimmed] = widthPrefs[oldName];
+			delete widthPrefs[oldName];
+		}
+
+		if (this.hiddenSortableFields.has(oldName)) {
+			this.hiddenSortableFields.delete(oldName);
+			this.hiddenSortableFields.add(trimmed);
+		}
+
+		this.renameColumnInFilterViews(oldName, trimmed);
+
+		for (const block of this.blocks) {
+			if (Object.prototype.hasOwnProperty.call(block.data, oldName)) {
+				const value = block.data[oldName];
+				delete block.data[oldName];
+				block.data[trimmed] = value;
+			}
+		}
+
+		return true;
+	}
+
+	private renameColumnInFilterViews(oldName: string, newName: string): void {
+		if (!this.filterViewState || !Array.isArray(this.filterViewState.views)) {
+			return;
+		}
+		for (const view of this.filterViewState.views) {
+			let modified = false;
+			if (view.filterRule) {
+				for (const condition of view.filterRule.conditions) {
+					if (condition.column === oldName) {
+						condition.column = newName;
+						modified = true;
+					}
+				}
+			}
+			if (Array.isArray(view.sortRules)) {
+				for (const rule of view.sortRules) {
+					if (rule.column === oldName) {
+						rule.column = newName;
+						modified = true;
+					}
+				}
+			}
+			if (modified) {
+				view.columnState = null;
+			}
+		}
+	}
+
+	private isConfigSegment(segment: string): boolean {
+		if (!segment || segment.trim().length === 0) {
+			return false;
+		}
+		const normalized = segment.trim().toLowerCase();
+		if (normalized === 'hide') {
+			return true;
+		}
+		const colonIndex = segment.indexOf(':');
+		if (colonIndex === -1) {
+			return false;
+		}
+		const key = segment.slice(0, colonIndex).trim().toLowerCase();
+		return key === 'width' || key === 'unit' || key === 'formula';
+	}
+
+	private findMatchingParenthesis(source: string, startIndex: number): number {
+		let depth = 0;
+		for (let i = startIndex; i < source.length; i++) {
+			const current = source[i];
+			if (current === '(') {
+				depth++;
+			} else if (current === ')') {
+				depth--;
+				if (depth === 0) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	private removeColumnFromFilterViews(column: string): void {
+		if (!this.filterViewState || !Array.isArray(this.filterViewState.views)) {
+			return;
+		}
+		for (const view of this.filterViewState.views) {
+			let modified = false;
+			if (view.filterRule) {
+				const conditions = view.filterRule.conditions.filter((condition) => condition.column !== column);
+				if (conditions.length !== view.filterRule.conditions.length) {
+					view.filterRule.conditions = conditions;
+					modified = true;
+				}
+				if (view.filterRule.conditions.length === 0) {
+					view.filterRule = null;
+					modified = true;
+				}
+			}
+			if (Array.isArray(view.sortRules)) {
+				const nextSort = view.sortRules.filter((rule) => rule.column !== column);
+				if (nextSort.length !== view.sortRules.length) {
+					view.sortRules = nextSort;
+					modified = true;
+				}
+			}
+			if (modified) {
+				view.columnState = null;
+			}
+		}
 	}
 
 	private describeWindow(win: Window | null | undefined): Record<string, unknown> | null {
@@ -3630,6 +3983,7 @@ export class TableView extends ItemView {
 type ColumnFieldType = 'text' | 'formula';
 
 interface ColumnEditorResult {
+	name: string;
 	type: ColumnFieldType;
 	formula: string;
 }
@@ -3638,6 +3992,7 @@ interface ColumnEditorModalOptions {
 	columnName: string;
 	initialType: ColumnFieldType;
 	initialFormula: string;
+	validateName?: (name: string) => string | null;
 	onSubmit: (result: ColumnEditorResult) => void;
 	onCancel: () => void;
 }
@@ -3645,8 +4000,10 @@ interface ColumnEditorModalOptions {
 class ColumnEditorModal extends Modal {
 	private readonly options: ColumnEditorModalOptions;
 	private type: ColumnFieldType;
+	private nameValue: string;
 	private formulaSetting!: Setting;
 	private formulaInput!: HTMLTextAreaElement;
+	private nameInput!: HTMLInputElement;
 	private errorEl!: HTMLElement;
 	private submitted = false;
 
@@ -3654,6 +4011,7 @@ class ColumnEditorModal extends Modal {
 		super(app);
 		this.options = options;
 		this.type = options.initialType;
+		this.nameValue = options.columnName;
 	}
 
 	onOpen(): void {
@@ -3661,6 +4019,17 @@ class ColumnEditorModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('tlb-column-editor-modal');
 		this.titleEl.setText(`编辑列：${this.options.columnName}`);
+
+		const nameSetting = new Setting(contentEl);
+		nameSetting.setName('列名称');
+		nameSetting.addText((text) => {
+			text.setPlaceholder('请输入列名称');
+			text.setValue(this.nameValue);
+			this.nameInput = text.inputEl;
+			text.onChange((value) => {
+				this.nameValue = value;
+			});
+		});
 
 		const typeSetting = new Setting(contentEl);
 		typeSetting.setName('列类型');
@@ -3728,7 +4097,7 @@ class ColumnEditorModal extends Modal {
 		}
 		if (message && message.trim().length > 0) {
 			this.errorEl.style.display = '';
-			this.errorEl.setText(`公式错误：${message}`);
+			this.errorEl.setText(message);
 		} else {
 			this.errorEl.style.display = 'none';
 			this.errorEl.empty();
@@ -3737,6 +4106,20 @@ class ColumnEditorModal extends Modal {
 
 	private submit(): void {
 		this.setError(null);
+		const trimmedName = this.nameValue.trim();
+		if (trimmedName.length === 0) {
+			this.setError('列名称不能为空');
+			this.nameInput?.focus();
+			return;
+		}
+		if (this.options.validateName) {
+			const validationMessage = this.options.validateName(trimmedName);
+			if (validationMessage) {
+				this.setError(validationMessage);
+				this.nameInput?.focus();
+				return;
+			}
+		}
 		if (this.type === 'formula') {
 			const formula = this.formulaInput.value.trim();
 			if (formula.length === 0) {
@@ -3748,17 +4131,17 @@ class ColumnEditorModal extends Modal {
 				compileFormula(formula);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				this.setError(message);
+				this.setError(`公式错误：${message}`);
 				this.formulaInput.focus();
 				return;
 			}
-			this.options.onSubmit({ type: 'formula', formula });
+			this.options.onSubmit({ name: trimmedName, type: 'formula', formula });
 			this.submitted = true;
 			this.close();
 			return;
 		}
 
-		this.options.onSubmit({ type: 'text', formula: '' });
+		this.options.onSubmit({ name: trimmedName, type: 'text', formula: '' });
 		this.submitted = true;
 		this.close();
 	}

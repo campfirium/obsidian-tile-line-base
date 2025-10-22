@@ -43,6 +43,8 @@ export class TableView extends ItemView {
 	file: TFile | null = null;
 	private blocks: H2Block[] = [];
 	private schema: Schema | null = null;
+	private schemaDirty: boolean = false;
+	private sparseCleanupRequired: boolean = false;
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
 	private allRowData: any[] = []; // 保存全部行数据
@@ -379,49 +381,90 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 动态扫描所有 H2 块，提取 Schema
-	 * 如果有头部配置块，优先使用配置块定义的列顺序
-	 * 自动添加 status 为内置系统列
+	 * 使用首个 H2 块作为 schema 基准，追加后续块出现的新字段
+	 * 自动在 schema 块中维护完整列集合，并保持 status 内置列
 	 */
 	private extractSchema(blocks: H2Block[], columnConfigs: ColumnConfig[] | null): Schema | null {
+		this.schemaDirty = false;
+		this.sparseCleanupRequired = false;
+
 		if (blocks.length === 0) {
 			return null;
 		}
 
-		let columnNames: string[];
+		const schemaBlock = blocks[0];
+		const columnNames: string[] = [];
+		const seenKeys = new Set<string>();
 
+		const appendKey = (key: string) => {
+			if (key === 'statusChanged') {
+				return;
+			}
+			if (seenKeys.has(key)) {
+				return;
+			}
+			columnNames.push(key);
+			seenKeys.add(key);
+		};
 		if (columnConfigs && columnConfigs.length > 0) {
-			// 使用头部配置块定义的列顺序
-			columnNames = columnConfigs.map(config => config.name);
-		} else {
-			// 没有配置块，动态扫描所有 key
-			columnNames = [];
-			const seenKeys = new Set<string>();
+			for (const config of columnConfigs) {
+				appendKey(config.name);
+				if (schemaBlock.data[config.name] === undefined) {
+					schemaBlock.data[config.name] = '';
+					this.schemaDirty = true;
+				}
+			}
+		}
 
-			for (const block of blocks) {
-				for (const key of Object.keys(block.data)) {
-					// 跳过压缩属性（statusChanged 等）
-					if (key === 'statusChanged') continue;
+		for (const key of Object.keys(schemaBlock.data)) {
+			appendKey(key);
+		}
 
-					if (!seenKeys.has(key)) {
-						columnNames.push(key);
-						seenKeys.add(key);
+		for (let i = 1; i < blocks.length; i++) {
+			const block = blocks[i];
+			for (const key of Object.keys(block.data)) {
+				const value = block.data[key];
+
+				if (!seenKeys.has(key)) {
+					appendKey(key);
+					if (schemaBlock.data[key] === undefined) {
+						schemaBlock.data[key] = '';
 					}
+					this.schemaDirty = true;
+				}
+
+				if (key === 'statusChanged') {
+					if (typeof value === 'string' && value.trim().length === 0) {
+						delete block.data[key];
+						this.sparseCleanupRequired = true;
+					}
+					continue;
+				}
+
+				const normalized = typeof value === 'string' ? value.trim() : value;
+				if (normalized === '' || normalized === null || normalized === undefined) {
+					delete block.data[key];
+					this.sparseCleanupRequired = true;
 				}
 			}
 		}
 
 		// 自动添加 status 为内置列（在第一个数据列之后，即第三列位置）
-		// 如果 columnNames 中已经有 status，先移除
 		const statusIndex = columnNames.indexOf('status');
 		if (statusIndex !== -1) {
 			columnNames.splice(statusIndex, 1);
 		}
-
-		// 在第二个位置插入 status（实际显示时：# -> 第一个数据列 -> status）
-		// 如果没有数据列，就放在第一个位置
 		const insertIndex = columnNames.length > 0 ? 1 : 0;
 		columnNames.splice(insertIndex, 0, 'status');
+		seenKeys.add('status');
+
+		if (statusIndex === -1 && schemaBlock.data['status'] === undefined) {
+			schemaBlock.data['status'] = 'todo';
+			if (schemaBlock.data['statusChanged'] === undefined) {
+				schemaBlock.data['statusChanged'] = getCurrentLocalDateTime();
+			}
+			this.schemaDirty = true;
+		}
 
 		return {
 			columnNames,
@@ -474,12 +517,16 @@ export class TableView extends ItemView {
 
 		const lines: string[] = [];
 
-		for (const block of this.blocks) {
+		for (let blockIndex = 0; blockIndex < this.blocks.length; blockIndex++) {
+			const block = this.blocks[blockIndex];
+			const isSchemaBlock = blockIndex === 0;
 			// 按照 schema 顺序输出
 			let isFirstKey = true;
 
 			for (const key of this.schema.columnNames) {
-				const value = block.data[key] || '';
+				const rawValue = block.data[key];
+				const value = rawValue ?? '';
+				const hasValue = value.trim().length > 0;
 
 				if (isFirstKey) {
 					// 第一个 key:value 作为 H2 标题
@@ -487,10 +534,10 @@ export class TableView extends ItemView {
 					isFirstKey = false;
 				} else {
 					// 其他 key:value 作为正文
-					if (value.trim()) {
+					if (hasValue) {
 						lines.push(`${key}：${value}`);
-					} else {
-						// 空值也要保留，确保 Schema 完整性
+					} else if (isSchemaBlock) {
+						// schema 块需要保留空字段以维持列定义
 						lines.push(`${key}：`);
 					}
 				}
@@ -656,6 +703,11 @@ export class TableView extends ItemView {
 		if (!this.schema) {
 			container.createDiv({ text: "无法提取表格结构" });
 			return;
+		}
+		if (this.schemaDirty || this.sparseCleanupRequired) {
+			this.scheduleSave();
+			this.schemaDirty = false;
+			this.sparseCleanupRequired = false;
 		}
 
 		// 提取数据

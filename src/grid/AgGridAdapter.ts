@@ -51,6 +51,7 @@ export class AgGridAdapter implements GridAdapter {
 	private gridApi: GridApi | null = null;
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
+	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
 	private columnResizeCallback?: (field: string, width: number) => void;
 	private columnLayoutInitialized = false;
@@ -965,6 +966,17 @@ export class AgGridAdapter implements GridAdapter {
 				}
 				this.gridContext?.onCopyH2Section?.(blockIndex);
 			},
+			onColumnHeaderContextMenu: (params: any) => {
+				const column = params?.column ?? null;
+				const field = column && typeof column.getColId === 'function' ? column.getColId() : null;
+				const domEvent = (params?.event ?? params?.mouseEvent) as MouseEvent | undefined;
+				if (!field || !domEvent) {
+					return;
+				}
+				if (this.columnHeaderContextMenuCallback) {
+					this.columnHeaderContextMenuCallback({ field, domEvent });
+				}
+			},
 
 			// 默认列配置
 			defaultColDef: {
@@ -1186,10 +1198,14 @@ export class AgGridAdapter implements GridAdapter {
 	 * 这里提供接口，但暂时不实现。
 	 * 如果需要表头编辑功能，可以通过自定义 Header Component 实现。
 	 */
-	onHeaderEdit(callback: (event: HeaderEditEvent) => void): void {
-		this.headerEditCallback = callback;
-		// TODO: 实现表头编辑（需要自定义 Header Component）
-	}
+onHeaderEdit(callback: (event: HeaderEditEvent) => void): void {
+	this.headerEditCallback = callback;
+	// TODO: 实现表头编辑（需要自定义 Header Component）
+}
+
+onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEvent }) => void): void {
+	this.columnHeaderContextMenuCallback = callback;
+}
 
 	/**
 	 * 销毁表格实例
@@ -1210,6 +1226,7 @@ export class AgGridAdapter implements GridAdapter {
 		}
 		this.unbindViewportListeners();
 		this.columnResizeCallback = undefined;
+		this.columnHeaderContextMenuCallback = undefined;
 		this.columnLayoutInitialized = false;
 		this.containerEl = null;
 		this.focusedDoc = null;

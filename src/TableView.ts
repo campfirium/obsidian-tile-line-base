@@ -6,11 +6,15 @@ import { getPluginContext } from "./pluginContext";
 import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
+import { compileFormula, evaluateFormula, CompiledFormula } from "./formula/FormulaEngine";
 import type { ColumnState } from "ag-grid-community";
 import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
 
 const LOG_PREFIX = "[TileLineBase]";
 const HIDDEN_SYSTEM_FIELDS = new Set(['statusChanged']);
+const FORMULA_ROW_LIMIT = 5000;
+const FORMULA_ERROR_VALUE = '#ERR';
+const FORMULA_TOOLTIP_PREFIX = '__tlbFormulaTooltip__';
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -89,6 +93,10 @@ export class TableView extends ItemView {
 	private globalQuickFilterClearEl: HTMLElement | null = null;
 	private globalQuickFilterUnsubscribe: (() => void) | null = null;
 	private hasRegisteredGlobalQuickFilter = false;
+	private formulaColumns: Map<string, CompiledFormula> = new Map();
+	private formulaCompileErrors: Map<string, string> = new Map();
+	private formulaColumnOrder: string[] = [];
+	private formulaLimitNoticeIssued = false;
 
 	private static globalQuickFilterValue: string = '';
 	private static globalQuickFilterListeners = new Set<(value: string, source: TableView | null) => void>();
@@ -331,46 +339,266 @@ export class TableView extends ItemView {
 	 * 格式：列名 (width: 30%) (unit: 分钟) (hide)
 	 */
 	private parseColumnDefinition(line: string): ColumnConfig | null {
-		// 提取列名（第一个左括号之前的部分）
 		const nameMatch = line.match(/^([^(]+)/);
 		if (!nameMatch) return null;
 
 		const name = nameMatch[1].trim();
 		const config: ColumnConfig = { name };
+		let index = nameMatch[0].length;
+		const length = line.length;
 
-		// 提取所有括号中的配置项
-		const configRegex = /\(([^)]+)\)/g;
-		let match;
-
-		while ((match = configRegex.exec(line)) !== null) {
-			const configStr = match[1].trim();
-
-			// 判断是键值对还是布尔开关
-			if (configStr.includes(':')) {
-				// 键值对：width: 30%
-				const [key, ...valueParts] = configStr.split(':');
-				const value = valueParts.join(':').trim();
-
-				switch (key.trim()) {
-					case 'width':
-						config.width = value;
-						break;
-					case 'unit':
-						config.unit = value;
-						break;
-					case 'formula':
-						config.formula = value;
-						break;
-				}
-			} else {
-				// 布尔开关：hide
-				if (configStr === 'hide') {
-					config.hide = true;
-				}
+		while (index < length) {
+			const char = line[index];
+			if (char !== '(') {
+				index++;
+				continue;
 			}
+
+			let depth = 1;
+			let cursor = index + 1;
+			while (cursor < length && depth > 0) {
+				const current = line[cursor];
+				if (current === '(') {
+					depth++;
+				} else if (current === ')') {
+					depth--;
+				}
+				cursor++;
+			}
+
+			if (depth !== 0) {
+				break;
+			}
+
+			const segment = line.slice(index + 1, cursor - 1).trim();
+			if (segment.length > 0) {
+				this.applyColumnConfigSegment(config, segment);
+			}
+
+			index = cursor;
 		}
 
 		return config;
+	}
+
+	private applyColumnConfigSegment(config: ColumnConfig, segment: string): void {
+		const colonIndex = segment.indexOf(':');
+		if (colonIndex === -1) {
+			if (segment.trim().toLowerCase() === 'hide') {
+				config.hide = true;
+			}
+			return;
+		}
+
+		const key = segment.slice(0, colonIndex).trim();
+		let value = segment.slice(colonIndex + 1).trim();
+		if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+			value = value.slice(1, -1);
+		}
+
+		switch (key) {
+			case 'width':
+				config.width = value;
+				break;
+			case 'unit':
+				config.unit = value;
+				break;
+			case 'formula':
+				config.formula = value;
+				break;
+		}
+	}
+
+	private hasColumnConfigContent(config: ColumnConfig): boolean {
+		return Boolean(
+			(config.width && config.width.trim().length > 0) ||
+			(config.unit && config.unit.trim().length > 0) ||
+			config.hide ||
+			(config.formula && config.formula.trim().length > 0)
+		);
+	}
+
+	private serializeColumnConfig(config: ColumnConfig): string {
+		const segments: string[] = [];
+		if (config.width && config.width.trim().length > 0) {
+			segments.push(`width: ${config.width.trim()}`);
+		}
+		if (config.unit && config.unit.trim().length > 0) {
+			segments.push(`unit: ${config.unit.trim()}`);
+		}
+		if (config.formula && config.formula.trim().length > 0) {
+			segments.push(`formula: ${config.formula.trim()}`);
+		}
+		if (config.hide) {
+			segments.push('hide');
+		}
+
+		const name = config.name.trim();
+		if (segments.length === 0) {
+			return name;
+		}
+		return `${name} ${segments.map((segment) => `(${segment})`).join(' ')}`;
+	}
+
+	private getFormulaTooltipField(columnName: string): string {
+		return `${FORMULA_TOOLTIP_PREFIX}${columnName}`;
+	}
+
+	private prepareFormulaColumns(columnConfigs: ColumnConfig[] | null): void {
+		this.formulaColumns.clear();
+		this.formulaCompileErrors.clear();
+		this.formulaColumnOrder = [];
+		this.formulaLimitNoticeIssued = false;
+
+		if (!columnConfigs) {
+			return;
+		}
+
+		for (const config of columnConfigs) {
+			const rawFormula = config.formula?.trim();
+			if (!rawFormula) {
+				continue;
+			}
+			this.formulaColumnOrder.push(config.name);
+			try {
+				const compiled = compileFormula(rawFormula);
+				if (compiled.dependencies.includes(config.name)) {
+					this.formulaCompileErrors.set(config.name, '公式不允许引用自身');
+					continue;
+				}
+				this.formulaColumns.set(config.name, compiled);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				this.formulaCompileErrors.set(config.name, message);
+				debugLog('公式解析失败', { column: config.name, message });
+			}
+		}
+	}
+
+	private applyFormulaResults(row: RowData, rowCount: number): void {
+		if (this.formulaColumnOrder.length === 0) {
+			return;
+		}
+
+		const formulasEnabled = rowCount <= FORMULA_ROW_LIMIT;
+		if (!formulasEnabled && !this.formulaLimitNoticeIssued) {
+			new Notice(`公式列已停用（行数超过 ${FORMULA_ROW_LIMIT}）`);
+			this.formulaLimitNoticeIssued = true;
+		}
+
+		for (const columnName of this.formulaColumnOrder) {
+			const tooltipField = this.getFormulaTooltipField(columnName);
+			const compileError = this.formulaCompileErrors.get(columnName);
+			if (compileError) {
+				row[columnName] = FORMULA_ERROR_VALUE;
+				row[tooltipField] = `公式解析失败：${compileError}`;
+				continue;
+			}
+
+			if (!formulasEnabled) {
+				row[tooltipField] = `公式列已停用（行数超过 ${FORMULA_ROW_LIMIT}）`;
+				continue;
+			}
+
+			const compiled = this.formulaColumns.get(columnName);
+			if (!compiled) {
+				continue;
+			}
+
+			const { value, error } = evaluateFormula(compiled, row);
+			if (error) {
+				row[columnName] = FORMULA_ERROR_VALUE;
+				row[tooltipField] = `公式错误：${error}`;
+				debugLog('公式运行失败', { column: columnName, formula: compiled.original, error });
+			} else {
+				row[columnName] = value;
+				row[tooltipField] = '';
+			}
+		}
+	}
+
+	private handleColumnHeaderContextMenu(field: string, event: MouseEvent): void {
+		if (!this.schema) {
+			return;
+		}
+		if (!field || field === '#' || field === ROW_ID_FIELD || field === 'status') {
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		this.openColumnHeaderMenu(field, event);
+	}
+
+	private openColumnHeaderMenu(field: string, event: MouseEvent): void {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle('编辑列').setIcon('pencil').onClick(() => {
+				this.openColumnEditModal(field);
+			});
+		});
+		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+	}
+
+	private openColumnEditModal(field: string): void {
+		if (!this.schema) {
+			return;
+		}
+		const configs = this.schema.columnConfigs ?? [];
+		const existing = configs.find((config) => config.name === field);
+		const initialType: ColumnFieldType = existing?.formula?.trim() ? 'formula' : 'text';
+		const initialFormula = existing?.formula ?? '';
+		const modal = new ColumnEditorModal(this.app, {
+			columnName: field,
+			initialType,
+			initialFormula,
+			onSubmit: (result) => {
+				this.applyColumnEditResult(field, result);
+			},
+			onCancel: () => {}
+		});
+		modal.open();
+	}
+
+	private applyColumnEditResult(field: string, result: ColumnEditorResult): void {
+		if (!this.schema) {
+			return;
+		}
+
+		const existingConfigs = this.schema.columnConfigs ?? [];
+		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
+		let config = nextConfigs.find((item) => item.name === field);
+		if (!config) {
+			config = { name: field };
+			nextConfigs.push(config);
+		}
+
+		if (result.type === 'formula') {
+			config.formula = result.formula;
+		} else {
+			delete config.formula;
+		}
+
+		if (!this.hasColumnConfigContent(config)) {
+			const index = nextConfigs.findIndex((item) => item.name === field);
+			if (index !== -1) {
+				nextConfigs.splice(index, 1);
+			}
+		}
+
+		this.schema.columnConfigs = nextConfigs.length > 0 ? nextConfigs : undefined;
+
+		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
+		this.refreshGridData();
+
+		if (this.saveTimeout) {
+			clearTimeout(this.saveTimeout);
+			this.saveTimeout = null;
+		}
+
+		void (async () => {
+			await this.saveToFile();
+			await this.render();
+		})();
 	}
 
 	/**
@@ -535,6 +763,7 @@ export class TableView extends ItemView {
 	 */
 	private extractTableData(blocks: H2Block[], schema: Schema): RowData[] {
 		const data: RowData[] = [];
+		const rowCount = blocks.length;
 
 		// 所有块都是数据（没有模板H2）
 		for (let i = 0; i < blocks.length; i++) {
@@ -565,6 +794,8 @@ export class TableView extends ItemView {
 				}
 				row[hiddenField] = block.data[hiddenField] || '';
 			}
+
+			this.applyFormulaResults(row, rowCount);
 
 			data.push(row);
 		}
@@ -674,6 +905,19 @@ export class TableView extends ItemView {
 		}, 500);
 	}
 
+	private buildColumnConfigBlock(): string | null {
+		if (!this.schema || !this.schema.columnConfigs || this.schema.columnConfigs.length === 0) {
+			return null;
+		}
+		const lines = this.schema.columnConfigs
+			.filter((config) => this.hasColumnConfigContent(config))
+			.map((config) => this.serializeColumnConfig(config));
+		if (lines.length === 0) {
+			return null;
+		}
+		return ['```tilelinebase', ...lines, '```'].join('\n');
+	}
+
 	/**
 	 * 保存到文件
 	 */
@@ -682,7 +926,11 @@ export class TableView extends ItemView {
 
 		try {
 			const markdown = this.blocksToMarkdown();
-			await this.app.vault.modify(this.file, markdown);
+			const columnConfigBlock = this.buildColumnConfigBlock();
+			const finalContent = columnConfigBlock
+				? `${columnConfigBlock}\n\n${markdown}`
+				: markdown;
+			await this.app.vault.modify(this.file, finalContent);
 			await this.saveConfigBlock();
 		} catch (error) {
 			console.error('❌ 保存失败:', error);
@@ -770,6 +1018,7 @@ export class TableView extends ItemView {
 			container.createDiv({ text: "无法提取表格结构" });
 			return;
 		}
+		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
 		if (this.schemaDirty || this.sparseCleanupRequired) {
 			this.scheduleSave();
 			this.schemaDirty = false;
@@ -815,6 +1064,12 @@ export class TableView extends ItemView {
 					if (config) {
 						this.applyWidthConfig(baseColDef, config);
 					}
+				}
+
+				const isFormulaColumn = this.formulaColumns.has(name) || this.formulaCompileErrors.has(name);
+				if (isFormulaColumn) {
+					baseColDef.editable = false;
+					(baseColDef as any).tooltipField = this.getFormulaTooltipField(name);
 				}
 
 				
@@ -871,6 +1126,10 @@ export class TableView extends ItemView {
 			// 监听表头编辑事件（暂未实现）
 			this.gridAdapter.onHeaderEdit((event) => {
 				// TODO: 实现表头编辑
+			});
+
+			this.gridAdapter.onColumnHeaderContextMenu?.((payload) => {
+				this.handleColumnHeaderContextMenu(payload.field, payload.domEvent);
 			});
 
 			// 监听最后一行 Enter 事件（自动新增行）
@@ -1165,17 +1424,28 @@ export class TableView extends ItemView {
 
 		// 创建并保存右键菜单处理器
 		this.contextMenuHandler = (event: MouseEvent) => {
-			// 检查是否点击的是 status 列
 			const target = event.target as HTMLElement;
-			const cellElement = target.closest('.ag-cell');
-			const colId = cellElement?.getAttribute('col-id');
-
-			// 如果是 status 列，让 AG Grid 的原生菜单处理
-			if (colId === 'status') {
-				return;  // 不阻止事件，让 AG Grid 的 getContextMenuItems 生效
+			const headerElement = target.closest('.ag-header-cell, .ag-header-group-cell') as HTMLElement | null;
+			if (headerElement) {
+				const headerColId = headerElement.getAttribute('col-id');
+				if (headerColId && headerColId !== 'status' && headerColId !== '#') {
+					event.preventDefault();
+					event.stopPropagation();
+					this.handleColumnHeaderContextMenu(headerColId, event);
+				}
+				return;
 			}
 
-			// 其他列使用自定义菜单
+			const cellElement = target.closest('.ag-cell');
+			if (!cellElement) {
+				return;
+			}
+			const colId = cellElement.getAttribute('col-id');
+
+			if (colId === 'status') {
+				return;
+			}
+
 			event.preventDefault();
 
 			// 获取点击行对应的块索引
@@ -3194,6 +3464,143 @@ export class TableView extends ItemView {
 
 		// 清理容器引用
 		this.tableContainer = null;
+	}
+}
+
+type ColumnFieldType = 'text' | 'formula';
+
+interface ColumnEditorResult {
+	type: ColumnFieldType;
+	formula: string;
+}
+
+interface ColumnEditorModalOptions {
+	columnName: string;
+	initialType: ColumnFieldType;
+	initialFormula: string;
+	onSubmit: (result: ColumnEditorResult) => void;
+	onCancel: () => void;
+}
+
+class ColumnEditorModal extends Modal {
+	private readonly options: ColumnEditorModalOptions;
+	private type: ColumnFieldType;
+	private formulaSetting!: Setting;
+	private formulaInput!: HTMLTextAreaElement;
+	private errorEl!: HTMLElement;
+	private submitted = false;
+
+	constructor(app: App, options: ColumnEditorModalOptions) {
+		super(app);
+		this.options = options;
+		this.type = options.initialType;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass('tlb-column-editor-modal');
+		this.titleEl.setText(`编辑列：${this.options.columnName}`);
+
+		const typeSetting = new Setting(contentEl);
+		typeSetting.setName('列类型');
+		typeSetting.addDropdown((dropdown) => {
+			dropdown.addOption('text', '文本');
+			dropdown.addOption('formula', '公式');
+			dropdown.setValue(this.type);
+			dropdown.onChange((value) => {
+				this.type = value === 'formula' ? 'formula' : 'text';
+				this.updateFormulaVisibility();
+			});
+		});
+
+		this.formulaSetting = new Setting(contentEl);
+		this.formulaSetting.setName('公式');
+		this.formulaSetting.setDesc('使用 {字段} 引用列，仅支持 + - * / 与括号。');
+		this.formulaSetting.controlEl.empty();
+		const textarea = document.createElement('textarea');
+		textarea.className = 'tlb-column-formula-input';
+		textarea.rows = 4;
+		textarea.placeholder = '{points} + {cost}';
+		textarea.value = this.options.initialFormula;
+		this.formulaSetting.controlEl.appendChild(textarea);
+		this.formulaInput = textarea;
+
+		this.errorEl = contentEl.createDiv({ cls: 'tlb-column-editor-error' });
+		this.errorEl.style.display = 'none';
+		this.errorEl.style.color = 'var(--text-error, #ff4d4f)';
+
+		const actionSetting = new Setting(contentEl);
+		actionSetting.addButton((button) => {
+			button.setButtonText('保存').setCta().onClick(() => {
+				this.submit();
+			});
+		});
+		actionSetting.addButton((button) => {
+			button.setButtonText('取消').onClick(() => {
+				this.close();
+			});
+		});
+
+		this.updateFormulaVisibility();
+	}
+
+	onClose(): void {
+		if (!this.submitted) {
+			this.options.onCancel();
+		}
+	}
+
+	private updateFormulaVisibility(): void {
+		const hidden = this.type !== 'formula';
+		if (this.formulaSetting) {
+			const el = this.formulaSetting.settingEl as HTMLElement;
+			el.style.display = hidden ? 'none' : '';
+		}
+		if (this.formulaInput) {
+			this.formulaInput.disabled = hidden;
+		}
+	}
+
+	private setError(message: string | null): void {
+		if (!this.errorEl) {
+			return;
+		}
+		if (message && message.trim().length > 0) {
+			this.errorEl.style.display = '';
+			this.errorEl.setText(`公式错误：${message}`);
+		} else {
+			this.errorEl.style.display = 'none';
+			this.errorEl.empty();
+		}
+	}
+
+	private submit(): void {
+		this.setError(null);
+		if (this.type === 'formula') {
+			const formula = this.formulaInput.value.trim();
+			if (formula.length === 0) {
+				this.setError('公式不能为空');
+				this.formulaInput.focus();
+				return;
+			}
+			try {
+				compileFormula(formula);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				this.setError(message);
+				this.formulaInput.focus();
+				return;
+			}
+			this.options.onSubmit({ type: 'formula', formula });
+			this.submitted = true;
+			this.close();
+			return;
+		}
+
+		this.options.onSubmit({ type: 'text', formula: '' });
+		this.submitted = true;
+		this.close();
 	}
 }
 

@@ -2,7 +2,7 @@ import { App, Menu, Plugin, TFile, Workspace, WorkspaceLeaf, WorkspaceWindow, Ma
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { debugLog, isDebugEnabled } from './utils/logger';
 import { setPluginContext } from './pluginContext';
-import type { FileFilterViewState, FilterViewDefinition } from './types/filterView';
+import type { FileFilterViewState, FilterViewDefinition, SortRule } from './types/filterView';
 import { FileCacheManager } from './cache/FileCacheManager';
 
 const LOG_PREFIX = '[TileLineBase]';
@@ -778,10 +778,24 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {
+		const rawSortRules = Array.isArray((source as any).sortRules)
+			? (source as any).sortRules
+			: [];
+		const sortRules: SortRule[] = rawSortRules
+			.map((rule: any) => {
+				const column = typeof rule?.column === 'string' ? rule.column : '';
+				if (!column) {
+					return null;
+				}
+				const direction: 'asc' | 'desc' = rule?.direction === 'desc' ? 'desc' : 'asc';
+				return { column, direction };
+			})
+			.filter((rule: SortRule | null): rule is SortRule => rule !== null);
 		return {
 			id: source.id,
 			name: source.name,
 			filterRule: source.filterRule != null ? this.deepClone(source.filterRule) : null,
+			sortRules,
 			columnState: source.columnState != null ? this.deepClone(source.columnState) : null,
 			quickFilter: source.quickFilter ?? null
 		};

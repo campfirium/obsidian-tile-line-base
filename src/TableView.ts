@@ -1,5 +1,5 @@
 import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting, Notice } from "obsidian";
-import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD } from "./grid/GridAdapter";
+import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD, SortModelEntry } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
 import { getPluginContext } from "./pluginContext";
@@ -7,9 +7,10 @@ import { clampColumnWidth } from "./grid/columnSizing";
 import { getCurrentLocalDateTime } from "./utils/datetime";
 import { debugLog } from "./utils/logger";
 import type { ColumnState } from "ag-grid-community";
-import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondition, FilterOperator } from "./types/filterView";
+import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
 
 const LOG_PREFIX = "[TileLineBase]";
+const HIDDEN_SYSTEM_FIELDS = new Set(['statusChanged']);
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -83,6 +84,7 @@ export class TableView extends ItemView {
 	private filterViewTabsEl: HTMLElement | null = null;
 	private filterViewState: FileFilterViewState = { views: [], activeViewId: null };
 	private initialColumnState: ColumnState[] | null = null;
+	private hiddenSortableFields: Set<string> = new Set();
 
 	constructor(leaf: WorkspaceLeaf) {
 		debugLog('=== TableView 构造函数开始 ===');
@@ -399,6 +401,7 @@ export class TableView extends ItemView {
 	private extractSchema(blocks: H2Block[], columnConfigs: ColumnConfig[] | null): Schema | null {
 		this.schemaDirty = false;
 		this.sparseCleanupRequired = false;
+		this.hiddenSortableFields = new Set(HIDDEN_SYSTEM_FIELDS);
 
 		if (blocks.length === 0) {
 			return null;
@@ -409,7 +412,8 @@ export class TableView extends ItemView {
 		const seenKeys = new Set<string>();
 
 		const appendKey = (key: string) => {
-			if (key === 'statusChanged') {
+			if (HIDDEN_SYSTEM_FIELDS.has(key)) {
+				this.hiddenSortableFields.add(key);
 				return;
 			}
 			if (seenKeys.has(key)) {
@@ -437,7 +441,7 @@ export class TableView extends ItemView {
 			for (const key of Object.keys(block.data)) {
 				const value = block.data[key];
 
-				if (!seenKeys.has(key)) {
+				if (!seenKeys.has(key) && !HIDDEN_SYSTEM_FIELDS.has(key)) {
 					appendKey(key);
 					if (schemaBlock.data[key] === undefined) {
 						schemaBlock.data[key] = '';
@@ -445,7 +449,8 @@ export class TableView extends ItemView {
 					this.schemaDirty = true;
 				}
 
-				if (key === 'statusChanged') {
+				if (HIDDEN_SYSTEM_FIELDS.has(key)) {
+					this.hiddenSortableFields.add(key);
 					if (typeof value === 'string' && value.trim().length === 0) {
 						delete block.data[key];
 						this.sparseCleanupRequired = true;
@@ -511,6 +516,13 @@ export class TableView extends ItemView {
 				}
 
 				row[key] = block.data[key] || '';
+			}
+
+			for (const hiddenField of this.hiddenSortableFields) {
+				if (hiddenField === '#') {
+					continue;
+				}
+				row[hiddenField] = block.data[hiddenField] || '';
 			}
 
 			data.push(row);
@@ -2105,6 +2117,7 @@ export class TableView extends ItemView {
 				id: view.id,
 				name: view.name,
 				filterRule: view.filterRule ?? null,
+				sortRules: this.sanitizeSortRules((view as any).sortRules),
 				columnState: view.columnState ? this.cloneColumnState(view.columnState as ColumnState[]) : null,
 				quickFilter: view.quickFilter ?? null
 			}))
@@ -2214,18 +2227,15 @@ export class TableView extends ItemView {
 		const targetId = this.filterViewState.activeViewId;
 		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
 
-		let dataToShow: any[];
-		if (!targetView || !targetView.filterRule) {
-			// 没有激活视图，显示全部数据
-			dataToShow = this.allRowData;
-		} else {
-			// 应用过滤规则
-			dataToShow = this.applyFilterRule(this.allRowData, targetView.filterRule);
-		}
-
-		// 更新 AG Grid 显示
-		this.visibleRowData = Array.isArray(dataToShow) ? [...dataToShow as RowData[]] : [];
-		this.gridAdapter.updateData(dataToShow);
+		const sortRules = targetView?.sortRules ?? [];
+		const filtered = !targetView || !targetView.filterRule
+			? this.allRowData
+			: this.applyFilterRule(this.allRowData, targetView.filterRule);
+		const normalizedRows = Array.isArray(filtered) ? [...filtered as RowData[]] : [];
+		const sortedRows = this.sortRowData(normalizedRows, sortRules);
+		this.visibleRowData = sortedRows;
+		this.gridAdapter.updateData(sortedRows);
+		this.applySortModelToGrid(sortRules);
 	}
 
 	private applyActiveFilterView(): void {
@@ -2235,12 +2245,15 @@ export class TableView extends ItemView {
 		const targetId = this.filterViewState.activeViewId;
 		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
 
+		const sortRules = targetView?.sortRules ?? [];
 		const resolveDataToShow = (): RowData[] => {
-			if (!targetView || !targetView.filterRule) {
-				return [...this.allRowData as RowData[]];
-			}
-			const filtered = this.applyFilterRule(this.allRowData, targetView.filterRule);
-			return Array.isArray(filtered) ? [...filtered as RowData[]] : [];
+			const baseRows = !targetView || !targetView.filterRule
+				? [...this.allRowData as RowData[]]
+				: (() => {
+					const filtered = this.applyFilterRule(this.allRowData, targetView.filterRule!);
+					return Array.isArray(filtered) ? [...filtered as RowData[]] : [];
+				})();
+			return this.sortRowData(baseRows, sortRules);
 		};
 
 		const applyData = () => {
@@ -2256,6 +2269,7 @@ export class TableView extends ItemView {
 			} else {
 				this.gridAdapter.updateData(dataToShow);
 			}
+			this.applySortModelToGrid(sortRules);
 		};
 
 		if (this.gridAdapter.runWhenReady) {
@@ -2275,6 +2289,110 @@ export class TableView extends ItemView {
 				return results.some((r) => r);
 			}
 		});
+	}
+
+	private sortRowData(rows: RowData[], sortRules: SortRule[]): RowData[] {
+		if (!Array.isArray(rows)) {
+			return [];
+		}
+		const effectiveRules = (sortRules ?? []).filter((rule) => rule && typeof rule.column === 'string' && rule.column.length > 0);
+		if (effectiveRules.length === 0) {
+			return [...rows];
+		}
+		const sorted = [...rows];
+		sorted.sort((a, b) => this.compareRowsForSort(a, b, effectiveRules));
+		return sorted;
+	}
+
+	private compareRowsForSort(a: RowData, b: RowData, sortRules: SortRule[]): number {
+		for (const rule of sortRules) {
+			const comparison = this.compareValuesForSort(a[rule.column], b[rule.column]);
+			if (comparison !== 0) {
+				return rule.direction === 'desc' ? -comparison : comparison;
+			}
+		}
+		return 0;
+	}
+
+	private compareValuesForSort(aValue: unknown, bValue: unknown): number {
+		const normalizedA = this.normalizeSortValue(aValue);
+		const normalizedB = this.normalizeSortValue(bValue);
+		if (normalizedA.rank !== normalizedB.rank) {
+			return normalizedA.rank - normalizedB.rank;
+		}
+		if (normalizedA.type === 'number' || normalizedA.type === 'date') {
+			return (normalizedA.value as number) - (normalizedB.value as number);
+		}
+		if (normalizedA.type === 'string') {
+			return (normalizedA.value as string).localeCompare(normalizedB.value as string);
+		}
+		return 0;
+	}
+
+	private normalizeSortValue(value: unknown): { type: 'empty' | 'number' | 'date' | 'string'; value: number | string; rank: number } {
+		if (value == null) {
+			return { type: 'empty', value: 0, rank: 0 };
+		}
+		if (value instanceof Date) {
+			return { type: 'date', value: value.getTime(), rank: 3 };
+		}
+		if (typeof value === 'number') {
+			if (Number.isNaN(value)) {
+				return { type: 'empty', value: 0, rank: 0 };
+			}
+			return { type: 'number', value, rank: 2 };
+		}
+		const stringValue = String(value).trim();
+		if (stringValue.length === 0) {
+			return { type: 'empty', value: 0, rank: 0 };
+		}
+		if (/^[+-]?\d+(\.\d+)?$/.test(stringValue)) {
+			const numeric = Number(stringValue);
+			if (!Number.isNaN(numeric)) {
+				return { type: 'number', value: numeric, rank: 2 };
+			}
+		}
+		if (/[\-\/](?:\d|$)/.test(stringValue) || /\d{1,2}:\d{2}/.test(stringValue)) {
+			const timestamp = Date.parse(stringValue);
+			if (!Number.isNaN(timestamp)) {
+				return { type: 'date', value: timestamp, rank: 3 };
+			}
+		}
+		return { type: 'string', value: stringValue.toLowerCase(), rank: 1 };
+	}
+
+	private applySortModelToGrid(sortRules: SortRule[]): void {
+		if (!this.gridAdapter?.setSortModel) {
+			return;
+		}
+		const model: SortModelEntry[] = [];
+		const visibleColumns = new Set<string>();
+		if (this.schema?.columnNames) {
+			for (const column of this.schema.columnNames) {
+				visibleColumns.add(column);
+			}
+		}
+		const columnState = this.gridAdapter?.getColumnState?.();
+		if (columnState) {
+			for (const state of columnState) {
+				if (state.colId) {
+					visibleColumns.add(state.colId);
+				}
+			}
+		}
+		for (const rule of sortRules ?? []) {
+			if (typeof rule?.column !== 'string' || rule.column.length === 0) {
+				continue;
+			}
+			if (!visibleColumns.has(rule.column)) {
+				continue;
+			}
+			model.push({
+				field: rule.column,
+				direction: rule.direction === 'desc' ? 'desc' : 'asc'
+			});
+		}
+		this.gridAdapter.setSortModel(model);
 	}
 
 	private evaluateCondition(row: any, condition: FilterCondition): boolean {
@@ -2328,8 +2446,8 @@ export class TableView extends ItemView {
 			const modal = new FilterViewEditorModal(this.app, {
 				title: '新建过滤视图',
 				columns,
-				onSubmit: (name, rule) => {
-					this.saveFilterView(name, rule);
+				onSubmit: (name, rule, sortRules) => {
+					this.saveFilterView(name, rule, sortRules);
 					resolve();
 				},
 				onCancel: () => resolve()
@@ -2338,11 +2456,12 @@ export class TableView extends ItemView {
 		});
 	}
 
-	private saveFilterView(name: string, rule: FilterRule): void {
+	private saveFilterView(name: string, rule: FilterRule, sortRules: SortRule[]): void {
 		const newView: FilterViewDefinition = {
 			id: this.generateFilterViewId(),
 			name,
 			filterRule: rule,
+			sortRules: this.sanitizeSortRules(sortRules),
 			columnState: null,
 			quickFilter: null
 		};
@@ -2354,22 +2473,45 @@ export class TableView extends ItemView {
 	}
 
 	private getAvailableColumns(): string[] {
-		// 优先使用 schema 中的列名
+		const result: string[] = [];
+		const seen = new Set<string>();
+		const exclude = new Set<string>(['#', ROW_ID_FIELD, '__tlb_status', '__tlb_index']);
+
+		const pushColumn = (value: string | undefined | null) => {
+			if (!value) {
+				return;
+			}
+			if (exclude.has(value)) {
+				return;
+			}
+			if (value.startsWith('ag-Grid')) {
+				return;
+			}
+			if (seen.has(value)) {
+				return;
+			}
+			seen.add(value);
+			result.push(value);
+		};
+
 		if (this.schema?.columnNames) {
-			return this.schema.columnNames;
+			for (const column of this.schema.columnNames) {
+				pushColumn(column);
+			}
+		} else {
+			const columnState = this.gridAdapter?.getColumnState?.();
+			if (columnState) {
+				for (const state of columnState) {
+					pushColumn(state.colId ?? undefined);
+				}
+			}
 		}
 
-		// 备用方案: 从 GridAdapter 获取列状态
-		const columnState = this.gridAdapter?.getColumnState?.();
-		if (!columnState) {
-			return [];
+		for (const hidden of this.hiddenSortableFields) {
+			pushColumn(hidden);
 		}
 
-		// 过滤掉内部列(如状态列、索引列)
-		return columnState
-			.filter((col) => col.colId && !col.colId.startsWith('ag-Grid'))
-			.map((col) => col.colId!)
-			.filter((colId) => colId !== '__tlb_status' && colId !== '__tlb_index' && colId !== '#' && colId !== 'status');
+		return result;
 	}
 
 	private async updateFilterView(viewId: string): Promise<void> {
@@ -2390,9 +2532,11 @@ export class TableView extends ItemView {
 				columns,
 				initialName: target.name,  // 传递当前视图名称
 				initialRule: target.filterRule,
-				onSubmit: (name, rule) => {
+				initialSortRules: target.sortRules,
+				onSubmit: (name, rule, sortRules) => {
 					target.name = name;
 					target.filterRule = rule;
+					target.sortRules = this.sanitizeSortRules(sortRules);
 					this.rebuildFilterViewButtons();
 					void this.persistFilterViews();
 					this.applyActiveFilterView();
@@ -2436,6 +2580,7 @@ export class TableView extends ItemView {
 				conditions: [...sourceView.filterRule.conditions.map(c => ({ ...c }))],
 				combineMode: sourceView.filterRule.combineMode
 			} : null,
+			sortRules: this.sanitizeSortRules(sourceView.sortRules),
 			columnState: this.cloneColumnState(sourceView.columnState),
 			quickFilter: sourceView.quickFilter
 		};
@@ -2526,6 +2671,23 @@ export class TableView extends ItemView {
 			return null;
 		}
 		return state.map((item) => ({ ...item }));
+	}
+
+	private sanitizeSortRules(input: unknown): SortRule[] {
+		if (!Array.isArray(input)) {
+			return [];
+		}
+		const result: SortRule[] = [];
+		for (const raw of input) {
+			const candidate = raw as Partial<SortRule> & { column?: unknown; direction?: unknown };
+			const column = typeof candidate?.column === 'string' ? candidate.column.trim() : '';
+			if (!column) {
+				continue;
+			}
+			const direction: 'asc' | 'desc' = candidate?.direction === 'desc' ? 'desc' : 'asc';
+			result.push({ column, direction });
+		}
+		return result;
 	}
 
 	private deepClone<T>(value: T): T {
@@ -2801,7 +2963,8 @@ interface FilterViewEditorModalOptions {
 	columns: string[];  // 可用的列名列表
 	initialName?: string;  // 初始视图名称(用于编辑)
 	initialRule?: FilterRule | null;  // 初始规则(用于编辑)
-	onSubmit: (name: string, rule: FilterRule) => void;
+	initialSortRules?: SortRule[] | null;
+	onSubmit: (name: string, rule: FilterRule, sortRules: SortRule[]) => void;
 	onCancel: () => void;
 }
 
@@ -2812,6 +2975,9 @@ class FilterViewEditorModal extends Modal {
 	private combineModeSelect!: HTMLSelectElement;
 	private conditions: FilterCondition[] = [];
 	private combineMode: 'AND' | 'OR' = 'AND';
+	private sortContainer!: HTMLElement;
+	private sortRules: SortRule[] = [];
+	private draggingSortIndex: number | null = null;
 
 	constructor(app: App, options: FilterViewEditorModalOptions) {
 		super(app);
@@ -2819,6 +2985,15 @@ class FilterViewEditorModal extends Modal {
 		if (options.initialRule) {
 			this.conditions = [...options.initialRule.conditions];
 			this.combineMode = options.initialRule.combineMode;
+		}
+		const availableColumns = new Set(options.columns ?? []);
+		if (options.initialSortRules && options.initialSortRules.length > 0) {
+			this.sortRules = options.initialSortRules
+				.filter((rule) => rule && typeof rule.column === 'string' && availableColumns.has(rule.column))
+				.map((rule) => ({
+					column: rule.column,
+					direction: rule.direction === 'desc' ? 'desc' : 'asc'
+				}));
 		}
 	}
 
@@ -2863,6 +3038,16 @@ class FilterViewEditorModal extends Modal {
 		addButton.addClass('mod-cta');
 		addButton.addEventListener('click', () => {
 			this.addCondition();
+		});
+
+		// 排序规则
+		contentEl.createEl('h3', { text: '排序规则' });
+		this.sortContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions tlb-filter-sort' });
+		this.renderSortRules();
+
+		const addSortButton = contentEl.createEl('button', { text: '+ 添加排序' });
+		addSortButton.addEventListener('click', () => {
+			this.addSortRule();
 		});
 
 		// 底部按钮
@@ -2958,6 +3143,130 @@ class FilterViewEditorModal extends Modal {
 		this.renderConditions();
 	}
 
+	private renderSortRules(): void {
+		if (!this.sortContainer) {
+			return;
+		}
+		this.clearSortDragState();
+		this.sortContainer.empty();
+		const availableColumns = this.options.columns;
+		if (availableColumns.length === 0) {
+			this.sortContainer.createEl('p', {
+				text: '当前没有可用的列，暂时无法设置排序',
+				cls: 'tlb-filter-empty-hint'
+			});
+			return;
+		}
+		if (this.sortRules.length === 0) {
+			this.sortContainer.createEl('p', {
+				text: '暂无排序规则,点击下方"添加排序"按钮开始',
+				cls: 'tlb-filter-empty-hint'
+			});
+			return;
+		}
+		this.sortRules.forEach((rule, index) => {
+			const row = this.sortContainer.createDiv({ cls: 'tlb-filter-condition-row tlb-sort-rule-row' });
+			row.draggable = true;
+			row.setAttribute('data-index', String(index));
+			row.addEventListener('dragstart', (event) => this.onSortDragStart(event, index));
+			row.addEventListener('dragover', (event) => this.onSortDragOver(event, index));
+			row.addEventListener('drop', (event) => this.onSortDrop(event, index));
+			row.addEventListener('dragleave', () => row.classList.remove('is-drag-over'));
+			row.addEventListener('dragend', () => this.onSortDragEnd());
+
+			const handle = row.createSpan({ cls: 'tlb-sort-rule-handle', text: '::' });
+			handle.setAttribute('aria-hidden', 'true');
+
+			const columnSelect = row.createEl('select', { cls: 'tlb-filter-select' });
+			availableColumns.forEach((col) => {
+				const option = columnSelect.createEl('option', { text: col, value: col });
+				if (col === rule.column) {
+					option.selected = true;
+				}
+			});
+			if (!availableColumns.includes(rule.column) && availableColumns.length > 0) {
+				columnSelect.value = availableColumns[0];
+				rule.column = availableColumns[0];
+			}
+			columnSelect.addEventListener('change', () => {
+				rule.column = columnSelect.value;
+			});
+
+			const directionSelect = row.createEl('select', { cls: 'tlb-filter-select' });
+			directionSelect.createEl('option', { text: '升序 (A -> Z)', value: 'asc' });
+			directionSelect.createEl('option', { text: '降序 (Z -> A)', value: 'desc' });
+			directionSelect.value = rule.direction === 'desc' ? 'desc' : 'asc';
+			directionSelect.addEventListener('change', () => {
+				rule.direction = directionSelect.value === 'desc' ? 'desc' : 'asc';
+			});
+
+			const deleteButton = row.createEl('button', { text: '删除', cls: 'mod-warning' });
+			deleteButton.style.marginLeft = 'auto';
+			deleteButton.addEventListener('click', () => {
+				this.sortRules.splice(index, 1);
+				this.renderSortRules();
+			});
+		});
+	}
+
+	private addSortRule(): void {
+		const firstColumn = this.options.columns[0];
+		if (!firstColumn) {
+			return;
+		}
+		this.sortRules.push({ column: firstColumn, direction: 'asc' });
+		this.renderSortRules();
+	}
+
+	private onSortDragStart(event: DragEvent, index: number): void {
+		this.draggingSortIndex = index;
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = 'move';
+			event.dataTransfer.setData('text/plain', String(index));
+		}
+		const target = event.currentTarget as HTMLElement | null;
+		target?.classList.add('is-dragging');
+	}
+
+	private onSortDragOver(event: DragEvent, index: number): void {
+		event.preventDefault();
+		if (this.draggingSortIndex === null || this.draggingSortIndex === index) {
+			return;
+		}
+		const target = event.currentTarget as HTMLElement | null;
+		target?.classList.add('is-drag-over');
+	}
+
+	private onSortDrop(event: DragEvent, index: number): void {
+		event.preventDefault();
+		const fromIndex = this.draggingSortIndex;
+		this.clearSortDragState();
+		if (fromIndex === null || fromIndex === index) {
+			return;
+		}
+		if (fromIndex < 0 || fromIndex >= this.sortRules.length || index < 0 || index >= this.sortRules.length) {
+			return;
+		}
+		const [moved] = this.sortRules.splice(fromIndex, 1);
+		this.sortRules.splice(index, 0, moved);
+		this.renderSortRules();
+	}
+
+	private onSortDragEnd(): void {
+		this.clearSortDragState();
+	}
+
+	private clearSortDragState(): void {
+		if (!this.sortContainer) {
+			return;
+		}
+		this.draggingSortIndex = null;
+		const rows = this.sortContainer.querySelectorAll('.tlb-sort-rule-row');
+		rows.forEach((row) => {
+			row.classList.remove('is-drag-over', 'is-dragging');
+		});
+	}
+
 	private submit(): void {
 		const name = this.nameInputEl?.value?.trim();
 		if (!name) {
@@ -2975,7 +3284,8 @@ class FilterViewEditorModal extends Modal {
 			combineMode: this.combineMode
 		};
 
-		this.options.onSubmit(name, rule);
+		const sortRules = this.sortRules.map((rule) => ({ ...rule }));
+		this.options.onSubmit(name, rule, sortRules);
 		this.options.onCancel = () => {}; // 防止重复调用
 		this.close();
 	}

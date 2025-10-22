@@ -13,6 +13,7 @@ import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
 import { GridController } from "./table-view/GridController";
 import { MarkdownBlockParser, ColumnConfig, H2Block } from "./table-view/MarkdownBlockParser";
 import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
+import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -70,7 +71,8 @@ export class TableView extends ItemView {
 	private pendingSizeUpdateHandle: number | null = null;
 	private filterViewBar: HTMLElement | null = null;
 	private filterViewTabsEl: HTMLElement | null = null;
-	private filterViewState: FileFilterViewState = { views: [], activeViewId: null };
+	private filterStateStore = new FilterStateStore(null);
+	private filterViewState: FileFilterViewState = this.filterStateStore.getState();
 	private initialColumnState: ColumnState[] | null = null;
 	private hiddenSortableFields: Set<string> = new Set();
 	private globalQuickFilterInputEl: HTMLInputElement | null = null;
@@ -784,6 +786,8 @@ export class TableView extends ItemView {
 		}
 
 		this.columnLayoutStore.reset(this.file.path);
+		this.filterStateStore.setFilePath(this.file.path);
+		this.filterStateStore.resetState();
 		// 读取文件内容
 		const content = await this.app.vault.read(this.file);
 
@@ -793,12 +797,14 @@ export class TableView extends ItemView {
 		// 如果有配置块，应用配置
 		if (configBlock) {
 			if (configBlock.filterViews) {
-				this.filterViewState = configBlock.filterViews;
+				this.filterStateStore.setState(configBlock.filterViews);
 			}
 			if (configBlock.columnWidths) {
 				this.columnLayoutStore.applyConfig(configBlock.columnWidths);
 			}
 		}
+
+		this.filterViewState = this.filterStateStore.getState();
 
 		// 解析头部配置块
 		let columnConfigs = this.markdownParser.parseHeaderConfig(content);
@@ -843,7 +849,8 @@ export class TableView extends ItemView {
 		// 准备列定义（添加序号列）
 		// 如果没有从配置块加载 filterViewState，则从插件设置加载
 		if (!this.filterViewState || this.filterViewState.views.length === 0) {
-			this.filterViewState = this.loadFilterViewState();
+			this.filterStateStore.loadFromSettings();
+			this.filterViewState = this.filterStateStore.getState();
 		}
 		this.initialColumnState = null;
 		this.filterViewBar = null;
@@ -2683,27 +2690,8 @@ export class TableView extends ItemView {
 		this.applyGlobalQuickFilter(TableView.getGlobalQuickFilter());
 	}
 
-	private loadFilterViewState(): FileFilterViewState {
-		const plugin = getPluginContext();
-		if (!plugin || !this.file || typeof plugin.getFilterViewsForFile !== 'function') {
-			return { views: [], activeViewId: null };
-		}
-		const stored = plugin.getFilterViewsForFile(this.file.path);
-		const availableIds = new Set(stored.views.map((view) => view.id));
-		const activeId = stored.activeViewId && availableIds.has(stored.activeViewId)
-			? stored.activeViewId
-			: null;
-		return {
-			activeViewId: activeId,
-			views: stored.views.map((view) => ({
-				id: view.id,
-				name: view.name,
-				filterRule: view.filterRule ?? null,
-				sortRules: this.sanitizeSortRules((view as any).sortRules),
-				columnState: view.columnState ? this.cloneColumnState(view.columnState as ColumnState[]) : null,
-				quickFilter: view.quickFilter ?? null
-			}))
-		};
+	private syncFilterViewState(): void {
+		this.filterViewState = this.filterStateStore.getState();
 	}
 
 	private rebuildFilterViewButtons(): void {
@@ -2770,16 +2758,21 @@ export class TableView extends ItemView {
 	}
 
 	private reorderFilterViews(draggedId: string, targetId: string): void {
-		const draggedIndex = this.filterViewState.views.findIndex((v) => v.id === draggedId);
-		const targetIndex = this.filterViewState.views.findIndex((v) => v.id === targetId);
-
-		if (draggedIndex === -1 || targetIndex === -1) {
+		let moved = false;
+		this.filterStateStore.updateState((state) => {
+			const draggedIndex = state.views.findIndex((v) => v.id === draggedId);
+			const targetIndex = state.views.findIndex((v) => v.id === targetId);
+			if (draggedIndex === -1 || targetIndex === -1) {
+				return;
+			}
+			const [draggedView] = state.views.splice(draggedIndex, 1);
+			state.views.splice(targetIndex, 0, draggedView);
+			moved = true;
+		});
+		if (!moved) {
 			return;
 		}
-
-		// 移动视图
-		const [draggedView] = this.filterViewState.views.splice(draggedIndex, 1);
-		this.filterViewState.views.splice(targetIndex, 0, draggedView);
+		this.syncFilterViewState();
 
 		// 重新渲染并保存
 		this.rebuildFilterViewButtons();
@@ -2787,7 +2780,10 @@ export class TableView extends ItemView {
 	}
 
 	private activateFilterView(viewId: string | null): void {
-		this.filterViewState.activeViewId = viewId;
+		this.filterStateStore.updateState((state) => {
+			state.activeViewId = viewId;
+		});
+		this.syncFilterViewState();
 		this.rebuildFilterViewButtons();
 		void this.persistFilterViews();
 		this.applyActiveFilterView();
@@ -3049,8 +3045,11 @@ export class TableView extends ItemView {
 			columnState: null,
 			quickFilter: null
 		};
-		this.filterViewState.views.push(newView);
-		this.filterViewState.activeViewId = newView.id;
+		this.filterStateStore.updateState((state) => {
+			state.views.push(newView);
+			state.activeViewId = newView.id;
+		});
+		this.syncFilterViewState();
 		this.rebuildFilterViewButtons();
 		void this.persistFilterViews();
 		this.applyActiveFilterView();
@@ -3118,9 +3117,16 @@ export class TableView extends ItemView {
 				initialRule: target.filterRule,
 				initialSortRules: target.sortRules,
 				onSubmit: (name, rule, sortRules) => {
-					target.name = name;
-					target.filterRule = rule;
-					target.sortRules = this.sanitizeSortRules(sortRules);
+					this.filterStateStore.updateState((state) => {
+						const current = state.views.find((view) => view.id === viewId);
+						if (!current) {
+							return;
+						}
+						current.name = name;
+						current.filterRule = rule;
+						current.sortRules = this.sanitizeSortRules(sortRules);
+					});
+					this.syncFilterViewState();
 					this.rebuildFilterViewButtons();
 					void this.persistFilterViews();
 					this.applyActiveFilterView();
@@ -3133,19 +3139,32 @@ export class TableView extends ItemView {
 	}
 
 	private async renameFilterView(viewId: string): Promise<void> {
-		const target = this.filterViewState.views.find((view) => view.id === viewId);
-		if (!target) {
+		const targetExists = this.filterViewState.views.some((view) => view.id === viewId);
+		if (!targetExists) {
 			return;
 		}
 		const name = await openFilterViewNameModal(this.app, {
 			title: '重命名视图',
 			placeholder: '输入新名称',
-			defaultValue: target.name
+			defaultValue: this.filterViewState.views.find((view) => view.id === viewId)?.name ?? ''
 		});
-		if (!name || name === target.name) {
+		const currentName = this.filterViewState.views.find((view) => view.id === viewId)?.name ?? '';
+		if (!name || name === currentName) {
 			return;
 		}
-		target.name = name;
+		let renamed = false;
+		this.filterStateStore.updateState((state) => {
+			const current = state.views.find((view) => view.id === viewId);
+			if (!current) {
+				return;
+			}
+			current.name = name;
+			renamed = true;
+		});
+		if (!renamed) {
+			return;
+		}
+		this.syncFilterViewState();
 		this.rebuildFilterViewButtons();
 		void this.persistFilterViews();
 	}
@@ -3156,25 +3175,34 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		// 创建副本
 		const duplicatedView: FilterViewDefinition = {
 			id: this.generateFilterViewId(),
 			name: `${sourceView.name} 副本`,
-			filterRule: sourceView.filterRule ? {
-				conditions: [...sourceView.filterRule.conditions.map(c => ({ ...c }))],
-				combineMode: sourceView.filterRule.combineMode
-			} : null,
+			filterRule: sourceView.filterRule
+				? {
+					conditions: sourceView.filterRule.conditions.map((c) => ({ ...c })),
+					combineMode: sourceView.filterRule.combineMode
+				}
+				: null,
 			sortRules: this.sanitizeSortRules(sourceView.sortRules),
 			columnState: this.cloneColumnState(sourceView.columnState),
 			quickFilter: sourceView.quickFilter
 		};
 
-		// 在源视图之后插入
-		const sourceIndex = this.filterViewState.views.findIndex((v) => v.id === viewId);
-		this.filterViewState.views.splice(sourceIndex + 1, 0, duplicatedView);
-
-		// 激活新视图
-		this.filterViewState.activeViewId = duplicatedView.id;
+		let inserted = false;
+		this.filterStateStore.updateState((state) => {
+			const sourceIndex = state.views.findIndex((v) => v.id === viewId);
+			if (sourceIndex === -1) {
+				return;
+			}
+			state.views.splice(sourceIndex + 1, 0, duplicatedView);
+			state.activeViewId = duplicatedView.id;
+			inserted = true;
+		});
+		if (!inserted) {
+			return;
+		}
+		this.syncFilterViewState();
 
 		// 重新渲染并保存
 		this.rebuildFilterViewButtons();
@@ -3185,14 +3213,22 @@ export class TableView extends ItemView {
 	}
 
 	private deleteFilterView(viewId: string): void {
-		const index = this.filterViewState.views.findIndex((view) => view.id === viewId);
-		if (index === -1) {
+		let removed = false;
+		this.filterStateStore.updateState((state) => {
+			const index = state.views.findIndex((view) => view.id === viewId);
+			if (index === -1) {
+				return;
+			}
+			state.views.splice(index, 1);
+			if (state.activeViewId === viewId) {
+				state.activeViewId = null;
+			}
+			removed = true;
+		});
+		if (!removed) {
 			return;
 		}
-		this.filterViewState.views.splice(index, 1);
-		if (this.filterViewState.activeViewId === viewId) {
-			this.filterViewState.activeViewId = null;
-		}
+		this.syncFilterViewState();
 		this.rebuildFilterViewButtons();
 		void this.persistFilterViews();
 		this.applyActiveFilterView();
@@ -3236,8 +3272,7 @@ export class TableView extends ItemView {
 	}
 
 	private persistFilterViews(): Promise<void> | void {
-		const plugin = getPluginContext();
-		if (!plugin || !this.file || typeof plugin.saveFilterViewsForFile !== 'function') {
+		if (!this.file) {
 			return;
 		}
 
@@ -3246,39 +3281,16 @@ export class TableView extends ItemView {
 			console.error('[TileLineBase] Failed to save config block:', error);
 		});
 
-		// 同时保存到插件设置（向后兼容）
-		return plugin.saveFilterViewsForFile(this.file.path, this.filterViewState);
+		// 同步到插件设置（向后兼容）
+		return this.filterStateStore.persist();
 	}
 
 	private cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
-		if (!state) {
-			return null;
-		}
-		return state.map((item) => ({ ...item }));
+		return this.filterStateStore.cloneColumnState(state);
 	}
 
 	private sanitizeSortRules(input: unknown): SortRule[] {
-		if (!Array.isArray(input)) {
-			return [];
-		}
-		const result: SortRule[] = [];
-		for (const raw of input) {
-			const candidate = raw as Partial<SortRule> & { column?: unknown; direction?: unknown };
-			const column = typeof candidate?.column === 'string' ? candidate.column.trim() : '';
-			if (!column) {
-				continue;
-			}
-			const direction: 'asc' | 'desc' = candidate?.direction === 'desc' ? 'desc' : 'asc';
-			result.push({ column, direction });
-		}
-		return result;
-	}
-
-	private deepClone<T>(value: T): T {
-		if (value == null) {
-			return value;
-		}
-		return JSON.parse(JSON.stringify(value)) as T;
+		return this.filterStateStore.sanitizeSortRules(input);
 	}
 
 	private clearElement(element: HTMLElement): void {

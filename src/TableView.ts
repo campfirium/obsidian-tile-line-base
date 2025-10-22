@@ -16,6 +16,7 @@ import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 import { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import { FilterViewController } from "./table-view/filter/FilterViewController";
 import { FilterDataProcessor } from "./table-view/filter/FilterDataProcessor";
+import { globalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterManager";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -86,9 +87,6 @@ export class TableView extends ItemView {
 	private formulaColumnOrder: string[] = [];
 	private formulaLimitNoticeIssued = false;
 
-	private static globalQuickFilterValue: string = '';
-	private static globalQuickFilterListeners = new Set<(value: string, source: TableView | null) => void>();
-	private static globalQuickFilterHostCount = 0;
 
 	constructor(leaf: WorkspaceLeaf) {
 		debugLog('=== TableView 构造函数开始 ===');
@@ -110,38 +108,10 @@ export class TableView extends ItemView {
 		debugLog('=== TableView 构造函数完成 ===');
 	}
 
-	private static subscribeGlobalQuickFilter(listener: (value: string, source: TableView | null) => void): () => void {
-		TableView.globalQuickFilterListeners.add(listener);
-		return () => {
-			TableView.globalQuickFilterListeners.delete(listener);
-		};
-	}
 
-	private static emitGlobalQuickFilter(value: string, source: TableView | null): void {
-		TableView.globalQuickFilterValue = value;
-		for (const listener of TableView.globalQuickFilterListeners) {
-			try {
-				listener(value, source);
-			} catch (error) {
-				console.error(LOG_PREFIX, 'globalQuickFilter listener failed', error);
-			}
-		}
-	}
 
-	private static getGlobalQuickFilter(): string {
-		return TableView.globalQuickFilterValue;
-	}
 
-	private static incrementGlobalQuickFilterHost(): void {
-		TableView.globalQuickFilterHostCount++;
-	}
 
-	private static decrementGlobalQuickFilterHost(): void {
-		TableView.globalQuickFilterHostCount = Math.max(0, TableView.globalQuickFilterHostCount - 1);
-		if (TableView.globalQuickFilterHostCount === 0 && TableView.globalQuickFilterValue) {
-			TableView.emitGlobalQuickFilter('', null);
-		}
-	}
 
 	getViewType(): string {
 		return TABLE_VIEW_TYPE;
@@ -2577,7 +2547,7 @@ export class TableView extends ItemView {
 		});
 		input.setAttribute('aria-label', '全局过滤关键字');
 		input.setAttribute('size', '16');
-		const currentValue = TableView.getGlobalQuickFilter();
+		const currentValue = globalQuickFilterManager.getValue();
 		input.value = currentValue;
 		this.globalQuickFilterInputEl = input;
 
@@ -2626,7 +2596,7 @@ export class TableView extends ItemView {
 			}
 		});
 
-		this.globalQuickFilterUnsubscribe = TableView.subscribeGlobalQuickFilter((value, source) => {
+		this.globalQuickFilterUnsubscribe = globalQuickFilterManager.subscribe((value, source) => {
 			if (source === this) {
 				return;
 			}
@@ -2636,17 +2606,17 @@ export class TableView extends ItemView {
 
 		if (!this.hasRegisteredGlobalQuickFilter) {
 			this.hasRegisteredGlobalQuickFilter = true;
-			TableView.incrementGlobalQuickFilterHost();
+			globalQuickFilterManager.incrementHost();
 		}
 	}
 
 	private onGlobalQuickFilterInput(rawValue: string): void {
 		const value = rawValue ?? '';
 		this.applyGlobalQuickFilter(value);
-		if (value === TableView.getGlobalQuickFilter()) {
+		if (value === globalQuickFilterManager.getValue()) {
 			return;
 		}
-		TableView.emitGlobalQuickFilter(value, this);
+		globalQuickFilterManager.emit(value, this);
 	}
 
 	private applyGlobalQuickFilter(value: string): void {
@@ -2686,12 +2656,12 @@ export class TableView extends ItemView {
 		if (!this.globalQuickFilterInputEl) {
 			return;
 		}
-		if (this.globalQuickFilterInputEl.value.length === 0 && !TableView.getGlobalQuickFilter()) {
+		if (this.globalQuickFilterInputEl.value.length === 0 && !globalQuickFilterManager.getValue()) {
 			return;
 		}
 		this.globalQuickFilterInputEl.value = '';
 		this.applyGlobalQuickFilter('');
-		TableView.emitGlobalQuickFilter('', this);
+		globalQuickFilterManager.emit('', this);
 		this.globalQuickFilterInputEl.focus();
 	}
 
@@ -2704,12 +2674,12 @@ export class TableView extends ItemView {
 		this.globalQuickFilterClearEl = null;
 		if (this.hasRegisteredGlobalQuickFilter) {
 			this.hasRegisteredGlobalQuickFilter = false;
-			TableView.decrementGlobalQuickFilterHost();
+			globalQuickFilterManager.decrementHost();
 		}
 	}
 
 	private reapplyGlobalQuickFilter(): void {
-		this.applyGlobalQuickFilter(TableView.getGlobalQuickFilter());
+		this.applyGlobalQuickFilter(globalQuickFilterManager.getValue());
 	}
 
 	private syncFilterViewState(): void {

@@ -1,6 +1,5 @@
 import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting, Notice, setIcon } from "obsidian";
-import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD, SortModelEntry } from "./grid/GridAdapter";
-import { AgGridAdapter } from "./grid/AgGridAdapter";
+import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD, SortModelEntry, HeaderEditEvent } from "./grid/GridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
 import { getPluginContext } from "./pluginContext";
 import { clampColumnWidth } from "./grid/columnSizing";
@@ -10,6 +9,8 @@ import { compileFormula, evaluateFormula, CompiledFormula } from "./formula/Form
 import type { ColumnState } from "ag-grid-community";
 import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondition, FilterOperator, SortRule } from "./types/filterView";
 import { FilterViewEditorModal, openFilterViewNameModal } from "./table-view/filter/FilterViewModals";
+import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
+import { GridController } from "./table-view/GridController";
 
 const LOG_PREFIX = "[TileLineBase]";
 const HIDDEN_SYSTEM_FIELDS = new Set(['statusChanged']);
@@ -62,12 +63,13 @@ export class TableView extends ItemView {
 	private sparseCleanupRequired: boolean = false;
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
+	private gridController = new GridController();
 	private pendingFocusRequest: PendingFocusRequest | null = null;
 	private focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
 	private allRowData: any[] = []; // 保存全部行数据
 	private visibleRowData: RowData[] = [];
 	private contextMenu: HTMLElement | null = null;
-	private columnWidthPrefs: Record<string, number> | null = null;
+	private columnLayoutStore = new ColumnLayoutStore(null);
 	private fileId: string | null = null; // 文件唯一ID（8位UUID）
 
 	// 事件监听器引用（用于清理）
@@ -296,20 +298,8 @@ export class TableView extends ItemView {
 		}
 	}
 
-	private ensureColumnWidthPrefs(): Record<string, number> {
-		if (this.columnWidthPrefs) {
-			return this.columnWidthPrefs;
-		}
-
-		const plugin = getPluginContext();
-		const filePath = this.file?.path;
-		this.columnWidthPrefs = plugin && filePath ? { ...(plugin.getColumnLayout(filePath) ?? {}) } : {};
-		return this.columnWidthPrefs;
-	}
-
 	private getStoredColumnWidth(field: string): number | undefined {
-		const prefs = this.ensureColumnWidthPrefs();
-		return prefs[field];
+		return this.columnLayoutStore.getWidth(field);
 	}
 
 	private handleColumnResize(field: string, width: number): void {
@@ -320,18 +310,15 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		const clamped = clampColumnWidth(width);
-		const prefs = this.ensureColumnWidthPrefs();
-		prefs[field] = clamped;
+		const changed = this.columnLayoutStore.updateWidth(field, width);
+		if (!changed) {
+			return;
+		}
 
 		// 保存到配置块（带缓存）
 		this.saveConfigBlock().catch((error) => {
 			console.error('[TileLineBase] Failed to save config block:', error);
 		});
-
-		// 同时保存到插件设置（向后兼容）
-		const plugin = getPluginContext();
-		plugin?.updateColumnWidthPreference(this.file.path, field, clamped);
 	}
 
 	private handleColumnOrderChange(orderedFields: string[]): void {
@@ -1148,7 +1135,7 @@ export class TableView extends ItemView {
 			return;
 		}
 
-		this.columnWidthPrefs = null;
+		this.columnLayoutStore.reset(this.file.path);
 		// 读取文件内容
 		const content = await this.app.vault.read(this.file);
 
@@ -1161,7 +1148,7 @@ export class TableView extends ItemView {
 				this.filterViewState = configBlock.filterViews;
 			}
 			if (configBlock.columnWidths) {
-				this.columnWidthPrefs = configBlock.columnWidths;
+				this.columnLayoutStore.applyConfig(configBlock.columnWidths);
 			}
 		}
 
@@ -1275,20 +1262,11 @@ export class TableView extends ItemView {
 		// 创建表格容器
 		const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
 
-		// 销毁旧的表格实例（如果存在）
-
 		const containerWindow = ownerDoc?.defaultView ?? window;
 		debugLog('TableView.render container window', this.describeWindow(containerWindow));
 
 		const mountGrid = () => {
-			// 销毁旧的表格实例（如果存在）
-			if (this.gridAdapter) {
-				this.gridAdapter.destroy();
-			}
-
-			// 创建并挂载新的表格
-			this.gridAdapter = new AgGridAdapter();
-			this.gridAdapter.mount(tableContainer, columns, data, {
+			const result = this.gridController.mount(tableContainer, columns, data, {
 				onStatusChange: (rowId: string, newStatus: TaskStatus) => {
 					this.onStatusChange(rowId, newStatus);
 				},
@@ -1300,57 +1278,32 @@ export class TableView extends ItemView {
 				},
 				onColumnOrderChange: (fields: string[]) => {
 					this.handleColumnOrderChange(fields);
+				},
+				onModelUpdated: () => this.handleGridModelUpdated(),
+				onCellEdit: (event: CellEditEvent) => {
+					this.onCellEdit(event);
+				},
+				onHeaderEdit: (event: HeaderEditEvent) => {
+					this.handleHeaderEditEvent(event);
+				},
+				onColumnHeaderContextMenu: (field: string, event: MouseEvent) => {
+					this.handleColumnHeaderContextMenu(field, event);
+				},
+				onEnterAtLastRow: (field: string | null) => {
+					const oldRowCount = this.blocks.length;
+					this.addRow(oldRowCount, {
+						focusField: field ?? null
+					});
 				}
 			});
-			this.gridAdapter.onModelUpdated?.(() => this.handleGridModelUpdated());
-			this.tableContainer = tableContainer;
+
+			this.gridAdapter = result.gridAdapter;
+			this.tableContainer = result.container;
 			this.updateTableContainerSize();
-
-			// 监听单元格编辑事件
-			this.gridAdapter.onCellEdit((event) => {
-				this.onCellEdit(event);
-			});
-
-			// 监听表头编辑事件（暂未实现）
-			this.gridAdapter.onHeaderEdit((event) => {
-				// TODO: 实现表头编辑
-			});
-
-			this.gridAdapter.onColumnHeaderContextMenu?.((payload) => {
-				this.handleColumnHeaderContextMenu(payload.field, payload.domEvent);
-			});
-
-			// 监听最后一行 Enter 事件（自动新增行）
-			this.gridAdapter.onEnterAtLastRow?.((field) => {
-				const oldRowCount = this.blocks.length;
-				this.addRow(oldRowCount, {
-					focusField: field ?? null
-				});
-			});
-
 			this.applyActiveFilterView();
-
-			// 添加右键菜单监听
-			this.setupContextMenu(tableContainer);
-
-			// 添加键盘快捷键
-			this.setupKeyboardShortcuts(tableContainer);
-
-			// 设置容器尺寸监听（处理新窗口和窗口调整大小）
-			this.setupResizeObserver(tableContainer);
-
-			// 多次尝试调整列宽，确保在新窗口中也能正确初始化
-			setTimeout(() => {
-				this.gridAdapter?.resizeColumns?.();
-			}, 100);
-
-			setTimeout(() => {
-				this.gridAdapter?.resizeColumns?.();
-			}, 300);
-
-			setTimeout(() => {
-				this.gridAdapter?.resizeColumns?.();
-			}, 800);
+			this.setupContextMenu(result.container);
+			this.setupKeyboardShortcuts(result.container);
+			this.setupResizeObserver(result.container);
 		};
 
 		if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
@@ -1517,8 +1470,8 @@ export class TableView extends ItemView {
 		}
 
 		this.resizeTimeout = setTimeout(() => {
-			this.gridAdapter?.markLayoutDirty?.();
-			this.gridAdapter?.resizeColumns?.();
+			this.gridController.markLayoutDirty();
+			this.gridController.resizeColumns();
 
 			// 对于窗口/viewport/workspace 等事件，延迟再次尝试，确保布局稳定
 			if (
@@ -1527,11 +1480,11 @@ export class TableView extends ItemView {
 				source === 'workspace resize'
 			) {
 				setTimeout(() => {
-					this.gridAdapter?.resizeColumns?.();
+					this.gridController.resizeColumns();
 				}, 200);
 
 				setTimeout(() => {
-					this.gridAdapter?.resizeColumns?.();
+					this.gridController.resizeColumns();
 				}, 500);
 			}
 
@@ -2025,6 +1978,17 @@ export class TableView extends ItemView {
 		}
 
 		return null;
+	}
+
+	private handleHeaderEditEvent(event: HeaderEditEvent): void {
+		if (!this.schema) {
+			return;
+		}
+		const colIndex = this.schema.columnNames.indexOf(event.field);
+		if (colIndex === -1) {
+			return;
+		}
+		this.onHeaderEdit(colIndex, event.newName);
 	}
 
 	/**
@@ -2628,10 +2592,7 @@ export class TableView extends ItemView {
 			this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
 		}
 
-		const widthPrefs = this.ensureColumnWidthPrefs();
-		if (Object.prototype.hasOwnProperty.call(widthPrefs, target)) {
-			delete widthPrefs[target];
-		}
+		this.columnLayoutStore.remove(target);
 
 		this.hiddenSortableFields.delete(target);
 		this.formulaColumns.delete(target);
@@ -2698,10 +2659,7 @@ export class TableView extends ItemView {
 		}
 
 		if (templateField) {
-			const widthPrefs = this.ensureColumnWidthPrefs();
-			if (Object.prototype.hasOwnProperty.call(widthPrefs, templateField)) {
-				widthPrefs[trimmedName] = widthPrefs[templateField];
-			}
+			this.columnLayoutStore.clone(templateField, trimmedName);
 		}
 
 		if (templateField && this.hiddenSortableFields.has(templateField)) {
@@ -2799,11 +2757,7 @@ export class TableView extends ItemView {
 			this.schema.columnConfigs = this.normalizeColumnConfigs(nextConfigs);
 		}
 
-		const widthPrefs = this.ensureColumnWidthPrefs();
-		if (Object.prototype.hasOwnProperty.call(widthPrefs, oldName)) {
-			widthPrefs[trimmed] = widthPrefs[oldName];
-			delete widthPrefs[oldName];
-		}
+		this.columnLayoutStore.rename(oldName, trimmed);
 
 		if (this.hiddenSortableFields.has(oldName)) {
 			this.hiddenSortableFields.delete(oldName);
@@ -3867,8 +3821,9 @@ export class TableView extends ItemView {
 		if (this.filterViewState) {
 			lines.push(`filterViews:${JSON.stringify(this.filterViewState)}`);
 		}
-		if (this.columnWidthPrefs && Object.keys(this.columnWidthPrefs).length > 0) {
-			lines.push(`columnWidths:${JSON.stringify(this.columnWidthPrefs)}`);
+		const widthPrefs = this.columnLayoutStore.exportPreferences();
+		if (Object.keys(widthPrefs).length > 0) {
+			lines.push(`columnWidths:${JSON.stringify(widthPrefs)}`);
 		}
 		if (this.schema?.columnConfigs && this.schema.columnConfigs.length > 0) {
 			const serializedColumns = this.schema.columnConfigs
@@ -3910,7 +3865,7 @@ export class TableView extends ItemView {
 		if (cacheManager) {
 			const config: Record<string, any> = {
 				filterViews: this.filterViewState,
-				columnWidths: this.columnWidthPrefs ?? {},
+				columnWidths: widthPrefs,
 				columnConfigs: this.schema?.columnConfigs
 					? this.schema.columnConfigs
 						.filter((cfg) => this.hasColumnConfigContent(cfg))
@@ -3926,8 +3881,8 @@ export class TableView extends ItemView {
 			if (this.filterViewState) {
 				await plugin.saveFilterViewsForFile(this.file.path, this.filterViewState);
 			}
-			if (this.columnWidthPrefs) {
-				for (const [field, width] of Object.entries(this.columnWidthPrefs)) {
+			if (Object.keys(widthPrefs).length > 0) {
+				for (const [field, width] of Object.entries(widthPrefs)) {
 					plugin.updateColumnWidthPreference(this.file.path, field, width);
 				}
 			}
@@ -3945,10 +3900,9 @@ export class TableView extends ItemView {
 		this.clearPendingFocus('view-close');
 
 		// 销毁表格实例
-		if (this.gridAdapter) {
-			this.gridAdapter.destroy();
-			this.gridAdapter = null;
-		}
+		this.gridController.destroy();
+		this.gridAdapter = null;
+		this.tableContainer = null;
 
 		// 清理保存定时器
 		if (this.saveTimeout) {

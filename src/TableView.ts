@@ -1,4 +1,4 @@
-import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting, Notice } from "obsidian";
+import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Menu, Modal, Setting, Notice, setIcon } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD, SortModelEntry } from "./grid/GridAdapter";
 import { AgGridAdapter } from "./grid/AgGridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
@@ -85,12 +85,53 @@ export class TableView extends ItemView {
 	private filterViewState: FileFilterViewState = { views: [], activeViewId: null };
 	private initialColumnState: ColumnState[] | null = null;
 	private hiddenSortableFields: Set<string> = new Set();
+	private globalQuickFilterInputEl: HTMLInputElement | null = null;
+	private globalQuickFilterClearEl: HTMLElement | null = null;
+	private globalQuickFilterUnsubscribe: (() => void) | null = null;
+	private hasRegisteredGlobalQuickFilter = false;
+
+	private static globalQuickFilterValue: string = '';
+	private static globalQuickFilterListeners = new Set<(value: string, source: TableView | null) => void>();
+	private static globalQuickFilterHostCount = 0;
 
 	constructor(leaf: WorkspaceLeaf) {
 		debugLog('=== TableView 构造函数开始 ===');
 		debugLog('leaf:', leaf);
 		super(leaf);
 		debugLog('=== TableView 构造函数完成 ===');
+	}
+
+	private static subscribeGlobalQuickFilter(listener: (value: string, source: TableView | null) => void): () => void {
+		TableView.globalQuickFilterListeners.add(listener);
+		return () => {
+			TableView.globalQuickFilterListeners.delete(listener);
+		};
+	}
+
+	private static emitGlobalQuickFilter(value: string, source: TableView | null): void {
+		TableView.globalQuickFilterValue = value;
+		for (const listener of TableView.globalQuickFilterListeners) {
+			try {
+				listener(value, source);
+			} catch (error) {
+				console.error(LOG_PREFIX, 'globalQuickFilter listener failed', error);
+			}
+		}
+	}
+
+	private static getGlobalQuickFilter(): string {
+		return TableView.globalQuickFilterValue;
+	}
+
+	private static incrementGlobalQuickFilterHost(): void {
+		TableView.globalQuickFilterHostCount++;
+	}
+
+	private static decrementGlobalQuickFilterHost(): void {
+		TableView.globalQuickFilterHostCount = Math.max(0, TableView.globalQuickFilterHostCount - 1);
+		if (TableView.globalQuickFilterHostCount === 0 && TableView.globalQuickFilterValue) {
+			TableView.emitGlobalQuickFilter('', null);
+		}
 	}
 
 	getViewType(): string {
@@ -2099,6 +2140,168 @@ export class TableView extends ItemView {
 		addButton.addEventListener('click', () => {
 			void this.promptCreateFilterView();
 		});
+
+		const search = bar.createDiv({ cls: 'tlb-filter-view-search' });
+		this.renderGlobalQuickFilter(search);
+	}
+
+	private renderGlobalQuickFilter(container: HTMLElement): void {
+		if (this.globalQuickFilterUnsubscribe) {
+			this.globalQuickFilterUnsubscribe();
+			this.globalQuickFilterUnsubscribe = null;
+		}
+
+		this.globalQuickFilterInputEl = null;
+		this.globalQuickFilterClearEl = null;
+
+		container.addClass('tlb-filter-view-search');
+		container.setAttribute('role', 'search');
+
+		const clearButton = container.createSpan({ cls: 'clickable-icon' });
+		clearButton.setAttribute('role', 'button');
+		clearButton.setAttribute('tabindex', '0');
+		clearButton.setAttribute('aria-label', '清除过滤');
+		setIcon(clearButton, 'x');
+
+		const input = container.createEl('input', {
+			type: 'search',
+			placeholder: '全局过滤'
+		});
+		input.setAttribute('aria-label', '全局过滤关键字');
+		input.setAttribute('size', '16');
+		const currentValue = TableView.getGlobalQuickFilter();
+		input.value = currentValue;
+		this.globalQuickFilterInputEl = input;
+
+		const iconEl = container.createSpan({ cls: 'clickable-icon' });
+		iconEl.setAttribute('aria-label', '聚焦过滤输入');
+		iconEl.setAttribute('tabindex', '0');
+		setIcon(iconEl, 'search');
+		clearButton.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.clearGlobalQuickFilter();
+		});
+		clearButton.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				event.stopPropagation();
+				this.clearGlobalQuickFilter();
+			}
+		});
+		this.globalQuickFilterClearEl = clearButton;
+		this.updateGlobalQuickFilterIndicators(currentValue);
+
+		iconEl.addEventListener('click', () => {
+			input.focus();
+		});
+		iconEl.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				event.stopPropagation();
+				input.focus();
+			}
+		});
+
+		input.addEventListener('input', () => {
+			this.onGlobalQuickFilterInput(input.value);
+		});
+		input.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				event.stopPropagation();
+				if (input.value.length > 0) {
+					this.clearGlobalQuickFilter();
+				} else {
+					input.blur();
+				}
+			}
+		});
+
+		this.globalQuickFilterUnsubscribe = TableView.subscribeGlobalQuickFilter((value, source) => {
+			if (source === this) {
+				return;
+			}
+			this.updateGlobalQuickFilterInput(value);
+			this.applyGlobalQuickFilter(value);
+		});
+
+		if (!this.hasRegisteredGlobalQuickFilter) {
+			this.hasRegisteredGlobalQuickFilter = true;
+			TableView.incrementGlobalQuickFilterHost();
+		}
+	}
+
+	private onGlobalQuickFilterInput(rawValue: string): void {
+		const value = rawValue ?? '';
+		this.applyGlobalQuickFilter(value);
+		if (value === TableView.getGlobalQuickFilter()) {
+			return;
+		}
+		TableView.emitGlobalQuickFilter(value, this);
+	}
+
+	private applyGlobalQuickFilter(value: string): void {
+		if (this.gridAdapter && typeof this.gridAdapter.setQuickFilter === 'function') {
+			this.gridAdapter.setQuickFilter(value);
+		}
+		this.updateGlobalQuickFilterIndicators(value);
+	}
+
+	private updateGlobalQuickFilterInput(value: string): void {
+		if (this.globalQuickFilterInputEl && this.globalQuickFilterInputEl.value !== value) {
+			const input = this.globalQuickFilterInputEl;
+			const isFocused = document.activeElement === input;
+			input.value = value;
+			if (isFocused) {
+				const caret = typeof input.selectionEnd === 'number' ? Math.min(value.length, input.selectionEnd) : value.length;
+				input.setSelectionRange(caret, caret);
+			}
+		}
+		this.updateGlobalQuickFilterIndicators(value);
+	}
+
+	private updateGlobalQuickFilterIndicators(value: string): void {
+		if (!this.globalQuickFilterClearEl) {
+			return;
+		}
+		if (value && value.length > 0) {
+			this.globalQuickFilterClearEl.removeAttribute('hidden');
+			(this.globalQuickFilterClearEl as HTMLElement).style.display = '';
+		} else {
+			this.globalQuickFilterClearEl.setAttribute('hidden', 'true');
+			(this.globalQuickFilterClearEl as HTMLElement).style.display = 'none';
+		}
+	}
+
+	private clearGlobalQuickFilter(): void {
+		if (!this.globalQuickFilterInputEl) {
+			return;
+		}
+		if (this.globalQuickFilterInputEl.value.length === 0 && !TableView.getGlobalQuickFilter()) {
+			return;
+		}
+		this.globalQuickFilterInputEl.value = '';
+		this.applyGlobalQuickFilter('');
+		TableView.emitGlobalQuickFilter('', this);
+		this.globalQuickFilterInputEl.focus();
+	}
+
+	private cleanupGlobalQuickFilter(): void {
+		if (this.globalQuickFilterUnsubscribe) {
+			this.globalQuickFilterUnsubscribe();
+			this.globalQuickFilterUnsubscribe = null;
+		}
+		this.globalQuickFilterInputEl = null;
+		this.globalQuickFilterClearEl = null;
+		if (this.hasRegisteredGlobalQuickFilter) {
+			this.hasRegisteredGlobalQuickFilter = false;
+			TableView.decrementGlobalQuickFilterHost();
+		}
+	}
+
+	private reapplyGlobalQuickFilter(): void {
+		this.applyGlobalQuickFilter(TableView.getGlobalQuickFilter());
 	}
 
 	private loadFilterViewState(): FileFilterViewState {
@@ -2236,6 +2439,7 @@ export class TableView extends ItemView {
 		this.visibleRowData = sortedRows;
 		this.gridAdapter.updateData(sortedRows);
 		this.applySortModelToGrid(sortRules);
+		this.reapplyGlobalQuickFilter();
 	}
 
 	private applyActiveFilterView(): void {
@@ -2270,6 +2474,7 @@ export class TableView extends ItemView {
 				this.gridAdapter.updateData(dataToShow);
 			}
 			this.applySortModelToGrid(sortRules);
+			this.reapplyGlobalQuickFilter();
 		};
 
 		if (this.gridAdapter.runWhenReady) {
@@ -2928,6 +3133,8 @@ export class TableView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		this.cleanupGlobalQuickFilter();
+
 		// 清理事件监听器
 		this.cleanupEventListeners();
 

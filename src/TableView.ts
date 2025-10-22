@@ -15,6 +15,7 @@ import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 import { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import { FilterViewController } from "./table-view/filter/FilterViewController";
+import { FilterDataProcessor } from "./table-view/filter/FilterDataProcessor";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -2733,11 +2734,10 @@ export class TableView extends ItemView {
 		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
 
 		const sortRules = targetView?.sortRules ?? [];
-		const filtered = !targetView || !targetView.filterRule
+		const filteredRows = !targetView || !targetView.filterRule
 			? this.allRowData
-			: this.applyFilterRule(this.allRowData, targetView.filterRule);
-		const normalizedRows = Array.isArray(filtered) ? [...filtered as RowData[]] : [];
-		const sortedRows = this.sortRowData(normalizedRows, sortRules);
+			: FilterDataProcessor.applyFilterRule(this.allRowData, targetView.filterRule);
+		const sortedRows = FilterDataProcessor.sortRowData(filteredRows, sortRules);
 		this.visibleRowData = sortedRows;
 		this.gridAdapter.updateData(sortedRows);
 		this.applySortModelToGrid(sortRules);
@@ -2754,12 +2754,9 @@ export class TableView extends ItemView {
 		const sortRules = targetView?.sortRules ?? [];
 		const resolveDataToShow = (): RowData[] => {
 			const baseRows = !targetView || !targetView.filterRule
-				? [...this.allRowData as RowData[]]
-				: (() => {
-					const filtered = this.applyFilterRule(this.allRowData, targetView.filterRule!);
-					return Array.isArray(filtered) ? [...filtered as RowData[]] : [];
-				})();
-			return this.sortRowData(baseRows, sortRules);
+				? this.allRowData
+				: FilterDataProcessor.applyFilterRule(this.allRowData, targetView.filterRule!);
+			return FilterDataProcessor.sortRowData(baseRows, sortRules);
 		};
 
 		const applyData = () => {
@@ -2784,88 +2781,6 @@ export class TableView extends ItemView {
 		} else {
 			applyData();
 		}
-	}
-
-	private applyFilterRule(rows: any[], rule: FilterRule): any[] {
-		return rows.filter((row) => {
-			const results = rule.conditions.map((condition) => this.evaluateCondition(row, condition));
-
-			if (rule.combineMode === 'AND') {
-				return results.every((r) => r);
-			} else {
-				return results.some((r) => r);
-			}
-		});
-	}
-
-	private sortRowData(rows: RowData[], sortRules: SortRule[]): RowData[] {
-		if (!Array.isArray(rows)) {
-			return [];
-		}
-		const effectiveRules = (sortRules ?? []).filter((rule) => rule && typeof rule.column === 'string' && rule.column.length > 0);
-		if (effectiveRules.length === 0) {
-			return [...rows];
-		}
-		const sorted = [...rows];
-		sorted.sort((a, b) => this.compareRowsForSort(a, b, effectiveRules));
-		return sorted;
-	}
-
-	private compareRowsForSort(a: RowData, b: RowData, sortRules: SortRule[]): number {
-		for (const rule of sortRules) {
-			const comparison = this.compareValuesForSort(a[rule.column], b[rule.column]);
-			if (comparison !== 0) {
-				return rule.direction === 'desc' ? -comparison : comparison;
-			}
-		}
-		return 0;
-	}
-
-	private compareValuesForSort(aValue: unknown, bValue: unknown): number {
-		const normalizedA = this.normalizeSortValue(aValue);
-		const normalizedB = this.normalizeSortValue(bValue);
-		if (normalizedA.rank !== normalizedB.rank) {
-			return normalizedA.rank - normalizedB.rank;
-		}
-		if (normalizedA.type === 'number' || normalizedA.type === 'date') {
-			return (normalizedA.value as number) - (normalizedB.value as number);
-		}
-		if (normalizedA.type === 'string') {
-			return (normalizedA.value as string).localeCompare(normalizedB.value as string);
-		}
-		return 0;
-	}
-
-	private normalizeSortValue(value: unknown): { type: 'empty' | 'number' | 'date' | 'string'; value: number | string; rank: number } {
-		if (value == null) {
-			return { type: 'empty', value: 0, rank: 0 };
-		}
-		if (value instanceof Date) {
-			return { type: 'date', value: value.getTime(), rank: 3 };
-		}
-		if (typeof value === 'number') {
-			if (Number.isNaN(value)) {
-				return { type: 'empty', value: 0, rank: 0 };
-			}
-			return { type: 'number', value, rank: 2 };
-		}
-		const stringValue = String(value).trim();
-		if (stringValue.length === 0) {
-			return { type: 'empty', value: 0, rank: 0 };
-		}
-		if (/^[+-]?\d+(\.\d+)?$/.test(stringValue)) {
-			const numeric = Number(stringValue);
-			if (!Number.isNaN(numeric)) {
-				return { type: 'number', value: numeric, rank: 2 };
-			}
-		}
-		if (/[\-\/](?:\d|$)/.test(stringValue) || /\d{1,2}:\d{2}/.test(stringValue)) {
-			const timestamp = Date.parse(stringValue);
-			if (!Number.isNaN(timestamp)) {
-				return { type: 'date', value: timestamp, rank: 3 };
-			}
-		}
-		return { type: 'string', value: stringValue.toLowerCase(), rank: 1 };
 	}
 
 	private applySortModelToGrid(sortRules: SortRule[]): void {

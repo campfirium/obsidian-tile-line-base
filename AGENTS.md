@@ -83,7 +83,7 @@ Hard Requirement: call binaries directly in functions.shell, always set workdir,
 
 ### 任务驱动开发
 
-1. **创建任务**：在 `.claude/tasks/T000X_描述` 创建任务文件
+1. **创建任务**：在 `/tasks/T000X_描述` 创建任务文件
 
 2. **开发实现**：在 `feat/T000X-name` 分支完成功能
 
@@ -117,7 +117,7 @@ Hard Requirement: call binaries directly in functions.shell, always set workdir,
 
 ### 任务驱动开发
 
-1. **创建任务**：在 `.claude/tasks/T000X_描述` 创建任务文件
+1. **创建任务**：在 `tasks/T000X_描述` 创建任务文件
 
 2. **开发实现**：在 `feat/T000X-name` 分支完成功能
 

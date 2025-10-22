@@ -333,6 +333,114 @@ export class TableView extends ItemView {
 		plugin?.updateColumnWidthPreference(this.file.path, field, clamped);
 	}
 
+	private handleColumnOrderChange(orderedFields: string[]): void {
+		if (!this.schema) {
+			return;
+		}
+
+		const currentOrder = this.schema.columnNames;
+		if (currentOrder.length === 0) {
+			return;
+		}
+
+		const primaryField = currentOrder[0] ?? null;
+		const fixedFields = new Set<string>();
+		if (primaryField) {
+			fixedFields.add(primaryField);
+		}
+		if (currentOrder.includes('status')) {
+			fixedFields.add('status');
+		}
+
+		const movableFields = currentOrder.filter((field) => !fixedFields.has(field));
+		if (movableFields.length === 0) {
+			return;
+		}
+
+		const normalizedOrder = orderedFields
+			.map((field) => (typeof field === 'string' ? field.trim() : ''))
+			.filter((field) => field.length > 0 && field !== '#' && field !== ROW_ID_FIELD);
+
+		const reorderedMovable: string[] = [];
+		for (const field of normalizedOrder) {
+			if (fixedFields.has(field)) {
+				continue;
+			}
+			if (!movableFields.includes(field)) {
+				continue;
+			}
+			if (!reorderedMovable.includes(field)) {
+				reorderedMovable.push(field);
+			}
+		}
+
+		for (const field of movableFields) {
+			if (!reorderedMovable.includes(field)) {
+				reorderedMovable.push(field);
+			}
+		}
+
+		const nextOrder: string[] = [];
+		const appendUnique = (field: string | null) => {
+			if (!field) return;
+			if (!nextOrder.includes(field)) {
+				nextOrder.push(field);
+			}
+		};
+
+		appendUnique(primaryField);
+		if (fixedFields.has('status')) {
+			appendUnique('status');
+		}
+
+		for (const field of reorderedMovable) {
+			appendUnique(field);
+		}
+
+		if (nextOrder.length !== currentOrder.length) {
+			return;
+		}
+
+		let changed = false;
+		for (let i = 0; i < nextOrder.length; i++) {
+			if (nextOrder[i] !== currentOrder[i]) {
+				changed = true;
+				break;
+			}
+		}
+
+		if (!changed) {
+			return;
+		}
+
+		this.schema.columnNames.splice(0, this.schema.columnNames.length, ...nextOrder);
+
+		if (this.schema.columnConfigs && this.schema.columnConfigs.length > 0) {
+			const configMap = new Map(this.schema.columnConfigs.map((config) => [config.name, config]));
+			const orderedConfigs: ColumnConfig[] = [];
+			const seen = new Set<string>();
+
+			for (const field of nextOrder) {
+				const config = configMap.get(field);
+				if (config && !seen.has(config.name)) {
+					orderedConfigs.push(config);
+					seen.add(config.name);
+				}
+			}
+
+			for (const config of this.schema.columnConfigs) {
+				if (!seen.has(config.name)) {
+					orderedConfigs.push(config);
+					seen.add(config.name);
+				}
+			}
+
+			this.schema.columnConfigs = orderedConfigs.length > 0 ? orderedConfigs : undefined;
+		}
+
+		this.scheduleSave();
+	}
+
 
 	/**
 	 * 解析单行列定义
@@ -407,6 +515,23 @@ export class TableView extends ItemView {
 				config.formula = value;
 				break;
 		}
+	}
+
+	private deserializeColumnConfigs(raw: unknown): ColumnConfig[] | null {
+		if (!Array.isArray(raw)) {
+			return null;
+		}
+		const result: ColumnConfig[] = [];
+		for (const entry of raw) {
+			if (typeof entry !== 'string' || entry.trim().length === 0) {
+				continue;
+			}
+			const config = this.parseColumnDefinition(entry);
+			if (config) {
+				result.push(config);
+			}
+		}
+		return result.length > 0 ? result : null;
 	}
 
 	private hasColumnConfigContent(config: ColumnConfig): boolean {
@@ -614,17 +739,29 @@ export class TableView extends ItemView {
 		const lines = contentWithoutConfig.split('\n');
 		const blocks: H2Block[] = [];
 		let currentBlock: H2Block | null = null;
+		let inCodeBlock = false;
 
 		for (const line of lines) {
+			const trimmed = line.trim();
+
+			if (trimmed.startsWith('```')) {
+				inCodeBlock = !inCodeBlock;
+				continue;
+			}
+
+			if (inCodeBlock) {
+				continue;
+			}
+
 			// 检测 H2 标题
-			if (line.startsWith('## ')) {
+			if (trimmed.startsWith('## ')) {
 				// 保存前一个块
 				if (currentBlock) {
 					blocks.push(currentBlock);
 				}
 
 				// 解析 H2 标题（去掉 "## "）
-				const titleText = line.substring(3).trim();
+				const titleText = trimmed.substring(3).trim();
 
 				// 开始新块
 				currentBlock = {
@@ -641,7 +778,6 @@ export class TableView extends ItemView {
 				}
 			} else if (currentBlock) {
 				// 在 H2 块内部，解析 Key:Value 格式
-				const trimmed = line.trim();
 				if (trimmed.length > 0) {
 					// 查找第一个冒号（支持中文冒号和英文冒号）
 					const colonIndex = trimmed.indexOf('：') >= 0 ? trimmed.indexOf('：') : trimmed.indexOf(':');
@@ -691,18 +827,19 @@ export class TableView extends ItemView {
 			columnNames.push(key);
 			seenKeys.add(key);
 		};
+		for (const key of Object.keys(schemaBlock.data)) {
+			appendKey(key);
+		}
+
 		if (columnConfigs && columnConfigs.length > 0) {
 			for (const config of columnConfigs) {
+				const alreadySeen = seenKeys.has(config.name);
 				appendKey(config.name);
-				if (schemaBlock.data[config.name] === undefined) {
+				if (!alreadySeen && schemaBlock.data[config.name] === undefined) {
 					schemaBlock.data[config.name] = '';
 					this.schemaDirty = true;
 				}
 			}
-		}
-
-		for (const key of Object.keys(schemaBlock.data)) {
-			appendKey(key);
 		}
 
 		for (let i = 1; i < blocks.length; i++) {
@@ -752,9 +889,15 @@ export class TableView extends ItemView {
 			this.schemaDirty = true;
 		}
 
+		const orderedConfigs = columnConfigs
+			? columnNames
+				.map((name) => columnConfigs.find((config) => config.name === name))
+				.filter((config): config is ColumnConfig => Boolean(config))
+			: undefined;
+
 		return {
 			columnNames,
-			columnConfigs: columnConfigs || undefined
+			columnConfigs: orderedConfigs && orderedConfigs.length > 0 ? orderedConfigs : undefined
 		};
 	}
 
@@ -905,19 +1048,6 @@ export class TableView extends ItemView {
 		}, 500);
 	}
 
-	private buildColumnConfigBlock(): string | null {
-		if (!this.schema || !this.schema.columnConfigs || this.schema.columnConfigs.length === 0) {
-			return null;
-		}
-		const lines = this.schema.columnConfigs
-			.filter((config) => this.hasColumnConfigContent(config))
-			.map((config) => this.serializeColumnConfig(config));
-		if (lines.length === 0) {
-			return null;
-		}
-		return ['```tilelinebase', ...lines, '```'].join('\n');
-	}
-
 	/**
 	 * 保存到文件
 	 */
@@ -925,12 +1055,8 @@ export class TableView extends ItemView {
 		if (!this.file) return;
 
 		try {
-			const markdown = this.blocksToMarkdown();
-			const columnConfigBlock = this.buildColumnConfigBlock();
-			const finalContent = columnConfigBlock
-				? `${columnConfigBlock}\n\n${markdown}`
-				: markdown;
-			await this.app.vault.modify(this.file, finalContent);
+			const markdown = this.blocksToMarkdown().trimEnd();
+			await this.app.vault.modify(this.file, `${markdown}\n`);
 			await this.saveConfigBlock();
 		} catch (error) {
 			console.error('❌ 保存失败:', error);
@@ -999,7 +1125,10 @@ export class TableView extends ItemView {
 		}
 
 		// 解析头部配置块
-		const columnConfigs = this.parseHeaderConfigBlock(content);
+		let columnConfigs = this.parseHeaderConfigBlock(content);
+		if ((!columnConfigs || columnConfigs.length === 0) && configBlock?.columnConfigs) {
+			columnConfigs = this.deserializeColumnConfigs(configBlock.columnConfigs);
+		}
 
 		// 解析 H2 块
 		this.blocks = this.parseH2Blocks(content);
@@ -1039,6 +1168,8 @@ export class TableView extends ItemView {
 		this.filterViewTabsEl = null;
 		this.renderFilterViewControls(container);
 
+		const primaryField = this.schema.columnNames[0] ?? null;
+
 		const columns: ColumnDef[] = [
 			{
 				field: '#',
@@ -1046,7 +1177,7 @@ export class TableView extends ItemView {
 				headerTooltip: 'Index',
 				editable: false  // 序号列只读
 			},
-			...this.schema.columnNames.map(name => {
+			...this.schema.columnNames.map((name) => {
 				const baseColDef: ColumnDef = {
 					field: name,
 					headerName: name,
@@ -1056,6 +1187,18 @@ export class TableView extends ItemView {
 				if (normalizedName === 'status') {
 					baseColDef.headerName = '';
 					baseColDef.headerTooltip = 'Status';
+					(baseColDef as any).suppressMovable = true;
+					(baseColDef as any).lockPosition = true;
+					(baseColDef as any).lockPinned = true;
+					(baseColDef as any).pinned = 'left';
+					baseColDef.editable = false;
+				}
+
+				if (primaryField && name === primaryField) {
+					(baseColDef as any).pinned = 'left';
+					(baseColDef as any).lockPinned = true;
+					(baseColDef as any).lockPosition = true;
+					(baseColDef as any).suppressMovable = true;
 				}
 
 				// 应用头部配置对每列的定制
@@ -1072,16 +1215,17 @@ export class TableView extends ItemView {
 					(baseColDef as any).tooltipField = this.getFormulaTooltipField(name);
 				}
 
-				
 				const storedWidth = this.getStoredColumnWidth(name);
 				if (typeof storedWidth === "number" && name !== "#" && name !== "status") {
 					const clamped = clampColumnWidth(storedWidth);
 					(baseColDef as any).width = clamped;
 					(baseColDef as any).__tlbStoredWidth = clamped;
 					(baseColDef as any).suppressSizeToFit = true;
-				}return baseColDef;
+				}
+
+				return baseColDef;
 			})
-		]
+		];
 
 		// 根据 Obsidian 主题选择 AG Grid 主题（支持新窗口）
 		const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
@@ -1112,6 +1256,9 @@ export class TableView extends ItemView {
 				},
 				onCopyH2Section: (rowIndex: number) => {
 					this.copyH2Section(rowIndex);
+				},
+				onColumnOrderChange: (fields: string[]) => {
+					this.handleColumnOrderChange(fields);
 				}
 			});
 			this.gridAdapter.onModelUpdated?.(() => this.handleGridModelUpdated());
@@ -3383,6 +3530,14 @@ export class TableView extends ItemView {
 		if (this.columnWidthPrefs && Object.keys(this.columnWidthPrefs).length > 0) {
 			lines.push(`columnWidths:${JSON.stringify(this.columnWidthPrefs)}`);
 		}
+		if (this.schema?.columnConfigs && this.schema.columnConfigs.length > 0) {
+			const serializedColumns = this.schema.columnConfigs
+				.filter((config) => this.hasColumnConfigContent(config))
+				.map((config) => this.serializeColumnConfig(config));
+			if (serializedColumns.length > 0) {
+				lines.push(`columnConfigs:${JSON.stringify(serializedColumns)}`);
+			}
+		}
 		lines.push(`viewPreference:table`);
 
 		const configBlock = `\`\`\`tlb\n${lines.join('\n')}\n\`\`\``;
@@ -3416,6 +3571,11 @@ export class TableView extends ItemView {
 			const config: Record<string, any> = {
 				filterViews: this.filterViewState,
 				columnWidths: this.columnWidthPrefs ?? {},
+				columnConfigs: this.schema?.columnConfigs
+					? this.schema.columnConfigs
+						.filter((cfg) => this.hasColumnConfigContent(cfg))
+						.map((cfg) => this.serializeColumnConfig(cfg))
+					: [],
 				viewPreference: 'table'
 			};
 			cacheManager.setCache(this.fileId, this.file.path, version, config);

@@ -84,6 +84,20 @@ export function compileFormula(rawFormula: string): CompiledFormula {
 }
 
 export function evaluateFormula(compiled: CompiledFormula, context: Record<string, unknown>): FormulaEvaluationResult {
+	if (compiled.rpn.length === 1) {
+		const soleToken = compiled.rpn[0];
+		if (soleToken.type === 'field') {
+			const raw = context[soleToken.value];
+			if (raw === null || raw === undefined) {
+				return { value: '', error: null };
+			}
+			return { value: String(raw), error: null };
+		}
+		if (soleToken.type === 'number') {
+			return { value: formatResult(soleToken.value), error: null };
+		}
+	}
+
 	try {
 		const result = evaluateRpn(compiled.rpn, context);
 		if (!Number.isFinite(result)) {

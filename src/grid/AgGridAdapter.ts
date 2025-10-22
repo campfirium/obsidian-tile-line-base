@@ -19,7 +19,8 @@ import {
 	IRowNode,
 	Column,
 	ColumnResizedEvent,
-	ColumnState
+	ColumnState,
+	ColumnMovedEvent
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -54,12 +55,14 @@ export class AgGridAdapter implements GridAdapter {
 	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
 	private columnResizeCallback?: (field: string, width: number) => void;
+	private columnOrderChangeCallback?: (fields: string[]) => void;
 	private columnLayoutInitialized = false;
 	private pendingEnterAtLastRow = false;
 	private gridContext?: {
 		onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 		onColumnResize?: (field: string, width: number) => void;
 		onCopyH2Section?: (rowIndex: number) => void;
+		onColumnOrderChange?: (fields: string[]) => void;
 	};
 
 	// Composition Proxy：每个 Document 一个代理层
@@ -711,12 +714,14 @@ export class AgGridAdapter implements GridAdapter {
 			onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 			onColumnResize?: (field: string, width: number) => void;
 			onCopyH2Section?: (rowIndex: number) => void;
+			onColumnOrderChange?: (fields: string[]) => void;
 		}
 	): void {
 		this.containerEl = container;
 		this.focusedDoc = container.ownerDocument || document;
 		this.gridContext = context;
 		this.columnResizeCallback = context?.onColumnResize;
+		this.columnOrderChangeCallback = context?.onColumnOrderChange;
 		this.columnLayoutInitialized = false;
 		if (this.proxyRealignTimer != null) {
 			window.clearTimeout(this.proxyRealignTimer);
@@ -734,6 +739,8 @@ export class AgGridAdapter implements GridAdapter {
 					editable: false,
 					pinned: 'left',
 					lockPinned: true,
+					lockPosition: true,
+					suppressMovable: true,
 					width: 60,  // 固定宽度
 					maxWidth: 80,
 					sortable: true,
@@ -765,6 +772,8 @@ export class AgGridAdapter implements GridAdapter {
 					editable: false,  // 禁用编辑模式
 					pinned: 'left',
 					lockPinned: true,
+					lockPosition: true,
+					suppressMovable: true,
 					width: 60,  // 固定宽度
 					resizable: false,
 					sortable: true,
@@ -952,6 +961,9 @@ export class AgGridAdapter implements GridAdapter {
 			},
 			onColumnResized: (event: ColumnResizedEvent) => {
 				this.handleColumnResized(event);
+			},
+			onColumnMoved: (event: ColumnMovedEvent) => {
+				this.handleColumnMoved(event);
 			},
 			onCellDoubleClicked: (event: CellDoubleClickedEvent) => {
 				const colId = event.column?.getColId?.() ?? null;
@@ -1227,6 +1239,7 @@ onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEven
 		this.unbindViewportListeners();
 		this.columnResizeCallback = undefined;
 		this.columnHeaderContextMenuCallback = undefined;
+		this.columnOrderChangeCallback = undefined;
 		this.columnLayoutInitialized = false;
 		this.containerEl = null;
 		this.focusedDoc = null;
@@ -1513,6 +1526,52 @@ onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEven
 		if (this.columnResizeCallback) {
 			this.columnResizeCallback(colId, clamped);
 		}
+	}
+
+	private handleColumnMoved(event: ColumnMovedEvent): void {
+		if (!this.columnOrderChangeCallback) {
+			return;
+		}
+
+		if (!event.finished) {
+			return;
+		}
+
+		const column = event.column ?? null;
+		const columnId = typeof column?.getColId === 'function' ? column.getColId() : null;
+		if (columnId === '#' || columnId === 'status' || columnId === ROW_ID_FIELD) {
+			return;
+		}
+
+		const columnApi: any = this.columnApi;
+		if (!columnApi || typeof columnApi.getAllGridColumns !== 'function') {
+			return;
+		}
+
+		const orderedColumns: Column[] = columnApi.getAllGridColumns() ?? [];
+		const orderedFields: string[] = [];
+
+		for (const gridColumn of orderedColumns) {
+			if (!gridColumn) {
+				continue;
+			}
+			const colDef = typeof gridColumn.getColDef === 'function' ? gridColumn.getColDef() : null;
+			const field = colDef?.field;
+			const fallback = typeof gridColumn.getColId === 'function' ? gridColumn.getColId() : null;
+			const value = field ?? fallback;
+			if (!value || value === '#' || value === 'status' || value === ROW_ID_FIELD) {
+				continue;
+			}
+			if (!orderedFields.includes(value)) {
+				orderedFields.push(value);
+			}
+		}
+
+		if (orderedFields.length === 0) {
+			return;
+		}
+
+		this.columnOrderChangeCallback(orderedFields);
 	}
 
 	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {

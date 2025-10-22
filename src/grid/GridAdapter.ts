@@ -27,6 +27,11 @@ export interface RowData {
 	[key: string]: string;
 }
 
+export interface SortModelEntry {
+	field: string;
+	direction: 'asc' | 'desc';
+}
+
 /**
  * 单元格编辑事件
  */
@@ -151,4 +156,6 @@ export interface GridAdapter {
 	 * Triggered when the grid model updates
 	 */
 	onModelUpdated?(callback: () => void): void;
+
+	setSortModel?(sortModel: SortModelEntry[]): void;
 }

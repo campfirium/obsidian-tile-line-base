@@ -146,4 +146,9 @@ export interface GridAdapter {
 	setFilterModel?(model: any | null): void;
 	getColumnState?(): ColumnState[] | null;
 	applyColumnState?(state: ColumnState[] | null): void;
+
+	/**
+	 * Triggered when the grid model updates
+	 */
+	onModelUpdated?(callback: () => void): void;
 }

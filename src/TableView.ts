@@ -39,6 +39,15 @@ interface Schema {
 	columnIds?: string[];             // 预留：稳定 ID 系统（用于 SchemaStore）
 }
 
+interface PendingFocusRequest {
+	rowIndex: number;
+	field?: string | null;
+	maxRetries: number;
+	retriesLeft: number;
+	retryDelay: number;
+	pendingVerification: boolean;
+}
+
 export class TableView extends ItemView {
 	file: TFile | null = null;
 	private blocks: H2Block[] = [];
@@ -47,7 +56,10 @@ export class TableView extends ItemView {
 	private sparseCleanupRequired: boolean = false;
 	private saveTimeout: NodeJS.Timeout | null = null;
 	private gridAdapter: GridAdapter | null = null;
+	private pendingFocusRequest: PendingFocusRequest | null = null;
+	private focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
 	private allRowData: any[] = []; // 保存全部行数据
+	private visibleRowData: RowData[] = [];
 	private contextMenu: HTMLElement | null = null;
 	private columnWidthPrefs: Record<string, number> | null = null;
 	private fileId: string | null = null; // 文件唯一ID（8位UUID）
@@ -717,7 +729,7 @@ export class TableView extends ItemView {
 
 		// 准备列定义（添加序号列）
 		// 如果没有从配置块加载 filterViewState，则从插件设置加载
-		if (!this.filterViewState) {
+		if (!this.filterViewState || this.filterViewState.views.length === 0) {
 			this.filterViewState = this.loadFilterViewState();
 		}
 		this.initialColumnState = null;
@@ -794,6 +806,7 @@ export class TableView extends ItemView {
 					this.copyH2Section(rowIndex);
 				}
 			});
+			this.gridAdapter.onModelUpdated?.(() => this.handleGridModelUpdated());
 			this.tableContainer = tableContainer;
 			this.updateTableContainerSize();
 
@@ -810,34 +823,9 @@ export class TableView extends ItemView {
 			// 监听最后一行 Enter 事件（自动新增行）
 			this.gridAdapter.onEnterAtLastRow?.((field) => {
 				const oldRowCount = this.blocks.length;
-				this.addRow(oldRowCount);
-
-				// 多次尝试聚焦和编辑，确保成功
-				const tryEdit = (attempt: number = 0) => {
-					if (!this.gridAdapter || attempt > 5) return;
-
-					const api = (this.gridAdapter as any).gridApi;
-					if (!api) return;
-
-					api.ensureIndexVisible(oldRowCount);
-					const newRowNode = api.getDisplayedRowAtIndex(oldRowCount);
-					newRowNode?.setSelected(true, true);
-					api.setFocusedCell(oldRowCount, field);
-
-					api.startEditingCell({
-						rowIndex: oldRowCount,
-						colKey: field
-					});
-
-					setTimeout(() => {
-						const editingCells = api.getEditingCells();
-						if (editingCells.length === 0) {
-							tryEdit(attempt + 1);
-						}
-					}, 50);
-				};
-
-				setTimeout(() => tryEdit(), 50);
+				this.addRow(oldRowCount, {
+					focusField: field ?? null
+				});
 			});
 
 			this.applyActiveFilterView();
@@ -1402,6 +1390,39 @@ export class TableView extends ItemView {
 	}
 
 	/**
+	 * 获取当前激活过滤视图中的等值条件，作为新建条目的预填充
+	 */
+	private getActiveFilterPrefills(): Record<string, string> {
+		const prefills: Record<string, string> = {};
+
+		const activeId = this.filterViewState.activeViewId;
+		if (!activeId) {
+			return prefills;
+		}
+
+		const activeView = this.filterViewState.views.find((view) => view.id === activeId);
+		if (!activeView || !activeView.filterRule) {
+			return prefills;
+		}
+
+		for (const condition of activeView.filterRule.conditions) {
+			if (condition.operator !== 'equals') {
+				continue;
+			}
+			const rawValue = condition.value ?? '';
+			if (rawValue.trim().length === 0) {
+				continue;
+			}
+			if (condition.column === 'statusChanged') {
+				continue;
+			}
+			prefills[condition.column] = rawValue;
+		}
+
+		return prefills;
+	}
+
+	/**
 	 * 处理单元格编辑（Key:Value 格式）
 	 */
 	private onCellEdit(event: CellEditEvent): void {
@@ -1498,15 +1519,19 @@ export class TableView extends ItemView {
 	 * 添加新行（Key:Value 格式）
 	 * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
 	 */
-	private addRow(beforeRowIndex?: number): void {
+	private addRow(beforeRowIndex?: number, options?: { focusField?: string | null }): void {
 		if (!this.schema) {
 			console.error('Schema not initialized');
 			return;
 		}
 
 		const focusedCell = this.gridAdapter?.getFocusedCell?.();
+		const focusField = options?.focusField !== undefined
+			? options.focusField ?? null
+			: focusedCell?.field ?? null;
 		// 计算新条目编号
 		const entryNumber = this.blocks.length + 1;
+		const filterPrefills = this.getActiveFilterPrefills();
 
 		// 创建新 H2Block（初始化所有 key）
 		const newBlock: H2Block = {
@@ -1517,17 +1542,15 @@ export class TableView extends ItemView {
 		// 为所有列初始化值
 		for (let i = 0; i < this.schema.columnNames.length; i++) {
 			const key = this.schema.columnNames[i];
+			const prefilledValue = filterPrefills[key];
 
-			// status 列初始化为 'todo'
-			if (key === 'status') {
+			if (prefilledValue !== undefined) {
+				newBlock.data[key] = prefilledValue;
+			} else if (key === 'status') {
 				newBlock.data[key] = 'todo';
-			}
-			// 第一列使用"新条目 X"，其他列为空
-			else if (i === 0) {
+			} else if (i === 0) {
 				newBlock.data[key] = `新条目 ${entryNumber}`;
-			}
-			// 其他列为空
-			else {
+			} else {
 				newBlock.data[key] = '';
 			}
 		}
@@ -1549,7 +1572,7 @@ export class TableView extends ItemView {
 		const insertIndex = (beforeRowIndex !== undefined && beforeRowIndex !== null)
 			? beforeRowIndex
 			: this.blocks.length - 1;
-		this.focusRow(insertIndex, focusedCell?.field);
+		this.focusRow(insertIndex, focusField ?? undefined);
 
 		// 触发保存
 		this.scheduleSave();
@@ -1558,27 +1581,298 @@ export class TableView extends ItemView {
 	/**
 	 * 聚焦并选中指定行，保持视图位置
 	 */
-	private focusRow(rowIndex: number, field?: string): void {
-		if (!this.gridAdapter || !this.schema) {
+	private focusRow(
+		rowIndex: number,
+		field?: string,
+		options?: { retryCount?: number; retryDelay?: number }
+	): void {
+		if (!this.schema) {
+			debugLog('[FocusDebug]', 'focusRow: missing schema', { rowIndex, field });
 			return;
 		}
 
 		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
+			debugLog('[FocusDebug]', 'focusRow: index out of range', {
+				rowIndex,
+				field,
+				blockCount: this.blocks.length
+			});
+			return;
+		}
+
+		const maxRetries = Math.max(1, options?.retryCount ?? 20);
+		const retryDelay = Math.max(20, options?.retryDelay ?? 80);
+
+		this.clearPendingFocus('replace-request');
+
+		this.pendingFocusRequest = {
+			rowIndex,
+			field: field ?? null,
+			maxRetries,
+			retriesLeft: maxRetries,
+			retryDelay,
+			pendingVerification: false
+		};
+
+		debugLog('[FocusDebug]', 'focusRow: request registered', {
+			rowIndex,
+			field: field ?? null,
+			maxRetries,
+			retryDelay,
+			visibleRowCount: this.visibleRowData.length
+		});
+
+		this.scheduleFocusAttempt(0, 'initial');
+	}
+
+	private scheduleFocusAttempt(delay: number, reason: string): void {
+		const request = this.pendingFocusRequest;
+		if (!request) {
+			debugLog('[FocusDebug]', 'scheduleFocusAttempt: no pending request', { reason, delay });
+			return;
+		}
+
+		const effectiveDelay = Math.max(0, delay);
+
+		if (this.focusRetryTimer) {
+			clearTimeout(this.focusRetryTimer);
+			this.focusRetryTimer = null;
+		}
+
+		debugLog('[FocusDebug]', 'scheduleFocusAttempt', {
+			reason,
+			delay: effectiveDelay,
+			rowIndex: request.rowIndex,
+			field: request.field ?? null,
+			retriesLeft: request.retriesLeft,
+			pendingVerification: request.pendingVerification
+		});
+
+		this.focusRetryTimer = setTimeout(() => {
+			this.focusRetryTimer = null;
+			this.attemptFocusOnPendingRow();
+		}, effectiveDelay);
+	}
+
+	private attemptFocusOnPendingRow(): void {
+		const request = this.pendingFocusRequest;
+		if (!request) {
+			debugLog('[FocusDebug]', 'attemptFocus: skipped (no request)');
+			return;
+		}
+
+		const attemptIndex = request.maxRetries - request.retriesLeft + 1;
+
+		if (!this.gridAdapter || !this.schema) {
+			debugLog('[FocusDebug]', 'attemptFocus: grid/schema not ready', {
+				rowIndex: request.rowIndex,
+				field: request.field ?? null,
+				attemptIndex,
+				retriesLeft: request.retriesLeft
+			});
+			this.handleFocusRetry(request, 'grid-not-ready');
 			return;
 		}
 
 		const fallbackField = this.schema.columnNames[0] ?? null;
-		const targetField = (field && field !== ROW_ID_FIELD) ? field : fallbackField;
+		const targetField = (request.field && request.field !== ROW_ID_FIELD) ? request.field : fallbackField;
+		const targetRowId = String(request.rowIndex);
 
-		setTimeout(() => {
-			if (!this.gridAdapter) return;
-			this.gridAdapter.selectRow?.(rowIndex, { ensureVisible: true });
+		const adapter: any = this.gridAdapter;
+		const api = adapter.gridApi;
+		if (!api) {
+			debugLog('[FocusDebug]', 'attemptFocus: grid API unavailable', {
+				rowIndex: request.rowIndex,
+				field: targetField,
+				attemptIndex,
+				retriesLeft: request.retriesLeft
+			});
+			this.handleFocusRetry(request, 'missing-api');
+			return;
+		}
 
-			if (!targetField) return;
+		let targetNode: any = null;
 
-			const api = (this.gridAdapter as any).gridApi;
-			api?.setFocusedCell(rowIndex, targetField);
-		}, 0);
+		if (typeof api.getRowNode === 'function') {
+			targetNode = api.getRowNode(targetRowId);
+		}
+
+		if (!targetNode && typeof api.forEachNodeAfterFilterAndSort === 'function') {
+			api.forEachNodeAfterFilterAndSort((node: any) => {
+				if (targetNode) {
+					return;
+				}
+				const nodeId = String(node?.data?.[ROW_ID_FIELD] ?? '');
+				if (nodeId === targetRowId) {
+					targetNode = node;
+				}
+			});
+		}
+
+		if (!targetNode) {
+			debugLog('[FocusDebug]', 'attemptFocus: target node missing', {
+				rowIndex: request.rowIndex,
+				field: targetField,
+				attemptIndex,
+				retriesLeft: request.retriesLeft
+			});
+			this.handleFocusRetry(request, 'node-missing');
+			return;
+		}
+
+		const displayedIndex = typeof targetNode.rowIndex === 'number'
+			? targetNode.rowIndex
+			: null;
+
+		const effectiveIndex = displayedIndex ?? this.visibleRowData.findIndex(
+			(row) => String(row?.[ROW_ID_FIELD]) === targetRowId
+		);
+
+		if (effectiveIndex === -1 || effectiveIndex === null) {
+			debugLog('[FocusDebug]', 'attemptFocus: effective index not found', {
+				rowIndex: request.rowIndex,
+				field: targetField,
+				attemptIndex,
+				retriesLeft: request.retriesLeft,
+				visibleRowCount: this.visibleRowData.length
+			});
+			this.handleFocusRetry(request, 'index-missing');
+			return;
+		}
+
+		const focusedCell = typeof api.getFocusedCell === 'function' ? api.getFocusedCell() : null;
+		const focusedColumnId = focusedCell?.column
+			? (typeof focusedCell.column.getColId === 'function'
+				? focusedCell.column.getColId()
+				: typeof focusedCell.column.getId === 'function'
+					? focusedCell.column.getId()
+					: focusedCell.column.colId ?? null)
+			: null;
+
+		const hasFocus =
+			focusedCell != null &&
+			focusedCell.rowIndex === effectiveIndex &&
+			(!targetField || focusedColumnId === targetField);
+
+		if (request.pendingVerification) {
+			if (hasFocus) {
+				debugLog('[FocusDebug]', 'attemptFocus: verification success', {
+					rowIndex: request.rowIndex,
+					field: targetField,
+					attemptIndex
+				});
+				this.clearPendingFocus('verification-success');
+				return;
+			}
+			debugLog('[FocusDebug]', 'attemptFocus: verification failed', {
+				rowIndex: request.rowIndex,
+				field: targetField,
+				attemptIndex
+			});
+			request.pendingVerification = false;
+			this.handleFocusRetry(request, 'verification-failed');
+			return;
+		}
+
+		if (hasFocus) {
+			debugLog('[FocusDebug]', 'attemptFocus: already focused', {
+				rowIndex: request.rowIndex,
+				field: targetField,
+				attemptIndex
+			});
+			this.clearPendingFocus('already-focused');
+			return;
+		}
+
+		if (typeof targetNode.setSelected === 'function') {
+			targetNode.setSelected(true, true);
+		} else {
+			this.gridAdapter.selectRow?.(request.rowIndex, { ensureVisible: true });
+		}
+
+		if (typeof api.ensureNodeVisible === 'function') {
+			api.ensureNodeVisible(targetNode, 'middle');
+		} else if (typeof api.ensureIndexVisible === 'function') {
+			api.ensureIndexVisible(effectiveIndex, 'middle');
+		}
+
+		if (targetField && typeof api.setFocusedCell === 'function') {
+			api.setFocusedCell(effectiveIndex, targetField);
+		}
+
+		debugLog('[FocusDebug]', 'attemptFocus: issued focus command', {
+			rowIndex: request.rowIndex,
+			field: targetField,
+			attemptIndex,
+			retriesLeft: request.retriesLeft
+		});
+
+		request.pendingVerification = true;
+		this.scheduleFocusAttempt(Math.max(30, Math.floor(request.retryDelay / 2)), 'verification-delay');
+	}
+
+	private handleFocusRetry(request: PendingFocusRequest, reason: string): void {
+		if (!this.pendingFocusRequest || request !== this.pendingFocusRequest) {
+			return;
+		}
+
+		if (request.pendingVerification) {
+			request.pendingVerification = false;
+		}
+
+		if (request.retriesLeft <= 1) {
+			debugLog('[FocusDebug]', 'handleFocusRetry: exhausted', {
+				reason,
+				rowIndex: request.rowIndex,
+				field: request.field ?? null
+			});
+			this.clearPendingFocus('exhausted');
+			return;
+		}
+
+		request.retriesLeft -= 1;
+		debugLog('[FocusDebug]', 'handleFocusRetry: scheduling retry', {
+			reason,
+			rowIndex: request.rowIndex,
+			field: request.field ?? null,
+			retriesLeft: request.retriesLeft
+		});
+		this.scheduleFocusAttempt(request.retryDelay, `retry:${reason}`);
+	}
+
+	private clearPendingFocus(reason?: string): void {
+		if (this.focusRetryTimer) {
+			clearTimeout(this.focusRetryTimer);
+			this.focusRetryTimer = null;
+		}
+
+		if (this.pendingFocusRequest) {
+			debugLog('[FocusDebug]', 'clearPendingFocus', {
+				reason: reason ?? 'unknown',
+				rowIndex: this.pendingFocusRequest.rowIndex,
+				field: this.pendingFocusRequest.field ?? null
+			});
+		} else {
+			debugLog('[FocusDebug]', 'clearPendingFocus', {
+				reason: reason ?? 'unknown',
+				skipped: true
+			});
+		}
+
+		this.pendingFocusRequest = null;
+	}
+
+	private handleGridModelUpdated(): void {
+		if (!this.pendingFocusRequest) {
+			debugLog('[FocusDebug]', 'handleGridModelUpdated: no pending request');
+			return;
+		}
+		debugLog('[FocusDebug]', 'handleGridModelUpdated: reschedule', {
+			rowIndex: this.pendingFocusRequest.rowIndex,
+			field: this.pendingFocusRequest.field ?? null,
+			retriesLeft: this.pendingFocusRequest.retriesLeft
+		});
+		this.scheduleFocusAttempt(0, 'model-updated');
 	}
 
 	/**
@@ -1930,6 +2224,7 @@ export class TableView extends ItemView {
 		}
 
 		// 更新 AG Grid 显示
+		this.visibleRowData = Array.isArray(dataToShow) ? [...dataToShow as RowData[]] : [];
 		this.gridAdapter.updateData(dataToShow);
 	}
 
@@ -1940,27 +2235,34 @@ export class TableView extends ItemView {
 		const targetId = this.filterViewState.activeViewId;
 		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
 
-		// 应用过滤规则
-		this.gridAdapter.runWhenReady?.(() => {
+		const resolveDataToShow = (): RowData[] => {
+			if (!targetView || !targetView.filterRule) {
+				return [...this.allRowData as RowData[]];
+			}
+			const filtered = this.applyFilterRule(this.allRowData, targetView.filterRule);
+			return Array.isArray(filtered) ? [...filtered as RowData[]] : [];
+		};
+
+		const applyData = () => {
 			if (!this.gridAdapter) {
 				return;
 			}
+			const dataToShow = resolveDataToShow();
+			this.visibleRowData = dataToShow;
 
-			let dataToShow: any[];
-			if (!targetView || !targetView.filterRule) {
-				// 没有激活视图,显示全部数据
-				dataToShow = this.allRowData;
-			} else {
-				// 应用过滤规则
-				dataToShow = this.applyFilterRule(this.allRowData, targetView.filterRule);
-			}
-
-			// 使用 AG Grid API 更新数据
 			const api = (this.gridAdapter as any).gridApi;
 			if (api && typeof api.setGridOption === 'function') {
 				api.setGridOption('rowData', dataToShow);
+			} else {
+				this.gridAdapter.updateData(dataToShow);
 			}
-		});
+		};
+
+		if (this.gridAdapter.runWhenReady) {
+			this.gridAdapter.runWhenReady(() => applyData());
+		} else {
+			applyData();
+		}
 	}
 
 	private applyFilterRule(rows: any[], rule: FilterRule): any[] {
@@ -2469,6 +2771,7 @@ export class TableView extends ItemView {
 
 		// 隐藏右键菜单
 		this.hideContextMenu();
+		this.clearPendingFocus('view-close');
 
 		// 销毁表格实例
 		if (this.gridAdapter) {

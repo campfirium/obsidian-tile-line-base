@@ -1254,12 +1254,25 @@ export class TableView extends ItemView {
 	 * 复制 H2 段落到剪贴板
 	 */
 	private async copyH2Section(blockIndex: number): Promise<void> {
-		if (blockIndex < 0 || blockIndex >= this.blocks.length) {
+		const blockIndexes = this.resolveBlockIndexesForCopy(blockIndex);
+		if (blockIndexes.length === 0) {
 			return;
 		}
 
-		const block = this.blocks[blockIndex];
-		const markdown = this.blockToMarkdown(block);
+		const segments: string[] = [];
+		for (const index of blockIndexes) {
+			const block = this.blocks[index];
+			if (!block) {
+				continue;
+			}
+			segments.push(this.blockToMarkdown(block));
+		}
+
+		if (segments.length === 0) {
+			return;
+		}
+
+		const markdown = segments.join('\n\n');
 
 		try {
 			await navigator.clipboard.writeText(markdown);
@@ -1268,6 +1281,25 @@ export class TableView extends ItemView {
 			console.error('复制失败:', error);
 			new Notice('复制失败');
 		}
+	}
+
+	private resolveBlockIndexesForCopy(primaryIndex: number): number[] {
+		const selected = this.gridAdapter?.getSelectedRows() ?? [];
+		const validSelection = selected.filter((index) => index >= 0 && index < this.blocks.length);
+
+		if (validSelection.length > 1 && validSelection.includes(primaryIndex)) {
+			return validSelection;
+		}
+
+		if (primaryIndex >= 0 && primaryIndex < this.blocks.length) {
+			return [primaryIndex];
+		}
+
+		if (validSelection.length > 0) {
+			return validSelection;
+		}
+
+		return [];
 	}
 
 	/**

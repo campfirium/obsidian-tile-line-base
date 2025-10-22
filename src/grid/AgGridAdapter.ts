@@ -13,6 +13,7 @@ import {
 	CellEditingStartedEvent,
 	CellFocusedEvent,
 	CellKeyDownEvent,
+	CellDoubleClickedEvent,
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode,
@@ -951,6 +952,19 @@ export class AgGridAdapter implements GridAdapter {
 			onColumnResized: (event: ColumnResizedEvent) => {
 				this.handleColumnResized(event);
 			},
+			onCellDoubleClicked: (event: CellDoubleClickedEvent) => {
+				const colId = event.column?.getColId?.() ?? null;
+				if (colId !== '#') {
+					return;
+				}
+				const data = event.data as RowData | undefined;
+				const raw = data ? data[ROW_ID_FIELD] : undefined;
+				const blockIndex = raw !== undefined ? parseInt(String(raw), 10) : NaN;
+				if (Number.isNaN(blockIndex)) {
+					return;
+				}
+				this.gridContext?.onCopyH2Section?.(blockIndex);
+			},
 
 			// 默认列配置
 			defaultColDef: {
@@ -1207,7 +1221,18 @@ export class AgGridAdapter implements GridAdapter {
 	getSelectedRows(): number[] {
 		if (!this.gridApi) return [];
 
-		const selectedNodes = this.gridApi.getSelectedNodes();
+		const selectedNodes = [...this.gridApi.getSelectedNodes()] as Array<IRowNode<RowData>>;
+		const resolveSortKey = (node: IRowNode<RowData>): number => {
+			const baseIndex = node.rowIndex ?? 0;
+			if (node.rowPinned === 'top') {
+				return baseIndex - 1_000_000_000;
+			}
+			if (node.rowPinned === 'bottom') {
+				return baseIndex + 1_000_000_000;
+			}
+			return baseIndex;
+		};
+		selectedNodes.sort((a, b) => resolveSortKey(a) - resolveSortKey(b));
 		const blockIndexes: number[] = [];
 
 		for (const node of selectedNodes) {

@@ -3,6 +3,7 @@ import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { debugLog, isDebugEnabled } from './utils/logger';
 import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState, FilterViewDefinition } from './types/filterView';
+import { FileCacheManager } from './cache/FileCacheManager';
 
 const LOG_PREFIX = '[TileLineBase]';
 
@@ -18,16 +19,31 @@ interface OpenContext {
 	workspace?: Workspace | null;
 }
 
+interface TlbConfigBlock {
+	filterViews?: FileFilterViewState;
+	columnWidths?: Record<string, number>;
+	viewPreference?: 'markdown' | 'table';
+	[key: string]: unknown;
+}
+
+interface ConfigCacheEntry {
+	filePath: string;
+	version: number;
+	config: TlbConfigBlock;
+}
+
 interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
+	configCache: Record<string, ConfigCacheEntry>; // 新增：配置缓存
 }
 
 const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	fileViewPrefs: {},
 	columnLayouts: {},
-	filterViews: {}
+	filterViews: {},
+	configCache: {} // 新增
 };
 
 export default class TileLineBasePlugin extends Plugin {
@@ -36,10 +52,16 @@ export default class TileLineBasePlugin extends Plugin {
 	private mainContext: WindowContext | null = null;
 	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
 	private suppressAutoSwitchUntil = new Map<string, number>();
+	public cacheManager: FileCacheManager | null = null;
 
 	async onload() {
 		setPluginContext(this);
 		await this.loadSettings();
+
+		// 初始化缓存管理器
+		this.cacheManager = new FileCacheManager(this);
+		await this.cacheManager.load();
+
 		debugLog('========== Plugin onload 开始 ==========');
 		debugLog('Registering TableView view');
 		debugLog('TABLE_VIEW_TYPE =', TABLE_VIEW_TYPE);
@@ -817,6 +839,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settings.fileViewPrefs = { ...DEFAULT_SETTINGS.fileViewPrefs, ...(this.settings.fileViewPrefs ?? {}) };
 		this.settings.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(this.settings.columnLayouts ?? {}) };
 		this.settings.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(this.settings.filterViews ?? {}) };
+		this.settings.configCache = { ...DEFAULT_SETTINGS.configCache, ...(this.settings.configCache ?? {}) };
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {

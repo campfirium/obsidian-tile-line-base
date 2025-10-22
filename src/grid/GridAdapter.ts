@@ -90,6 +90,11 @@ export interface GridAdapter {
 	onHeaderEdit(callback: (event: HeaderEditEvent) => void): void;
 
 	/**
+	 * 监听列表头的右键菜单事件
+	 */
+	onColumnHeaderContextMenu?(callback: (event: { field: string; domEvent: MouseEvent }) => void): void;
+
+	/**
 	 * 销毁表格实例，释放资源
 	 */
 	destroy(): void;

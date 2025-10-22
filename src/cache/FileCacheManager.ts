@@ -1,20 +1,5 @@
 import type TileLineBasePlugin from '../main';
-
-export interface TlbConfigBlock {
-	filterViews?: {
-		views: any[];
-		activeViewId: string | null;
-	};
-	columnWidths?: Record<string, number>;
-	viewPreference?: 'markdown' | 'table';
-	[key: string]: unknown;
-}
-
-interface ConfigCacheEntry {
-	filePath: string;
-	version: number;
-	config: TlbConfigBlock;
-}
+import type { ConfigCacheEntry, TlbConfigBlock } from '../types/config';
 
 /**
  * 文件配置缓存管理器

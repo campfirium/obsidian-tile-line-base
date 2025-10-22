@@ -11,9 +11,10 @@ import type { FileFilterViewState, FilterViewDefinition, FilterRule, FilterCondi
 import { FilterViewEditorModal, openFilterViewNameModal } from "./table-view/filter/FilterViewModals";
 import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
 import { GridController } from "./table-view/GridController";
+import { MarkdownBlockParser, ColumnConfig, H2Block } from "./table-view/MarkdownBlockParser";
+import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 
 const LOG_PREFIX = "[TileLineBase]";
-const HIDDEN_SYSTEM_FIELDS = new Set(['statusChanged']);
 const FORMULA_ROW_LIMIT = 5000;
 const FORMULA_ERROR_VALUE = '#ERR';
 const FORMULA_TOOLTIP_PREFIX = '__tlbFormulaTooltip__';
@@ -22,28 +23,6 @@ export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
 interface TableViewState extends Record<string, unknown> {
 	filePath: string;
-}
-
-// H2 块数据结构（Key:Value 格式）
-interface H2Block {
-	title: string;                 // H2 标题（去掉 ## ）
-	data: Record<string, string>;  // Key-Value 键值对
-}
-
-// 列配置（头部配置块）
-interface ColumnConfig {
-	name: string;           // 列名
-	width?: string;         // 宽度："30%", "150px", "auto"
-	unit?: string;          // 单位："分钟"
-	formula?: string;       // 公式："= {价值}/{成本}"
-	hide?: boolean;         // 是否隐藏
-}
-
-// Schema（表格结构）
-interface Schema {
-	columnNames: string[];            // 所有列名
-	columnConfigs?: ColumnConfig[];   // 列配置（来自头部配置块）
-	columnIds?: string[];             // 预留：稳定 ID 系统（用于 SchemaStore）
 }
 
 interface PendingFocusRequest {
@@ -70,6 +49,8 @@ export class TableView extends ItemView {
 	private visibleRowData: RowData[] = [];
 	private contextMenu: HTMLElement | null = null;
 	private columnLayoutStore = new ColumnLayoutStore(null);
+	private markdownParser = new MarkdownBlockParser();
+	private schemaBuilder = new SchemaBuilder();
 	private fileId: string | null = null; // 文件唯一ID（8位UUID）
 
 	// 事件监听器引用（用于清理）
@@ -175,83 +156,6 @@ export class TableView extends ItemView {
 		return {
 			filePath: this.file?.path || ""
 		};
-	}
-
-	/**
-	 * 解析头部配置块（```tlb）
-	 */
-	private parseHeaderConfigBlock(content: string): ColumnConfig[] | null {
-		// 支持 ```tlb / ```tilelinebase 代码块，逐个尝试
-		const blockRegex = /```(?:tlb|tilelinebase)\s*\n([\s\S]*?)\n```/gi;
-		let match: RegExpExecArray | null;
-
-		while ((match = blockRegex.exec(content)) !== null) {
-			const blockContent = match[1];
-			const blockStartIndex = match.index ?? 0;
-
-			// 跳过运行时配置块（filterViews、columnWidths 等）
-			if (this.isRuntimeConfigBlock(content, blockStartIndex, blockContent)) {
-				continue;
-			}
-
-			const lines = blockContent.split(/\r?\n/);
-			const columnConfigs: ColumnConfig[] = [];
-
-			for (const line of lines) {
-				const trimmed = line.trim();
-				if (trimmed.length === 0 || trimmed.startsWith('#')) {
-					continue; // 跳过空行和注释
-				}
-
-				// 解析列定义：列名 (配置1) (配置2: 值)
-				const config = this.parseColumnDefinition(trimmed);
-				if (config) {
-					columnConfigs.push(config);
-				}
-			}
-
-			if (columnConfigs.length > 0) {
-				return columnConfigs;
-			}
-		}
-
-		return null; // 未找到有效的头部配置块
-	}
-
-	private isRuntimeConfigBlock(content: string, blockStartIndex: number, blockContent: string): boolean {
-		const preceding = content.slice(0, blockStartIndex).replace(/\r/g, '');
-		let headingLine = '';
-		const lastHeadingStart = preceding.lastIndexOf('\n## ');
-
-		if (lastHeadingStart >= 0) {
-			const headingStart = lastHeadingStart + 1;
-			const headingEnd = preceding.indexOf('\n', headingStart);
-			headingLine = preceding
-				.slice(headingStart, headingEnd === -1 ? preceding.length : headingEnd)
-				.trim();
-		} else if (preceding.startsWith('## ')) {
-			const firstLineEnd = preceding.indexOf('\n');
-			headingLine = (firstLineEnd === -1 ? preceding : preceding.slice(0, firstLineEnd)).trim();
-		}
-
-		// 运行时配置块会以 "## tlb <fileId> <version>" 作为标题
-		const runtimeHeadingPattern = /^##\s+tlb\s+[A-Za-z0-9-]{4,}\s+\d+$/;
-		if (headingLine && runtimeHeadingPattern.test(headingLine)) {
-			return true;
-		}
-
-		// 若首个有效行命中运行时配置关键字，同样跳过
-		const firstContentLine = blockContent
-			.split(/\r?\n/)
-			.map(line => line.trim())
-			.find(line => line.length > 0 && !line.startsWith('#'));
-
-		if (!firstContentLine) {
-			return false;
-		}
-
-		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
-		return runtimeKeyPattern.test(firstContentLine);
 	}
 
 	/**
@@ -430,87 +334,6 @@ export class TableView extends ItemView {
 	}
 
 
-	/**
-	 * 解析单行列定义
-	 * 格式：列名 (width: 30%) (unit: 分钟) (hide)
-	 */
-	private parseColumnDefinition(line: string): ColumnConfig | null {
-		const trimmed = line.trim();
-		if (trimmed.length === 0) {
-			return null;
-		}
-
-		const config: ColumnConfig = { name: '' };
-		const length = trimmed.length;
-		let index = 0;
-		let nameBuilder = '';
-
-		while (index < length) {
-			const char = trimmed[index];
-			if (char !== '(') {
-				nameBuilder += char;
-				index++;
-				continue;
-			}
-
-			const closingIndex = this.findMatchingParenthesis(trimmed, index);
-			if (closingIndex === -1) {
-				nameBuilder += trimmed.slice(index);
-				break;
-			}
-
-			const segment = trimmed.slice(index + 1, closingIndex).trim();
-			if (this.isConfigSegment(segment)) {
-				this.applyColumnConfigSegment(config, segment);
-			} else {
-				nameBuilder += trimmed.slice(index, closingIndex + 1);
-			}
-
-			index = closingIndex + 1;
-		}
-
-		const normalizedName = nameBuilder.trim();
-		if (normalizedName.length === 0) {
-			config.name = trimmed;
-		} else {
-			config.name = normalizedName.replace(/\s+/g, ' ');
-		}
-
-		if (config.name.length === 0) {
-			return null;
-		}
-
-		return config;
-	}
-
-	private applyColumnConfigSegment(config: ColumnConfig, segment: string): void {
-		const colonIndex = segment.indexOf(':');
-		if (colonIndex === -1) {
-			if (segment.trim().toLowerCase() === 'hide') {
-				config.hide = true;
-			}
-			return;
-		}
-
-		const key = segment.slice(0, colonIndex).trim();
-		let value = segment.slice(colonIndex + 1).trim();
-		if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-			value = value.slice(1, -1);
-		}
-
-		switch (key) {
-			case 'width':
-				config.width = value;
-				break;
-			case 'unit':
-				config.unit = value;
-				break;
-			case 'formula':
-				config.formula = value;
-				break;
-		}
-	}
-
 	private deserializeColumnConfigs(raw: unknown): ColumnConfig[] | null {
 		if (!Array.isArray(raw)) {
 			return null;
@@ -520,7 +343,7 @@ export class TableView extends ItemView {
 			if (typeof entry !== 'string' || entry.trim().length === 0) {
 				continue;
 			}
-			const config = this.parseColumnDefinition(entry);
+			const config = this.markdownParser.parseColumnDefinition(entry);
 			if (config) {
 				result.push(config);
 			}
@@ -755,181 +578,6 @@ export class TableView extends ItemView {
 	}
 
 	/**
-	 * 解析文件内容，提取所有 H2 块（Key:Value 格式）
-	 * H2 标题本身也可能是 Key:Value 格式
-	 */
-	private parseH2Blocks(content: string): H2Block[] {
-		// 首先移除配置块（## tlb <id> <version> + ```tlb ... ```）
-		// 使用多行模式，从 ## tlb 开始到文件末尾
-		const configBlockRegex = /^## tlb \w+ \d+[\s\S]*$/m;
-		const contentWithoutConfig = content.replace(configBlockRegex, '');
-
-		const lines = contentWithoutConfig.split('\n');
-		const blocks: H2Block[] = [];
-		let currentBlock: H2Block | null = null;
-		let inCodeBlock = false;
-
-		for (const line of lines) {
-			const trimmed = line.trim();
-
-			if (trimmed.startsWith('```')) {
-				inCodeBlock = !inCodeBlock;
-				continue;
-			}
-
-			if (inCodeBlock) {
-				continue;
-			}
-
-			// 检测 H2 标题
-			if (trimmed.startsWith('## ')) {
-				// 保存前一个块
-				if (currentBlock) {
-					blocks.push(currentBlock);
-				}
-
-				// 解析 H2 标题（去掉 "## "）
-				const titleText = trimmed.substring(3).trim();
-
-				// 开始新块
-				currentBlock = {
-					title: titleText,
-					data: {}
-				};
-
-				// 如果 H2 标题包含冒号，解析为第一个键值对
-				const colonIndex = titleText.indexOf('：') >= 0 ? titleText.indexOf('：') : titleText.indexOf(':');
-				if (colonIndex > 0) {
-					const key = titleText.substring(0, colonIndex).trim();
-					const value = titleText.substring(colonIndex + 1).trim();
-					currentBlock.data[key] = value;
-				}
-			} else if (currentBlock) {
-				// 在 H2 块内部，解析 Key:Value 格式
-				if (trimmed.length > 0) {
-					// 查找第一个冒号（支持中文冒号和英文冒号）
-					const colonIndex = trimmed.indexOf('：') >= 0 ? trimmed.indexOf('：') : trimmed.indexOf(':');
-					if (colonIndex > 0) {
-						const key = trimmed.substring(0, colonIndex).trim();
-						const value = trimmed.substring(colonIndex + 1).trim();
-						currentBlock.data[key] = value;
-					}
-				}
-			}
-			// 如果还没遇到 H2，忽略该行
-		}
-
-		// 保存最后一个块
-		if (currentBlock) {
-			blocks.push(currentBlock);
-		}
-
-		return blocks;
-	}
-
-	/**
-	 * 使用首个 H2 块作为 schema 基准，追加后续块出现的新字段
-	 * 自动在 schema 块中维护完整列集合，并保持 status 内置列
-	 */
-	private extractSchema(blocks: H2Block[], columnConfigs: ColumnConfig[] | null): Schema | null {
-		this.schemaDirty = false;
-		this.sparseCleanupRequired = false;
-		this.hiddenSortableFields = new Set(HIDDEN_SYSTEM_FIELDS);
-
-		if (blocks.length === 0) {
-			return null;
-		}
-
-		const schemaBlock = blocks[0];
-		const columnNames: string[] = [];
-		const seenKeys = new Set<string>();
-
-		const appendKey = (key: string) => {
-			if (HIDDEN_SYSTEM_FIELDS.has(key)) {
-				this.hiddenSortableFields.add(key);
-				return;
-			}
-			if (seenKeys.has(key)) {
-				return;
-			}
-			columnNames.push(key);
-			seenKeys.add(key);
-		};
-		for (const key of Object.keys(schemaBlock.data)) {
-			appendKey(key);
-		}
-
-		if (columnConfigs && columnConfigs.length > 0) {
-			for (const config of columnConfigs) {
-				const alreadySeen = seenKeys.has(config.name);
-				appendKey(config.name);
-				if (!alreadySeen && schemaBlock.data[config.name] === undefined) {
-					schemaBlock.data[config.name] = '';
-					this.schemaDirty = true;
-				}
-			}
-		}
-
-		for (let i = 1; i < blocks.length; i++) {
-			const block = blocks[i];
-			for (const key of Object.keys(block.data)) {
-				const value = block.data[key];
-
-				if (!seenKeys.has(key) && !HIDDEN_SYSTEM_FIELDS.has(key)) {
-					appendKey(key);
-					if (schemaBlock.data[key] === undefined) {
-						schemaBlock.data[key] = '';
-					}
-					this.schemaDirty = true;
-				}
-
-				if (HIDDEN_SYSTEM_FIELDS.has(key)) {
-					this.hiddenSortableFields.add(key);
-					if (typeof value === 'string' && value.trim().length === 0) {
-						delete block.data[key];
-						this.sparseCleanupRequired = true;
-					}
-					continue;
-				}
-
-				const normalized = typeof value === 'string' ? value.trim() : value;
-				if (normalized === '' || normalized === null || normalized === undefined) {
-					delete block.data[key];
-					this.sparseCleanupRequired = true;
-				}
-			}
-		}
-
-		// 自动添加 status 为内置列（在第一个数据列之后，即第三列位置）
-		const statusIndex = columnNames.indexOf('status');
-		if (statusIndex !== -1) {
-			columnNames.splice(statusIndex, 1);
-		}
-		const insertIndex = columnNames.length > 0 ? 1 : 0;
-		columnNames.splice(insertIndex, 0, 'status');
-		seenKeys.add('status');
-
-		if (statusIndex === -1 && schemaBlock.data['status'] === undefined) {
-			schemaBlock.data['status'] = 'todo';
-			if (schemaBlock.data['statusChanged'] === undefined) {
-				schemaBlock.data['statusChanged'] = getCurrentLocalDateTime();
-			}
-			this.schemaDirty = true;
-		}
-
-		const orderedConfigs = columnConfigs
-			? columnNames
-				.map((name) => columnConfigs.find((config) => config.name === name))
-				.filter((config): config is ColumnConfig => Boolean(config))
-			: undefined;
-
-		return {
-			columnNames,
-			columnConfigs: orderedConfigs && orderedConfigs.length > 0 ? orderedConfigs : undefined
-		};
-	}
-
-	/**
 	 * 从 H2 块提取表格数据（转换为 RowData 格式）
 	 */
 	private extractTableData(blocks: H2Block[], schema: Schema): RowData[] {
@@ -1153,28 +801,34 @@ export class TableView extends ItemView {
 		}
 
 		// 解析头部配置块
-		let columnConfigs = this.parseHeaderConfigBlock(content);
+		let columnConfigs = this.markdownParser.parseHeaderConfig(content);
 		if ((!columnConfigs || columnConfigs.length === 0) && configBlock?.columnConfigs) {
 			columnConfigs = this.deserializeColumnConfigs(configBlock.columnConfigs);
 		}
 
 		// 解析 H2 块
-		this.blocks = this.parseH2Blocks(content);
-
-		if (this.blocks.length === 0) {
+		const parsedBlocks = this.markdownParser.parseH2Blocks(content);
+		if (parsedBlocks.length === 0) {
 			container.createDiv({
 				text: "此文件不包含 H2 块，无法显示为表格",
 				cls: "tlb-warning"
 			});
 			return;
 		}
+		this.blocks = parsedBlocks;
 
 		// 提取 Schema
-		this.schema = this.extractSchema(this.blocks, columnConfigs);
+		const schemaResult = this.schemaBuilder.buildSchema(this.blocks, columnConfigs ?? null);
+		this.schema = schemaResult.schema;
+		this.hiddenSortableFields = schemaResult.hiddenSortableFields;
+		this.schemaDirty = schemaResult.schemaDirty;
+		this.sparseCleanupRequired = schemaResult.sparseCleanupRequired;
+
 		if (!this.schema) {
 			container.createDiv({ text: "无法提取表格结构" });
 			return;
 		}
+
 		this.prepareFormulaColumns(this.schema.columnConfigs ?? null);
 		if (this.schemaDirty || this.sparseCleanupRequired) {
 			this.scheduleSave();
@@ -2803,38 +2457,6 @@ export class TableView extends ItemView {
 				view.columnState = null;
 			}
 		}
-	}
-
-	private isConfigSegment(segment: string): boolean {
-		if (!segment || segment.trim().length === 0) {
-			return false;
-		}
-		const normalized = segment.trim().toLowerCase();
-		if (normalized === 'hide') {
-			return true;
-		}
-		const colonIndex = segment.indexOf(':');
-		if (colonIndex === -1) {
-			return false;
-		}
-		const key = segment.slice(0, colonIndex).trim().toLowerCase();
-		return key === 'width' || key === 'unit' || key === 'formula';
-	}
-
-	private findMatchingParenthesis(source: string, startIndex: number): number {
-		let depth = 0;
-		for (let i = startIndex; i < source.length; i++) {
-			const current = source[i];
-			if (current === '(') {
-				depth++;
-			} else if (current === ')') {
-				depth--;
-				if (depth === 0) {
-					return i;
-				}
-			}
-		}
-		return -1;
 	}
 
 	private removeColumnFromFilterViews(column: string): void {

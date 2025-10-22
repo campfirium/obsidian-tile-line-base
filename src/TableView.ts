@@ -571,6 +571,7 @@ export class TableView extends ItemView {
 		try {
 			const markdown = this.blocksToMarkdown();
 			await this.app.vault.modify(this.file, markdown);
+			await this.saveConfigBlock();
 		} catch (error) {
 			console.error('❌ 保存失败:', error);
 		}

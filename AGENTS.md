@@ -77,7 +77,7 @@ Hard Requirement: call binaries directly in functions.shell, always set workdir,
 
 - `main`: 生产稳定版本
 - `dev`: 开发集成分支
-- `feat/T000X-name`: 任务功能分支
+- `feat/T000X-name`: 任务功能分支（`T` + 四位编号 + 主题短横线，示例 `feat/T0055-table-view-refactor`）
 - 缺陷/紧急修复统一从 `dev` 切出 `fix/TXXXX-topic` 分支
 - 回到 `dev` 时使用 `git merge --no-ff`；不对公共分支（尤其是 `dev`）执行 rebase
 
@@ -113,7 +113,7 @@ Hard Requirement: call binaries directly in functions.shell, always set workdir,
 
 - `dev`: 开发集成分支
 
-- `feat/T000X-name`: 任务功能分支
+- `feat/T000X-name`: 任务功能分支（`T` + 四位编号 + 主题短横线，示例 `feat/T0055-table-view-refactor`）
 
 ### 任务驱动开发
 

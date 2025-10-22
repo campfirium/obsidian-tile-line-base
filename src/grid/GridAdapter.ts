@@ -158,4 +158,9 @@ export interface GridAdapter {
 	onModelUpdated?(callback: () => void): void;
 
 	setSortModel?(sortModel: SortModelEntry[]): void;
+
+	/**
+	 * 设置跨列的快速过滤文本
+	 */
+	setQuickFilter?(value: string | null): void;
 }

@@ -127,6 +127,25 @@
   border-radius: 6px;
 }
 
+.tlb-sort-rule-row {
+  cursor: grab;
+}
+
+.tlb-sort-rule-row.is-dragging {
+  opacity: 0.6;
+}
+
+.tlb-sort-rule-row.is-drag-over {
+  outline: 1px dashed var(--interactive-accent);
+}
+
+.tlb-sort-rule-handle {
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  margin-right: 4px;
+}
+
 .tlb-filter-select {
   padding: 4px 8px;
   border: 1px solid var(--background-modifier-border);

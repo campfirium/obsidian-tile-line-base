@@ -26,7 +26,8 @@ import {
 	RowData,
 	CellEditEvent,
 	HeaderEditEvent,
-	ROW_ID_FIELD
+	ROW_ID_FIELD,
+	SortModelEntry
 } from './GridAdapter';
 import {
 	StatusCellRenderer,
@@ -498,6 +499,30 @@ export class AgGridAdapter implements GridAdapter {
 			this.gridApi.setFilterModel(cloned);
 			if (typeof this.gridApi.onFilterChanged === 'function') {
 				this.gridApi.onFilterChanged();
+			}
+		});
+	}
+
+	setSortModel(sortModel: SortModelEntry[]): void {
+		this.runWhenReady(() => {
+			if (!this.columnApi || typeof this.columnApi.applyColumnState !== 'function') {
+				return;
+			}
+			const state = Array.isArray(sortModel)
+				? sortModel
+					.filter((item) => typeof item?.field === 'string' && item.field.length > 0)
+					.map((item, index) => ({
+						colId: item.field,
+						sort: item.direction === 'desc' ? 'desc' : 'asc',
+						sortIndex: index
+					}))
+				: [];
+			this.columnApi.applyColumnState({
+				defaultState: { sort: null, sortIndex: null },
+				state
+			});
+			if (this.gridApi && typeof this.gridApi.refreshClientSideRowModel === 'function') {
+				this.gridApi.refreshClientSideRowModel('sort');
 			}
 		});
 	}

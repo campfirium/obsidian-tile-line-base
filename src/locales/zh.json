@@ -54,6 +54,15 @@
     "insertSuccess": "已插入列：{{name}}",
     "deleteSuccess": "已删除列：{{name}}"
   },
+  "statusCell": {
+    "labels": {
+      "todo": "待办",
+      "done": "已完成",
+      "inprogress": "进行中",
+      "onhold": "暂停",
+      "canceled": "已取消"
+    }
+  },
   "quickFilter": {
     "clearAriaLabel": "清除过滤",
     "placeholder": "全局过滤",
@@ -112,6 +121,10 @@
     "renamePlaceholder": "输入新名称",
     "duplicateNameSuffix": "副本",
     "duplicateNotice": "已复制视图: {{name}}"
+  },
+  "filterViewModals": {
+    "saveButton": "保存",
+    "cancelButton": "取消"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] 无法在 compositionstart 重置光标",

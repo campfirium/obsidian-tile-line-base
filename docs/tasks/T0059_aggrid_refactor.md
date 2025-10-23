@@ -41,7 +41,7 @@
 - [x] 目标：将焦点/键盘/复制等交互逻辑迁移到 `src/grid/interactions/AgGridInteractionController.ts`
 - [x] 梳理 `AgGridAdapter` 中交互相关字段与方法（焦点记录、CompositionProxy、键盘处理、复制）
 - [x] 设计交互控制器的依赖注入接口（GridApi 访问、上下文回调、列服务委托）
-- [ ] 更新 specs/251024 AgGridAdapter 拆分方案.md，补充 Phase 3 设计概述
+- [x] 更新 specs/251024 AgGridAdapter 拆分方案.md，补充 Phase 3 设计概述
 - [x] 预备验证脚本，确保迁移后 `ts-node` 验证用例覆盖交互行为（`scripts/dev/verify-interaction-controller.ts`）
 
 ### Phase 3 设计概述（草稿）

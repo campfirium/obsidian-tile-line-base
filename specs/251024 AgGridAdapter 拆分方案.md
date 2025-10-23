@@ -60,14 +60,17 @@
    - 引入 `AgGridLifecycleManager`，负责 `mount` 时创建 grid、缓存 `gridApi`、处理 `ready`。
    - Adapter 中的销毁、`runWhenReady`、`markLayoutDirty` 等改由新模块提供。
    - 验证：多次 mount/destroy（例如切换视图）不泄露事件。
-4. **Phase 3：事件桥接模块化**
-   - 将 `onCellEdit`、`onHeaderEdit`、`onModelUpdated`、`onEnterAtLastRow` 的事件订阅迁移至 `AgGridEventBridge`。
-   - 统一事件解绑流程，减少 Adapter 内部的 `callback?()` 判断。
-   - 验证：单元格编辑、表头重命名、Enter 自动增行。
-5. **Phase 4：交互控制器抽离**
-   - 把输入法代理、键盘导航、剪贴板逻辑移入 `AgGridInteractionController`。
-   - Adapter 对外仅暴露配置入口（比如 `interactionController.attach(containerEl)`），其余内部通过桥接事件更新状态。
-   - 验证：中文输入、复制粘贴、Delete 清除、焦点移动。
+4. **Phase 3：交互控制器拆分**
+   - **控制器定位**：`AgGridInteractionController` 聚合焦点管理、键盘导航、剪贴板复制、输入法代理等交互场景，Adapter 只暴露启停接口。
+   - **依赖输入**：通过构造函数注入 `AgGridLifecycleManager.withApis`、列服务快照访问器以及 `GridController` 回调，避免直接引用 Adapter 内部字段。
+   - **DOM 钩子**：初始化阶段挂载到容器元素，统一管理 `CompositionProxy` 与事件监听，销毁时集中清理避免内存泄漏。
+   - **事件分层**：按导航（方向键 / Tab）、提交（Enter）、编辑控制（Delete / Backspace）、批量操作（Ctrl+A/C/V）拆分处理函数，方便替换或扩展。
+   - **状态同步**：维护当前焦点、选区与组合输入状态，通过生命周期管理器订阅 `modelUpdated`、视口变化事件以重新对齐代理元素。
+   - **扩展策略**：预留 `onCopy` / `onPaste` 等策略钩子，支撑后续自定义列或安全策略接入。
+5. **Phase 4（可选）：事件桥接模块化**
+   - 将 `onCellEdit`、`onHeaderEdit`、`onModelUpdated`、`onEnterAtLastRow` 的事件统一收敛到 `AgGridEventBridge`，精简 Adapter 内部的分支判断。
+   - 贯通事件监听与上层回调注册顺序，确保解绑 / 销毁逻辑集中。
+   - 验证范围覆盖单元格编辑、表头重命名、Enter 自动增行等关键场景。
 6. **Phase 5（可选）：过滤/排序服务**
    - 若前述阶段顺利，再独立 `FilterAndSortService`。若工作量较大，可放入后续任务。
 

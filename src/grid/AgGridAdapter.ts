@@ -5,7 +5,6 @@
  */
 
 import {
-	createGrid,
 	GridApi,
 	GridOptions,
 	CellEditingStoppedEvent,
@@ -35,6 +34,7 @@ import {
 	AgGridInteractionController,
 	GridInteractionContext
 } from './interactions/AgGridInteractionController';
+import { AgGridLifecycleManager } from './lifecycle/AgGridLifecycleManager';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -42,7 +42,6 @@ const DEFAULT_ROW_HEIGHT = 40;
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export class AgGridAdapter implements GridAdapter {
-	private gridApi: GridApi | null = null;
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
 	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
@@ -52,45 +51,38 @@ export class AgGridAdapter implements GridAdapter {
 	private readonly columnService = new AgGridColumnService({
 		getContainer: () => this.containerEl
 	});
+	private readonly lifecycle = new AgGridLifecycleManager();
 	private readonly interaction: AgGridInteractionController;
-	private ready = false;
-	private readyCallbacks: Array<() => void> = [];
-	private modelUpdatedCallbacks: Array<() => void> = [];
 
 	constructor() {
 		this.interaction = new AgGridInteractionController({
-			getGridApi: () => this.gridApi,
+			getGridApi: () => this.lifecycle.getGridApi(),
 			getGridContext: () => this.gridContext,
 			getCellEditCallback: () => this.cellEditCallback,
 			getEnterAtLastRowCallback: () => this.enterAtLastRowCallback,
 			translate: (key: string) => t(key as any)
 		});
-	}
-
-
-	private emitModelUpdated(): void {
-		if (this.modelUpdatedCallbacks.length === 0) {
-			return;
-		}
-		for (const callback of this.modelUpdatedCallbacks) {
-			try {
-				callback();
-			} catch (error) {
-				console.error('[AgGridAdapter] onModelUpdated callback failed', error);
+		this.interaction.onViewportResize((reason) => {
+			if (reason === 'resize') {
+				this.columnService.resizeColumns();
 			}
-		}
+		});
+
+		this.lifecycle.onReady(({ gridApi, columnApi }) => {
+			this.columnService.attachApis(gridApi, (columnApi ?? null) as any);
+		});
+
+		this.lifecycle.onModelUpdated(() => {
+			this.interaction.onLayoutInvalidated();
+		});
 	}
 
 	runWhenReady(callback: () => void): void {
-		if (this.ready) {
-			callback();
-			return;
-		}
-		this.readyCallbacks.push(callback);
+		this.lifecycle.runWhenReady(callback);
 	}
 
 	onModelUpdated(callback: () => void): void {
-		this.modelUpdatedCallbacks.push(callback);
+		this.lifecycle.onModelUpdated(callback);
 	}
 
 	mount(
@@ -100,8 +92,8 @@ export class AgGridAdapter implements GridAdapter {
 		context?: GridInteractionContext
 	): void {
 		this.containerEl = container;
-		this.interaction.setContainer(container);
 		this.gridContext = context;
+		this.interaction.setContainer(container);
 		this.columnService.configureCallbacks({
 			onColumnResize: context?.onColumnResize,
 			onColumnOrderChange: context?.onColumnOrderChange
@@ -113,33 +105,9 @@ export class AgGridAdapter implements GridAdapter {
 
 		const gridOptions: GridOptions = {
 			popupParent: ownerDoc?.body ?? document.body,
-			onGridReady: (params: any) => {
-				this.gridApi = params.api;
-				this.columnService.attachApis(params.api, params.columnApi ?? null);
-				this.ready = true;
-				if (this.readyCallbacks.length > 0) {
-					const queue = [...this.readyCallbacks];
-					this.readyCallbacks.length = 0;
-					for (const callback of queue) {
-						try {
-							callback();
-						} catch (error) {
-							console.error('[AgGridAdapter] runWhenReady callback failed', error);
-						}
-					}
-				}
-			},
-			columnDefs: colDefs,
-			rowData: rows,
 			rowHeight: DEFAULT_ROW_HEIGHT,
 			onFirstDataRendered: () => {
 				this.resizeColumns();
-			},
-			onModelUpdated: () => {
-				this.emitModelUpdated();
-			},
-			onRowDataUpdated: () => {
-				this.emitModelUpdated();
 			},
 			getRowId: (params) => String(params.data[ROW_ID_FIELD]),
 			context: context || {},
@@ -233,15 +201,15 @@ export class AgGridAdapter implements GridAdapter {
 			}
 		};
 
-		this.gridApi = createGrid(container, gridOptions);
+		this.lifecycle.mountGrid(container, colDefs, rows, gridOptions);
 		this.interaction.bindViewportListeners(container);
 	}
 
 	updateData(rows: RowData[]): void {
-		if (this.gridApi) {
-			this.gridApi.setGridOption('rowData', rows);
-			this.gridApi.refreshCells({ force: true });
-		}
+		this.withGridApi((api) => {
+			api.setGridOption('rowData', rows);
+			api.refreshCells({ force: true });
+		});
 	}
 
 	private deepClone<T>(value: T): T {
@@ -251,22 +219,32 @@ export class AgGridAdapter implements GridAdapter {
 		return JSON.parse(JSON.stringify(value)) as T;
 	}
 
+	private getGridApi(): GridApi | null {
+		return this.lifecycle.getGridApi();
+	}
+
+	private withGridApi(callback: (api: GridApi) => void): void {
+		this.lifecycle.withGridApi(callback);
+	}
+
 	getFilterModel(): any | null {
-		if (!this.gridApi || typeof this.gridApi.getFilterModel !== 'function') {
+		const gridApi = this.getGridApi();
+		if (!gridApi || typeof gridApi.getFilterModel !== 'function') {
 			return null;
 		}
-		return this.deepClone(this.gridApi.getFilterModel());
+		return this.deepClone(gridApi.getFilterModel());
 	}
 
 	setFilterModel(model: any | null): void {
 		this.runWhenReady(() => {
-			if (!this.gridApi || typeof this.gridApi.setFilterModel !== 'function') {
+			const gridApi = this.getGridApi();
+			if (!gridApi || typeof gridApi.setFilterModel !== 'function') {
 				return;
 			}
 			const cloned = model == null ? null : this.deepClone(model);
-			this.gridApi.setFilterModel(cloned);
-			if (typeof this.gridApi.onFilterChanged === 'function') {
-				this.gridApi.onFilterChanged();
+			gridApi.setFilterModel(cloned);
+			if (typeof gridApi.onFilterChanged === 'function') {
+				gridApi.onFilterChanged();
 			}
 		});
 	}
@@ -299,17 +277,18 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {
-		if (!this.gridApi) return;
+		const gridApi = this.getGridApi();
+		if (!gridApi) return;
 		const node = this.findRowNodeByBlockIndex(blockIndex);
 		if (!node) return;
 
-		this.gridApi.deselectAll();
+		gridApi.deselectAll();
 		node.setSelected(true, true);
 
 		if (options?.ensureVisible !== false) {
 			const rowIndex = node.rowIndex ?? null;
 			if (rowIndex !== null) {
-				this.gridApi.ensureIndexVisible(rowIndex, 'middle');
+				gridApi.ensureIndexVisible(rowIndex, 'middle');
 			}
 		}
 	}
@@ -353,27 +332,25 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	destroy(): void {
-		if (this.gridApi) {
-			this.gridApi.destroy();
-			this.gridApi = null;
-		}
-		this.ready = false;
-		this.readyCallbacks = [];
-		this.modelUpdatedCallbacks = [];
+		this.lifecycle.destroy();
 		this.columnService.detachApis();
 		this.columnService.configureCallbacks(undefined);
 		this.columnService.setContainer(null);
 		this.interaction.destroy();
 		this.interaction.setContainer(null);
+		this.cellEditCallback = undefined;
+		this.headerEditCallback = undefined;
+		this.enterAtLastRowCallback = undefined;
 		this.columnHeaderContextMenuCallback = undefined;
 		this.gridContext = undefined;
 		this.containerEl = null;
 	}
 
 	getSelectedRows(): number[] {
-		if (!this.gridApi) return [];
+		const gridApi = this.getGridApi();
+		if (!gridApi) return [];
 
-		const selectedNodes = [...this.gridApi.getSelectedNodes()] as Array<IRowNode<RowData>>;
+		const selectedNodes = [...gridApi.getSelectedNodes()] as Array<IRowNode<RowData>>;
 		const resolveSortKey = (node: IRowNode<RowData>): number => {
 			const baseIndex = node.rowIndex ?? 0;
 			if (node.rowPinned === 'top') {
@@ -401,7 +378,8 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	getRowIndexFromEvent(event: MouseEvent): number | null {
-		if (!this.gridApi) return null;
+		const gridApi = this.getGridApi();
+		if (!gridApi) return null;
 
 		const target = event.target as HTMLElement;
 		const rowElement = target.closest('.ag-row');
@@ -414,7 +392,7 @@ export class AgGridAdapter implements GridAdapter {
 		const displayIndex = parseInt(rowIndexAttr, 10);
 		if (Number.isNaN(displayIndex)) return null;
 
-		const rowNode = this.gridApi.getDisplayedRowAtIndex(displayIndex);
+		const rowNode = gridApi.getDisplayedRowAtIndex(displayIndex);
 		const data = rowNode?.data as RowData | undefined;
 		if (!data) return null;
 
@@ -426,11 +404,13 @@ export class AgGridAdapter implements GridAdapter {
 	resizeColumns(): void {
 		this.columnService.resizeColumns();
 	}
-private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
-		if (!this.gridApi) return null;
+
+	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
+		const gridApi = this.getGridApi();
+		if (!gridApi) return null;
 
 		let match: IRowNode<RowData> | null = null;
-		this.gridApi.forEachNode(node => {
+		gridApi.forEachNode(node => {
 			if (match) return;
 			const data = node.data as RowData | undefined;
 			if (!data) return;
@@ -448,12 +428,13 @@ private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
 	 * 开始编辑当前聚焦的单元格
 	 */
 	startEditingFocusedCell(): void {
-		if (!this.gridApi) return;
+		const gridApi = this.getGridApi();
+		if (!gridApi) return;
 
-		const focusedCell = this.gridApi.getFocusedCell();
+		const focusedCell = gridApi.getFocusedCell();
 		if (!focusedCell) return;
 
-		this.gridApi.startEditingCell({
+		gridApi.startEditingCell({
 			rowIndex: focusedCell.rowIndex,
 			colKey: focusedCell.column.getColId()
 		});
@@ -463,13 +444,14 @@ private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
 	 * 获取当前聚焦的单元格信息
 	 */
 	getFocusedCell(): { rowIndex: number; field: string } | null {
-		if (!this.gridApi) return null;
+		const gridApi = this.getGridApi();
+		if (!gridApi) return null;
 
-		const focusedCell = this.gridApi.getFocusedCell();
+		const focusedCell = gridApi.getFocusedCell();
 		if (!focusedCell) return null;
 
 		// 获取块索引
-		const rowNode = this.gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
+		const rowNode = gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
 		const data = rowNode?.data as RowData | undefined;
 		if (!data) return null;
 

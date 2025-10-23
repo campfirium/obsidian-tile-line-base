@@ -19,6 +19,7 @@ import { globalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterM
 import { TableDataStore } from "./table-view/TableDataStore";
 import { TableConfigManager } from "./table-view/TableConfigManager";
 import { ColumnInteractionController } from "./table-view/ColumnInteractionController";
+import { RowInteractionController } from "./table-view/RowInteractionController";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -65,6 +66,7 @@ export class TableView extends ItemView {
         });
         private configManager: TableConfigManager;
         private columnInteractionController: ColumnInteractionController;
+        private rowInteractionController: RowInteractionController;
 
         // 事件监听器引用（用于清理）
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
@@ -111,6 +113,21 @@ export class TableView extends ItemView {
 			persistColumnStructureChange: (options) => {
 				this.persistColumnStructureChange(options);
 			}
+		});
+		this.rowInteractionController = new RowInteractionController({
+			dataStore: this.dataStore,
+			getSchema: () => this.schema,
+			getFocusedField: () => this.gridAdapter?.getFocusedCell?.()?.field ?? null,
+			refreshGridData: () => {
+				this.refreshGridData();
+			},
+			focusRow: (rowIndex, field) => {
+				this.focusRow(rowIndex, field ?? undefined);
+			},
+			scheduleSave: () => {
+				this.scheduleSave();
+			},
+			getActiveFilterPrefills: () => this.getActiveFilterPrefills()
 		});
 		this.filterViewController = new FilterViewController({
 			app: this.app,
@@ -1221,30 +1238,9 @@ export class TableView extends ItemView {
 	 * 添加新行（Key:Value 格式）
 	 * @param beforeRowIndex 在指定行索引之前插入，undefined 表示末尾
 	 */
-        private addRow(beforeRowIndex?: number, options?: { focusField?: string | null }): void {
-                if (!this.schema) {
-                        console.error('Schema not initialized');
-                        return;
-                }
-
-                const focusedCell = this.gridAdapter?.getFocusedCell?.();
-                const focusField = options?.focusField !== undefined
-                        ? options.focusField ?? null
-                        : focusedCell?.field ?? null;
-                const filterPrefills = this.getActiveFilterPrefills();
-
-                const insertIndex = this.dataStore.addRow(beforeRowIndex, filterPrefills);
-                if (insertIndex < 0) {
-                        console.error('Failed to add new row');
-                        return;
-                }
-
-                this.refreshGridData();
-                this.focusRow(insertIndex, focusField ?? undefined);
-
-                // 触发保存
-                this.scheduleSave();
-        }
+	private addRow(beforeRowIndex?: number, options?: { focusField?: string | null }): void {
+		this.rowInteractionController.addRow(beforeRowIndex, options);
+	}
 
 	/**
 	 * 聚焦并选中指定行，保持视图位置
@@ -1547,107 +1543,30 @@ export class TableView extends ItemView {
 	 * 删除指定行（Key:Value 格式）
 	 * @param rowIndex 数据行索引
 	 */
-        private deleteRow(rowIndex: number): void {
-                if (!this.schema) {
-                        console.error('Schema not initialized');
-                        return;
-                }
-
-                const focusedCell = this.gridAdapter?.getFocusedCell?.();
-                const nextIndex = this.dataStore.deleteRow(rowIndex);
-                this.refreshGridData();
-
-                if (nextIndex !== null && nextIndex >= 0) {
-                        this.focusRow(nextIndex, focusedCell?.field);
-                }
-
-                // 触发保存
-                this.scheduleSave();
+	private deleteRow(rowIndex: number): void {
+		this.rowInteractionController.deleteRow(rowIndex);
 	}
-
 	/**
 	 * 批量删除指定的多行
 	 * @param rowIndexes 要删除的行索引数组（块索引）
 	 */
 	private deleteRows(rowIndexes: number[]): void {
-		if (!this.schema) {
-			console.error('Schema not initialized');
-			return;
-		}
-
-                if (rowIndexes.length === 0) {
-                        return;
-                }
-
-                const nextIndex = this.dataStore.deleteRows(rowIndexes);
-                this.refreshGridData();
-
-                if (nextIndex !== null && nextIndex >= 0) {
-                        this.focusRow(nextIndex);
-                }
-
-                // 触发保存
-                this.scheduleSave();
+		this.rowInteractionController.deleteRows(rowIndexes);
 	}
-
 	/**
 	 * 批量复制指定的多行
 	 * @param rowIndexes 要复制的行索引数组（块索引）
 	 */
 	private duplicateRows(rowIndexes: number[]): void {
-		if (!this.schema) {
-			console.error('Schema not initialized');
-			return;
-		}
-
-		if (rowIndexes.length === 0) {
-			return;
-		}
-
-		const focusedCell = this.gridAdapter?.getFocusedCell?.();
-
-		// 排序索引（从大到小），避免插入时索引偏移
-                const newIndex = this.dataStore.duplicateRows(rowIndexes);
-                this.refreshGridData();
-
-                if (newIndex !== null && newIndex >= 0) {
-                        this.focusRow(newIndex, focusedCell?.field);
-                }
-
-		// 触发保存
-		this.scheduleSave();
+		this.rowInteractionController.duplicateRows(rowIndexes);
 	}
-
 	/**
 	 * 复制指定行（Key:Value 格式）
 	 * @param rowIndex 数据行索引
 	 */
 	private duplicateRow(rowIndex: number): void {
-		if (!this.schema) {
-			console.error('Schema not initialized');
-			return;
-		}
-
-		// 边界检查（rowIndex 直接对应 blocks 索引）
-		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-			console.error('Invalid row index:', rowIndex);
-			return;
-		}
-
-		const focusedCell = this.gridAdapter?.getFocusedCell?.();
-
-		// 深拷贝目标块
-                const newIndex = this.dataStore.duplicateRow(rowIndex);
-                this.refreshGridData();
-
-                if (newIndex !== null && newIndex >= 0) {
-                        this.focusRow(newIndex, focusedCell?.field);
-                }
-
-		// 触发保存
-		this.scheduleSave();
+		this.rowInteractionController.duplicateRow(rowIndex);
 	}
-
         private persistColumnStructureChange(options?: { notice?: string }): void {
                 if (!this.schema) {
                         return;

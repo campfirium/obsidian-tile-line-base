@@ -1,4 +1,4 @@
-import { t, type TranslationKey } from '../i18n';
+import { t } from '../i18n';
 
 export type Operator = '+' | '-' | '*' | '/';
 
@@ -255,7 +255,10 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 			case 'rightParen': {
 				let foundLeft = false;
 				while (operatorStack.length > 0) {
-					const op = operatorStack.pop()!;
+					const op = operatorStack.pop();
+					if (!op) {
+						break;
+					}
 					if (op.type === 'leftParen') {
 						foundLeft = true;
 						break;
@@ -272,7 +275,10 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 	}
 
 	while (operatorStack.length > 0) {
-		const op = operatorStack.pop()!;
+		const op = operatorStack.pop();
+		if (!op) {
+			continue;
+		}
 		if (op.type === 'leftParen') {
 			throw new FormulaCompilationError(t(ERROR_KEYS.unmatchedParen));
 		}
@@ -300,8 +306,11 @@ function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): numb
 				if (stack.length < 2) {
 					throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
 				}
-				const right = stack.pop()!;
-				const left = stack.pop()!;
+				const right = stack.pop();
+				const left = stack.pop();
+				if (right === undefined || left === undefined) {
+					throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
+				}
 				let result: number;
 				switch (token.value) {
 					case '+':

@@ -58,7 +58,7 @@ export class IconHeaderComponent implements IHeaderComp {
 		return this.eGui;
 	}
 
-	refresh(params: IconHeaderParams): boolean {
+	refresh(_params: IconHeaderParams): boolean {
 		// 不需要刷新，返回 false 让 AG Grid 重新创建
 		return false;
 	}

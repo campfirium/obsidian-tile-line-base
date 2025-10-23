@@ -25,7 +25,7 @@ export function createTextCellEditor() {
 	return class implements ICellEditorComp {
 		private eInput!: HTMLInputElement;
 		private params!: ICellEditorParams;
-		private initialValue: string = '';
+		private initialValue = '';
 
 		init(params: ICellEditorParams): void {
 			this.params = params;

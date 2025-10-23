@@ -5,6 +5,7 @@ import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
 import type { TableConfigManager } from './TableConfigManager';
 import type { FilterStateStore } from './filter/FilterStateStore';
+import { t } from '../i18n';
 
 interface TablePersistenceDeps {
 	app: App;
@@ -59,8 +60,8 @@ export class TablePersistenceService {
 			await this.deps.app.vault.modify(file, `${markdown}\n`);
 			await this.saveConfig();
 		} catch (error) {
-			console.error('[TileLineBase] Failed to save file', error);
-			new Notice('保存失败，请查看控制台日志');
+            console.error('[TileLineBase] Failed to save file', error);
+            new Notice(t('tablePersistence.saveFailed'));
 		} finally {
 			this.cancelScheduledSave();
 		}

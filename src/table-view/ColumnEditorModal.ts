@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from 'obsidian';
 import { compileFormula } from '../formula/FormulaEngine';
+import { t } from '../i18n';
 
 export type ColumnFieldType = 'text' | 'formula';
 
@@ -39,12 +40,12 @@ export class ColumnEditorModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass('tlb-column-editor-modal');
-		this.titleEl.setText(`编辑列：${this.options.columnName}`);
+		this.titleEl.setText(t('columnEditorModal.title', { columnName: this.options.columnName }));
 
 		const nameSetting = new Setting(contentEl);
-		nameSetting.setName('列名');
+		nameSetting.setName(t('columnEditorModal.nameLabel'));
 		nameSetting.addText((text) => {
-			text.setPlaceholder('请输入列名称');
+			text.setPlaceholder(t('columnEditorModal.namePlaceholder'));
 			text.setValue(this.nameValue);
 			this.nameInput = text.inputEl;
 			text.onChange((value) => {
@@ -53,10 +54,10 @@ export class ColumnEditorModal extends Modal {
 		});
 
 		const typeSetting = new Setting(contentEl);
-		typeSetting.setName('列类型');
+		typeSetting.setName(t('columnEditorModal.typeLabel'));
 		typeSetting.addDropdown((dropdown) => {
-			dropdown.addOption('text', '文本');
-			dropdown.addOption('formula', '公式');
+			dropdown.addOption('text', t('columnEditorModal.typeTextOption'));
+			dropdown.addOption('formula', t('columnEditorModal.typeFormulaOption'));
 			dropdown.setValue(this.type);
 			dropdown.onChange((value) => {
 				this.type = value === 'formula' ? 'formula' : 'text';
@@ -65,8 +66,8 @@ export class ColumnEditorModal extends Modal {
 		});
 
 		this.formulaSetting = new Setting(contentEl);
-		this.formulaSetting.setName('公式');
-		this.formulaSetting.setDesc('使用 {字段} 引用列，支持 + - * / 运算符。');
+		this.formulaSetting.setName(t('columnEditorModal.formulaLabel'));
+		this.formulaSetting.setDesc(t('columnEditorModal.formulaDescription'));
 		this.formulaSetting.controlEl.empty();
 
 		const textarea = document.createElement('textarea');
@@ -83,14 +84,14 @@ export class ColumnEditorModal extends Modal {
 
 		const actionSetting = new Setting(contentEl);
 		actionSetting.addButton((button) => {
-			button.setButtonText('保存')
+			button.setButtonText(t('columnEditorModal.saveButton'))
 				.setCta()
 				.onClick(() => {
 					this.submit();
 				});
 		});
 		actionSetting.addButton((button) => {
-			button.setButtonText('取消').onClick(() => {
+			button.setButtonText(t('columnEditorModal.cancelButton')).onClick(() => {
 				this.close();
 			});
 		});
@@ -132,7 +133,7 @@ export class ColumnEditorModal extends Modal {
 		this.setError(null);
 		const trimmedName = this.nameValue.trim();
 		if (trimmedName.length === 0) {
-			this.setError('列名称不能为空');
+			this.setError(t('columnEditorModal.nameEmptyError'));
 			this.nameInput?.focus();
 			return;
 		}
@@ -147,7 +148,7 @@ export class ColumnEditorModal extends Modal {
 		if (this.type === 'formula') {
 			const formula = this.formulaInput.value.trim();
 			if (formula.length === 0) {
-				this.setError('公式不能为空');
+				this.setError(t('columnEditorModal.formulaEmptyError'));
 				this.formulaInput.focus();
 				return;
 			}
@@ -155,7 +156,7 @@ export class ColumnEditorModal extends Modal {
 				compileFormula(formula);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				this.setError(`公式校验失败：${message}`);
+				this.setError(t('columnEditorModal.formulaValidationFailed', { message }));
 				this.formulaInput.focus();
 				return;
 			}

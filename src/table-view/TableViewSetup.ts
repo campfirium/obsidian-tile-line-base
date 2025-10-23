@@ -10,6 +10,7 @@ import { GridLayoutController } from './GridLayoutController';
 import { FocusManager } from './FocusManager';
 import { FilterViewController } from './filter/FilterViewController';
 import { TablePersistenceService } from './TablePersistenceService';
+import { t } from '../i18n';
 import {
 	getActiveFilterPrefills,
 	persistColumnStructureChange,
@@ -20,7 +21,7 @@ import { getAvailableColumns, persistFilterViews, syncFilterViewState } from './
 import type { TableView } from '../TableView';
 
 export function initializeTableView(view: TableView): void {
-	debugLog('=== TableView 构造函数开始 ===');
+	debugLog(t('tableViewSetup.constructorStart'));
 	debugLog('leaf:', view.leaf);
 
 	view.configManager = new TableConfigManager(view.app);
@@ -65,7 +66,7 @@ export function initializeTableView(view: TableView): void {
 		getSchemaColumns: () => view.schema?.columnNames ?? null,
 		reapplyGlobalQuickFilter: () => view.globalQuickFilterController.reapply(),
 		emitFormulaLimitNotice: (limit) => {
-			new Notice(`公式计算暂停，超过限制 ${limit} 行`);
+			new Notice(t('tableViewSetup.formulaLimitNotice', { limit: String(limit) }));
 		}
 	});
 	view.gridInteractionController = new GridInteractionController({
@@ -95,5 +96,5 @@ export function initializeTableView(view: TableView): void {
 		}
 	});
 
-	debugLog('=== TableView 构造函数完成 ===');
+	debugLog(t('tableViewSetup.constructorComplete'));
 }

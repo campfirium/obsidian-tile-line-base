@@ -1,3 +1,5 @@
+import { t, type TranslationKey } from '../i18n';
+
 export type Operator = '+' | '-' | '*' | '/';
 
 interface NumberToken {
@@ -45,14 +47,18 @@ const OPERATOR_PRECEDENCE: Record<Operator, number> = {
 	'/': 2
 };
 
-const FORMULA_ERROR_MESSAGES = {
-	UNEXPECTED_CHAR: '存在无法识别的字符',
-	UNMATCHED_BRACE: '花括号未闭合',
-	EMPTY_FIELD: '字段名不能为空',
-	UNMATCHED_PAREN: '括号不匹配',
-	STACK_UNDERFLOW: '运算栈不平衡',
-	DIVIDE_BY_ZERO: '除数为 0',
-	NON_FINITE_RESULT: '结果不是有限数值'
+const ERROR_KEYS = {
+	unexpectedChar: 'formula.errors.unexpectedChar',
+	unexpectedCharWithValue: 'formula.errors.unexpectedCharWithValue',
+	unmatchedBrace: 'formula.errors.unmatchedBrace',
+	emptyField: 'formula.errors.emptyField',
+	unmatchedParen: 'formula.errors.unmatchedParen',
+	stackUnderflow: 'formula.errors.stackUnderflow',
+	divideByZero: 'formula.errors.divideByZero',
+	nonFiniteResult: 'formula.errors.nonFiniteResult',
+	emptyFormula: 'formula.errors.emptyFormula',
+	numericOutOfRange: 'formula.errors.numericOutOfRange',
+	unaryNotSupported: 'formula.errors.unaryNotSupported'
 } as const;
 
 export class FormulaCompilationError extends Error {
@@ -72,7 +78,7 @@ export class FormulaEvaluationError extends Error {
 export function compileFormula(rawFormula: string): CompiledFormula {
 	const normalized = normalizeFormula(rawFormula);
 	if (!normalized) {
-		throw new FormulaCompilationError('公式为空');
+		throw new FormulaCompilationError(t(ERROR_KEYS.emptyFormula));
 	}
 	const tokens = tokenize(normalized);
 	const { rpn, dependencies } = toReversePolish(tokens);
@@ -101,7 +107,7 @@ export function evaluateFormula(compiled: CompiledFormula, context: Record<strin
 	try {
 		const result = evaluateRpn(compiled.rpn, context);
 		if (!Number.isFinite(result)) {
-			return { value: '#ERR', error: FORMULA_ERROR_MESSAGES.NON_FINITE_RESULT };
+			return { value: '#ERR', error: t(ERROR_KEYS.nonFiniteResult) };
 		}
 		return { value: formatResult(result), error: null };
 	} catch (error) {
@@ -134,11 +140,11 @@ function tokenize(expression: string): Token[] {
 		if (char === '{') {
 			const closing = expression.indexOf('}', index + 1);
 			if (closing === -1) {
-				throw new FormulaCompilationError(FORMULA_ERROR_MESSAGES.UNMATCHED_BRACE);
+				throw new FormulaCompilationError(t(ERROR_KEYS.unmatchedBrace));
 			}
 			const fieldName = expression.slice(index + 1, closing).trim();
 			if (!fieldName) {
-				throw new FormulaCompilationError(FORMULA_ERROR_MESSAGES.EMPTY_FIELD);
+				throw new FormulaCompilationError(t(ERROR_KEYS.emptyField));
 			}
 			tokens.push({ type: 'field', value: fieldName });
 			index = closing + 1;
@@ -184,18 +190,18 @@ function tokenize(expression: string): Token[] {
 				index++;
 			}
 			if (!seenDigit) {
-				throw new FormulaCompilationError(FORMULA_ERROR_MESSAGES.UNEXPECTED_CHAR);
+				throw new FormulaCompilationError(t(ERROR_KEYS.unexpectedChar));
 			}
 			const numberLiteral = expression.slice(start, index);
 			const value = Number(numberLiteral);
 			if (!Number.isFinite(value)) {
-				throw new FormulaCompilationError('数值超出范围');
+				throw new FormulaCompilationError(t(ERROR_KEYS.numericOutOfRange));
 			}
 			tokens.push({ type: 'number', value });
 			continue;
 		}
 
-		throw new FormulaCompilationError(`${FORMULA_ERROR_MESSAGES.UNEXPECTED_CHAR}：“${char}”`);
+		throw new FormulaCompilationError(t(ERROR_KEYS.unexpectedCharWithValue, { char }));
 	}
 
 	return tokens;
@@ -223,7 +229,7 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 					if (token.value === '+' || token.value === '-') {
 						output.push({ type: 'number', value: 0 });
 					} else {
-						throw new FormulaCompilationError('暂不支持一元运算符');
+						throw new FormulaCompilationError(t(ERROR_KEYS.unaryNotSupported));
 					}
 				}
 				while (operatorStack.length > 0) {
@@ -257,7 +263,7 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 					output.push(op);
 				}
 				if (!foundLeft) {
-					throw new FormulaCompilationError(FORMULA_ERROR_MESSAGES.UNMATCHED_PAREN);
+					throw new FormulaCompilationError(t(ERROR_KEYS.unmatchedParen));
 				}
 				previousKind = token.type;
 				break;
@@ -268,7 +274,7 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 	while (operatorStack.length > 0) {
 		const op = operatorStack.pop()!;
 		if (op.type === 'leftParen') {
-			throw new FormulaCompilationError(FORMULA_ERROR_MESSAGES.UNMATCHED_PAREN);
+			throw new FormulaCompilationError(t(ERROR_KEYS.unmatchedParen));
 		}
 		output.push(op);
 	}
@@ -292,7 +298,7 @@ function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): numb
 			}
 			case 'operator': {
 				if (stack.length < 2) {
-					throw new FormulaEvaluationError(FORMULA_ERROR_MESSAGES.STACK_UNDERFLOW);
+					throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
 				}
 				const right = stack.pop()!;
 				const left = stack.pop()!;
@@ -309,12 +315,12 @@ function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): numb
 						break;
 					case '/':
 						if (Math.abs(right) < Number.EPSILON) {
-							throw new FormulaEvaluationError(FORMULA_ERROR_MESSAGES.DIVIDE_BY_ZERO);
+							throw new FormulaEvaluationError(t(ERROR_KEYS.divideByZero));
 						}
 						result = left / right;
 						break;
 					default:
-						throw new FormulaEvaluationError(`${FORMULA_ERROR_MESSAGES.UNEXPECTED_CHAR}`);
+						throw new FormulaEvaluationError(t(ERROR_KEYS.unexpectedChar));
 				}
 				stack.push(result);
 				break;
@@ -323,7 +329,7 @@ function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): numb
 	}
 
 	if (stack.length !== 1) {
-		throw new FormulaEvaluationError(FORMULA_ERROR_MESSAGES.STACK_UNDERFLOW);
+		throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
 	}
 
 	return stack[0];

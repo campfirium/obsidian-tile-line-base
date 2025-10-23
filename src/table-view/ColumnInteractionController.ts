@@ -5,6 +5,7 @@ import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
 import { ColumnEditorModal, type ColumnEditorResult, type ColumnFieldType } from './ColumnEditorModal';
+import { t } from '../i18n';
 
 interface ColumnInteractionDeps {
 	app: App;
@@ -50,23 +51,23 @@ export class ColumnInteractionController {
 	private openColumnHeaderMenu(field: string, event: MouseEvent): void {
 		const menu = new Menu();
 		menu.addItem((item) => {
-			item.setTitle('编辑列').setIcon('pencil').onClick(() => {
+			item.setTitle(t('columnInteraction.menuEdit')).setIcon('pencil').onClick(() => {
 				this.openColumnEditModal(field);
 			});
 		});
 		menu.addItem((item) => {
-			item.setTitle('复制列').setIcon('copy').onClick(() => {
+			item.setTitle(t('columnInteraction.menuDuplicate')).setIcon('copy').onClick(() => {
 				this.duplicateColumn(field);
 			});
 		});
 		menu.addItem((item) => {
-			item.setTitle('插入列').setIcon('plus').onClick(() => {
+			item.setTitle(t('columnInteraction.menuInsert')).setIcon('plus').onClick(() => {
 				this.insertColumnAfter(field);
 			});
 		});
 		menu.addSeparator();
 		menu.addItem((item) => {
-			item.setTitle('删除列').setIcon('trash').onClick(() => {
+			item.setTitle(t('columnInteraction.menuDelete')).setIcon('trash').onClick(() => {
 				this.removeColumn(field);
 			});
 		});
@@ -85,16 +86,16 @@ export class ColumnInteractionController {
 		const validateName = (name: string): string | null => {
 			const trimmed = name.trim();
 			if (trimmed.length === 0) {
-				return '列名称不能为空';
+				return t('columnInteraction.nameEmptyError');
 			}
 			if (trimmed === field) {
 				return null;
 			}
 			if (trimmed === '#' || trimmed === ROW_ID_FIELD || trimmed === 'status') {
-				return '列名已被系统保留';
+				return t('columnInteraction.nameReservedError');
 			}
 			if (this.getSchema()?.columnNames?.some((item) => item === trimmed)) {
-				return '列名已存在';
+				return t('columnInteraction.nameExistsError');
 			}
 			return null;
 		};
@@ -125,7 +126,7 @@ export class ColumnInteractionController {
 		if (nameChanged) {
 			const renamed = this.dataStore.renameColumn(field, targetName);
 			if (!renamed) {
-				new Notice(`重命名列失败：${targetName}`);
+				new Notice(t('columnInteraction.renameFailed', { target: targetName }));
 				return;
 			}
 			this.columnLayoutStore.rename(field, targetName);
@@ -166,11 +167,11 @@ export class ColumnInteractionController {
 		}
 		const newName = this.dataStore.duplicateColumn(field);
 		if (!newName) {
-			new Notice('复制列失败，请稍后重试');
+			new Notice(t('columnInteraction.duplicateFailed'));
 			return;
 		}
 		this.columnLayoutStore.clone(field, newName);
-		this.persistColumnStructureChange({ notice: `已复制列：${newName}` });
+		this.persistColumnStructureChange({ notice: t('columnInteraction.duplicateSuccess', { name: newName }) });
 		this.openColumnEditModal(newName);
 	}
 
@@ -180,10 +181,10 @@ export class ColumnInteractionController {
 		}
 		const newName = this.dataStore.insertColumnAfter(field);
 		if (!newName) {
-			new Notice('插入新列失败，请稍后重试');
+			new Notice(t('columnInteraction.insertFailed'));
 			return;
 		}
-		this.persistColumnStructureChange({ notice: `已插入列：${newName}` });
+		this.persistColumnStructureChange({ notice: t('columnInteraction.insertSuccess', { name: newName }) });
 		this.openColumnEditModal(newName);
 	}
 
@@ -201,6 +202,6 @@ export class ColumnInteractionController {
 		}
 		this.columnLayoutStore.remove(target);
 		this.removeColumnFromFilterViews(target);
-		this.persistColumnStructureChange({ notice: `已删除列：${target}` });
+		this.persistColumnStructureChange({ notice: t('columnInteraction.deleteSuccess', { name: target }) });
 	}
 }

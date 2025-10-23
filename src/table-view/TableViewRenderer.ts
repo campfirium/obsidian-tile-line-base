@@ -5,10 +5,7 @@ import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
 import { renderFilterViewControls } from './TableViewFilterPresenter';
 import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
 import type { ColumnConfig } from './MarkdownBlockParser';
-
-const NO_FILE_TEXT = '未选择文件';
-const NO_H2_TEXT = '该文件缺少 H2 段落，无法显示为表格';
-const NO_SCHEMA_TEXT = '无法获取数据结构';
+import { t } from '../i18n';
 
 export async function renderTableView(view: TableView): Promise<void> {
 	const container = view.containerEl.children[1];
@@ -24,7 +21,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	});
 
 	if (!view.file) {
-		container.createDiv({ text: NO_FILE_TEXT });
+		container.createDiv({ text: t('tableViewRenderer.noFile') });
 		return;
 	}
 
@@ -55,7 +52,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	const parsedBlocks = view.markdownParser.parseH2Blocks(content);
 	if (parsedBlocks.length === 0) {
 		container.createDiv({
-			text: NO_H2_TEXT,
+			text: t('tableViewRenderer.missingH2'),
 			cls: 'tlb-warning'
 		});
 		return;
@@ -72,7 +69,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;
 
 	if (!view.schema) {
-		container.createDiv({ text: NO_SCHEMA_TEXT });
+		container.createDiv({ text: t('tableViewRenderer.noSchema') });
 		return;
 	}
 	if (view.schemaDirty || view.sparseCleanupRequired) {

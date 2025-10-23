@@ -1,0 +1,120 @@
+{
+  "tableView": {
+    "displayName": "TileLineBase Table"
+  },
+  "formula": {
+    "errors": {
+      "unexpectedChar": "Encountered an unrecognized character",
+      "unexpectedCharWithValue": "Encountered an unrecognized character: \"{{char}}\"",
+      "unmatchedBrace": "Curly braces are not closed",
+      "emptyField": "Field name cannot be empty",
+      "unmatchedParen": "Parentheses do not match",
+      "stackUnderflow": "Expression stack is imbalanced",
+      "divideByZero": "Division by zero",
+      "nonFiniteResult": "Result is not a finite number",
+      "emptyFormula": "Formula is empty",
+      "numericOutOfRange": "Numeric value is out of range",
+      "unaryNotSupported": "Unary operator is not supported yet"
+    }
+  },
+  "agGrid": {
+    "editorInputMissing": "[AgGridAdapter] Editor input element not found",
+    "documentBodyUnavailable": "document.body is not available",
+    "editorWaitTimeout": "Timed out while waiting for editor input",
+    "compositionCaptureFailed": "[AgGridAdapter] CompositionProxy capture failed",
+    "copyFailed": "[AgGridAdapter] execCommand copy failed"
+  },
+  "columnEditorModal": {
+    "title": "Edit column: {{columnName}}",
+    "nameLabel": "Column name",
+    "namePlaceholder": "Enter column name",
+    "typeLabel": "Column type",
+    "typeTextOption": "Text",
+    "typeFormulaOption": "Formula",
+    "formulaLabel": "Formula",
+    "formulaDescription": "Reference a column with {field}; supports + - * / operators.",
+    "saveButton": "Save",
+    "cancelButton": "Cancel",
+    "nameEmptyError": "Column name cannot be empty",
+    "formulaEmptyError": "Formula cannot be empty",
+    "formulaValidationFailed": "Formula validation failed: {{message}}"
+  },
+  "columnInteraction": {
+    "menuEdit": "Edit column",
+    "menuDuplicate": "Duplicate column",
+    "menuInsert": "Insert column",
+    "menuDelete": "Delete column",
+    "nameEmptyError": "Column name cannot be empty",
+    "nameReservedError": "Column name is reserved by the system",
+    "nameExistsError": "Column name already exists",
+    "renameFailed": "Failed to rename column: {{target}}",
+    "duplicateFailed": "Failed to duplicate column, please try again later",
+    "duplicateSuccess": "Duplicated column: {{name}}",
+    "insertFailed": "Failed to insert column, please try again later",
+    "insertSuccess": "Inserted column: {{name}}",
+    "deleteSuccess": "Deleted column: {{name}}"
+  },
+  "quickFilter": {
+    "clearAriaLabel": "Clear filter",
+    "placeholder": "Global filter",
+    "inputAriaLabel": "Global filter keyword",
+    "focusAriaLabel": "Focus filter input"
+  },
+  "gridInteraction": {
+    "copySectionSuccess": "Copied entire section",
+    "copyFailedLog": "Copy failed:",
+    "copyFailedNotice": "Copy failed",
+    "copySection": "Copy section",
+    "insertRowAbove": "Insert row above",
+    "insertRowBelow": "Insert row below",
+    "duplicateSelected": "Duplicate selected {{count}} rows",
+    "deleteSelected": "Delete selected {{count}} rows",
+    "duplicateRow": "Duplicate row",
+    "deleteRow": "Delete row"
+  },
+  "tableDataStore": {
+    "newRowPrefix": "New item",
+    "newColumnName": "New column",
+    "formulaSelfReference": "Formulas cannot reference the same column",
+    "formulaParseFailed": "Formula parsing failed: {{error}}",
+    "formulaDisabled": "Formula column disabled (row count exceeds {{limit}})",
+    "formulaError": "Formula error: {{error}}",
+    "duplicateColumnBase": "{{field}} (copy)"
+  },
+  "tablePersistence": {
+    "saveFailed": "Failed to save, please check console logs"
+  },
+  "tableViewInteractions": {
+    "blockIndexMissing": "Unable to locate matching block index",
+    "renameFailed": "Failed to rename column: {{name}}"
+  },
+  "tableViewRenderer": {
+    "noFile": "No file selected",
+    "missingH2": "The file is missing H2 sections and cannot be rendered as a table",
+    "noSchema": "Unable to build data schema"
+  },
+  "tableViewSetup": {
+    "constructorStart": "=== TableView constructor start ===",
+    "constructorComplete": "=== TableView constructor complete ===",
+    "formulaLimitNotice": "Formula calculation paused; exceeded limit of {{limit}} rows"
+  },
+  "filterViewBar": {
+    "allTabLabel": "All"
+  },
+  "filterViewController": {
+    "noColumns": "Unable to fetch column information, please try again later",
+    "createModalTitle": "Create filter view",
+    "menuEdit": "Edit",
+    "menuDuplicate": "Duplicate",
+    "menuDelete": "Delete",
+    "editModalTitle": "Edit view: {{name}}",
+    "renameModalTitle": "Rename view",
+    "renamePlaceholder": "Enter new name",
+    "duplicateNameSuffix": "copy",
+    "duplicateNotice": "Duplicated view: {{name}}"
+  },
+  "compositionProxy": {
+    "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
+    "caretResetFailed": "[CompositionProxy] Unable to reset caret position"
+  }
+}

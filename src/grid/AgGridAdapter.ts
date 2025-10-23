@@ -8,7 +8,6 @@ import {
 	createGrid,
 	GridApi,
 	GridOptions,
-	ColDef,
 	CellEditingStoppedEvent,
 	CellEditingStartedEvent,
 	CellFocusedEvent,
@@ -17,10 +16,7 @@ import {
 	ModuleRegistry,
 	AllCommunityModule,
 	IRowNode,
-	Column,
-	ColumnResizedEvent,
-	ColumnState,
-	ColumnMovedEvent
+	ColumnState
 } from 'ag-grid-community';
 import {
 	GridAdapter,
@@ -31,18 +27,11 @@ import {
 	ROW_ID_FIELD,
 	SortModelEntry
 } from './GridAdapter';
-import {
-	StatusCellRenderer,
-	TaskStatus,
-	normalizeStatus,
-	getStatusLabel,
-	getStatusIcon
-} from '../renderers/StatusCellRenderer';
+import { TaskStatus, normalizeStatus } from '../renderers/StatusCellRenderer';
 import { createTextCellEditor } from './editors/TextCellEditor';
 import { CompositionProxy } from './utils/CompositionProxy';
-import { COLUMN_MIN_WIDTH, COLUMN_MAX_WIDTH, clampColumnWidth } from './columnSizing';
-import { IconHeaderComponent } from './headers/IconHeaderComponent';
 import { t } from '../i18n';
+import { AgGridColumnService } from './column/AgGridColumnService';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -55,9 +44,6 @@ export class AgGridAdapter implements GridAdapter {
 	private headerEditCallback?: (event: HeaderEditEvent) => void;
 	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
-	private columnResizeCallback?: (field: string, width: number) => void;
-	private columnOrderChangeCallback?: (fields: string[]) => void;
-	private columnLayoutInitialized = false;
 	private pendingEnterAtLastRow = false;
 	private gridContext?: {
 		onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
@@ -69,18 +55,19 @@ export class AgGridAdapter implements GridAdapter {
 	// Composition Proxy：每个 Document 一个代理层
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
 	private containerEl: HTMLElement | null = null;
+	private readonly columnService = new AgGridColumnService({
+		getContainer: () => this.containerEl
+	});
 	private focusedDoc: Document | null = null;
 	private focusedRowIndex: number | null = null;
 	private focusedColId: string | null = null;
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private editing = false;
-	private columnApi: any = null;
 	private ready = false;
 	private readyCallbacks: Array<() => void> = [];
 	private modelUpdatedCallbacks: Array<() => void> = [];
 	private proxyRealignTimer: number | null = null;
 	private viewportListenerCleanup: (() => void) | null = null;
-	private quickFilterText: string = '';
 
 	/**
 	 * 获取或创建指定 Document 的 CompositionProxy
@@ -512,64 +499,25 @@ export class AgGridAdapter implements GridAdapter {
 
 	setSortModel(sortModel: SortModelEntry[]): void {
 		this.runWhenReady(() => {
-			if (!this.columnApi || typeof this.columnApi.applyColumnState !== 'function') {
-				return;
-			}
-			const state = Array.isArray(sortModel)
-				? sortModel
-					.filter((item) => typeof item?.field === 'string' && item.field.length > 0)
-					.map((item, index) => ({
-						colId: item.field,
-						sort: item.direction === 'desc' ? 'desc' : 'asc',
-						sortIndex: index
-					}))
-				: [];
-			this.columnApi.applyColumnState({
-				defaultState: { sort: null, sortIndex: null },
-				state
-			});
-			if (this.gridApi && typeof this.gridApi.refreshClientSideRowModel === 'function') {
-				this.gridApi.refreshClientSideRowModel('sort');
-			}
+			this.columnService.setSortModel(sortModel);
 		});
 	}
 
 	setQuickFilter(value: string | null): void {
-		this.quickFilterText = value?.trim() ?? '';
+		this.columnService.setQuickFilterText(value);
 		this.runWhenReady(() => {
-			this.applyQuickFilterText();
+			this.columnService.applyQuickFilter();
 		});
 	}
 
 	getColumnState(): ColumnState[] | null {
-		if (!this.columnApi || typeof this.columnApi.getColumnState !== 'function') {
-			return null;
-		}
-		return this.cloneColumnState(this.columnApi.getColumnState());
+		return this.columnService.getColumnState();
 	}
 
 	applyColumnState(state: ColumnState[] | null): void {
 		this.runWhenReady(() => {
-			if (!this.columnApi || typeof this.columnApi.applyColumnState !== 'function') {
-				return;
-			}
-			if (!state) {
-				this.columnApi.resetColumnState();
-				return;
-			}
-			this.columnApi.applyColumnState({
-				state: this.cloneColumnState(state) ?? undefined,
-				applyOrder: true
-			});
-			this.applyQuickFilterText();
+			this.columnService.applyColumnState(state);
 		});
-	}
-
-	private cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
-		if (!state) {
-			return null;
-		}
-		return state.map((item) => ({ ...item }));
 	}
 
 	private deepClone<T>(value: T): T {
@@ -721,134 +669,28 @@ export class AgGridAdapter implements GridAdapter {
 		this.containerEl = container;
 		this.focusedDoc = container.ownerDocument || document;
 		this.gridContext = context;
-		this.columnResizeCallback = context?.onColumnResize;
-		this.columnOrderChangeCallback = context?.onColumnOrderChange;
-		this.columnLayoutInitialized = false;
+		this.columnService.configureCallbacks({
+			onColumnResize: context?.onColumnResize,
+			onColumnOrderChange: context?.onColumnOrderChange
+		});
+		this.columnService.setContainer(container);
 		if (this.proxyRealignTimer != null) {
 			window.clearTimeout(this.proxyRealignTimer);
 			this.proxyRealignTimer = null;
 		}
 		this.unbindViewportListeners();
 
-		// 转换列定义为 AG Grid 格式
-		const colDefs: ColDef[] = columns.map(col => {
-			// 序号列特殊处理
-			if (col.field === '#') {
-				return {
-					field: col.field,
-					headerName: col.headerName,
-					editable: false,
-					pinned: 'left',
-					lockPinned: true,
-					lockPosition: true,
-					suppressMovable: true,
-					width: 60,  // 固定宽度
-					maxWidth: 80,
-					sortable: true,
-					filter: false,
-					resizable: false,
-					suppressSizeToFit: true,  // 不参与自动调整
-					cellStyle: { textAlign: 'center' },  // 居中显示
-					headerComponent: IconHeaderComponent,
-					headerComponentParams: {
-						icon: 'hashtag',
-						fallbacks: ['hash'],
-						tooltip: col.headerTooltip || col.headerName || 'Index'
-					}
-				};
-			}
-
-			// status 列特殊处理
-			if (col.field === 'status') {
-				const headerName = col.headerName ?? 'Status';
-				const tooltipFallback =
-					typeof headerName === 'string' && headerName.trim().length > 0
-						? headerName
-						: 'Status';
-
-				return {
-					field: col.field,
-					headerName,
-					headerTooltip: col.headerTooltip ?? tooltipFallback,
-					editable: false,  // 禁用编辑模式
-					pinned: 'left',
-					lockPinned: true,
-					lockPosition: true,
-					suppressMovable: true,
-					width: 60,  // 固定宽度
-					resizable: false,
-					sortable: true,
-					filter: false,
-					suppressSizeToFit: true,  // 不参与自动调整
-					suppressNavigable: true,  // 禁止键盘导航
-					cellRenderer: StatusCellRenderer,  // 使用自定义渲染器
-					cellStyle: {
-						textAlign: 'center',
-						cursor: 'pointer',
-						padding: '10px var(--ag-cell-horizontal-padding)'  // 使用计算后的垂直内边距 (8px + 2px，来自行距调整)
-					},
-					headerComponent: IconHeaderComponent,
-					headerComponentParams: {
-						icon: 'list-checks',
-						fallbacks: ['checklist', 'check-square'],
-						tooltip: col.headerTooltip ?? tooltipFallback
-					}
-				};
-			}
-
-			// 构建基础列定义
-			const baseColDef: ColDef = {
-				field: col.field,
-				headerName: col.headerName,
-				editable: col.editable,
-				sortable: true, // 启用排序
-				filter: false, // 关闭筛选
-				resizable: true, // 可调整列宽
-				cellClass: 'tlb-cell-truncate'
-			};
-
-			// 合并用户配置（width, flex 等）
-			const mergedColDef = { ...baseColDef, ...(col as any) };
-			if (typeof col.field === 'string' && col.field !== '#' && col.field !== 'status') {
-				mergedColDef.minWidth = typeof mergedColDef.minWidth === 'number'
-					? clampColumnWidth(mergedColDef.minWidth)
-					: COLUMN_MIN_WIDTH;
-				mergedColDef.maxWidth = typeof mergedColDef.maxWidth === 'number'
-					? clampColumnWidth(mergedColDef.maxWidth)
-					: COLUMN_MAX_WIDTH;
-			}
-			const pinnedFields = new Set(['任务', '任务名称', '任务', 'task', 'taskName', 'title', '标题']);
-			if (typeof col.field === 'string' && pinnedFields.has(col.field)) {
-				mergedColDef.pinned = 'left';
-				mergedColDef.lockPinned = true;
-			}
-
-			const explicitWidth = (mergedColDef as any).width;
-			if (typeof explicitWidth === 'number') {
-				const clamped = clampColumnWidth(explicitWidth);
-				(mergedColDef as any).width = clamped;
-				(mergedColDef as any).suppressSizeToFit = true;
-			}
-
-			return mergedColDef;
-		});
-
-		const statusColDef = colDefs.find(def => def.field === 'status');
-		if (statusColDef) {
-			statusColDef.width = 80;
-			statusColDef.minWidth = 72;
-			statusColDef.maxWidth = 96;
-		}
+		const colDefs = this.columnService.buildColumnDefs(columns);
 
 		// 获取容器所在的 document 和 body（支持 pop-out 窗口）
 		const ownerDoc = container.ownerDocument;
-		const popupParent = ownerDoc.body;
 
 		// 创建 AG Grid 配置
 		const gridOptions: GridOptions = {
+			popupParent: ownerDoc.body,
 			onGridReady: (params: any) => {
 				this.gridApi = params.api;
-				this.columnApi = params.columnApi ?? null;
+				this.columnService.attachApis(params.api, params.columnApi ?? null);
 				this.ready = true;
 				if (this.readyCallbacks.length > 0) {
 					const queue = [...this.readyCallbacks];
@@ -960,11 +802,11 @@ export class AgGridAdapter implements GridAdapter {
 			onCellFocused: (event: CellFocusedEvent) => {
 				this.handleCellFocused(event);
 			},
-			onColumnResized: (event: ColumnResizedEvent) => {
-				this.handleColumnResized(event);
+			onColumnResized: (event) => {
+				this.columnService.handleColumnResized(event);
 			},
-			onColumnMoved: (event: ColumnMovedEvent) => {
-				this.handleColumnMoved(event);
+			onColumnMoved: (event) => {
+				this.columnService.handleColumnMoved(event);
 			},
 			onCellDoubleClicked: (event: CellDoubleClickedEvent) => {
 				const colId = event.column?.getColId?.() ?? null;
@@ -1042,10 +884,6 @@ export class AgGridAdapter implements GridAdapter {
 				this.gridApi.setColumnsVisible([colId], false);
 			}
 		});
-
-		// 对短文本列执行一次性 autoSize（不会随窗口变化重复执行）
-		setTimeout(() => {
-					}, 100);
 	}
 
 	/**
@@ -1177,7 +1015,7 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	markLayoutDirty(): void {
-		this.columnLayoutInitialized = false;
+		this.columnService.markLayoutDirty();
 		this.armProxyForCurrentCell();
 	}
 
@@ -1231,17 +1069,16 @@ onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEven
 		this.ready = false;
 		this.readyCallbacks = [];
 		this.modelUpdatedCallbacks = [];
-		this.columnApi = null;
+		this.columnService.detachApis();
 		this.cancelPendingCapture('destroy');
 		if (this.proxyRealignTimer != null) {
 			window.clearTimeout(this.proxyRealignTimer);
 			this.proxyRealignTimer = null;
 		}
 		this.unbindViewportListeners();
-		this.columnResizeCallback = undefined;
+		this.columnService.configureCallbacks(undefined);
+		this.columnService.setContainer(null);
 		this.columnHeaderContextMenuCallback = undefined;
-		this.columnOrderChangeCallback = undefined;
-		this.columnLayoutInitialized = false;
 		this.containerEl = null;
 		this.focusedDoc = null;
 	}
@@ -1312,267 +1149,7 @@ onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEven
 	 * 用于处理容器尺寸变化或新窗口初始化的情况
 	 */
 	resizeColumns(): void {
-		if (!this.gridApi) {
-			return;
-		}
-
-		if (!this.containerEl) {
-			if (!this.columnLayoutInitialized) {
-				this.initializeColumnSizing();
-			}
-			return;
-		}
-
-		const containerWidth = this.containerEl.clientWidth ?? 0;
-		const containerHeight = this.containerEl.clientHeight ?? 0;
-		if (containerWidth <= 0 || containerHeight <= 0) {
-			return;
-		}
-
-		const gridApiAny = this.gridApi as any;
-		gridApiAny?.doLayout?.();
-		gridApiAny?.checkGridSize?.();
-
-		const allColumns = this.gridApi.getAllDisplayedColumns() || [];
-
-		if (!this.columnLayoutInitialized) {
-			this.initializeColumnSizing();
-			return;
-		}
-
-		this.applyWidthClamping(allColumns);
-		this.distributeSparseSpace(allColumns);
-		this.gridApi.refreshHeader();
-		this.gridApi.refreshCells({ force: true });
-	}
-
-	private applyWidthClamping(columns: Column[]): void {
-		if (!this.gridApi) return;
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
-				continue;
-			}
-
-			const current = column.getActualWidth();
-			const clamped = clampColumnWidth(current);
-			if (Math.abs(clamped - current) > 0.5) {
-				this.gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
-			}
-		}
-	}
-
-	private distributeSparseSpace(columns: Column[]): void {
-		if (!this.containerEl) {
-			return;
-		}
-
-		const viewportWidth = this.containerEl.clientWidth ?? 0;
-		if (viewportWidth <= 0) {
-			return;
-		}
-
-		const totalWidth = columns.reduce((sum, column) => sum + column.getActualWidth(), 0);
-		let deficit = viewportWidth - totalWidth;
-		if (deficit <= 1) {
-			return;
-		}
-
-		let adjustable = columns.filter((column) => {
-			const id = column.getColId();
-			return id && id !== '#' && id !== 'status' && column.isResizable();
-		});
-
-		if (adjustable.length === 0) {
-			return;
-		}
-
-		const tolerance = 0.5;
-
-		while (deficit > tolerance && adjustable.length > 0) {
-			const share = deficit / adjustable.length;
-			let consumed = 0;
-			const nextRound: Column[] = [];
-
-			for (const column of adjustable) {
-				const current = column.getActualWidth();
-				const target = clampColumnWidth(current + share);
-				const delta = target - current;
-
-				if (delta > tolerance) {
-					const colId = column.getColId();
-					if (colId) {
-						this.gridApi!.setColumnWidths([{ key: colId, newWidth: target }]);
-					}
-					consumed += delta;
-				}
-
-				if (target < COLUMN_MAX_WIDTH - tolerance) {
-					nextRound.push(column);
-				}
-			}
-
-			if (consumed <= tolerance) {
-				break;
-			}
-
-			deficit -= consumed;
-			adjustable = nextRound.length > 0
-				? nextRound
-				: adjustable.filter((column) => column.getActualWidth() < COLUMN_MAX_WIDTH - tolerance);
-		}
-	}
-
-	private initializeColumnSizing(): void {
-		if (!this.gridApi || !this.containerEl) {
-			return;
-		}
-
-		const containerWidth = this.containerEl.clientWidth ?? 0;
-		const containerHeight = this.containerEl.clientHeight ?? 0;
-		if (containerWidth <= 0 || containerHeight <= 0) {
-			return;
-		}
-
-		const columns = this.gridApi.getAllDisplayedColumns() || [];
-		if (columns.length === 0) {
-			this.columnLayoutInitialized = true;
-			return;
-		}
-
-		const storedWidths = new Map<string, number>();
-		const explicitWidths = new Map<string, number>();
-		let requiresAutoSize = false;
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
-				continue;
-			}
-
-			const colDef = column.getColDef() as any;
-			const stored = colDef.__tlbStoredWidth;
-			const explicit = colDef.width;
-
-			if (typeof stored === 'number') {
-				storedWidths.set(colId, clampColumnWidth(stored));
-			} else if (typeof explicit === 'number') {
-				const clamped = clampColumnWidth(explicit);
-				explicitWidths.set(colId, clamped);
-				colDef.width = clamped;
-				colDef.suppressSizeToFit = true;
-			} else {
-				requiresAutoSize = true;
-			}
-		}
-
-		if (requiresAutoSize) {
-			this.gridApi.autoSizeAllColumns();
-		}
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
-				continue;
-			}
-
-			const stored = storedWidths.get(colId);
-			const explicit = explicitWidths.get(colId);
-
-			if (stored !== undefined) {
-				this.gridApi.setColumnWidths([{ key: colId, newWidth: stored }]);
-				(column.getColDef() as any).__tlbStoredWidth = stored;
-				continue;
-			}
-
-			if (explicit !== undefined) {
-				this.gridApi.setColumnWidths([{ key: colId, newWidth: explicit }]);
-				const colDef = column.getColDef() as any;
-				colDef.width = explicit;
-				colDef.suppressSizeToFit = true;
-			}
-		}
-
-		this.applyWidthClamping(columns);
-		this.distributeSparseSpace(columns);
-		this.gridApi.refreshHeader();
-		this.gridApi.refreshCells({ force: true });
-		this.columnLayoutInitialized = true;
-	}
-
-	private handleColumnResized(event: ColumnResizedEvent): void {
-		if (!event.finished || !event.column) {
-			return;
-		}
-
-		const source = event.source as string | undefined;
-		if (source !== 'uiColumnDragged' && source !== 'uiColumnResized') {
-			return;
-		}
-
-		const colId = event.column.getColId();
-		if (!colId || colId === '#' || colId === 'status') {
-			return;
-		}
-
-		const clamped = clampColumnWidth(event.column.getActualWidth());
-		if (Math.abs(clamped - event.column.getActualWidth()) > 0.5) {
-			this.gridApi!.setColumnWidths([{ key: colId, newWidth: clamped }]);
-		}
-
-		const colDef = event.column.getColDef() as any;
-		colDef.__tlbStoredWidth = clamped;
-
-		if (this.columnResizeCallback) {
-			this.columnResizeCallback(colId, clamped);
-		}
-	}
-
-	private handleColumnMoved(event: ColumnMovedEvent): void {
-		if (!this.columnOrderChangeCallback) {
-			return;
-		}
-
-		if (!event.finished) {
-			return;
-		}
-
-		const column = event.column ?? null;
-		const columnId = typeof column?.getColId === 'function' ? column.getColId() : null;
-		if (columnId === '#' || columnId === 'status' || columnId === ROW_ID_FIELD) {
-			return;
-		}
-
-		const columnApi: any = this.columnApi;
-		if (!columnApi || typeof columnApi.getAllGridColumns !== 'function') {
-			return;
-		}
-
-		const orderedColumns: Column[] = columnApi.getAllGridColumns() ?? [];
-		const orderedFields: string[] = [];
-
-		for (const gridColumn of orderedColumns) {
-			if (!gridColumn) {
-				continue;
-			}
-			const colDef = typeof gridColumn.getColDef === 'function' ? gridColumn.getColDef() : null;
-			const field = colDef?.field;
-			const fallback = typeof gridColumn.getColId === 'function' ? gridColumn.getColId() : null;
-			const value = field ?? fallback;
-			if (!value || value === '#' || value === 'status' || value === ROW_ID_FIELD) {
-				continue;
-			}
-			if (!orderedFields.includes(value)) {
-				orderedFields.push(value);
-			}
-		}
-
-		if (orderedFields.length === 0) {
-			return;
-		}
-
-		this.columnOrderChangeCallback(orderedFields);
+		this.columnService.resizeColumns();
 	}
 
 	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
@@ -1630,55 +1207,6 @@ onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEven
 			rowIndex: blockIndex,
 			field: focusedCell.column.getColId()
 		};
-	}
-
-	private applyQuickFilterText(): void {
-		if (!this.gridApi) {
-			return;
-		}
-		const api = this.gridApi as GridApi;
-		const anyApi = api as GridApi & {
-			setQuickFilter?: (value: string) => void;
-			setQuickFilterColumns?: (columns: string[]) => void;
-			getColumns?: () => Column[] | null;
-			setGridOption?: (key: string, value: unknown) => void;
-			onFilterChanged?: () => void;
-		};
-
-		if (typeof anyApi.setQuickFilterColumns === 'function' && typeof anyApi.getColumns === 'function') {
-			const columns = anyApi.getColumns() ?? [];
-			const filterable: string[] = [];
-			for (const column of columns) {
-				if (!column) {
-					continue;
-				}
-				const colId = typeof column.getColId === 'function'
-					? column.getColId()
-					: typeof (column as any).getId === 'function'
-						? (column as any).getId()
-						: null;
-				if (!colId) {
-					continue;
-				}
-				if (colId === '#' || colId === ROW_ID_FIELD || colId === 'status') {
-					continue;
-				}
-				if (typeof column.isVisible === 'function' && !column.isVisible()) {
-					continue;
-				}
-				filterable.push(colId);
-			}
-			anyApi.setQuickFilterColumns(filterable);
-		}
-
-		if (typeof anyApi.setQuickFilter === 'function') {
-			anyApi.setQuickFilter(this.quickFilterText);
-		} else if (typeof anyApi.setGridOption === 'function') {
-			anyApi.setGridOption('quickFilterText', this.quickFilterText);
-			if (typeof anyApi.onFilterChanged === 'function') {
-				anyApi.onFilterChanged();
-			}
-		}
 	}
 
 	/**

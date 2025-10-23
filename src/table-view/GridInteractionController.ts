@@ -3,6 +3,7 @@ import type { GridAdapter } from '../grid/GridAdapter';
 import type { RowInteractionController } from './RowInteractionController';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnInteractionController } from './ColumnInteractionController';
+import { t } from '../i18n';
 
 interface GridInteractionDeps {
 	columnInteraction: ColumnInteractionController;
@@ -153,7 +154,6 @@ export class GridInteractionController {
 		if (blockIndexes.length === 0) {
 			return;
 		}
-
 		const blocks = this.deps.dataStore.getBlocks();
 		const segments: string[] = [];
 		for (const index of blockIndexes) {
@@ -171,10 +171,10 @@ export class GridInteractionController {
 		const markdown = segments.join('\n\n');
 		try {
 			await navigator.clipboard.writeText(markdown);
-			new Notice('已复制整段内容');
+			new Notice(t('gridInteraction.copySectionSuccess'));
 		} catch (error) {
-			console.error('复制失败:', error);
-			new Notice('复制失败');
+			console.error(t('gridInteraction.copyFailedLog'), error);
+			new Notice(t('gridInteraction.copyFailedNotice'));
 		}
 	}
 
@@ -215,7 +215,7 @@ export class GridInteractionController {
 
 		if (isIndexColumn) {
 			const copySection = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			copySection.createSpan({ text: '复制整段' });
+			copySection.createSpan({ text: t('gridInteraction.copySection') });
 			copySection.addEventListener('click', () => {
 				this.copySection(blockIndex);
 				this.hideContextMenu();
@@ -224,14 +224,14 @@ export class GridInteractionController {
 		}
 
 		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-		insertAbove.createSpan({ text: '在上方插入行' });
+		insertAbove.createSpan({ text: t('gridInteraction.insertRowAbove') });
 		insertAbove.addEventListener('click', () => {
 			this.deps.rowInteraction.addRow(blockIndex);
 			this.hideContextMenu();
 		});
 
 		const insertBelow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-		insertBelow.createSpan({ text: '在下方插入行' });
+		insertBelow.createSpan({ text: t('gridInteraction.insertRowBelow') });
 		insertBelow.addEventListener('click', () => {
 			this.deps.rowInteraction.addRow(blockIndex + 1);
 			this.hideContextMenu();
@@ -241,28 +241,32 @@ export class GridInteractionController {
 
 		if (isMultiSelect) {
 			const duplicateRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			duplicateRows.createSpan({ text: `复制选中的 ${selectedRows.length} 行` });
+			duplicateRows.createSpan({
+				text: t('gridInteraction.duplicateSelected', { count: String(selectedRows.length) })
+			});
 			duplicateRows.addEventListener('click', () => {
 				this.deps.rowInteraction.duplicateRows(selectedRows);
 				this.hideContextMenu();
 			});
 
 			const deleteRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-			deleteRows.createSpan({ text: `删除选中的 ${selectedRows.length} 行` });
+			deleteRows.createSpan({
+				text: t('gridInteraction.deleteSelected', { count: String(selectedRows.length) })
+			});
 			deleteRows.addEventListener('click', () => {
 				this.deps.rowInteraction.deleteRows(selectedRows);
 				this.hideContextMenu();
 			});
 		} else {
 			const duplicateRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			duplicateRow.createSpan({ text: '复制此行' });
+			duplicateRow.createSpan({ text: t('gridInteraction.duplicateRow') });
 			duplicateRow.addEventListener('click', () => {
 				this.deps.rowInteraction.duplicateRow(blockIndex);
 				this.hideContextMenu();
 			});
 
 			const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-			deleteRow.createSpan({ text: '删除此行' });
+			deleteRow.createSpan({ text: t('gridInteraction.deleteRow') });
 			deleteRow.addEventListener('click', () => {
 				this.deps.rowInteraction.deleteRow(blockIndex);
 				this.hideContextMenu();

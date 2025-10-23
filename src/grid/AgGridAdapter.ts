@@ -42,6 +42,7 @@ import { createTextCellEditor } from './editors/TextCellEditor';
 import { CompositionProxy } from './utils/CompositionProxy';
 import { COLUMN_MIN_WIDTH, COLUMN_MAX_WIDTH, clampColumnWidth } from './columnSizing';
 import { IconHeaderComponent } from './headers/IconHeaderComponent';
+import { t } from '../i18n';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -123,7 +124,7 @@ export class AgGridAdapter implements GridAdapter {
 				input.focus();
 			})
 			.catch((err) => {
-				console.warn('[AgGridAdapter] 未找到编辑器输入框', err);
+				console.warn(t('agGrid.editorInputMissing'), err);
 			});
 	}
 
@@ -139,7 +140,7 @@ export class AgGridAdapter implements GridAdapter {
 
 			const body = doc.body;
 			if (!body) {
-				reject(new Error('document.body 不可用'));
+				reject(new Error(t('agGrid.documentBodyUnavailable')));
 				return;
 			}
 
@@ -153,7 +154,7 @@ export class AgGridAdapter implements GridAdapter {
 
 			const timeout = window.setTimeout(() => {
 				cleanup();
-				reject(new Error('等待编辑器超时'));
+				reject(new Error(t('agGrid.editorWaitTimeout')));
 			}, 1000);
 
 			const cleanup = () => {
@@ -330,7 +331,7 @@ export class AgGridAdapter implements GridAdapter {
 				if (err === 'cancelled' || err === 'rearm' || err === 'editing-started' || err === 'focus-cleared' || err === 'cell-missing' || err === 'destroyed' || err === 'focus-move') {
 					return;
 				}
-				console.error('[AgGridAdapter] CompositionProxy 捕获失败', err);
+				console.error(t('agGrid.compositionCaptureFailed'), err);
 			});
 	}
 
@@ -483,7 +484,7 @@ export class AgGridAdapter implements GridAdapter {
 		try {
 			doc.execCommand('copy');
 		} catch (error) {
-			console.warn('[AgGridAdapter] execCommand 复制失败', error);
+			console.warn(t('agGrid.copyFailed'), error);
 		}
 		textarea.blur();
 		doc.body.removeChild(textarea);

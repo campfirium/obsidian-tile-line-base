@@ -3,9 +3,8 @@ import { compileFormula, evaluateFormula, type CompiledFormula } from '../formul
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
 import type { Schema, SchemaBuildResult } from './SchemaBuilder';
+import { t } from '../i18n';
 
-const DEFAULT_NEW_ROW_PREFIX = '新条目';
-const DEFAULT_NEW_COLUMN_NAME = '新列';
 const SYSTEM_FIELDS = new Set(['status', 'statusChanged']);
 
 export interface FormulaOptions {
@@ -32,7 +31,7 @@ export class TableDataStore {
         private formulaColumnOrder: string[] = [];
         private formulaLimitNoticeIssued = false;
 
-        constructor(private readonly formulaOptions: FormulaOptions) {}
+	constructor(private readonly formulaOptions: FormulaOptions) {}
 
         initialise(result: SchemaBuildResult, columnConfigs: ColumnConfig[] | null): void {
                         this.blocks = result.blocks;
@@ -244,41 +243,42 @@ export class TableDataStore {
                 return true;
         }
 
-        addRow(beforeRowIndex?: number | null, prefills?: Record<string, string>): number {
-                if (!this.schema) {
-                        return -1;
-                }
+	addRow(beforeRowIndex?: number | null, prefills?: Record<string, string>): number {
+		if (!this.schema) {
+			return -1;
+		}
 
-                const entryNumber = this.blocks.length + 1;
-                const newBlock: H2Block = {
-                        title: '',
-                        data: {}
-                };
+		const entryNumber = this.blocks.length + 1;
+		const newBlock: H2Block = {
+			title: '',
+			data: {}
+		};
+		const newRowPrefix = t('tableDataStore.newRowPrefix');
 
-                for (let i = 0; i < this.schema.columnNames.length; i++) {
-                        const key = this.schema.columnNames[i];
-                        const prefilledValue = prefills ? prefills[key] : undefined;
-                        if (prefilledValue !== undefined) {
-                                newBlock.data[key] = prefilledValue;
-                        } else if (key === 'status') {
-                                newBlock.data[key] = 'todo';
-                        } else if (i === 0) {
-                                newBlock.data[key] = `${DEFAULT_NEW_ROW_PREFIX} ${entryNumber}`;
-                        } else {
-                                newBlock.data[key] = '';
-                        }
-                }
+		for (let i = 0; i < this.schema.columnNames.length; i++) {
+			const key = this.schema.columnNames[i];
+			const prefilledValue = prefills ? prefills[key] : undefined;
+			if (prefilledValue !== undefined) {
+				newBlock.data[key] = prefilledValue;
+			} else if (key === 'status') {
+				newBlock.data[key] = 'todo';
+			} else if (i === 0) {
+				newBlock.data[key] = `${newRowPrefix} ${entryNumber}`;
+			} else {
+				newBlock.data[key] = '';
+			}
+		}
 
-                newBlock.data['statusChanged'] = getCurrentLocalDateTime();
+		newBlock.data['statusChanged'] = getCurrentLocalDateTime();
 
-                if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
-                        this.blocks.splice(beforeRowIndex, 0, newBlock);
-                        return beforeRowIndex;
-                }
+		if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
+			this.blocks.splice(beforeRowIndex, 0, newBlock);
+			return beforeRowIndex;
+		}
 
-                this.blocks.push(newBlock);
-                return this.blocks.length - 1;
-        }
+		this.blocks.push(newBlock);
+		return this.blocks.length - 1;
+	}
 
         deleteRow(rowIndex: number): number | null {
                 if (!this.schema) {
@@ -456,9 +456,9 @@ export class TableDataStore {
                 return true;
         }
 
-        duplicateColumn(field: string): string | null {
-                const baseName = `${field} (副本)`;
-                const newName = this.generateUniqueColumnName(baseName);
+	duplicateColumn(field: string): string | null {
+		const baseName = t('tableDataStore.duplicateColumnBase', { field });
+		const newName = this.generateUniqueColumnName(baseName);
                 const created = this.insertColumnInternal({
                         newName,
                         afterField: field,
@@ -468,14 +468,15 @@ export class TableDataStore {
                 return created ? newName : null;
         }
 
-        insertColumnAfter(field: string, baseName: string = DEFAULT_NEW_COLUMN_NAME): string | null {
-                const newName = this.generateUniqueColumnName(baseName);
-                const created = this.insertColumnInternal({
-                        newName,
-                        afterField: field
-                });
-                return created ? newName : null;
-        }
+	insertColumnAfter(field: string, baseName?: string): string | null {
+		const effectiveBaseName = baseName ?? t('tableDataStore.newColumnName');
+		const newName = this.generateUniqueColumnName(effectiveBaseName);
+		const created = this.insertColumnInternal({
+			newName,
+			afterField: field
+		});
+		return created ? newName : null;
+	}
 
         removeColumn(field: string): boolean {
                 if (!this.schema) {
@@ -583,11 +584,11 @@ export class TableDataStore {
                 return null;
         }
 
-        private prepareFormulaColumns(columnConfigs: ColumnConfig[] | null): void {
-                this.formulaColumns.clear();
-                this.formulaCompileErrors.clear();
-                this.formulaColumnOrder = [];
-                this.formulaLimitNoticeIssued = false;
+	private prepareFormulaColumns(columnConfigs: ColumnConfig[] | null): void {
+		this.formulaColumns.clear();
+		this.formulaCompileErrors.clear();
+		this.formulaColumnOrder = [];
+		this.formulaLimitNoticeIssued = false;
 
                 if (!columnConfigs) {
                         if (this.schema) {
@@ -600,18 +601,18 @@ export class TableDataStore {
                         this.schema.columnConfigs = columnConfigs;
                 }
 
-                for (const config of columnConfigs) {
-                        const rawFormula = config.formula?.trim();
-                        if (!rawFormula) {
-                                continue;
-                        }
-                        this.formulaColumnOrder.push(config.name);
-                        try {
-                                const compiled = compileFormula(rawFormula);
-                                if (compiled.dependencies.includes(config.name)) {
-                                        this.formulaCompileErrors.set(config.name, '公式不允许引用自身');
-                                        continue;
-                                }
+		for (const config of columnConfigs) {
+			const rawFormula = config.formula?.trim();
+			if (!rawFormula) {
+				continue;
+			}
+			this.formulaColumnOrder.push(config.name);
+			try {
+				const compiled = compileFormula(rawFormula);
+				if (compiled.dependencies.includes(config.name)) {
+					this.formulaCompileErrors.set(config.name, t('tableDataStore.formulaSelfReference'));
+					continue;
+				}
                                 this.formulaColumns.set(config.name, compiled);
                         } catch (error) {
                                 const message = error instanceof Error ? error.message : String(error);
@@ -620,43 +621,44 @@ export class TableDataStore {
                 }
         }
 
-        private applyFormulaResults(row: RowData, rowCount: number, formulasEnabled: boolean): void {
-                if (this.formulaColumnOrder.length === 0) {
-                        return;
-                }
+	private applyFormulaResults(row: RowData, rowCount: number, formulasEnabled: boolean): void {
+		if (this.formulaColumnOrder.length === 0) {
+			return;
+		}
 
-                for (const columnName of this.formulaColumnOrder) {
-                        const tooltipField = this.getFormulaTooltipField(columnName);
-                        const compileError = this.formulaCompileErrors.get(columnName);
-                        if (compileError) {
-                                row[columnName] = this.formulaOptions.errorValue;
-                                row[tooltipField] = `公式解析失败：${compileError}`;
-                                continue;
-                        }
+		for (const columnName of this.formulaColumnOrder) {
+			const tooltipField = this.getFormulaTooltipField(columnName);
+			const compileError = this.formulaCompileErrors.get(columnName);
+			if (compileError) {
+				row[columnName] = this.formulaOptions.errorValue;
+				row[tooltipField] = t('tableDataStore.formulaParseFailed', { error: compileError });
+				continue;
+			}
 
-                        if (!formulasEnabled) {
-                                row[tooltipField] = `公式列已停用（行数超过 ${this.formulaOptions.rowLimit}）`;
-                                continue;
-                        }
+			if (!formulasEnabled) {
+				row[tooltipField] = t('tableDataStore.formulaDisabled', { limit: String(this.formulaOptions.rowLimit) });
+				continue;
+			}
 
                         const compiled = this.formulaColumns.get(columnName);
                         if (!compiled) {
                                 continue;
                         }
 
-                        const { value, error } = evaluateFormula(compiled, row);
-                        if (error) {
-                                row[columnName] = this.formulaOptions.errorValue;
-                                row[tooltipField] = `公式错误：${error}`;
-                        } else {
-                                row[columnName] = value;
-                                row[tooltipField] = '';
-                        }
+			const { value, error } = evaluateFormula(compiled, row);
+			if (error) {
+				row[columnName] = this.formulaOptions.errorValue;
+				row[tooltipField] = t('tableDataStore.formulaError', { error });
+			} else {
+				row[columnName] = value;
+				row[tooltipField] = '';
+			}
                 }
         }
 
-        private generateUniqueColumnName(base: string): string {
-                const normalizedBase = base.trim().length > 0 ? base.trim() : DEFAULT_NEW_COLUMN_NAME;
+	private generateUniqueColumnName(base: string): string {
+		const fallback = t('tableDataStore.newColumnName');
+		const normalizedBase = base.trim().length > 0 ? base.trim() : fallback;
                 if (!this.schema) {
                         return normalizedBase;
                 }

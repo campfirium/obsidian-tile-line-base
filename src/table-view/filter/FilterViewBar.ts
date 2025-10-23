@@ -1,4 +1,5 @@
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
+import { t } from '../../i18n';
 
 export interface FilterViewBarCallbacks {
 	onCreate(): void;
@@ -43,7 +44,7 @@ export class FilterViewBar {
 
 		const defaultButton = this.tabsEl.createEl('button', {
 			cls: 'tlb-filter-view-button',
-			text: '全部'
+			text: t('filterViewBar.allTabLabel')
 		});
 		defaultButton.addEventListener('click', () => {
 			this.options.callbacks.onActivate(null);

@@ -1,0 +1,120 @@
+{
+  "tableView": {
+    "displayName": "TileLineBase 表格"
+  },
+  "formula": {
+    "errors": {
+      "unexpectedChar": "存在无法识别的字符",
+      "unexpectedCharWithValue": "存在无法识别的字符：“{{char}}”",
+      "unmatchedBrace": "花括号未闭合",
+      "emptyField": "字段名不能为空",
+      "unmatchedParen": "括号不匹配",
+      "stackUnderflow": "运算栈不平衡",
+      "divideByZero": "除数为 0",
+      "nonFiniteResult": "结果不是有限数值",
+      "emptyFormula": "公式为空",
+      "numericOutOfRange": "数值超出范围",
+      "unaryNotSupported": "暂不支持一元运算符"
+    }
+  },
+  "agGrid": {
+    "editorInputMissing": "[AgGridAdapter] 未找到编辑器输入框",
+    "documentBodyUnavailable": "document.body 不可用",
+    "editorWaitTimeout": "等待编辑器超时",
+    "compositionCaptureFailed": "[AgGridAdapter] CompositionProxy 捕获失败",
+    "copyFailed": "[AgGridAdapter] execCommand 复制失败"
+  },
+  "columnEditorModal": {
+    "title": "编辑列：{{columnName}}",
+    "nameLabel": "列名",
+    "namePlaceholder": "请输入列名称",
+    "typeLabel": "列类型",
+    "typeTextOption": "文本",
+    "typeFormulaOption": "公式",
+    "formulaLabel": "公式",
+    "formulaDescription": "使用 {字段} 引用列，支持 + - * / 运算符。",
+    "saveButton": "保存",
+    "cancelButton": "取消",
+    "nameEmptyError": "列名称不能为空",
+    "formulaEmptyError": "公式不能为空",
+    "formulaValidationFailed": "公式校验失败：{{message}}"
+  },
+  "columnInteraction": {
+    "menuEdit": "编辑列",
+    "menuDuplicate": "复制列",
+    "menuInsert": "插入列",
+    "menuDelete": "删除列",
+    "nameEmptyError": "列名称不能为空",
+    "nameReservedError": "列名已被系统保留",
+    "nameExistsError": "列名已存在",
+    "renameFailed": "重命名列失败：{{target}}",
+    "duplicateFailed": "复制列失败，请稍后重试",
+    "duplicateSuccess": "已复制列：{{name}}",
+    "insertFailed": "插入新列失败，请稍后重试",
+    "insertSuccess": "已插入列：{{name}}",
+    "deleteSuccess": "已删除列：{{name}}"
+  },
+  "quickFilter": {
+    "clearAriaLabel": "清除过滤",
+    "placeholder": "全局过滤",
+    "inputAriaLabel": "全局过滤关键字",
+    "focusAriaLabel": "聚焦过滤输入"
+  },
+  "gridInteraction": {
+    "copySectionSuccess": "已复制整段内容",
+    "copyFailedLog": "复制失败:",
+    "copyFailedNotice": "复制失败",
+    "copySection": "复制整段",
+    "insertRowAbove": "在上方插入行",
+    "insertRowBelow": "在下方插入行",
+    "duplicateSelected": "复制选中的 {{count}} 行",
+    "deleteSelected": "删除选中的 {{count}} 行",
+    "duplicateRow": "复制此行",
+    "deleteRow": "删除此行"
+  },
+  "tableDataStore": {
+    "newRowPrefix": "新条目",
+    "newColumnName": "新列",
+    "formulaSelfReference": "公式不允许引用自身",
+    "formulaParseFailed": "公式解析失败：{{error}}",
+    "formulaDisabled": "公式列已停用（行数超过 {{limit}}）",
+    "formulaError": "公式错误：{{error}}",
+    "duplicateColumnBase": "{{field}} (副本)"
+  },
+  "tablePersistence": {
+    "saveFailed": "保存失败，请查看控制台日志"
+  },
+  "tableViewInteractions": {
+    "blockIndexMissing": "无法定位对应的块索引",
+    "renameFailed": "重命名列失败：{{name}}"
+  },
+  "tableViewRenderer": {
+    "noFile": "未选择文件",
+    "missingH2": "该文件缺少 H2 段落，无法显示为表格",
+    "noSchema": "无法获取数据结构"
+  },
+  "tableViewSetup": {
+    "constructorStart": "=== TableView 构造函数开始 ===",
+    "constructorComplete": "=== TableView 构造函数完成 ===",
+    "formulaLimitNotice": "公式计算暂停，超过限制 {{limit}} 行"
+  },
+  "filterViewBar": {
+    "allTabLabel": "全部"
+  },
+  "filterViewController": {
+    "noColumns": "无法获取列信息，请稍后重试",
+    "createModalTitle": "新建过滤视图",
+    "menuEdit": "编辑",
+    "menuDuplicate": "复制",
+    "menuDelete": "删除",
+    "editModalTitle": "编辑视图: {{name}}",
+    "renameModalTitle": "重命名视图",
+    "renamePlaceholder": "输入新名称",
+    "duplicateNameSuffix": "副本",
+    "duplicateNotice": "已复制视图: {{name}}"
+  },
+  "compositionProxy": {
+    "compositionResetFailed": "[CompositionProxy] 无法在 compositionstart 重置光标",
+    "caretResetFailed": "[CompositionProxy] 无法重置光标位置"
+  }
+}

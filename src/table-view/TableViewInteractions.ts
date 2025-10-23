@@ -3,6 +3,7 @@ import { getCurrentLocalDateTime } from '../utils/datetime';
 import type { TaskStatus } from '../renderers/StatusCellRenderer';
 import type { CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
 import type { TableView } from '../TableView';
+import { t } from '../i18n';
 
 export function handleStatusChange(view: TableView, rowId: string, newStatus: TaskStatus): void {
 	if (!view.schema || !view.gridAdapter) {
@@ -75,7 +76,7 @@ export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 
 	const blockIndex = view.dataStore.getBlockIndexFromRow(rowData);
 	if (blockIndex === null) {
-		console.error('无法定位对应的块索引', { rowData });
+		console.error(t('tableViewInteractions.blockIndexMissing'), { rowData });
 		return;
 	}
 
@@ -113,7 +114,7 @@ export function handleHeaderEdit(view: TableView, colIndex: number, newValue: st
 	}
 	const renamed = view.dataStore.renameColumn(oldName, trimmed);
 	if (!renamed) {
-		new Notice(`重命名列失败：${trimmed}`);
+		new Notice(t('tableViewInteractions.renameFailed', { name: trimmed }));
 		return;
 	}
 	view.columnLayoutStore.rename(oldName, trimmed);

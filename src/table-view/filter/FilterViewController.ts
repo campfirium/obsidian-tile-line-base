@@ -2,6 +2,7 @@ import { App, Menu, Notice } from 'obsidian';
 import type { FilterViewDefinition, FilterRule, SortRule } from '../../types/filterView';
 import { FilterViewEditorModal, openFilterViewNameModal } from './FilterViewModals';
 import { FilterStateStore } from './FilterStateStore';
+import { t } from '../../i18n';
 
 interface FilterViewControllerOptions {
 	app: App;
@@ -41,13 +42,13 @@ export class FilterViewController {
 	async promptCreateFilterView(): Promise<void> {
 		const columns = this.getAvailableColumns();
 		if (columns.length === 0) {
-			new Notice('无法获取列信息，请稍后重试');
+			new Notice(t('filterViewController.noColumns'));
 			return;
 		}
 
 		await new Promise<void>((resolve) => {
 			const modal = new FilterViewEditorModal(this.app, {
-				title: '新建过滤视图',
+				title: t('filterViewController.createModalTitle'),
 				columns,
 				onSubmit: (name, rule, sortRules) => {
 					this.saveFilterView(name, rule, sortRules);
@@ -87,13 +88,13 @@ export class FilterViewController {
 	openFilterViewMenu(view: FilterViewDefinition, event: MouseEvent): void {
 		const menu = new Menu();
 		menu.addItem((item) => {
-			item.setTitle('编辑').setIcon('pencil').onClick(() => {
+			item.setTitle(t('filterViewController.menuEdit')).setIcon('pencil').onClick(() => {
 				void this.updateFilterView(view.id);
 			});
 		});
 
 		menu.addItem((item) => {
-			item.setTitle('复制').setIcon('copy').onClick(() => {
+			item.setTitle(t('filterViewController.menuDuplicate')).setIcon('copy').onClick(() => {
 				this.duplicateFilterView(view.id);
 			});
 		});
@@ -101,7 +102,7 @@ export class FilterViewController {
 		menu.addSeparator();
 
 		menu.addItem((item) => {
-			item.setTitle('删除').setIcon('trash').onClick(() => {
+			item.setTitle(t('filterViewController.menuDelete')).setIcon('trash').onClick(() => {
 				this.deleteFilterView(view.id);
 			});
 		});
@@ -122,7 +123,7 @@ export class FilterViewController {
 
 		await new Promise<void>((resolve) => {
 			const modal = new FilterViewEditorModal(this.app, {
-				title: `编辑视图: ${current.name}`,
+				title: t('filterViewController.editModalTitle', { name: current.name }),
 				columns,
 				initialName: current.name,
 				initialRule: current.filterRule,
@@ -152,8 +153,8 @@ export class FilterViewController {
 			return;
 		}
 		const name = await openFilterViewNameModal(this.app, {
-			title: '重命名视图',
-			placeholder: '输入新名称',
+			title: t('filterViewController.renameModalTitle'),
+			placeholder: t('filterViewController.renamePlaceholder'),
 			defaultValue: current.name
 		});
 		if (!name || name.trim() === current.name) {
@@ -174,10 +175,11 @@ export class FilterViewController {
 		if (!sourceView) {
 			return;
 		}
+		const duplicatedName = `${sourceView.name} ${t('filterViewController.duplicateNameSuffix')}`.trim();
 
 		const duplicatedView: FilterViewDefinition = {
 			id: this.generateFilterViewId(),
-			name: `${sourceView.name} 副本`,
+			name: duplicatedName,
 			filterRule: sourceView.filterRule
 				? {
 					conditions: sourceView.filterRule.conditions.map((condition) => ({ ...condition })),
@@ -204,7 +206,7 @@ export class FilterViewController {
 		}
 
 		this.runStateEffects({ persist: true, apply: true });
-		new Notice(`已复制视图: ${duplicatedView.name}`);
+		new Notice(t('filterViewController.duplicateNotice', { name: duplicatedView.name }));
 	}
 
 	deleteFilterView(viewId: string): void {

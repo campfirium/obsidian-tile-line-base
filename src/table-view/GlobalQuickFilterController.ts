@@ -1,6 +1,7 @@
 import { setIcon } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
 import { globalQuickFilterManager } from './filter/GlobalQuickFilterManager';
+import { t } from '../i18n';
 
 interface GlobalQuickFilterDeps {
         getGridAdapter: () => GridAdapter | null;
@@ -12,31 +13,31 @@ export class GlobalQuickFilterController {
         private unsubscribe: (() => void) | null = null;
         private registered = false;
 
-        constructor(private readonly deps: GlobalQuickFilterDeps) {}
+	constructor(private readonly deps: GlobalQuickFilterDeps) {}
 
-        render(container: HTMLElement): void {
-                this.cleanup();
+	render(container: HTMLElement): void {
+		this.cleanup();
 
-                container.addClass('tlb-filter-view-search');
-                container.setAttribute('role', 'search');
+		container.addClass('tlb-filter-view-search');
+		container.setAttribute('role', 'search');
 
-                const clearButton = container.createSpan({ cls: 'clickable-icon' });
-                clearButton.setAttribute('role', 'button');
-                clearButton.setAttribute('tabindex', '0');
-                clearButton.setAttribute('aria-label', '清除过滤');
-                setIcon(clearButton, 'x');
+		const clearButton = container.createSpan({ cls: 'clickable-icon' });
+		clearButton.setAttribute('role', 'button');
+		clearButton.setAttribute('tabindex', '0');
+		clearButton.setAttribute('aria-label', t('quickFilter.clearAriaLabel'));
+		setIcon(clearButton, 'x');
 
-                const input = container.createEl('input', {
-                        type: 'search',
-                        placeholder: '全局过滤'
-                });
-                input.setAttribute('aria-label', '全局过滤关键字');
-                input.setAttribute('size', '16');
+		const input = container.createEl('input', {
+			type: 'search',
+			placeholder: t('quickFilter.placeholder')
+		});
+		input.setAttribute('aria-label', t('quickFilter.inputAriaLabel'));
+		input.setAttribute('size', '16');
 
-                const iconEl = container.createSpan({ cls: 'clickable-icon' });
-                iconEl.setAttribute('aria-label', '聚焦过滤输入');
-                iconEl.setAttribute('tabindex', '0');
-                setIcon(iconEl, 'search');
+		const iconEl = container.createSpan({ cls: 'clickable-icon' });
+		iconEl.setAttribute('aria-label', t('quickFilter.focusAriaLabel'));
+		iconEl.setAttribute('tabindex', '0');
+		setIcon(iconEl, 'search');
 
                 const currentValue = globalQuickFilterManager.getValue();
                 input.value = currentValue;

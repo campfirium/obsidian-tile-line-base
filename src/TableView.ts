@@ -23,6 +23,7 @@ import type { TablePersistenceService } from "./table-view/TablePersistenceServi
 import { initializeTableView } from "./table-view/TableViewSetup";
 import { renderTableView } from "./table-view/TableViewRenderer";
 import { handleOnClose } from "./table-view/TableViewInteractions";
+import { t } from "./i18n";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -69,7 +70,7 @@ export class TableView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return this.file?.basename ?? "TileLineBase 表格";
+		return this.file?.basename ?? t("tableView.displayName");
 	}
 
 	async setState(state: TableViewState, _result: unknown): Promise<void> {

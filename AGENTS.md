@@ -16,13 +16,19 @@
 - `npm run version` 更新版本信息并暂存 `manifest.json`、`versions.json`，提交时包含这些改动，并重新推送标签。
 - 需要检查依赖树时可运行 `npm ls ag-grid-community`，确认 AG Grid 版本符合预期。
 - 如遇构建失败可先执行 `npm cache clean --force` 与 `rm -rf node_modules`，随后重新 `npm install`。
+- 建议新增 `npm run lint`（基于 ESLint，`eslint "src/**/*.{ts,tsx}" --max-warnings=0`），并在提交或 pre-commit 钩子中与 `npm run build` 一起执行，lint 失败严禁提交。
 
 ## 代码风格与命名约定
 - 使用 TypeScript + 制表符缩进；引号风格保持与周边一致，导入语句按逻辑分组。
 - 类名采用 `PascalCase`，变量/函数使用 `camelCase`，导出常量保持 `SCREAMING_SNAKE_CASE`。
+- 所有代码注释、TODO、JSDoc 必须使用英文撰写；若 UI 字符串需要中文，请在同段注释说明含义。
 - 复杂的解析或网格配置逻辑应拆入 `src/grid/` 子模块，并在难懂的片段前添加简明注释，保持中文与英文术语一致。
 - 禁止直接修改 `main.js`，必要日志请在插件生命周期钩子中添加带前缀的输出，便于过滤。
 - 在编辑 Markdown 解析器时，确保正则表达式覆盖多语言标题，必要时补充单元注释说明。
+
+## 模块拆分约束
+- `src/TableView.ts` 必须控制在 250 行以内（目标 ≤200 行），新增渲染或交互逻辑优先落在 `src/table-view/` 子模块。
+- 计划拆分大块逻辑前，先在 `specs/` 补充对应方案并按子任务增量提交，每完成一子任务都执行 `npm run build` 校验。
 
 ## 测试指南
 - 当前无自动化测试，`npm run build` 是基础质量闸。

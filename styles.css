@@ -286,6 +286,21 @@
   transition: all 0.2s ease-in-out;
 }
 
+.tlb-status-context-menu {
+  outline: none;
+}
+
+.tlb-status-menu-item.is-focused,
+.tlb-status-menu-item:focus {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+  background-color: var(--background-modifier-hover);
+}
+
+.tlb-status-menu-item[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
 /* 完成状态行：轻微弱化但保持可见 */
 .tlb-row-completed .ag-cell {
   color: color-mix(in srgb, var(--text-normal) 88%, transparent);

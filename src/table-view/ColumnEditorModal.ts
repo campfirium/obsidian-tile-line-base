@@ -15,6 +15,7 @@ export interface ColumnEditorModalOptions {
 	initialType: ColumnFieldType;
 	initialFormula: string;
 	validateName?: (name: string) => string | null;
+	triggerElement?: HTMLElement | null;
 	onSubmit: (result: ColumnEditorResult) => void;
 	onCancel: () => void;
 }
@@ -28,6 +29,8 @@ export class ColumnEditorModal extends Modal {
 	private nameInput!: HTMLInputElement;
 	private errorEl!: HTMLElement;
 	private submitted = false;
+	private returnFocusTarget: HTMLElement | null = null;
+	private keydownHandler?: (event: KeyboardEvent) => void;
 
 	constructor(app: App, options: ColumnEditorModalOptions) {
 		super(app);
@@ -38,6 +41,17 @@ export class ColumnEditorModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
+		const ownerDoc = contentEl.ownerDocument;
+
+		const providedTrigger = this.options.triggerElement;
+		if (providedTrigger && providedTrigger instanceof HTMLElement) {
+			this.returnFocusTarget = providedTrigger;
+		} else if (ownerDoc?.activeElement instanceof HTMLElement) {
+			this.returnFocusTarget = ownerDoc.activeElement;
+		} else {
+			this.returnFocusTarget = null;
+		}
+
 		contentEl.empty();
 		contentEl.addClass('tlb-column-editor-modal');
 		this.titleEl.setText(t('columnEditorModal.title', { columnName: this.options.columnName }));
@@ -73,7 +87,7 @@ export class ColumnEditorModal extends Modal {
 		const textarea = document.createElement('textarea');
 		textarea.className = 'tlb-column-formula-input';
 		textarea.rows = 4;
-		textarea.placeholder = '{points} + {cost}';
+		textarea.placeholder = t('columnEditorModal.formulaPlaceholder');
 		textarea.value = this.options.initialFormula;
 		this.formulaSetting.controlEl.appendChild(textarea);
 		this.formulaInput = textarea;
@@ -81,6 +95,21 @@ export class ColumnEditorModal extends Modal {
 		this.errorEl = contentEl.createDiv({ cls: 'tlb-column-editor-error' });
 		this.errorEl.style.display = 'none';
 		this.errorEl.style.color = 'var(--text-error, #ff4d4f)';
+
+		const modalEl = this.modalEl;
+		if (modalEl) {
+			if (this.keydownHandler) {
+				modalEl.removeEventListener('keydown', this.keydownHandler, true);
+			}
+			this.keydownHandler = (event: KeyboardEvent) => {
+				if (event.key === 'Escape' || event.key === 'Esc') {
+					event.preventDefault();
+					event.stopPropagation();
+					this.close();
+				}
+			};
+			modalEl.addEventListener('keydown', this.keydownHandler, true);
+		}
 
 		const actionSetting = new Setting(contentEl);
 		actionSetting.addButton((button) => {
@@ -97,12 +126,34 @@ export class ColumnEditorModal extends Modal {
 		});
 
 		this.updateFormulaVisibility();
+
+		const focusNameInput = () => {
+			this.nameInput?.focus({ preventScroll: true });
+		};
+		const requestFrame = ownerDoc?.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
+		if (typeof requestFrame === 'function') {
+			requestFrame(() => focusNameInput());
+		} else {
+			window.setTimeout(focusNameInput, 0);
+		}
 	}
 
 	onClose(): void {
+		if (this.modalEl && this.keydownHandler) {
+			this.modalEl.removeEventListener('keydown', this.keydownHandler, true);
+			this.keydownHandler = undefined;
+		}
+
 		if (!this.submitted) {
 			this.options.onCancel();
 		}
+
+		if (this.returnFocusTarget && this.returnFocusTarget.isConnected) {
+			this.returnFocusTarget.focus({ preventScroll: true });
+		} else if (this.options.triggerElement && this.options.triggerElement.isConnected) {
+			this.options.triggerElement.focus({ preventScroll: true });
+		}
+		this.returnFocusTarget = null;
 	}
 
 	private updateFormulaVisibility(): void {

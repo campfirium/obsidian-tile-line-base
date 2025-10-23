@@ -62,7 +62,8 @@
       "inprogress": "In Progress",
       "onhold": "On Hold",
       "canceled": "Canceled"
-    }
+    },
+    "menuLabel": "Status options"
   },
   "quickFilter": {
     "clearAriaLabel": "Clear filter",

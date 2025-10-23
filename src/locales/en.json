@@ -33,6 +33,7 @@
     "typeFormulaOption": "Formula",
     "formulaLabel": "Formula",
     "formulaDescription": "Reference a column with {field}; supports + - * / operators.",
+    "formulaPlaceholder": "{points} + {cost}",
     "saveButton": "Save",
     "cancelButton": "Cancel",
     "nameEmptyError": "Column name cannot be empty",
@@ -53,6 +54,15 @@
     "insertFailed": "Failed to insert column, please try again later",
     "insertSuccess": "Inserted column: {{name}}",
     "deleteSuccess": "Deleted column: {{name}}"
+  },
+  "statusCell": {
+    "labels": {
+      "todo": "Todo",
+      "done": "Done",
+      "inprogress": "In Progress",
+      "onhold": "On Hold",
+      "canceled": "Canceled"
+    }
   },
   "quickFilter": {
     "clearAriaLabel": "Clear filter",
@@ -112,6 +122,36 @@
     "renamePlaceholder": "Enter new name",
     "duplicateNameSuffix": "copy",
     "duplicateNotice": "Duplicated view: {{name}}"
+  },
+  "filterViewModals": {
+    "saveButton": "Save",
+    "cancelButton": "Cancel",
+    "viewNameLabel": "View name",
+    "viewNamePlaceholder": "Enter view name",
+    "combineModeLabel": "Condition combine mode",
+    "combineModeOptionAll": "Match all conditions (AND)",
+    "combineModeOptionAny": "Match any condition (OR)",
+    "conditionsHeading": "Filter conditions",
+    "conditionsEmptyHint": "No filter conditions yet. Use Add condition to configure.",
+    "addConditionButton": "+ Add condition",
+    "operators": {
+      "equals": "Equals",
+      "notEquals": "Not equal",
+      "contains": "Contains",
+      "notContains": "Does not contain",
+      "startsWith": "Starts with",
+      "endsWith": "Ends with",
+      "isEmpty": "Is empty",
+      "isNotEmpty": "Is not empty"
+    },
+    "valuePlaceholder": "Enter value",
+    "removeButton": "Remove",
+    "sortHeading": "Sort rules",
+    "addSortButton": "+ Add sort",
+    "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
+    "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
+    "sortDirectionAsc": "Ascending (A → Z)",
+    "sortDirectionDesc": "Descending (Z → A)"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",

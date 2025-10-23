@@ -1,5 +1,17 @@
 import { App, Modal, Setting } from 'obsidian';
 import type { FilterCondition, FilterOperator, FilterRule, SortRule } from '../../types/filterView';
+import { t, type TranslationKey } from '../../i18n';
+
+const FILTER_OPERATOR_LABEL_KEYS: Array<{ value: FilterOperator; key: TranslationKey }> = [
+	{ value: 'equals', key: 'filterViewModals.operators.equals' },
+	{ value: 'notEquals', key: 'filterViewModals.operators.notEquals' },
+	{ value: 'contains', key: 'filterViewModals.operators.contains' },
+	{ value: 'notContains', key: 'filterViewModals.operators.notContains' },
+	{ value: 'startsWith', key: 'filterViewModals.operators.startsWith' },
+	{ value: 'endsWith', key: 'filterViewModals.operators.endsWith' },
+	{ value: 'isEmpty', key: 'filterViewModals.operators.isEmpty' },
+	{ value: 'isNotEmpty', key: 'filterViewModals.operators.isNotEmpty' }
+];
 
 export interface FilterViewEditorModalOptions {
 	title: string;
@@ -44,9 +56,9 @@ export class FilterViewEditorModal extends Modal {
 		this.titleEl.setText(this.options.title);
 
 		const nameSetting = new Setting(contentEl);
-		nameSetting.setName('View name');
+		nameSetting.setName(t('filterViewModals.viewNameLabel'));
 		nameSetting.addText((text) => {
-			text.setPlaceholder('Enter view name');
+			text.setPlaceholder(t('filterViewModals.viewNamePlaceholder'));
 			if (this.options.initialName) {
 				text.setValue(this.options.initialName);
 			}
@@ -54,10 +66,10 @@ export class FilterViewEditorModal extends Modal {
 		});
 
 		const modeSetting = new Setting(contentEl);
-		modeSetting.setName('Condition combine mode');
+		modeSetting.setName(t('filterViewModals.combineModeLabel'));
 		modeSetting.addDropdown((dropdown) => {
-			dropdown.addOption('AND', 'Match all conditions (AND)');
-			dropdown.addOption('OR', 'Match any condition (OR)');
+			dropdown.addOption('AND', t('filterViewModals.combineModeOptionAll'));
+			dropdown.addOption('OR', t('filterViewModals.combineModeOptionAny'));
 			dropdown.setValue(this.combineMode);
 			dropdown.onChange((value) => {
 				this.combineMode = value as 'AND' | 'OR';
@@ -65,27 +77,27 @@ export class FilterViewEditorModal extends Modal {
 			this.combineModeSelect = dropdown.selectEl;
 		});
 
-		contentEl.createEl('h3', { text: 'Filter conditions' });
+		contentEl.createEl('h3', { text: t('filterViewModals.conditionsHeading') });
 		this.conditionsContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions' });
 		this.renderConditions();
 
-		const addConditionButton = contentEl.createEl('button', { text: '+ Add condition' });
+		const addConditionButton = contentEl.createEl('button', { text: t('filterViewModals.addConditionButton') });
 		addConditionButton.addClass('mod-cta');
 		addConditionButton.addEventListener('click', () => this.addCondition());
 
-		contentEl.createEl('h3', { text: 'Sort rules' });
+		contentEl.createEl('h3', { text: t('filterViewModals.sortHeading') });
 		this.sortContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions tlb-filter-sort' });
 		this.renderSortRules();
 
-		const addSortButton = contentEl.createEl('button', { text: '+ Add sort' });
+		const addSortButton = contentEl.createEl('button', { text: t('filterViewModals.addSortButton') });
 		addSortButton.addEventListener('click', () => this.addSortRule());
 
 		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-		const saveButton = buttonContainer.createEl('button', { text: 'Save' });
+		const saveButton = buttonContainer.createEl('button', { text: t('filterViewModals.saveButton') });
 		saveButton.addClass('mod-cta');
 		saveButton.addEventListener('click', () => this.submit());
 
-		const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
+		const cancelButton = buttonContainer.createEl('button', { text: t('filterViewModals.cancelButton') });
 		cancelButton.addEventListener('click', () => this.close());
 	}
 
@@ -94,7 +106,7 @@ export class FilterViewEditorModal extends Modal {
 
 		if (this.conditions.length === 0) {
 			this.conditionsContainer.createEl('p', {
-				text: 'No filter conditions yet. Use "Add condition" to configure.',
+				text: t('filterViewModals.conditionsEmptyHint'),
 				cls: 'tlb-filter-empty-hint'
 			});
 			return;
@@ -114,16 +126,10 @@ export class FilterViewEditorModal extends Modal {
 				condition.column = columnSelect.value;
 			});
 
-			const operators: { value: FilterOperator; label: string }[] = [
-				{ value: 'equals', label: 'Equals' },
-				{ value: 'notEquals', label: 'Not equal' },
-				{ value: 'contains', label: 'Contains' },
-				{ value: 'notContains', label: 'Does not contain' },
-				{ value: 'startsWith', label: 'Starts with' },
-				{ value: 'endsWith', label: 'Ends with' },
-				{ value: 'isEmpty', label: 'Is empty' },
-				{ value: 'isNotEmpty', label: 'Is not empty' }
-			];
+			const operators: { value: FilterOperator; label: string }[] = FILTER_OPERATOR_LABEL_KEYS.map((item) => ({
+				value: item.value,
+				label: t(item.key)
+			}));
 
 			const operatorSelect = row.createEl('select', { cls: 'tlb-filter-select' });
 			operators.forEach((op) => {
@@ -142,7 +148,7 @@ export class FilterViewEditorModal extends Modal {
 				const valueInput = row.createEl('input', {
 					type: 'text',
 					cls: 'tlb-filter-input',
-					placeholder: 'Enter value'
+					placeholder: t('filterViewModals.valuePlaceholder')
 				});
 				valueInput.value = condition.value ?? '';
 				valueInput.addEventListener('input', () => {
@@ -150,7 +156,7 @@ export class FilterViewEditorModal extends Modal {
 				});
 			}
 
-			const removeButton = row.createEl('button', { text: 'Remove', cls: 'mod-warning' });
+			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning' });
 			removeButton.addEventListener('click', () => {
 				this.conditions.splice(index, 1);
 				this.renderConditions();
@@ -169,14 +175,14 @@ export class FilterViewEditorModal extends Modal {
 		const availableColumns = this.options.columns;
 		if (availableColumns.length === 0) {
 			this.sortContainer.createEl('p', {
-				text: 'No available columns. Sorting cannot be configured.',
+				text: t('filterViewModals.sortsNoColumnsHint'),
 				cls: 'tlb-filter-empty-hint'
 			});
 			return;
 		}
 		if (this.sortRules.length === 0) {
 			this.sortContainer.createEl('p', {
-				text: 'No sort rules yet. Use "Add sort" to configure.',
+				text: t('filterViewModals.sortsEmptyHint'),
 				cls: 'tlb-filter-empty-hint'
 			});
 			return;
@@ -210,14 +216,14 @@ export class FilterViewEditorModal extends Modal {
 			});
 
 			const directionSelect = row.createEl('select', { cls: 'tlb-filter-select' });
-			directionSelect.createEl('option', { text: 'Ascending (A → Z)', value: 'asc' });
-			directionSelect.createEl('option', { text: 'Descending (Z → A)', value: 'desc' });
+			directionSelect.createEl('option', { text: t('filterViewModals.sortDirectionAsc'), value: 'asc' });
+			directionSelect.createEl('option', { text: t('filterViewModals.sortDirectionDesc'), value: 'desc' });
 			directionSelect.value = rule.direction === 'desc' ? 'desc' : 'asc';
 			directionSelect.addEventListener('change', () => {
 				rule.direction = directionSelect.value === 'desc' ? 'desc' : 'asc';
 			});
 
-			const removeButton = row.createEl('button', { text: 'Remove', cls: 'mod-warning' });
+			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning' });
 			removeButton.style.marginLeft = 'auto';
 			removeButton.addEventListener('click', () => {
 				this.sortRules.splice(index, 1);
@@ -297,7 +303,7 @@ export class FilterViewEditorModal extends Modal {
 
 		const sortRules = this.sortRules.map((rule) => ({ ...rule }));
 		this.options.onSubmit(name, rule, sortRules);
-		this.options.onCancel = () => {};
+		this.options.onCancel = () => undefined;
 		this.close();
 	}
 
@@ -344,12 +350,12 @@ export class FilterViewNameModal extends Modal {
 		});
 
 		setting.addButton((button) => {
-			button.setButtonText('Save');
+			button.setButtonText(t('filterViewModals.saveButton'));
 			button.setCta();
 			button.onClick(() => this.submit());
 		});
 
-		const cancelBtn = contentEl.createEl('button', { text: 'Cancel' });
+		const cancelBtn = contentEl.createEl('button', { text: t('filterViewModals.cancelButton') });
 		cancelBtn.addClass('mod-cta-secondary');
 		cancelBtn.addEventListener('click', () => this.close());
 	}
@@ -364,7 +370,7 @@ export class FilterViewNameModal extends Modal {
 	private submit(): void {
 		const value = this.inputEl?.value ?? '';
 		this.options.onSubmit(value);
-		this.options.onCancel = () => {};
+		this.options.onCancel = () => undefined;
 		this.close();
 	}
 }

@@ -21,6 +21,7 @@ import { TableConfigManager } from "./table-view/TableConfigManager";
 import { ColumnInteractionController } from "./table-view/ColumnInteractionController";
 import { RowInteractionController } from "./table-view/RowInteractionController";
 import { GridInteractionController } from "./table-view/GridInteractionController";
+import { FocusManager } from "./table-view/FocusManager";
 import { GridLayoutController } from "./table-view/GridLayoutController";
 
 const LOG_PREFIX = "[TileLineBase]";
@@ -34,15 +35,6 @@ interface TableViewState extends Record<string, unknown> {
 	filePath: string;
 }
 
-interface PendingFocusRequest {
-	rowIndex: number;
-	field?: string | null;
-	maxRetries: number;
-	retriesLeft: number;
-	retryDelay: number;
-	pendingVerification: boolean;
-}
-
 export class TableView extends ItemView {
 	file: TFile | null = null;
         private blocks: H2Block[] = [];
@@ -53,8 +45,6 @@ export class TableView extends ItemView {
         private saveTimeout: NodeJS.Timeout | null = null;
         private gridAdapter: GridAdapter | null = null;
         private gridController = new GridController();
-        private pendingFocusRequest: PendingFocusRequest | null = null;
-        private focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
         private allRowData: RowData[] = [];
         private visibleRowData: RowData[] = [];
         private columnLayoutStore = new ColumnLayoutStore(null);
@@ -70,6 +60,7 @@ export class TableView extends ItemView {
         private rowInteractionController: RowInteractionController;
         private gridInteractionController: GridInteractionController;
         private gridLayoutController: GridLayoutController;
+        private focusManager: FocusManager;
 
         // 事件监听器引用（用于清理）
 	private tableContainer: HTMLElement | null = null;
@@ -126,6 +117,12 @@ export class TableView extends ItemView {
 			getGridAdapter: () => this.gridAdapter
 		});
 		this.gridLayoutController = new GridLayoutController(this.app, this.gridController);
+		this.focusManager = new FocusManager({
+			getSchema: () => this.schema,
+			getBlockCount: () => this.blocks.length,
+			getVisibleRows: () => this.visibleRowData,
+			getGridAdapter: () => this.gridAdapter
+		});
 		this.filterViewController = new FilterViewController({
 			app: this.app,
 			stateStore: this.filterStateStore,
@@ -553,6 +550,7 @@ export class TableView extends ItemView {
 	private cleanupEventListeners(): void {
 		this.gridInteractionController.detach();
 		this.gridLayoutController.detach();
+		this.focusManager.clearPendingFocus('cleanup');
 	}
 
 	/**
@@ -722,293 +720,15 @@ export class TableView extends ItemView {
 		field?: string,
 		options?: { retryCount?: number; retryDelay?: number }
 	): void {
-		if (!this.schema) {
-			debugLog('[FocusDebug]', 'focusRow: missing schema', { rowIndex, field });
-			return;
-		}
-
-		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-			debugLog('[FocusDebug]', 'focusRow: index out of range', {
-				rowIndex,
-				field,
-				blockCount: this.blocks.length
-			});
-			return;
-		}
-
-		const maxRetries = Math.max(1, options?.retryCount ?? 20);
-		const retryDelay = Math.max(20, options?.retryDelay ?? 80);
-
-		this.clearPendingFocus('replace-request');
-
-		this.pendingFocusRequest = {
-			rowIndex,
-			field: field ?? null,
-			maxRetries,
-			retriesLeft: maxRetries,
-			retryDelay,
-			pendingVerification: false
-		};
-
-		debugLog('[FocusDebug]', 'focusRow: request registered', {
-			rowIndex,
-			field: field ?? null,
-			maxRetries,
-			retryDelay,
-			visibleRowCount: this.visibleRowData.length
-		});
-
-		this.scheduleFocusAttempt(0, 'initial');
-	}
-
-	private scheduleFocusAttempt(delay: number, reason: string): void {
-		const request = this.pendingFocusRequest;
-		if (!request) {
-			debugLog('[FocusDebug]', 'scheduleFocusAttempt: no pending request', { reason, delay });
-			return;
-		}
-
-		const effectiveDelay = Math.max(0, delay);
-
-		if (this.focusRetryTimer) {
-			clearTimeout(this.focusRetryTimer);
-			this.focusRetryTimer = null;
-		}
-
-		debugLog('[FocusDebug]', 'scheduleFocusAttempt', {
-			reason,
-			delay: effectiveDelay,
-			rowIndex: request.rowIndex,
-			field: request.field ?? null,
-			retriesLeft: request.retriesLeft,
-			pendingVerification: request.pendingVerification
-		});
-
-		this.focusRetryTimer = setTimeout(() => {
-			this.focusRetryTimer = null;
-			this.attemptFocusOnPendingRow();
-		}, effectiveDelay);
-	}
-
-	private attemptFocusOnPendingRow(): void {
-		const request = this.pendingFocusRequest;
-		if (!request) {
-			debugLog('[FocusDebug]', 'attemptFocus: skipped (no request)');
-			return;
-		}
-
-		const attemptIndex = request.maxRetries - request.retriesLeft + 1;
-
-		if (!this.gridAdapter || !this.schema) {
-			debugLog('[FocusDebug]', 'attemptFocus: grid/schema not ready', {
-				rowIndex: request.rowIndex,
-				field: request.field ?? null,
-				attemptIndex,
-				retriesLeft: request.retriesLeft
-			});
-			this.handleFocusRetry(request, 'grid-not-ready');
-			return;
-		}
-
-		const fallbackField = this.schema.columnNames[0] ?? null;
-		const targetField = (request.field && request.field !== ROW_ID_FIELD) ? request.field : fallbackField;
-		const targetRowId = String(request.rowIndex);
-
-		const adapter: any = this.gridAdapter;
-		const api = adapter.gridApi;
-		if (!api) {
-			debugLog('[FocusDebug]', 'attemptFocus: grid API unavailable', {
-				rowIndex: request.rowIndex,
-				field: targetField,
-				attemptIndex,
-				retriesLeft: request.retriesLeft
-			});
-			this.handleFocusRetry(request, 'missing-api');
-			return;
-		}
-
-		let targetNode: any = null;
-
-		if (typeof api.getRowNode === 'function') {
-			targetNode = api.getRowNode(targetRowId);
-		}
-
-		if (!targetNode && typeof api.forEachNodeAfterFilterAndSort === 'function') {
-			api.forEachNodeAfterFilterAndSort((node: any) => {
-				if (targetNode) {
-					return;
-				}
-				const nodeId = String(node?.data?.[ROW_ID_FIELD] ?? '');
-				if (nodeId === targetRowId) {
-					targetNode = node;
-				}
-			});
-		}
-
-		if (!targetNode) {
-			debugLog('[FocusDebug]', 'attemptFocus: target node missing', {
-				rowIndex: request.rowIndex,
-				field: targetField,
-				attemptIndex,
-				retriesLeft: request.retriesLeft
-			});
-			this.handleFocusRetry(request, 'node-missing');
-			return;
-		}
-
-		const displayedIndex = typeof targetNode.rowIndex === 'number'
-			? targetNode.rowIndex
-			: null;
-
-		const effectiveIndex = displayedIndex ?? this.visibleRowData.findIndex(
-			(row) => String(row?.[ROW_ID_FIELD]) === targetRowId
-		);
-
-		if (effectiveIndex === -1 || effectiveIndex === null) {
-			debugLog('[FocusDebug]', 'attemptFocus: effective index not found', {
-				rowIndex: request.rowIndex,
-				field: targetField,
-				attemptIndex,
-				retriesLeft: request.retriesLeft,
-				visibleRowCount: this.visibleRowData.length
-			});
-			this.handleFocusRetry(request, 'index-missing');
-			return;
-		}
-
-		const focusedCell = typeof api.getFocusedCell === 'function' ? api.getFocusedCell() : null;
-		const focusedColumnId = focusedCell?.column
-			? (typeof focusedCell.column.getColId === 'function'
-				? focusedCell.column.getColId()
-				: typeof focusedCell.column.getId === 'function'
-					? focusedCell.column.getId()
-					: focusedCell.column.colId ?? null)
-			: null;
-
-		const hasFocus =
-			focusedCell != null &&
-			focusedCell.rowIndex === effectiveIndex &&
-			(!targetField || focusedColumnId === targetField);
-
-		if (request.pendingVerification) {
-			if (hasFocus) {
-				debugLog('[FocusDebug]', 'attemptFocus: verification success', {
-					rowIndex: request.rowIndex,
-					field: targetField,
-					attemptIndex
-				});
-				this.clearPendingFocus('verification-success');
-				return;
-			}
-			debugLog('[FocusDebug]', 'attemptFocus: verification failed', {
-				rowIndex: request.rowIndex,
-				field: targetField,
-				attemptIndex
-			});
-			request.pendingVerification = false;
-			this.handleFocusRetry(request, 'verification-failed');
-			return;
-		}
-
-		if (hasFocus) {
-			debugLog('[FocusDebug]', 'attemptFocus: already focused', {
-				rowIndex: request.rowIndex,
-				field: targetField,
-				attemptIndex
-			});
-			this.clearPendingFocus('already-focused');
-			return;
-		}
-
-		if (typeof targetNode.setSelected === 'function') {
-			targetNode.setSelected(true, true);
-		} else {
-			this.gridAdapter.selectRow?.(request.rowIndex, { ensureVisible: true });
-		}
-
-		if (typeof api.ensureNodeVisible === 'function') {
-			api.ensureNodeVisible(targetNode, 'middle');
-		} else if (typeof api.ensureIndexVisible === 'function') {
-			api.ensureIndexVisible(effectiveIndex, 'middle');
-		}
-
-		if (targetField && typeof api.setFocusedCell === 'function') {
-			api.setFocusedCell(effectiveIndex, targetField);
-		}
-
-		debugLog('[FocusDebug]', 'attemptFocus: issued focus command', {
-			rowIndex: request.rowIndex,
-			field: targetField,
-			attemptIndex,
-			retriesLeft: request.retriesLeft
-		});
-
-		request.pendingVerification = true;
-		this.scheduleFocusAttempt(Math.max(30, Math.floor(request.retryDelay / 2)), 'verification-delay');
-	}
-
-	private handleFocusRetry(request: PendingFocusRequest, reason: string): void {
-		if (!this.pendingFocusRequest || request !== this.pendingFocusRequest) {
-			return;
-		}
-
-		if (request.pendingVerification) {
-			request.pendingVerification = false;
-		}
-
-		if (request.retriesLeft <= 1) {
-			debugLog('[FocusDebug]', 'handleFocusRetry: exhausted', {
-				reason,
-				rowIndex: request.rowIndex,
-				field: request.field ?? null
-			});
-			this.clearPendingFocus('exhausted');
-			return;
-		}
-
-		request.retriesLeft -= 1;
-		debugLog('[FocusDebug]', 'handleFocusRetry: scheduling retry', {
-			reason,
-			rowIndex: request.rowIndex,
-			field: request.field ?? null,
-			retriesLeft: request.retriesLeft
-		});
-		this.scheduleFocusAttempt(request.retryDelay, `retry:${reason}`);
+		this.focusManager.focusRow(rowIndex, field ?? null, options);
 	}
 
 	private clearPendingFocus(reason?: string): void {
-		if (this.focusRetryTimer) {
-			clearTimeout(this.focusRetryTimer);
-			this.focusRetryTimer = null;
-		}
-
-		if (this.pendingFocusRequest) {
-			debugLog('[FocusDebug]', 'clearPendingFocus', {
-				reason: reason ?? 'unknown',
-				rowIndex: this.pendingFocusRequest.rowIndex,
-				field: this.pendingFocusRequest.field ?? null
-			});
-		} else {
-			debugLog('[FocusDebug]', 'clearPendingFocus', {
-				reason: reason ?? 'unknown',
-				skipped: true
-			});
-		}
-
-		this.pendingFocusRequest = null;
+		this.focusManager.clearPendingFocus(reason);
 	}
 
 	private handleGridModelUpdated(): void {
-		if (!this.pendingFocusRequest) {
-			debugLog('[FocusDebug]', 'handleGridModelUpdated: no pending request');
-			return;
-		}
-		debugLog('[FocusDebug]', 'handleGridModelUpdated: reschedule', {
-			rowIndex: this.pendingFocusRequest.rowIndex,
-			field: this.pendingFocusRequest.field ?? null,
-			retriesLeft: this.pendingFocusRequest.retriesLeft
-		});
-		this.scheduleFocusAttempt(0, 'model-updated');
+		this.focusManager.handleGridModelUpdated();
 	}
 
 	/**

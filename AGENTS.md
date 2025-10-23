@@ -1,142 +1,69 @@
 # AGENTS
 
-## 项目结构与模块组织
-- `src/` 存放 TypeScript 源码：`main.ts` 管理 Obsidian 插件生命周期，`TableView.ts` 负责解析与视图逻辑，`src/grid/` 封装 AG Grid 适配器。
-- `main.js` 为构建产物，修改 `src/` 后让构建流程自动生成，避免直接编辑编译文件。
-- `styles.css` 可覆盖表格展示样式；需要定制主题时在此新增选择器并备注使用场景。
-- `scripts/` 放置部署辅助脚本；`specs/` 保存需求、设计与实验记录，新增结论请补充在此。
-- 调整插件元数据或权限时，同时更新 `manifest.json` 与 `package.json`，保持两者同步，并检查 `version` 字段。
-- `specs/` 下的文档遵循“日期 + 空格 + 主题”命名，如 `251007 列表视图设计.md`，便于时间线回溯。
+## 项目总览
+- TileLineBase 是基于 Obsidian 的数据表视图插件，核心流程：读取 Markdown → 解析 H2 段落 → 构建列 Schema → 调用 AG Grid 渲染 → 监听交互事件。
+- 默认网格实现采用 `AgGridAdapter` 并遵循 `GridAdapter` 抽象，后续可替换为轻量或原生实现。
+- 插件运行于 Obsidian 的 Node 环境，需兼顾桌面端性能、可访问性与安全约束。
 
-## 构建、测试与开发命令
-- `npm install` 安装依赖，更新 `package.json` 后请重新执行。
-- `npm run dev` 以监听模式运行 `esbuild.config.mjs`，适合迭代开发；终端保持开启即可增量构建。
-- `npm run build` 先通过 `tsc` 做类型检查，再编译出最新的 `main.js`，发布前务必通过该命令。
-- `npm run deploy` 在构建后将插件复制到绑定的 Obsidian Vault，便于手动验证，也会触发 Obsidian 重载。
-- `npm run version` 更新版本信息并暂存 `manifest.json`、`versions.json`，提交时包含这些改动，并重新推送标签。
-- 需要检查依赖树时可运行 `npm ls ag-grid-community`，确认 AG Grid 版本符合预期。
-- 如遇构建失败可先执行 `npm cache clean --force` 与 `rm -rf node_modules`，随后重新 `npm install`。
-- 建议新增 `npm run lint`（基于 ESLint，`eslint "src/**/*.{ts,tsx}" --max-warnings=0`），并在提交或 pre-commit 钩子中与 `npm run build` 一起执行，lint 失败严禁提交。
+## 目录结构与模块职责
+- `src/main.ts`：管理插件注册、卸载与生命周期日志，禁止在此堆积业务逻辑。
+- `src/TableView.ts`：负责聚合数据与视图控制，保持在 250 行以内（目标 ≤200 行），新增渲染或交互逻辑优先放入 `src/table-view/`。
+- `src/table-view/`：拆分后的表格模块（如 `GridController`、`MarkdownBlockParser`、`SchemaBuilder`），新增逻辑按职责落位并补充注释说明复杂场景。
+- `src/grid/`：封装 AG Grid 相关适配层（适配器、列宽策略、组件等），如需自定义渲染器或编辑器，先评估可复用性再落库。
+- `src/i18n/index.ts` 与 `src/locales/*.json`：统一的国际化出口，所有 UI 字符串必须通过此模块管理。
+- `src/utils/`、`src/services/`、`src/formula/`：通用工具、设置读取与公式引擎，避免彼此之间的循环依赖。
+- `styles.css`：覆盖表格展示样式；新增主题时写明使用场景和依赖前提。
+- `scripts/`：部署与联调脚本，使用相对路径或环境变量，避免硬编码本地 Vault。
+- `specs/`：需求、设计、实验记录，命名遵循“日期 + 空格 + 主题”，如 `251007 列表视图设计.md`。
+- `docs/tasks/`：任务追踪文档，仅追加新发现或子任务备注，不修改既有条目。
+- `main.js`：构建产物，任何改动都应来源于 `src/` 的 TypeScript 编译。
 
-## 代码风格与命名约定
-- 使用 TypeScript + 制表符缩进；引号风格保持与周边一致，导入语句按逻辑分组。
-- 类名采用 `PascalCase`，变量/函数使用 `camelCase`，导出常量保持 `SCREAMING_SNAKE_CASE`。
-- 所有代码注释、TODO、JSDoc 必须使用英文撰写；若 UI 字符串需要中文，请在同段注释说明含义。
-- 复杂的解析或网格配置逻辑应拆入 `src/grid/` 子模块，并在难懂的片段前添加简明注释，保持中文与英文术语一致。
-- 禁止直接修改 `main.js`，必要日志请在插件生命周期钩子中添加带前缀的输出，便于过滤。
-- 在编辑 Markdown 解析器时，确保正则表达式覆盖多语言标题，必要时补充单元注释说明。
+## 开发流程
+- 分支策略：`main`（生产）、`dev`（集成）、`feat/T000X-topic`（功能）、`fix/T000X-topic`（缺陷）。禁止直接在 `main` 提交或对公共分支执行 rebase，合并回 `dev` 时使用 `--no-ff`。
+- 任务驱动：1) 在 `tasks/T000X_英文描述` 建立任务记录；2) 从 `dev` 切出对应分支开发；3) 完成阶段性工作后合并回 `dev` 并保留 feature 分支；4) 定期由 `dev` 合并进入 `main`。
+- 提交流程：每次提交前必须通过 `npm run build`，确保 `git status -sb` 仅含本次任务改动；不要添加 AI 协作者信息。
+- PR 规范：提供摘要、构建和操作系统信息、关联任务编号；若涉及 UI，附截图或 GIF，并标注主要入口和受影响文件。
 
-## 模块拆分约束
-- `src/TableView.ts` 必须控制在 250 行以内（目标 ≤200 行），新增渲染或交互逻辑优先落在 `src/table-view/` 子模块。
-- 计划拆分大块逻辑前，先在 `specs/` 补充对应方案并按子任务增量提交，每完成一子任务都执行 `npm run build` 校验。
+## 构建与验证
+- `npm install`：安装依赖，更新 `package.json` 后必须重新执行。
+- `npm run dev`：监听模式运行 `esbuild.config.mjs`，适合迭代开发，保持终端开启以获取增量构建。
+- `npm run build`：先执行 `tsc` 再输出最新 `main.js`，作为发布前的必备质量闸。
+- `npm run deploy`：在构建后将插件同步到绑定的 Obsidian Vault，并触发 Obsidian 重载以便手动验证。
+- `npm run version`：同步更新 `manifest.json` 与 `versions.json` 的版本信息，执行后需在提交中包含相关变更并推送标签。
+- 构建问题排查：先尝试 `npm cache clean --force` 与删除 `node_modules` 后重装；必要时检查 `npm ls ag-grid-community` 以确认依赖版本。
+- 手工回归：验证 TileLineBase 视图的切换、H2 块解析、列配置加载、窗口尺寸响应；重点检查基础交互（最后一行 `Enter` 自动增行、`Delete/Backspace` 清除单元格、单选/多选逻辑）。
+- 调试建议：使用 Obsidian 开发者工具（Ctrl+Shift+I）查看 console 与 DOM 结构，必要时记录截图或日志以支持问题复现。
 
-## 测试指南
-- 当前无自动化测试，`npm run build` 是基础质量闸。
-- 在隔离的 Obsidian Vault 中验证功能：切换 TileLineBase 视图、检查 H2 块解析、确认列配置生效，并留意窗口尺寸变化的行为。
-- 若修复渲染缺陷，请记录复现 Markdown 样例，并附带操作步骤。
-- 将探索结果、缺陷或边界情况记录到 `specs/`，为后续积木迭代提供背景。
-- 调试时可使用 Obsidian 开发者工具（Ctrl+Shift+I）查看 console 输出与 DOM 结构，必要时抓取截图或日志。
+## 静态检查与提交流程
+- Lint 依赖：使用 `eslint`、`@typescript-eslint/parser`、`@typescript-eslint/eslint-plugin`，通过 `.eslintrc.cjs` 管理规则并指向当前 `tsconfig.json`。
+- 命令规范：在 `package.json` 中定义 `lint` 脚本（`eslint "src/**/*.{ts,tsx}" --max-warnings=0`），与 `npm run build` 共同组成提交前的必须项。
+- 提交流水线：推荐 `husky + lint-staged`，备选 `simple-git-hooks`；无论采用何种方案，lint 或 build 失败必须立刻阻断提交。
+- 依赖变更：调整 ESLint 或相关插件版本后，需要重新执行 `npm install` 并在 PR 中说明兼容性验证范围。
 
-## 提交与拉取请求规范
-- 沿用 Conventional Commits（如 `feat:`, `fix:`, `docs:`）的历史风格。
-- 每次提交聚焦单一主题，包含相关文档或配置变更，避免遗漏。
-- 提交 PR 时附上摘要、测试说明（构建 + 操作系统）、关联问题编号，以及涉及 UI 时的截图或 GIF。
-- 在 PR 描述中列出主要代码入口和受影响文件，帮助评审快速定位。
-- 建议分支命名遵循 `feature/<module>-<topic>` 或 `fix/<issue-id>` 格式，方便持续集成过滤。
+## 质量审查维度
+- **Complexity**：新增功能应尊重现有模块边界；若核心文件趋于臃肿，先在 `specs/` 撰写拆分计划，再实施迁移，持续维持 `src/TableView.ts` 的行数目标。
+- **i18n**：所有 UI 字符串通过 `src/i18n/index.ts` 注入，并同步维护 `src/locales/en.json` 与 `src/locales/zh.json`；新增字段在 PR 中注明翻译状态。
+- **a11y**：确保 UI 可聚焦、可键盘操作，必要时提供 `aria-label` 或 `title`；新增网格组件需记录辅助功能验证步骤。
+- **Security**：任何 Markdown 或外部输入必须经既有解析链路，禁止直接写入 `innerHTML`；引入第三方库时附带简要安全评估。
+- **Testability**：核心解析、数据映射与网格交互逻辑保持可单独调用，避免与 Obsidian API 紧耦合；若无法避免，请在 `specs/` 记录手动验证步骤。
+- **Performance**：以 10k 行数据为压力基准评估新逻辑；说明时间复杂度和潜在内存成本，必要时提供基准数据或采用延迟加载/批处理策略。
 
-## 文档与任务编号约定
-- `docs/tasks/T0000.md` 由产品方维护；未经指示不得修改已有条目或字段内容，可单独记录新发现到任务文件中。
-- 需要关联任务时，以 `T0000.md` 中的编号为准，按现有命名（如 `T0037`）建立分支，例如 `feat/T0037-status-column-opt`。
-- 若需补充说明或拆分子任务，请在独立文档或任务笔记中追加，避免直接重写 T0000 表格。
-
-## 沟通约定
-- 与本代理交互时统一使用中文回复，必要的英文术语保持原样以免歧义。
-
-## 列宽优化
-- 具体策略与实现细节记录在 `docs/tasks/T0037-status-column-opt.md`，本文件仅保留指向。
-
-## 架构概览
-- TileLineBase 以 Markdown H2 标题为段落主键，`TableView` 将其解析为结构化行数据，再交由网格层渲染。
-- `GridAdapter` 定义网格抽象接口，目前默认使用 `AgGridAdapter`，未来可以拓展轻量或原生实现。
-- 渲染流程依次为：读取文件 → 检索头部配置块 → 构建列 Schema → 映射数据行 → 初始化 AG Grid → 监听交互事件。
+## 代码规范
+- 语言与格式：统一使用 TypeScript，采用制表符缩进；引号风格与周边保持一致，导入语句按功能分组。
+- 命名约定：类使用 `PascalCase`，变量与函数使用 `camelCase`，导出常量使用 `SCREAMING_SNAKE_CASE`。
+- 注释要求：代码注释、TODO、JSDoc 必须使用英文；若 UI 展示中文字符串，请在同段注释说明含义。
+- 模块拆分：复杂的解析或网格配置逻辑优先放入 `src/table-view/` 或 `src/grid/` 子模块；避免在 `TableView`、`main.ts` 或 `AgGridAdapter` 中堆积多职责代码。
+- 日志规范：禁止直接修改 `main.js`；在生命周期钩子中输出日志时请增加统一前缀，便于在 Obsidian console 中筛选。
+- Markdown 解析：调整正则时确保覆盖多语言标题，并在代码附近写明意图与边界条件。
+- 资源同步：变更列配置或国际化字段时，保持 TypeScript 定义、JSON 文案与说明文档同步更新。
 
 ## 安全与配置提示
-- Obsidian 插件运行在 Node 环境，谨慎引入新依赖，必要时说明安全评估结果。
-- 若需要访问外部服务，请在 `manifest.json` 中注明权限，并在 README 中标注配置步骤。
-- 在部署脚本中避免硬编码路径，改用环境变量或仓库根目录相对路径。
-- 提交到公共仓库前，请确认未包含 Vault 私人笔记、测试数据或临时令牌。
+- 新增依赖需评估许可证与运行时体积，必要时在 PR 中写明安全考量。
+- 若需要外部服务或额外权限，需同步更新 `manifest.json`、README 以及用户配置说明。
+- 部署脚本避免硬编码本地路径，始终使用仓库根目录或环境变量。
+- 发布前确认仓库未包含私人 Vault 数据、临时令牌或测试文件。
 
-Hard Requirement: call binaries directly in functions.shell, always set workdir, and avoid shell wrappers such as `bash -lc`, `sh -lc`, `zsh -lc`, `cmd /c`, `pwsh.exe -NoLogo -NoProfile -Command`, and `powershell.exe -NoLogo -NoProfile -Command`.
-
-- Text Editing Priority: Use the `apply_patch` tool for all routine text edits; fall back to `sed` for single-line substitutions only if `apply_patch` is unavailable, and avoid `python` editing scripts unless both options fail.
-- `apply_patch` Usage: Invoke `apply_patch` with the patch payload as the second element in the command array (no shell-style flags). Provide `workdir` and, when helpful, a short `justification` alongside the command.
-
-- Example invocation:
-
-```bash
-{"command":["apply_patch","*** Begin Patch\n*** Update File: path/to/file\n@@\n- old\n+ new\n*** End Patch\n"],"workdir":"<workdir>","justification":"Brief reason for the change"}
-
-
-## 工作流程
-
-### Git 分支策略
-
-- `main`: 生产稳定版本
-- `dev`: 开发集成分支
-- `feat/T000X-name`: 任务功能分支（`T` + 四位编号 + 主题短横线，示例 `feat/T0055-table-view-refactor`）
-- 缺陷/紧急修复统一从 `dev` 切出 `fix/TXXXX-topic` 分支
-- 回到 `dev` 时使用 `git merge --no-ff`；不对公共分支（尤其是 `dev`）执行 rebase
-
-### 任务驱动开发
-
-1. **创建任务**：在 `/tasks/T000X_描述` 创建任务文件
-
-2. **开发实现**：在 `feat/T000X-name` 分支完成功能
-
-3. **合并集成**：合并到 `dev` 分支，但保留 feat 分支
-
-4. **版本发布**：定期从 `dev` 合并到 `main`
-
-### 提交规范
-
-- 每次提交前必须执行 `npm run build`，构建通过后再提交/合并
-- 提交前确认 `git status -sb` 干净；若有非本次任务的临时改动，使用 `git stash push` 暂存
-- `docs/`、`specs/` 等文档属于正式成果，修改后直接随任务提交，不要长时间留在工作区
-- 不添加 AI 协作者信息
-- `main` 仅通过 squash merge 接收来自 `dev` 的提交
-- 禁止直接在 `main` 分支进行提交
-
-### 手工回归检查（表格基础交互）
-
-- `Enter`：最后一行触发时必须自动新增新行并聚焦到新行同列
-- `Delete` / `Backspace`：清空当前聚焦单元格的值，不触发整行删除
-- 行选择：单击保持单选；多选依赖 `Shift` / `Ctrl` / `Cmd`
-## 工作流程
-
-### Git 分支策略
-
-- `main`: 生产稳定版本
-
-- `dev`: 开发集成分支
-
-- `feat/T000X-name`: 任务功能分支（`T` + 四位编号 + 主题短横线，示例 `feat/T0055-table-view-refactor`）
-
-### 任务驱动开发
-
-1. **创建任务**：在 `tasks/T000X_描述` 创建任务文件
-
-2. **开发实现**：在 `feat/T000X-name` 分支完成功能
-
-3. **合并集成**：合并到 `dev` 分支，但保留 feat 分支
-
-4. **版本发布**：定期从 `dev` 合并到 `main`
-
-### 提交规范
-
-**注意事项**：
-
-- 不添加 AI 协作者信息
-
-- main 分支只通过 squash merge 合并 dev 的提交
-
-- 禁止直接在 main 分支进行提交
+## 文档与沟通
+- `specs/` 用于记录需求、方案、实验与缺陷排查，保持时间顺序命名，并在章节中注明结论。
+- 与团队沟通统一使用中文，保留必要的英文术语以避免歧义；重要决策或边界情况请在 `specs/` 备案。
+- 进行可访问性或性能排查时，记录复现 Markdown 样例、操作步骤及结果，方便后续回溯。

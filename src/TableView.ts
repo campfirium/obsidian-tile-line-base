@@ -14,8 +14,6 @@ import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 import { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import { FilterViewController } from "./table-view/filter/FilterViewController";
-import { FilterDataProcessor } from "./table-view/filter/FilterDataProcessor";
-import { globalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterManager";
 import { TableDataStore } from "./table-view/TableDataStore";
 import { TableConfigManager } from "./table-view/TableConfigManager";
 import { ColumnInteractionController } from "./table-view/ColumnInteractionController";
@@ -23,6 +21,9 @@ import { RowInteractionController } from "./table-view/RowInteractionController"
 import { GridInteractionController } from "./table-view/GridInteractionController";
 import { FocusManager } from "./table-view/FocusManager";
 import { GridLayoutController } from "./table-view/GridLayoutController";
+import { FilterViewOrchestrator } from "./table-view/FilterViewOrchestrator";
+import { GlobalQuickFilterController } from "./table-view/GlobalQuickFilterController";
+import { TablePersistenceService } from "./table-view/TablePersistenceService";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -42,11 +43,8 @@ export class TableView extends ItemView {
         private schemaDirty: boolean = false;
         private sparseCleanupRequired: boolean = false;
         private hiddenSortableFields: Set<string> = new Set();
-        private saveTimeout: NodeJS.Timeout | null = null;
         private gridAdapter: GridAdapter | null = null;
         private gridController = new GridController();
-        private allRowData: RowData[] = [];
-        private visibleRowData: RowData[] = [];
         private columnLayoutStore = new ColumnLayoutStore(null);
         private markdownParser = new MarkdownBlockParser();
         private schemaBuilder = new SchemaBuilder();
@@ -56,11 +54,14 @@ export class TableView extends ItemView {
                 tooltipPrefix: FORMULA_TOOLTIP_PREFIX
         });
         private configManager: TableConfigManager;
+        private persistenceService: TablePersistenceService;
         private columnInteractionController: ColumnInteractionController;
         private rowInteractionController: RowInteractionController;
         private gridInteractionController: GridInteractionController;
+        private filterOrchestrator: FilterViewOrchestrator;
         private gridLayoutController: GridLayoutController;
         private focusManager: FocusManager;
+        private globalQuickFilterController: GlobalQuickFilterController;
 
         // 事件监听器引用（用于清理）
 	private tableContainer: HTMLElement | null = null;
@@ -69,10 +70,6 @@ export class TableView extends ItemView {
 	private filterStateStore = new FilterStateStore(null);
         private filterViewState: FileFilterViewState = this.filterStateStore.getState();
         private initialColumnState: ColumnState[] | null = null;
-        private globalQuickFilterInputEl: HTMLInputElement | null = null;
-        private globalQuickFilterClearEl: HTMLElement | null = null;
-        private globalQuickFilterUnsubscribe: (() => void) | null = null;
-        private hasRegisteredGlobalQuickFilter = false;
 
 
 	constructor(leaf: WorkspaceLeaf) {
@@ -80,6 +77,15 @@ export class TableView extends ItemView {
 		debugLog('leaf:', leaf);
 		super(leaf);
 		this.configManager = new TableConfigManager(this.app);
+		this.persistenceService = new TablePersistenceService({
+			app: this.app,
+			dataStore: this.dataStore,
+			columnLayoutStore: this.columnLayoutStore,
+			configManager: this.configManager,
+			filterStateStore: this.filterStateStore,
+			getFile: () => this.file,
+			getFilterViewState: () => this.filterViewState
+		});
 		this.columnInteractionController = new ColumnInteractionController({
 			app: this.app,
 			dataStore: this.dataStore,
@@ -106,9 +112,22 @@ export class TableView extends ItemView {
 				this.focusRow(rowIndex, field ?? undefined);
 			},
 			scheduleSave: () => {
-				this.scheduleSave();
+				this.persistenceService.scheduleSave();
 			},
 			getActiveFilterPrefills: () => this.getActiveFilterPrefills()
+		});
+		this.globalQuickFilterController = new GlobalQuickFilterController({
+			getGridAdapter: () => this.gridAdapter
+		});
+		this.filterOrchestrator = new FilterViewOrchestrator({
+			dataStore: this.dataStore,
+			getFilterViewState: () => this.filterViewState,
+			getGridAdapter: () => this.gridAdapter,
+			getSchemaColumns: () => this.schema?.columnNames ?? null,
+			reapplyGlobalQuickFilter: () => this.reapplyGlobalQuickFilter(),
+			emitFormulaLimitNotice: (limit) => {
+				new Notice(`公式列已停用（行数超过 ${limit}）`);
+			}
 		});
 		this.gridInteractionController = new GridInteractionController({
 			columnInteraction: this.columnInteractionController,
@@ -120,7 +139,7 @@ export class TableView extends ItemView {
 		this.focusManager = new FocusManager({
 			getSchema: () => this.schema,
 			getBlockCount: () => this.blocks.length,
-			getVisibleRows: () => this.visibleRowData,
+			getVisibleRows: () => this.filterOrchestrator.getVisibleRows(),
 			getGridAdapter: () => this.gridAdapter
 		});
 		this.filterViewController = new FilterViewController({
@@ -278,15 +297,7 @@ export class TableView extends ItemView {
 	 * 调度保存（500ms 防抖）
 	 */
 	private scheduleSave(): void {
-		// 清除之前的定时器
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout);
-		}
-
-		// 500ms 后保存
-		this.saveTimeout = setTimeout(() => {
-			this.saveToFile();
-		}, 500);
+		this.persistenceService.scheduleSave();
 	}
 
 	/**
@@ -356,7 +367,7 @@ export class TableView extends ItemView {
                 const content = await this.app.vault.read(this.file);
 
 		// 尝试加载配置块（带缓存）
-		const configBlock = await this.loadConfig();
+		const configBlock = await this.persistenceService.loadConfig();
 
 		// 如果有配置块，应用配置
 		if (configBlock) {
@@ -407,19 +418,13 @@ export class TableView extends ItemView {
                 }
 
                 // 提取数据
-                const data = this.dataStore.extractRowData({
-                        onFormulaLimitExceeded: (limit) => {
-                                new Notice(`公式列已停用（行数超过 ${limit}）`);
-                        }
-                });
-                this.allRowData = data; // 保存全部数据供过滤使用
-
 		// 准备列定义（添加序号列）
 		// 如果没有从配置块加载 filterViewState，则从插件设置加载
 		if (!this.filterViewState || this.filterViewState.views.length === 0) {
 			this.filterStateStore.loadFromSettings();
 			this.filterViewState = this.filterStateStore.getState();
 		}
+		this.filterOrchestrator.refresh();
 		this.initialColumnState = null;
 		if (this.filterViewBar) {
 			this.filterViewBar.destroy();
@@ -497,7 +502,11 @@ export class TableView extends ItemView {
 		debugLog('TableView.render container window', this.describeWindow(containerWindow));
 
 		const mountGrid = () => {
-			const result = this.gridController.mount(tableContainer, columns, data, {
+			const result = this.gridController.mount(
+				tableContainer,
+				columns,
+				this.filterOrchestrator.getVisibleRows(),
+				{
 				onStatusChange: (rowId: string, newStatus: TaskStatus) => {
 					this.onStatusChange(rowId, newStatus);
 				},
@@ -759,23 +768,21 @@ export class TableView extends ItemView {
 	private duplicateRow(rowIndex: number): void {
 		this.rowInteractionController.duplicateRow(rowIndex);
 	}
-        private persistColumnStructureChange(options?: { notice?: string }): void {
-                if (!this.schema) {
-                        return;
-                }
-                this.schema = this.dataStore.getSchema();
-                this.hiddenSortableFields = this.dataStore.getHiddenSortableFields();
-                this.refreshGridData();
-                if (options?.notice) {
-                        new Notice(options.notice);
-                }
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout);
-			this.saveTimeout = null;
+
+	private persistColumnStructureChange(options?: { notice?: string }): void {
+		if (!this.schema) {
+			return;
 		}
+		this.schema = this.dataStore.getSchema();
+		this.hiddenSortableFields = this.dataStore.getHiddenSortableFields();
+		this.refreshGridData();
+		if (options?.notice) {
+			new Notice(options.notice);
+		}
+		this.persistenceService.cancelScheduledSave();
 		void (async () => {
 			try {
-				await this.saveToFile();
+				await this.persistenceService.save();
 				await this.render();
 			} catch (error) {
 				console.error(`${LOG_PREFIX} Failed to persist column change`, error);
@@ -861,328 +868,43 @@ export class TableView extends ItemView {
 	}
 
 	private renderFilterViewControls(container: Element): void {
-		this.filterViewBar = new FilterViewBar({
-			container,
-			renderQuickFilter: (searchContainer) => this.renderGlobalQuickFilter(searchContainer),
-			callbacks: {
-				onCreate: () => {
-					void this.filterViewController.promptCreateFilterView();
-				},
-				onActivate: (viewId) => {
-					this.filterViewController.activateFilterView(viewId);
-				},
-				onContextMenu: (view, event) => {
-					this.filterViewController.openFilterViewMenu(view, event);
-				},
-				onReorder: (draggedId, targetId) => {
-					this.filterViewController.reorderFilterViews(draggedId, targetId);
-				}
-			}
-		});
-		this.filterViewBar.render(this.filterViewState);
-	}
+	this.globalQuickFilterController.cleanup();
 
-	private renderGlobalQuickFilter(container: HTMLElement): void {
-		if (this.globalQuickFilterUnsubscribe) {
-			this.globalQuickFilterUnsubscribe();
-			this.globalQuickFilterUnsubscribe = null;
-		}
-
-		this.globalQuickFilterInputEl = null;
-		this.globalQuickFilterClearEl = null;
-
-		container.addClass('tlb-filter-view-search');
-		container.setAttribute('role', 'search');
-
-		const clearButton = container.createSpan({ cls: 'clickable-icon' });
-		clearButton.setAttribute('role', 'button');
-		clearButton.setAttribute('tabindex', '0');
-		clearButton.setAttribute('aria-label', '清除过滤');
-		setIcon(clearButton, 'x');
-
-		const input = container.createEl('input', {
-			type: 'search',
-			placeholder: '全局过滤'
-		});
-		input.setAttribute('aria-label', '全局过滤关键字');
-		input.setAttribute('size', '16');
-		const currentValue = globalQuickFilterManager.getValue();
-		input.value = currentValue;
-		this.globalQuickFilterInputEl = input;
-
-		const iconEl = container.createSpan({ cls: 'clickable-icon' });
-		iconEl.setAttribute('aria-label', '聚焦过滤输入');
-		iconEl.setAttribute('tabindex', '0');
-		setIcon(iconEl, 'search');
-		clearButton.addEventListener('click', (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			this.clearGlobalQuickFilter();
-		});
-		clearButton.addEventListener('keydown', (event) => {
-			if (event.key === 'Enter' || event.key === ' ') {
-				event.preventDefault();
-				event.stopPropagation();
-				this.clearGlobalQuickFilter();
-			}
-		});
-		this.globalQuickFilterClearEl = clearButton;
-		this.updateGlobalQuickFilterIndicators(currentValue);
-
-		iconEl.addEventListener('click', () => {
-			input.focus();
-		});
-		iconEl.addEventListener('keydown', (event) => {
-			if (event.key === 'Enter' || event.key === ' ') {
-				event.preventDefault();
-				event.stopPropagation();
-				input.focus();
-			}
-		});
-
-		input.addEventListener('input', () => {
-			this.onGlobalQuickFilterInput(input.value);
-		});
-		input.addEventListener('keydown', (event) => {
-			if (event.key === 'Escape') {
-				event.preventDefault();
-				event.stopPropagation();
-				if (input.value.length > 0) {
-					this.clearGlobalQuickFilter();
-				} else {
-					input.blur();
-				}
-			}
-		});
-
-		this.globalQuickFilterUnsubscribe = globalQuickFilterManager.subscribe((value, source) => {
-			if (source === this) {
-				return;
-			}
-			this.updateGlobalQuickFilterInput(value);
-			this.applyGlobalQuickFilter(value);
-		});
-
-		if (!this.hasRegisteredGlobalQuickFilter) {
-			this.hasRegisteredGlobalQuickFilter = true;
-			globalQuickFilterManager.incrementHost();
-		}
-	}
-
-	private onGlobalQuickFilterInput(rawValue: string): void {
-		const value = rawValue ?? '';
-		this.applyGlobalQuickFilter(value);
-		if (value === globalQuickFilterManager.getValue()) {
-			return;
-		}
-		globalQuickFilterManager.emit(value, this);
-	}
-
-	private applyGlobalQuickFilter(value: string): void {
-		if (this.gridAdapter && typeof this.gridAdapter.setQuickFilter === 'function') {
-			this.gridAdapter.setQuickFilter(value);
-		}
-		this.updateGlobalQuickFilterIndicators(value);
-	}
-
-	private updateGlobalQuickFilterInput(value: string): void {
-		if (this.globalQuickFilterInputEl && this.globalQuickFilterInputEl.value !== value) {
-			const input = this.globalQuickFilterInputEl;
-			const isFocused = document.activeElement === input;
-			input.value = value;
-			if (isFocused) {
-				const caret = typeof input.selectionEnd === 'number' ? Math.min(value.length, input.selectionEnd) : value.length;
-				input.setSelectionRange(caret, caret);
+	this.filterViewBar = new FilterViewBar({
+		container,
+		renderQuickFilter: (searchContainer) => this.globalQuickFilterController.render(searchContainer),
+		callbacks: {
+			onCreate: () => {
+				void this.filterViewController.promptCreateFilterView();
+			},
+			onActivate: (viewId) => {
+				this.filterViewController.activateFilterView(viewId);
+			},
+			onContextMenu: (view, event) => {
+				this.filterViewController.openFilterViewMenu(view, event);
+			},
+			onReorder: (draggedId, targetId) => {
+				this.filterViewController.reorderFilterViews(draggedId, targetId);
 			}
 		}
-		this.updateGlobalQuickFilterIndicators(value);
-	}
+	});
+	this.filterViewBar.render(this.filterViewState);
+}
 
-	private updateGlobalQuickFilterIndicators(value: string): void {
-		if (!this.globalQuickFilterClearEl) {
-			return;
-		}
-		if (value && value.length > 0) {
-			this.globalQuickFilterClearEl.removeAttribute('hidden');
-			(this.globalQuickFilterClearEl as HTMLElement).style.display = '';
-		} else {
-			this.globalQuickFilterClearEl.setAttribute('hidden', 'true');
-			(this.globalQuickFilterClearEl as HTMLElement).style.display = 'none';
-		}
-	}
+private reapplyGlobalQuickFilter(): void {
+	this.globalQuickFilterController.reapply();
+}
 
-	private clearGlobalQuickFilter(): void {
-		if (!this.globalQuickFilterInputEl) {
-			return;
-		}
-		if (this.globalQuickFilterInputEl.value.length === 0 && !globalQuickFilterManager.getValue()) {
-			return;
-		}
-		this.globalQuickFilterInputEl.value = '';
-		this.applyGlobalQuickFilter('');
-		globalQuickFilterManager.emit('', this);
-		this.globalQuickFilterInputEl.focus();
-	}
+private syncFilterViewState(): void {
+	this.filterViewState = this.filterStateStore.getState();
+}
 
-	private cleanupGlobalQuickFilter(): void {
-		if (this.globalQuickFilterUnsubscribe) {
-			this.globalQuickFilterUnsubscribe();
-			this.globalQuickFilterUnsubscribe = null;
-		}
-		this.globalQuickFilterInputEl = null;
-		this.globalQuickFilterClearEl = null;
-		if (this.hasRegisteredGlobalQuickFilter) {
-			this.hasRegisteredGlobalQuickFilter = false;
-			globalQuickFilterManager.decrementHost();
-		}
-	}
-
-	private reapplyGlobalQuickFilter(): void {
-		this.applyGlobalQuickFilter(globalQuickFilterManager.getValue());
-	}
-
-	private syncFilterViewState(): void {
-		this.filterViewState = this.filterStateStore.getState();
-	}
-
-
-	/**
-	 * 刷新表格数据（同步 allRowData 并重新应用过滤视图）
-	 * 所有数据修改操作（增删改）后都应该调用此方法
-	 */
-	private refreshGridData(): void {
-		if (!this.schema || !this.gridAdapter) {
-			return;
-		}
-
-                // 从 blocks 重新提取完整数据
-                this.allRowData = this.dataStore.extractRowData({
-                        onFormulaLimitExceeded: (limit) => {
-                                new Notice(`公式列已停用（行数超过 ${limit}）`);
-                        }
-                });
-
-		// 根据当前激活的过滤视图决定显示哪些数据
-		const targetId = this.filterViewState.activeViewId;
-		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
-
-		const sortRules = targetView?.sortRules ?? [];
-		const filteredRows = !targetView || !targetView.filterRule
-			? this.allRowData
-			: FilterDataProcessor.applyFilterRule(this.allRowData, targetView.filterRule);
-		const sortedRows = FilterDataProcessor.sortRowData(filteredRows, sortRules);
-		this.visibleRowData = sortedRows;
-		this.gridAdapter.updateData(sortedRows);
-		this.applySortModelToGrid(sortRules);
-		this.reapplyGlobalQuickFilter();
+private refreshGridData(): void {
+		this.filterOrchestrator.refresh();
 	}
 
 	private applyActiveFilterView(): void {
-		if (!this.gridAdapter) {
-			return;
-		}
-		const targetId = this.filterViewState.activeViewId;
-		const targetView = targetId ? this.filterViewState.views.find((view) => view.id === targetId) ?? null : null;
-
-		const sortRules = targetView?.sortRules ?? [];
-		const resolveDataToShow = (): RowData[] => {
-			const baseRows = !targetView || !targetView.filterRule
-				? this.allRowData
-				: FilterDataProcessor.applyFilterRule(this.allRowData, targetView.filterRule!);
-			return FilterDataProcessor.sortRowData(baseRows, sortRules);
-		};
-
-		const applyData = () => {
-			if (!this.gridAdapter) {
-				return;
-			}
-			const dataToShow = resolveDataToShow();
-			this.visibleRowData = dataToShow;
-
-			const api = (this.gridAdapter as any).gridApi;
-			if (api && typeof api.setGridOption === 'function') {
-				api.setGridOption('rowData', dataToShow);
-			} else {
-				this.gridAdapter.updateData(dataToShow);
-			}
-			this.applySortModelToGrid(sortRules);
-			this.reapplyGlobalQuickFilter();
-		};
-
-		if (this.gridAdapter.runWhenReady) {
-			this.gridAdapter.runWhenReady(() => applyData());
-		} else {
-			applyData();
-		}
-	}
-
-	private applySortModelToGrid(sortRules: SortRule[]): void {
-		if (!this.gridAdapter?.setSortModel) {
-			return;
-		}
-		const model: SortModelEntry[] = [];
-		const visibleColumns = new Set<string>();
-		if (this.schema?.columnNames) {
-			for (const column of this.schema.columnNames) {
-				visibleColumns.add(column);
-			}
-		}
-		const columnState = this.gridAdapter?.getColumnState?.();
-		if (columnState) {
-			for (const state of columnState) {
-				if (state.colId) {
-					visibleColumns.add(state.colId);
-				}
-			}
-		}
-		for (const rule of sortRules ?? []) {
-			if (typeof rule?.column !== 'string' || rule.column.length === 0) {
-				continue;
-			}
-			if (!visibleColumns.has(rule.column)) {
-				continue;
-			}
-			model.push({
-				field: rule.column,
-				direction: rule.direction === 'desc' ? 'desc' : 'asc'
-			});
-		}
-		this.gridAdapter.setSortModel(model);
-	}
-
-	private evaluateCondition(row: any, condition: FilterCondition): boolean {
-		const cellValue = row[condition.column];
-		const cellStr = cellValue == null ? '' : String(cellValue).toLowerCase();
-		const compareStr = (condition.value ?? '').toLowerCase();
-
-		switch (condition.operator) {
-			case 'equals':
-				return cellStr === compareStr;
-			case 'notEquals':
-				return cellStr !== compareStr;
-			case 'contains':
-				return cellStr.includes(compareStr);
-			case 'notContains':
-				return !cellStr.includes(compareStr);
-			case 'startsWith':
-				return cellStr.startsWith(compareStr);
-			case 'endsWith':
-				return cellStr.endsWith(compareStr);
-			case 'isEmpty':
-				return cellStr === '';
-			case 'isNotEmpty':
-				return cellStr !== '';
-			case 'greaterThan':
-				return parseFloat(cellStr) > parseFloat(compareStr);
-			case 'lessThan':
-				return parseFloat(cellStr) < parseFloat(compareStr);
-			case 'greaterOrEqual':
-				return parseFloat(cellStr) >= parseFloat(compareStr);
-			case 'lessOrEqual':
-				return parseFloat(cellStr) <= parseFloat(compareStr);
-			default:
-				return false;
-		}
+		this.filterOrchestrator.applyActiveView();
 	}
 
 	private getAvailableColumns(): string[] {
@@ -1273,34 +995,23 @@ export class TableView extends ItemView {
                 });
         }
 
-	async onClose(): Promise<void> {
-		this.cleanupGlobalQuickFilter();
+			async onClose(): Promise<void> {
+		this.globalQuickFilterController.cleanup();
 		if (this.filterViewBar) {
 			this.filterViewBar.destroy();
 			this.filterViewBar = null;
 		}
 
-		// 清理事件监听器
 		this.cleanupEventListeners();
-
-		// 隐藏右键菜单
 		this.gridInteractionController.hideContextMenu();
 		this.clearPendingFocus('view-close');
-
-		// 销毁表格实例
 		this.gridController.destroy();
 		this.gridAdapter = null;
 		this.tableContainer = null;
-
-		// 清理保存定时器
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout);
-			this.saveTimeout = null;
-		}
-
-		// 清理容器引用
-		this.tableContainer = null;
+		this.persistenceService.cancelScheduledSave();
+		this.persistenceService.dispose();
 	}
+
 }
 
 

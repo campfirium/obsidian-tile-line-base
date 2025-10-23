@@ -1,4 +1,4 @@
-import { App, ItemView, WorkspaceLeaf, TFile, EventRef, Notice, setIcon } from "obsidian";
+import { App, ItemView, WorkspaceLeaf, TFile, Notice, setIcon } from "obsidian";
 import { GridAdapter, ColumnDef, RowData, CellEditEvent, ROW_ID_FIELD, SortModelEntry, HeaderEditEvent } from "./grid/GridAdapter";
 import { TaskStatus } from "./renderers/StatusCellRenderer";
 import { getPluginContext } from "./pluginContext";
@@ -21,6 +21,7 @@ import { TableConfigManager } from "./table-view/TableConfigManager";
 import { ColumnInteractionController } from "./table-view/ColumnInteractionController";
 import { RowInteractionController } from "./table-view/RowInteractionController";
 import { GridInteractionController } from "./table-view/GridInteractionController";
+import { GridLayoutController } from "./table-view/GridLayoutController";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -68,19 +69,10 @@ export class TableView extends ItemView {
         private columnInteractionController: ColumnInteractionController;
         private rowInteractionController: RowInteractionController;
         private gridInteractionController: GridInteractionController;
+        private gridLayoutController: GridLayoutController;
 
         // 事件监听器引用（用于清理）
-	private windowResizeHandler: (() => void) | null = null;
 	private tableContainer: HTMLElement | null = null;
-	private resizeObserver: ResizeObserver | null = null;
-	private resizeTimeout: NodeJS.Timeout | null = null;
-	private sizeCheckInterval: NodeJS.Timeout | null = null;
-	private visualViewportResizeHandler: (() => void) | null = null;
-	private visualViewportTarget: VisualViewport | null = null;
-	private workspaceResizeRef: EventRef | null = null;
-	private lastContainerWidth: number = 0;
-	private lastContainerHeight: number = 0;
-	private pendingSizeUpdateHandle: number | null = null;
 	private filterViewBar: FilterViewBar | null = null;
 	private filterViewController: FilterViewController;
 	private filterStateStore = new FilterStateStore(null);
@@ -133,6 +125,7 @@ export class TableView extends ItemView {
 			dataStore: this.dataStore,
 			getGridAdapter: () => this.gridAdapter
 		});
+		this.gridLayoutController = new GridLayoutController(this.app, this.gridController);
 		this.filterViewController = new FilterViewController({
 			app: this.app,
 			stateStore: this.filterStateStore,
@@ -540,10 +533,9 @@ export class TableView extends ItemView {
 
 			this.gridAdapter = result.gridAdapter;
 			this.tableContainer = result.container;
-			this.updateTableContainerSize();
+			this.gridLayoutController.attach(result.container);
 			this.applyActiveFilterView();
 			this.gridInteractionController.attach(result.container);
-			this.setupResizeObserver(result.container);
 		};
 
 		if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
@@ -560,224 +552,11 @@ export class TableView extends ItemView {
 	 */
 	private cleanupEventListeners(): void {
 		this.gridInteractionController.detach();
-
-		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
-			cancelAnimationFrame(this.pendingSizeUpdateHandle);
-		}
-		this.pendingSizeUpdateHandle = null;
-
-		// 移除 ResizeObserver
-		if (this.resizeObserver) {
-			this.resizeObserver.disconnect();
-			this.resizeObserver = null;
-		}
-
-		// 移除窗口 resize 监听器
-		if (this.tableContainer && this.windowResizeHandler) {
-			const ownerWindow = this.tableContainer.ownerDocument.defaultView;
-			if (ownerWindow) {
-				ownerWindow.removeEventListener('resize', this.windowResizeHandler);
-			}
-			this.windowResizeHandler = null;
-		}
-
-		// 移除 visualViewport 监听
-		if (this.visualViewportTarget && this.visualViewportResizeHandler) {
-			this.visualViewportTarget.removeEventListener('resize', this.visualViewportResizeHandler);
-		}
-		this.visualViewportTarget = null;
-		this.visualViewportResizeHandler = null;
-
-		// 解除 workspace resize 监听
-		if (this.workspaceResizeRef) {
-			this.app.workspace.offref(this.workspaceResizeRef);
-			this.workspaceResizeRef = null;
-		}
-
-		// 停止尺寸轮询
-		if (this.sizeCheckInterval) {
-			clearInterval(this.sizeCheckInterval);
-			this.sizeCheckInterval = null;
-		}
-		this.lastContainerWidth = 0;
-		this.lastContainerHeight = 0;
+		this.gridLayoutController.detach();
 	}
 
 	/**
 	 * 设置容器尺寸监听器（包括窗口 resize）
-	 */
-	private setupResizeObserver(tableContainer: HTMLElement): void {
-		// 清理旧的 observer
-		if (this.resizeObserver) {
-			this.resizeObserver.disconnect();
-		}
-
-		// 清理旧的窗口/viewport/workspace 监听
-		if (this.windowResizeHandler) {
-			const previousWindow = this.tableContainer?.ownerDocument.defaultView;
-			if (previousWindow) {
-				previousWindow.removeEventListener('resize', this.windowResizeHandler);
-			}
-		}
-		this.windowResizeHandler = null;
-
-		if (this.visualViewportTarget && this.visualViewportResizeHandler) {
-			this.visualViewportTarget.removeEventListener('resize', this.visualViewportResizeHandler);
-		}
-		this.visualViewportTarget = null;
-		this.visualViewportResizeHandler = null;
-
-		if (this.workspaceResizeRef) {
-			this.app.workspace.offref(this.workspaceResizeRef);
-			this.workspaceResizeRef = null;
-		}
-
-		if (this.sizeCheckInterval) {
-			clearInterval(this.sizeCheckInterval);
-			this.sizeCheckInterval = null;
-		}
-
-		// 创建新的 ResizeObserver（监听容器尺寸变化）
-		this.resizeObserver = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				if (entry.target === tableContainer) {
-					this.updateTableContainerSize();
-					this.scheduleColumnResize('ResizeObserver');
-				}
-			}
-		});
-
-		// 开始监听容器
-		this.resizeObserver.observe(tableContainer);
-
-		// 创建窗口 resize 监听器（监听窗口尺寸变化）
-		this.windowResizeHandler = () => {
-			this.updateTableContainerSize();
-			this.scheduleColumnResize('window resize');
-		};
-
-		// 获取容器所在的窗口（支持新窗口）
-		const ownerWindow = tableContainer.ownerDocument.defaultView;
-		if (ownerWindow) {
-			ownerWindow.addEventListener('resize', this.windowResizeHandler);
-
-			if ('visualViewport' in ownerWindow && ownerWindow.visualViewport) {
-				this.visualViewportTarget = ownerWindow.visualViewport;
-				this.visualViewportResizeHandler = () => {
-					this.updateTableContainerSize();
-					this.scheduleColumnResize('visualViewport resize');
-				};
-				this.visualViewportTarget.addEventListener('resize', this.visualViewportResizeHandler);
-			}
-		} else {
-			console.error('❌ 无法获取窗口对象！');
-		}
-
-		// 监听 Obsidian workspace resize（覆盖跨窗口场景）
-		this.workspaceResizeRef = this.app.workspace.on('resize', () => {
-			this.updateTableContainerSize();
-			this.scheduleColumnResize('workspace resize');
-		});
-
-		// 启动尺寸轮询兜底（处理最大化未触发 resize 的情况）
-		this.startSizePolling(tableContainer);
-	}
-
-	/**
-	 * 调度列宽调整（带防抖和延迟重试）
-	 */
-	private scheduleColumnResize(source: string): void {
-		// 使用防抖，避免频繁调用
-		if (this.resizeTimeout) {
-			clearTimeout(this.resizeTimeout);
-		}
-
-		this.resizeTimeout = setTimeout(() => {
-			this.gridController.markLayoutDirty();
-			this.gridController.resizeColumns();
-
-			// 对于窗口/viewport/workspace 等事件，延迟再次尝试，确保布局稳定
-			if (
-				source === 'window resize' ||
-				source === 'visualViewport resize' ||
-				source === 'workspace resize'
-			) {
-				setTimeout(() => {
-					this.gridController.resizeColumns();
-				}, 200);
-
-				setTimeout(() => {
-					this.gridController.resizeColumns();
-				}, 500);
-			}
-
-			this.resizeTimeout = null;
-		}, 150);
-	}
-
-	/**
-	 * 启动尺寸轮询（兜底最大化/特殊窗口场景）
-	 */
-	private startSizePolling(tableContainer: HTMLElement): void {
-		if (this.sizeCheckInterval) {
-			clearInterval(this.sizeCheckInterval);
-		}
-
-		this.lastContainerWidth = tableContainer.offsetWidth;
-		this.lastContainerHeight = tableContainer.offsetHeight;
-
-		this.sizeCheckInterval = setInterval(() => {
-			if (!tableContainer.isConnected) {
-				return;
-			}
-
-			const currentWidth = tableContainer.offsetWidth;
-			const currentHeight = tableContainer.offsetHeight;
-
-			if (currentWidth !== this.lastContainerWidth || currentHeight !== this.lastContainerHeight) {
-				this.lastContainerWidth = currentWidth;
-				this.lastContainerHeight = currentHeight;
-				this.updateTableContainerSize();
-				this.scheduleColumnResize('size polling');
-			}
-		}, 400);
-	}
-
-	private updateTableContainerSize(): void {
-		if (!this.tableContainer) return;
-
-		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
-			cancelAnimationFrame(this.pendingSizeUpdateHandle);
-			this.pendingSizeUpdateHandle = null;
-		}
-
-		const container = this.tableContainer;
-		const parent = container.parentElement as HTMLElement | null;
-
-		// 始终允许宽度随父容器自适应
-		container.style.removeProperty('width');
-		container.style.maxWidth = '100%';
-		container.style.width = '100%';
-
-		let targetHeight = 0;
-		if (parent) {
-			const rect = parent.getBoundingClientRect();
-			targetHeight = rect.height || parent.clientHeight || parent.offsetHeight;
-		}
-
-		if (targetHeight > 0) {
-			const heightPx = `${targetHeight}px`;
-			if (container.style.height !== heightPx) {
-				container.style.height = heightPx;
-			}
-		} else {
-			container.style.removeProperty('height');
-			container.style.height = '100%';
-		}
-	}
-
-	/**
-	 * 设置右键菜单
 	 */
 	private onStatusChange(rowId: string, newStatus: TaskStatus): void {
 		if (!this.schema || !this.gridAdapter) {
@@ -1797,12 +1576,6 @@ export class TableView extends ItemView {
 		if (this.saveTimeout) {
 			clearTimeout(this.saveTimeout);
 			this.saveTimeout = null;
-		}
-
-		// 清理 resize 定时器
-		if (this.resizeTimeout) {
-			clearTimeout(this.resizeTimeout);
-			this.resizeTimeout = null;
 		}
 
 		// 清理容器引用

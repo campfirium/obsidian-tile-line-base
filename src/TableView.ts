@@ -20,6 +20,7 @@ import { TableDataStore } from "./table-view/TableDataStore";
 import { TableConfigManager } from "./table-view/TableConfigManager";
 import { ColumnInteractionController } from "./table-view/ColumnInteractionController";
 import { RowInteractionController } from "./table-view/RowInteractionController";
+import { GridInteractionController } from "./table-view/GridInteractionController";
 
 const LOG_PREFIX = "[TileLineBase]";
 const FORMULA_ROW_LIMIT = 5000;
@@ -55,7 +56,6 @@ export class TableView extends ItemView {
         private focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
         private allRowData: RowData[] = [];
         private visibleRowData: RowData[] = [];
-        private contextMenu: HTMLElement | null = null;
         private columnLayoutStore = new ColumnLayoutStore(null);
         private markdownParser = new MarkdownBlockParser();
         private schemaBuilder = new SchemaBuilder();
@@ -67,11 +67,9 @@ export class TableView extends ItemView {
         private configManager: TableConfigManager;
         private columnInteractionController: ColumnInteractionController;
         private rowInteractionController: RowInteractionController;
+        private gridInteractionController: GridInteractionController;
 
         // 事件监听器引用（用于清理）
-	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
-	private documentClickHandler: (() => void) | null = null;
-	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 	private windowResizeHandler: (() => void) | null = null;
 	private tableContainer: HTMLElement | null = null;
 	private resizeObserver: ResizeObserver | null = null;
@@ -128,6 +126,12 @@ export class TableView extends ItemView {
 				this.scheduleSave();
 			},
 			getActiveFilterPrefills: () => this.getActiveFilterPrefills()
+		});
+		this.gridInteractionController = new GridInteractionController({
+			columnInteraction: this.columnInteractionController,
+			rowInteraction: this.rowInteractionController,
+			dataStore: this.dataStore,
+			getGridAdapter: () => this.gridAdapter
 		});
 		this.filterViewController = new FilterViewController({
 			app: this.app,
@@ -511,7 +515,7 @@ export class TableView extends ItemView {
 					this.handleColumnResize(field, width);
 				},
 				onCopyH2Section: (rowIndex: number) => {
-					this.copyH2Section(rowIndex);
+					void this.gridInteractionController.copySection(rowIndex);
 				},
 				onColumnOrderChange: (fields: string[]) => {
 					this.handleColumnOrderChange(fields);
@@ -538,8 +542,7 @@ export class TableView extends ItemView {
 			this.tableContainer = result.container;
 			this.updateTableContainerSize();
 			this.applyActiveFilterView();
-			this.setupContextMenu(result.container);
-			this.setupKeyboardShortcuts(result.container);
+			this.gridInteractionController.attach(result.container);
 			this.setupResizeObserver(result.container);
 		};
 
@@ -556,24 +559,7 @@ export class TableView extends ItemView {
 	 * 清理事件监听器（防止内存泄漏）
 	 */
 	private cleanupEventListeners(): void {
-		// 移除右键菜单监听器
-		if (this.tableContainer && this.contextMenuHandler) {
-			this.tableContainer.removeEventListener('contextmenu', this.contextMenuHandler);
-			this.contextMenuHandler = null;
-		}
-
-		// 移除 document 点击监听器
-		if (this.tableContainer && this.documentClickHandler) {
-			const ownerDoc = this.tableContainer.ownerDocument;
-			ownerDoc.removeEventListener('click', this.documentClickHandler);
-			this.documentClickHandler = null;
-		}
-
-		// 移除键盘监听器
-		if (this.tableContainer && this.keydownHandler) {
-			this.tableContainer.removeEventListener('keydown', this.keydownHandler);
-			this.keydownHandler = null;
-		}
+		this.gridInteractionController.detach();
 
 		if (this.pendingSizeUpdateHandle !== null && typeof cancelAnimationFrame === 'function') {
 			cancelAnimationFrame(this.pendingSizeUpdateHandle);
@@ -792,299 +778,6 @@ export class TableView extends ItemView {
 
 	/**
 	 * 设置右键菜单
-	 */
-	private setupContextMenu(tableContainer: HTMLElement): void {
-		// 清理旧的事件监听器
-		this.cleanupEventListeners();
-
-		// 保存容器引用
-		this.tableContainer = tableContainer;
-
-		// 创建并保存右键菜单处理器
-		this.contextMenuHandler = (event: MouseEvent) => {
-			const target = event.target as HTMLElement;
-			const headerElement = target.closest('.ag-header-cell, .ag-header-group-cell') as HTMLElement | null;
-			if (headerElement) {
-				const headerColId = headerElement.getAttribute('col-id');
-				if (headerColId && headerColId !== 'status' && headerColId !== '#') {
-					event.preventDefault();
-					event.stopPropagation();
-					this.columnInteractionController.handleColumnHeaderContextMenu(headerColId, event);
-				}
-				return;
-			}
-
-			const cellElement = target.closest('.ag-cell');
-			if (!cellElement) {
-				return;
-			}
-			const colId = cellElement.getAttribute('col-id');
-
-			if (colId === 'status') {
-				return;
-			}
-
-			event.preventDefault();
-
-			// 获取点击行对应的块索引
-			const blockIndex = this.gridAdapter?.getRowIndexFromEvent(event);
-			if (blockIndex === null || blockIndex === undefined) return;
-
-			// 检查当前选中的行
-			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
-
-			// 如果右键点击的行不在已选中的行中，则只选中这一行
-			if (!selectedRows.includes(blockIndex)) {
-				this.gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
-			}
-
-			// 显示自定义菜单，传递列ID信息
-			this.showContextMenu(event, blockIndex, colId || undefined);
-		};
-
-		// 创建并保存点击处理器（点击其他地方隐藏菜单）
-		this.documentClickHandler = () => {
-			this.hideContextMenu();
-		};
-
-		// 绑定事件监听器
-		tableContainer.addEventListener('contextmenu', this.contextMenuHandler);
-
-		// 使用容器所在的 document（支持新窗口）
-		const ownerDoc = tableContainer.ownerDocument;
-		ownerDoc.addEventListener('click', this.documentClickHandler);
-	}
-
-	/**
-	 * 设置键盘快捷键
-	 */
-	private setupKeyboardShortcuts(tableContainer: HTMLElement): void {
-		// 创建并保存键盘事件处理器
-		this.keydownHandler = (event: KeyboardEvent) => {
-			// 使用容器所在的 document（支持新窗口）
-			const ownerDoc = tableContainer.ownerDocument;
-			const activeElement = ownerDoc.activeElement;
-			const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
-
-			// 如果正在编辑单元格，不触发其他快捷键
-			if (isEditing) {
-				return;
-			}
-
-			const selectedRows = this.gridAdapter?.getSelectedRows() || [];
-			const hasSelection = selectedRows.length > 0;
-
-			// 注意：Ctrl+C 在序号列的处理已移至 AgGridAdapter 的 onCellKeyDown 中
-
-			// Cmd+D / Ctrl+D: 复制行（支持单行和多行）
-			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
-				event.preventDefault();
-				if (hasSelection) {
-					if (selectedRows.length > 1) {
-						// 多行选择：批量复制
-						this.duplicateRows(selectedRows);
-					} else {
-						// 单行选择：单行复制
-						this.duplicateRow(selectedRows[0]);
-					}
-				}
-				return;
-			}
-
-			// Delete / Backspace 快捷键禁用：保留原生删除行为，通过上下文菜单删除整行
-		};
-
-		// 绑定事件监听器
-		tableContainer.addEventListener('keydown', this.keydownHandler);
-	}
-
-	/**
-	 * 复制 H2 段落到剪贴板
-	 */
-	private async copyH2Section(blockIndex: number): Promise<void> {
-		const blockIndexes = this.resolveBlockIndexesForCopy(blockIndex);
-		if (blockIndexes.length === 0) {
-			return;
-		}
-
-		const segments: string[] = [];
-		for (const index of blockIndexes) {
-			const block = this.blocks[index];
-			if (!block) {
-				continue;
-			}
-                        segments.push(this.dataStore.blockToMarkdown(block));
-		}
-
-		if (segments.length === 0) {
-			return;
-		}
-
-		const markdown = segments.join('\n\n');
-
-		try {
-			await navigator.clipboard.writeText(markdown);
-			new Notice('已复制整段内容');
-		} catch (error) {
-			console.error('复制失败:', error);
-			new Notice('复制失败');
-		}
-	}
-
-	private resolveBlockIndexesForCopy(primaryIndex: number): number[] {
-		const selected = this.gridAdapter?.getSelectedRows() ?? [];
-		const validSelection = selected.filter((index) => index >= 0 && index < this.blocks.length);
-
-		if (validSelection.length > 1 && validSelection.includes(primaryIndex)) {
-			return validSelection;
-		}
-
-		if (primaryIndex >= 0 && primaryIndex < this.blocks.length) {
-			return [primaryIndex];
-		}
-
-		if (validSelection.length > 0) {
-			return validSelection;
-		}
-
-		return [];
-	}
-
-	/**
-	 * 显示右键菜单
-	 */
-	private showContextMenu(event: MouseEvent, blockIndex: number, colId?: string): void {
-		// 移除旧菜单
-		this.hideContextMenu();
-
-		// 检查是否在序号列上
-		const isIndexColumn = colId === '#';
-
-		// 获取当前选中的所有行
-		const selectedRows = this.gridAdapter?.getSelectedRows() || [];
-		const isMultiSelect = selectedRows.length > 1;
-
-		// 使用容器所在的 document（支持新窗口）
-		const ownerDoc = this.tableContainer?.ownerDocument || document;
-		this.contextMenu = ownerDoc.body.createDiv({ cls: 'tlb-context-menu' });
-		this.contextMenu.style.visibility = 'hidden';
-		this.contextMenu.style.left = '0px';
-		this.contextMenu.style.top = '0px';
-
-		// 如果在序号列上，显示"复制整段"菜单
-		if (isIndexColumn) {
-			const copySection = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			copySection.createSpan({ text: '复制整段' });
-			copySection.addEventListener('click', () => {
-				this.copyH2Section(blockIndex);
-				this.hideContextMenu();
-			});
-
-			// 分隔线
-			this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
-		}
-
-		// 在上方插入行
-		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-		insertAbove.createSpan({ text: '在上方插入行' });
-		insertAbove.addEventListener('click', () => {
-			this.addRow(blockIndex);  // 在当前行之前插入
-			this.hideContextMenu();
-		});
-
-		// 在下方插入行
-		const insertBelow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-		insertBelow.createSpan({ text: '在下方插入行' });
-		insertBelow.addEventListener('click', () => {
-			this.addRow(blockIndex + 1);  // 在当前行之后插入
-			this.hideContextMenu();
-		});
-
-		// 分隔线
-		this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
-
-		if (isMultiSelect) {
-			// 多选模式：显示批量操作菜单
-			// 复制选中的行
-			const duplicateRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			duplicateRows.createSpan({ text: `复制选中的 ${selectedRows.length} 行` });
-			duplicateRows.addEventListener('click', () => {
-				this.duplicateRows(selectedRows);
-				this.hideContextMenu();
-			});
-
-			// 删除选中的行
-			const deleteRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-			deleteRows.createSpan({ text: `删除选中的 ${selectedRows.length} 行` });
-			deleteRows.addEventListener('click', () => {
-				this.deleteRows(selectedRows);
-				this.hideContextMenu();
-			});
-		} else {
-			// 单选模式：显示单行操作菜单
-			// 复制此行
-			const duplicateRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			duplicateRow.createSpan({ text: '复制此行' });
-			duplicateRow.addEventListener('click', () => {
-				this.duplicateRow(blockIndex);
-				this.hideContextMenu();
-			});
-
-			// 删除此行
-			const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-			deleteRow.createSpan({ text: '删除此行' });
-			deleteRow.addEventListener('click', () => {
-				this.deleteRow(blockIndex);
-				this.hideContextMenu();
-			});
-		}
-
-		// 定位菜单，避免超出屏幕
-		const defaultView = ownerDoc.defaultView || window;
-		const docElement = ownerDoc.documentElement;
-		const viewportWidth = defaultView.innerWidth ?? docElement?.clientWidth ?? 0;
-		const viewportHeight = defaultView.innerHeight ?? docElement?.clientHeight ?? 0;
-		const menuRect = this.contextMenu.getBoundingClientRect();
-		const margin = 8;
-
-		let left = event.clientX;
-		let top = event.clientY;
-
-		if (left + menuRect.width > viewportWidth - margin) {
-			left = Math.max(margin, viewportWidth - menuRect.width - margin);
-		}
-
-		if (top + menuRect.height > viewportHeight - margin) {
-			top = Math.max(margin, viewportHeight - menuRect.height - margin);
-		}
-
-		if (left < margin) {
-			left = margin;
-		}
-
-		if (top < margin) {
-			top = margin;
-		}
-
-		this.contextMenu.style.left = `${left}px`;
-		this.contextMenu.style.top = `${top}px`;
-		this.contextMenu.style.visibility = 'visible';
-	}
-
-	/**
-	 * 隐藏右键菜单
-	 */
-	private hideContextMenu(): void {
-		if (this.contextMenu) {
-			this.contextMenu.remove();
-			this.contextMenu = null;
-		}
-	}
-
-	/**
-	 * 处理状态变更
-	 * @param rowId 行的稳定 ID（使用 ROW_ID_FIELD）
-	 * @param newStatus 新的状态值
 	 */
 	private onStatusChange(rowId: string, newStatus: TaskStatus): void {
 		if (!this.schema || !this.gridAdapter) {
@@ -2092,7 +1785,7 @@ export class TableView extends ItemView {
 		this.cleanupEventListeners();
 
 		// 隐藏右键菜单
-		this.hideContextMenu();
+		this.gridInteractionController.hideContextMenu();
 		this.clearPendingFocus('view-close');
 
 		// 销毁表格实例

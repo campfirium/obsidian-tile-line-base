@@ -54,6 +54,15 @@
     "insertSuccess": "已插入列：{{name}}",
     "deleteSuccess": "已删除列：{{name}}"
   },
+  "statusCell": {
+    "labels": {
+      "todo": "待办",
+      "done": "已完成",
+      "inprogress": "进行中",
+      "onhold": "暂停",
+      "canceled": "已取消"
+    }
+  },
   "quickFilter": {
     "clearAriaLabel": "清除过滤",
     "placeholder": "全局过滤",
@@ -112,6 +121,36 @@
     "renamePlaceholder": "输入新名称",
     "duplicateNameSuffix": "副本",
     "duplicateNotice": "已复制视图: {{name}}"
+  },
+  "filterViewModals": {
+    "saveButton": "保存",
+    "cancelButton": "取消",
+    "viewNameLabel": "视图名称",
+    "viewNamePlaceholder": "输入视图名称",
+    "combineModeLabel": "条件组合模式",
+    "combineModeOptionAll": "满足所有条件（与）",
+    "combineModeOptionAny": "满足任一条件（或）",
+    "conditionsHeading": "过滤条件",
+    "conditionsEmptyHint": "尚未配置过滤条件，请使用「新增条件」进行设置。",
+    "addConditionButton": "+ 新增条件",
+    "operators": {
+      "equals": "等于",
+      "notEquals": "不等于",
+      "contains": "包含",
+      "notContains": "不包含",
+      "startsWith": "以...开头",
+      "endsWith": "以...结尾",
+      "isEmpty": "为空",
+      "isNotEmpty": "不为空"
+    },
+    "valuePlaceholder": "输入值",
+    "removeButton": "移除",
+    "sortHeading": "排序规则",
+    "addSortButton": "+ 新增排序",
+    "sortsEmptyHint": "尚未配置排序规则，请使用「新增排序」进行设置。",
+    "sortsNoColumnsHint": "没有可用列，无法配置排序。",
+    "sortDirectionAsc": "升序 (A → Z)",
+    "sortDirectionDesc": "降序 (Z → A)"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] 无法在 compositionstart 重置光标",

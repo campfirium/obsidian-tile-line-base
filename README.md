@@ -47,6 +47,15 @@ npm run build
 npm run dev
 ```
 
+### 验证脚本
+
+```bash
+npx ts-node --compiler-options '{"module":"commonjs"}' scripts/dev/verify-column-service.ts
+npx ts-node --compiler-options '{"module":"commonjs"}' scripts/dev/verify-lifecycle-manager.ts
+npx ts-node --compiler-options '{"module":"commonjs"}' scripts/dev/verify-interaction-controller.ts
+```
+
+
 ### 在 Obsidian 中使用
 
 1. **创建示例文件**：创建一个 .md 文件，粘贴以下内容：

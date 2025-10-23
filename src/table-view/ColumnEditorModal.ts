@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from 'obsidian';
+﻿import { App, Modal, Setting } from 'obsidian';
 import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
 

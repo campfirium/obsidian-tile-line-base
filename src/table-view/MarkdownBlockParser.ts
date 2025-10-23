@@ -102,7 +102,6 @@ export class MarkdownBlockParser {
 	}
 
 	parseColumnDefinition(line: string): ColumnConfig | null {
-		const parts = line.split(/\s+/);
 		const trimmed = line.trim();
 		if (trimmed.length === 0) {
 			return null;

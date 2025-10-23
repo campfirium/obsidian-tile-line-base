@@ -1,6 +1,6 @@
-import { App, Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
-import { debugLog, isDebugEnabled } from './utils/logger';
+import { debugLog } from './utils/logger';
 import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
 import { FileCacheManager } from './cache/FileCacheManager';
@@ -8,8 +8,6 @@ import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './servi
 import { WindowContextManager } from './plugin/WindowContextManager';
 import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
-
-const LOG_PREFIX = '[TileLineBase]';
 
 function snapshotLeaf(manager: WindowContextManager, leaf: WorkspaceLeaf | null | undefined): Record<string, unknown> | null {
 	if (!leaf) {

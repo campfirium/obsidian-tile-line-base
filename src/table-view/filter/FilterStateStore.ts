@@ -1,6 +1,6 @@
 import { getPluginContext } from '../../pluginContext';
 import type { ColumnState } from 'ag-grid-community';
-import type { FileFilterViewState, FilterViewDefinition, FilterRule, SortRule } from '../../types/filterView';
+import type { FileFilterViewState, FilterViewDefinition, SortRule } from '../../types/filterView';
 
 export class FilterStateStore {
 	private state: FileFilterViewState = { views: [], activeViewId: null };

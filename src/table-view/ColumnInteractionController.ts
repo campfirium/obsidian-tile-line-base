@@ -107,7 +107,7 @@ export class ColumnInteractionController {
 			onSubmit: (result) => {
 				this.applyColumnEditResult(field, result);
 			},
-			onCancel: () => {}
+			onCancel: () => undefined
 		});
 		modal.open();
 	}

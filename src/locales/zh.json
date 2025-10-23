@@ -61,7 +61,8 @@
       "inprogress": "进行中",
       "onhold": "暂停",
       "canceled": "已取消"
-    }
+    },
+    "menuLabel": "状态选项"
   },
   "quickFilter": {
     "clearAriaLabel": "清除过滤",

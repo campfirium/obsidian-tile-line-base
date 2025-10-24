@@ -421,3 +421,46 @@
 .ag-theme-alpine-dark .ag-cell-range-selected:not(.ag-cell-inline-editing) {
   border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
 }
+.tlb-column-formula-input-wrapper {
+  position: relative;
+}
+
+.tlb-formula-field-suggest {
+  position: fixed;
+  z-index: 100020;
+  left: 0;
+  top: 100%;
+  margin-top: 4px;
+  border: 1px solid var(--background-modifier-border, rgba(120, 120, 120, 0.4));
+  border-radius: 6px;
+  background: var(--background-primary, #ffffff);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 0;
+  min-width: 180px;
+}
+
+.theme-dark .tlb-formula-field-suggest {
+  background: var(--background-secondary, #1f1f1f);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.tlb-formula-field-suggest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tlb-formula-field-suggest-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-normal, #2e3338);
+}
+
+.tlb-formula-field-suggest-item:hover,
+.tlb-formula-field-suggest-item.is-active {
+  background: var(--background-modifier-hover, rgba(33, 150, 243, 0.12));
+  color: var(--text-normal, #2e3338);
+}

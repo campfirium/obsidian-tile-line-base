@@ -5,40 +5,29 @@
  */
 
 import {
-	GridApi,
-	GridOptions,
-	CellEditingStoppedEvent,
-	CellEditingStartedEvent,
-	CellFocusedEvent,
-	CellKeyDownEvent,
-	CellDoubleClickedEvent,
-	ModuleRegistry,
 	AllCommunityModule,
-	IRowNode,
-	ColumnState
+	CellEditingStoppedEvent,
+	ColumnState,
+	GridApi,
+	ModuleRegistry
 } from 'ag-grid-community';
 import {
-	GridAdapter,
-	ColumnDef,
-	RowData,
 	CellEditEvent,
+	ColumnDef,
+	GridAdapter,
 	HeaderEditEvent,
-	ROW_ID_FIELD,
+	RowData,
 	SortModelEntry
 } from './GridAdapter';
-import { normalizeStatus } from '../renderers/StatusCellRenderer';
-import { createTextCellEditor } from './editors/TextCellEditor';
 import { t } from '../i18n';
 import { AgGridColumnService } from './column/AgGridColumnService';
-import {
-	AgGridInteractionController,
-	GridInteractionContext
-} from './interactions/AgGridInteractionController';
+import { AgGridInteractionController } from './interactions/AgGridInteractionController';
+import type { GridInteractionContext } from './interactions/types';
 import { AgGridLifecycleManager } from './lifecycle/AgGridLifecycleManager';
+import { createAgGridOptions } from './options/createAgGridOptions';
+import { AgGridSelectionController } from './selection/AgGridSelectionController';
+import { AgGridStateService } from './state/AgGridStateService';
 
-const DEFAULT_ROW_HEIGHT = 40;
-
-// 注册 AG Grid Community 模块
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export class AgGridAdapter implements GridAdapter {
@@ -53,6 +42,8 @@ export class AgGridAdapter implements GridAdapter {
 	});
 	private readonly lifecycle = new AgGridLifecycleManager();
 	private readonly interaction: AgGridInteractionController;
+	private readonly selection: AgGridSelectionController;
+	private readonly state: AgGridStateService;
 
 	get gridApi(): GridApi | null {
 		return this.lifecycle.getGridApi();
@@ -70,7 +61,7 @@ export class AgGridAdapter implements GridAdapter {
 			getEnterAtLastRowCallback: () => this.enterAtLastRowCallback,
 			translate: (key: string) => t(key as any)
 		});
-		this.interaction.onViewportResize((reason) => {
+		this.interaction.onViewportResize(reason => {
 			if (reason === 'resize') {
 				this.columnService.resizeColumns();
 			}
@@ -82,6 +73,16 @@ export class AgGridAdapter implements GridAdapter {
 
 		this.lifecycle.onModelUpdated(() => {
 			this.interaction.onLayoutInvalidated();
+		});
+
+		this.selection = new AgGridSelectionController({
+			getGridApi: () => this.lifecycle.getGridApi()
+		});
+
+		this.state = new AgGridStateService({
+			getGridApi: () => this.lifecycle.getGridApi(),
+			runWhenReady: callback => this.lifecycle.runWhenReady(callback),
+			columnService: this.columnService
 		});
 	}
 
@@ -109,222 +110,58 @@ export class AgGridAdapter implements GridAdapter {
 		this.columnService.setContainer(container);
 
 		const colDefs = this.columnService.buildColumnDefs(columns);
-		const ownerDoc = container.ownerDocument;
-
-		const gridOptions: GridOptions = {
-			popupParent: ownerDoc?.body ?? document.body,
-			rowHeight: DEFAULT_ROW_HEIGHT,
-			onFirstDataRendered: () => {
-				this.resizeColumns();
-			},
-			getRowId: (params) => String(params.data[ROW_ID_FIELD]),
-			context: context || {},
-			enableBrowserTooltips: true,
-			tooltipShowDelay: 0,
-			tooltipHideDelay: 200,
-			onCellKeyDown: (event: CellKeyDownEvent) => {
-				this.interaction.handleGridCellKeyDown(event);
-			},
-			singleClickEdit: false,
-			stopEditingWhenCellsLoseFocus: true,
-			enterNavigatesVertically: true,
-			enterNavigatesVerticallyAfterEdit: true,
-			rowSelection: {
-				mode: 'multiRow',
-				enableClickSelection: true,
-				enableSelectionWithoutKeys: false,
-				checkboxes: false,
-				checkboxLocation: 'autoGroupColumn'
-			},
-			selectionColumnDef: {
-				width: 0,
-				minWidth: 0,
-				maxWidth: 0,
-				resizable: false,
-				suppressSizeToFit: true,
-				headerName: '',
-				suppressHeaderMenuButton: true,
-				suppressHeaderContextMenu: true
-			},
-			onCellEditingStopped: (event: CellEditingStoppedEvent) => {
-				this.handleCellEdit(event);
-			},
-			onCellEditingStarted: (_event: CellEditingStartedEvent) => {
-				this.interaction.handleCellEditingStarted();
-			},
-			onCellFocused: (event: CellFocusedEvent) => {
-				this.interaction.handleCellFocused(event);
-			},
-			onColumnResized: (event) => {
-				this.columnService.handleColumnResized(event);
-			},
-			onColumnMoved: (event) => {
-				this.columnService.handleColumnMoved(event);
-			},
-			onCellDoubleClicked: (event: CellDoubleClickedEvent) => {
-				const colId = event.column?.getColId?.() ?? null;
-				if (colId !== '#') {
-					return;
-				}
-				const data = event.data as RowData | undefined;
-				const raw = data ? data[ROW_ID_FIELD] : undefined;
-				const blockIndex = raw !== undefined ? parseInt(String(raw), 10) : NaN;
-				if (Number.isNaN(blockIndex)) {
-					return;
-				}
-				this.gridContext?.onCopyH2Section?.(blockIndex);
-			},
-			onColumnHeaderContextMenu: (params: any) => {
-				const column = params?.column ?? null;
-				const field =
-					column && typeof column.getColId === 'function' ? column.getColId() : null;
-				const domEvent = (params?.event ?? params?.mouseEvent) as MouseEvent | undefined;
-				if (!field || !domEvent) {
-					return;
-				}
-				this.columnHeaderContextMenuCallback?.({ field, domEvent });
-			},
-			defaultColDef: {
-				tooltipValueGetter: (params) => {
-					const value = params.value;
-					return value == null ? '' : String(value);
-				},
-				editable: true,
-				sortable: true,
-				filter: false,
-				resizable: true,
-				cellEditor: createTextCellEditor(),
-				suppressKeyboardEvent: (params: any) => {
-					return this.interaction.handleSuppressKeyboardEvent(params);
-				}
-			},
-			enableCellTextSelection: true,
-			suppressAnimationFrame: false,
-			suppressColumnVirtualisation: false,
-			rowClassRules: {
-				'tlb-row-completed': (params) => {
-					const status = normalizeStatus(params.data?.status);
-					return status === 'done' || status === 'canceled';
-				}
-			}
-		};
+		const gridOptions = createAgGridOptions({
+			ownerDocument: container.ownerDocument,
+			columnService: this.columnService,
+			interaction: this.interaction,
+			getGridContext: () => this.gridContext,
+			onCellEditingStopped: (event: CellEditingStoppedEvent) => this.handleCellEdit(event),
+			getColumnHeaderContextMenu: () => this.columnHeaderContextMenuCallback,
+			resizeColumns: () => this.resizeColumns()
+		});
 
 		this.lifecycle.mountGrid(container, colDefs, rows, gridOptions);
 		this.interaction.bindViewportListeners(container);
 	}
 
 	updateData(rows: RowData[]): void {
-		this.withGridApi((api) => {
+		this.lifecycle.withGridApi(api => {
 			api.setGridOption('rowData', rows);
 			api.refreshCells({ force: true });
 		});
 	}
 
-	private deepClone<T>(value: T): T {
-		if (value == null) {
-			return value;
-		}
-		return JSON.parse(JSON.stringify(value)) as T;
-	}
-
-	private getGridApi(): GridApi | null {
-		return this.lifecycle.getGridApi();
-	}
-
-	private withGridApi(callback: (api: GridApi) => void): void {
-		this.lifecycle.withGridApi(callback);
-	}
-
 	getFilterModel(): any | null {
-		const gridApi = this.getGridApi();
-		if (!gridApi || typeof gridApi.getFilterModel !== 'function') {
-			return null;
-		}
-		return this.deepClone(gridApi.getFilterModel());
+		return this.state.getFilterModel();
 	}
 
 	setFilterModel(model: any | null): void {
-		this.runWhenReady(() => {
-			const gridApi = this.getGridApi();
-			if (!gridApi || typeof gridApi.setFilterModel !== 'function') {
-				return;
-			}
-			const cloned = model == null ? null : this.deepClone(model);
-			gridApi.setFilterModel(cloned);
-			if (typeof gridApi.onFilterChanged === 'function') {
-				gridApi.onFilterChanged();
-			}
-		});
+		this.state.setFilterModel(model);
 	}
 
 	setSortModel(sortModel: SortModelEntry[]): void {
-		this.runWhenReady(() => {
-			this.columnService.setSortModel(sortModel);
-		});
+		this.state.setSortModel(sortModel);
 	}
 
 	setQuickFilter(value: string | null): void {
-		this.columnService.setQuickFilterText(value);
-		this.runWhenReady(() => {
-			this.columnService.applyQuickFilter();
-		});
+		this.state.setQuickFilter(value);
 	}
 
 	getColumnState(): ColumnState[] | null {
-		return this.columnService.getColumnState();
+		return this.state.getColumnState();
 	}
 
 	applyColumnState(state: ColumnState[] | null): void {
-		this.runWhenReady(() => {
-			this.columnService.applyColumnState(state);
-		});
+		this.state.applyColumnState(state);
 	}
+
 	markLayoutDirty(): void {
 		this.columnService.markLayoutDirty();
 		this.interaction.onLayoutInvalidated();
 	}
 
 	selectRow(blockIndex: number, options?: { ensureVisible?: boolean }): void {
-		const gridApi = this.getGridApi();
-		if (!gridApi) return;
-		const node = this.findRowNodeByBlockIndex(blockIndex);
-		if (!node) return;
-
-		gridApi.deselectAll();
-		node.setSelected(true, true);
-
-		if (options?.ensureVisible !== false) {
-			const rowIndex = node.rowIndex ?? null;
-			if (rowIndex !== null) {
-				gridApi.ensureIndexVisible(rowIndex, 'middle');
-			}
-		}
-	}
-
-	private handleCellEdit(event: CellEditingStoppedEvent): void {
-		this.interaction.handleCellEditingStopped();
-
-		if (!this.cellEditCallback) return;
-
-		const field = event.colDef.field;
-		const rowIndex = event.node.rowIndex;
-		const newValue = event.newValue;
-		const oldValue = event.oldValue;
-
-		if (field && rowIndex !== null && rowIndex !== undefined) {
-			const newStr = String(newValue ?? '');
-			const oldStr = String(oldValue ?? '');
-
-			if (newStr !== oldStr) {
-				this.cellEditCallback({
-					rowIndex: rowIndex,
-					field: field,
-					newValue: newStr,
-					oldValue: oldStr,
-					rowData: event.data as RowData
-				});
-			}
-		}
+		this.selection.selectRow(blockIndex, options);
 	}
 
 	onCellEdit(callback: (event: CellEditEvent) => void): void {
@@ -335,7 +172,9 @@ export class AgGridAdapter implements GridAdapter {
 		this.headerEditCallback = callback;
 	}
 
-	onColumnHeaderContextMenu(callback: (event: { field: string; domEvent: MouseEvent }) => void): void {
+	onColumnHeaderContextMenu(
+		callback: (event: { field: string; domEvent: MouseEvent }) => void
+	): void {
 		this.columnHeaderContextMenuCallback = callback;
 	}
 
@@ -355,143 +194,54 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	getSelectedRows(): number[] {
-		const gridApi = this.getGridApi();
-		if (!gridApi) return [];
-
-		const selectedNodes = [...gridApi.getSelectedNodes()] as Array<IRowNode<RowData>>;
-		const resolveSortKey = (node: IRowNode<RowData>): number => {
-			const baseIndex = node.rowIndex ?? 0;
-			if (node.rowPinned === 'top') {
-				return baseIndex - 1_000_000_000;
-			}
-			if (node.rowPinned === 'bottom') {
-				return baseIndex + 1_000_000_000;
-			}
-			return baseIndex;
-		};
-		selectedNodes.sort((a, b) => resolveSortKey(a) - resolveSortKey(b));
-		const blockIndexes: number[] = [];
-
-		for (const node of selectedNodes) {
-			const data = node.data as RowData | undefined;
-			if (!data) continue;
-			const raw = data[ROW_ID_FIELD];
-			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
-			if (!Number.isNaN(parsed)) {
-				blockIndexes.push(parsed);
-			}
-		}
-
-		return blockIndexes;
+		return this.selection.getSelectedRows();
 	}
 
 	getRowIndexFromEvent(event: MouseEvent): number | null {
-		const gridApi = this.getGridApi();
-		if (!gridApi) return null;
-
-		const target = event.target as HTMLElement;
-		const rowElement = target.closest('.ag-row');
-
-		if (!rowElement) return null;
-
-		const rowIndexAttr = rowElement.getAttribute('row-index');
-		if (rowIndexAttr === null) return null;
-
-		const displayIndex = parseInt(rowIndexAttr, 10);
-		if (Number.isNaN(displayIndex)) return null;
-
-		const rowNode = gridApi.getDisplayedRowAtIndex(displayIndex);
-		const data = rowNode?.data as RowData | undefined;
-		if (!data) return null;
-
-		const raw = data[ROW_ID_FIELD];
-		const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
-		return Number.isNaN(parsed) ? null : parsed;
+		return this.selection.getRowIndexFromEvent(event);
 	}
 
 	resizeColumns(): void {
 		this.columnService.resizeColumns();
 	}
 
-	private findRowNodeByBlockIndex(blockIndex: number): IRowNode<RowData> | null {
-		const gridApi = this.getGridApi();
-		if (!gridApi) return null;
-
-		let match: IRowNode<RowData> | null = null;
-		gridApi.forEachNode(node => {
-			if (match) return;
-			const data = node.data as RowData | undefined;
-			if (!data) return;
-			const raw = data[ROW_ID_FIELD];
-			const parsed = raw !== undefined ? parseInt(String(raw), 10) : NaN;
-			if (!Number.isNaN(parsed) && parsed === blockIndex) {
-				match = node as IRowNode<RowData>;
-			}
-		});
-
-		return match;
-	}
-
-	/**
-	 * 开始编辑当前聚焦的单元格
-	 */
 	startEditingFocusedCell(): void {
-		const gridApi = this.getGridApi();
-		if (!gridApi) return;
-
-		const focusedCell = gridApi.getFocusedCell();
-		if (!focusedCell) return;
-
-		gridApi.startEditingCell({
-			rowIndex: focusedCell.rowIndex,
-			colKey: focusedCell.column.getColId()
-		});
+		this.selection.startEditingFocusedCell();
 	}
 
-	/**
-	 * 获取当前聚焦的单元格信息
-	 */
 	getFocusedCell(): { rowIndex: number; field: string } | null {
-		const gridApi = this.getGridApi();
-		if (!gridApi) return null;
-
-		const focusedCell = gridApi.getFocusedCell();
-		if (!focusedCell) return null;
-
-		// 获取块索引
-		const rowNode = gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
-		const data = rowNode?.data as RowData | undefined;
-		if (!data) return null;
-
-		const raw = data[ROW_ID_FIELD];
-		const blockIndex = raw !== undefined ? parseInt(String(raw), 10) : NaN;
-		if (Number.isNaN(blockIndex)) return null;
-
-		return {
-			rowIndex: blockIndex,
-			field: focusedCell.column.getColId()
-		};
+		return this.selection.getFocusedCell();
 	}
 
-	/**
-	 * 监听 Enter 键在最后一行按下的事件
-	 */
 	onEnterAtLastRow(callback: (field: string) => void): void {
 		this.enterAtLastRowCallback = callback;
 	}
 
+	private handleCellEdit(event: CellEditingStoppedEvent): void {
+		this.interaction.handleCellEditingStopped();
+
+		if (!this.cellEditCallback) {
+			return;
+		}
+
+		const field = event.colDef.field;
+		const rowIndex = event.node.rowIndex;
+		const newValue = event.newValue;
+		const oldValue = event.oldValue;
+
+		if (field && rowIndex !== null && rowIndex !== undefined) {
+			const newStr = String(newValue ?? '');
+			const oldStr = String(oldValue ?? '');
+
+			if (newStr !== oldStr) {
+				this.cellEditCallback({
+					rowIndex,
+					field,
+					newValue: newStr,
+					oldValue: oldStr,
+					rowData: event.data as RowData
+				});
+			}
+		}
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

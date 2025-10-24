@@ -21,11 +21,29 @@ module.exports = {
 	],
 	ignorePatterns: ['dist/', 'node_modules/', '*.js'],
 	rules: {
+		'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
 		'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/explicit-module-boundary-types': 'off',
 	},
 	overrides: [
+		{
+			files: [
+				'src/TableView.ts',
+				'src/table-view/GridController.ts',
+				'src/table-view/TableViewRenderer.ts',
+				'src/table-view/TableViewSetup.ts',
+				'src/table-view/TableViewInteractions.ts',
+				'src/table-view/TableConfigManager.ts',
+				'src/table-view/TableDataStore.ts',
+				'src/table-view/MarkdownBlockParser.ts',
+				'src/table-view/SchemaBuilder.ts',
+			],
+			rules: {
+				// Core orchestration modules must remain lean (<=250 logical lines).
+				'max-lines': ['error', { max: 250, skipBlankLines: true, skipComments: true }],
+			},
+		},
 		{
 			files: ['scripts/**/*.mjs', 'esbuild.config.mjs'],
 			rules: {

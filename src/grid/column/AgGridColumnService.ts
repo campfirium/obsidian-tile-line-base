@@ -450,12 +450,18 @@ export class AgGridColumnService {
 			}
 
 			if (storedWidths.has(colId)) {
-				gridApi.setColumnWidths([{ key: colId, newWidth: storedWidths.get(colId)! }]);
+				const storedWidth = storedWidths.get(colId);
+				if (storedWidth !== undefined) {
+					gridApi.setColumnWidths([{ key: colId, newWidth: storedWidth }]);
+				}
 				continue;
 			}
 
 			if (explicitWidths.has(colId)) {
-				gridApi.setColumnWidths([{ key: colId, newWidth: explicitWidths.get(colId)! }]);
+				const explicitWidth = explicitWidths.get(colId);
+				if (explicitWidth !== undefined) {
+					gridApi.setColumnWidths([{ key: colId, newWidth: explicitWidth }]);
+				}
 			}
 		}
 

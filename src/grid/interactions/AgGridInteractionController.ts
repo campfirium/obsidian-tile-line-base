@@ -274,22 +274,23 @@ export class AgGridInteractionController {
 			stopPropagation?: () => void;
 		};
 
+		const preventDefault =
+			typeof original.preventDefault === 'function'
+				? original.preventDefault.bind(original)
+				: undefined;
+		const stopPropagation =
+			typeof original.stopPropagation === 'function'
+				? original.stopPropagation.bind(original)
+				: undefined;
+
 		const normalized: KeyboardEventLike = {
 			key: original.key,
 			ctrlKey: Boolean(original.ctrlKey),
 			metaKey: Boolean(original.metaKey),
 			altKey: Boolean(original.altKey),
 			shiftKey: Boolean(original.shiftKey),
-			preventDefault: () => {
-				if (typeof original.preventDefault === 'function') {
-					original.preventDefault();
-				}
-			},
-			stopPropagation: () => {
-				if (typeof original.stopPropagation === 'function') {
-					original.stopPropagation();
-				}
-			}
+			preventDefault,
+			stopPropagation
 		};
 
 		return normalized;

@@ -25,7 +25,6 @@ npm-debug.log*
 .env
 .env.local
 
-# Lint reports
-docs/reports.md
 
+docs
 

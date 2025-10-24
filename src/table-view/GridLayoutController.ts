@@ -179,16 +179,27 @@ export class GridLayoutController {
 	}
 
 	private applyContainerSize(container: HTMLElement): void {
-		const parent = container.parentElement as HTMLElement | null;
+		const layoutHost =
+			(container.closest('.tlb-table-view-content') as HTMLElement | null) ||
+			(container.parentElement as HTMLElement | null);
 
 		container.style.removeProperty('width');
 		container.style.maxWidth = '100%';
 		container.style.width = '100%';
 
 		let targetHeight = 0;
-		if (parent) {
-			const rect = parent.getBoundingClientRect();
-			targetHeight = rect.height || parent.clientHeight || parent.offsetHeight;
+		if (layoutHost) {
+			const parentRect = layoutHost.getBoundingClientRect();
+			const containerRect = container.getBoundingClientRect();
+			const parentHeight =
+				parentRect.height || layoutHost.clientHeight || layoutHost.offsetHeight;
+			if (parentHeight > 0) {
+				const offsetTop = containerRect.top - parentRect.top;
+				const available = parentHeight - offsetTop;
+				targetHeight = available > 0 ? available : parentHeight;
+			} else {
+				targetHeight = parentHeight;
+			}
 		}
 
 		if (targetHeight > 0) {

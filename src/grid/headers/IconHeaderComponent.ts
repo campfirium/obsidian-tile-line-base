@@ -20,22 +20,18 @@ export class IconHeaderComponent implements IHeaderComp {
 
 	init(params: IconHeaderParams): void {
 		this.params = params;
+		const doc = params.eGridHeader?.ownerDocument || document;
 
-		// 创建容器
-		this.eGui = document.createElement('div');
-		this.eGui.className = 'ag-cell-label-container';
+		this.eGui = doc.createElement('div');
+		this.eGui.classList.add('ag-header-cell-label', 'tlb-header-icon-only');
 		this.eGui.setAttribute('role', 'presentation');
 
-		// 创建图标容器
-		this.iconEl = document.createElement('div');
+		this.iconEl = doc.createElement('div');
 		this.iconEl.className = 'tlb-header-icon';
 		this.iconEl.setAttribute('aria-hidden', 'true');
-		this.iconEl.setAttribute('role', 'presentation');
 
-		// 设置图标
 		setIcon(this.iconEl, params.icon);
 
-		// 尝试 fallback 图标
 		if (!this.iconEl.querySelector('svg') && params.fallbacks) {
 			for (const fallback of params.fallbacks) {
 				setIcon(this.iconEl, fallback);
@@ -45,7 +41,6 @@ export class IconHeaderComponent implements IHeaderComp {
 			}
 		}
 
-		// 设置 tooltip
 		if (params.tooltip) {
 			this.eGui.setAttribute('title', params.tooltip);
 			this.iconEl.setAttribute('aria-label', params.tooltip);
@@ -59,11 +54,13 @@ export class IconHeaderComponent implements IHeaderComp {
 	}
 
 	refresh(_params: IconHeaderParams): boolean {
-		// 不需要刷新，返回 false 让 AG Grid 重新创建
 		return false;
 	}
 
 	destroy(): void {
-		// 清理资源
+		if (this.iconEl) {
+			this.iconEl.replaceChildren();
+		}
 	}
 }
+

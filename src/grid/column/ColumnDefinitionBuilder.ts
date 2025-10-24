@@ -31,6 +31,7 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 	return {
 		field: column.field,
 		headerName: column.headerName,
+		headerClass: 'tlb-index-header-cell',
 		editable: false,
 		pinned: 'left',
 		lockPinned: true,
@@ -60,6 +61,7 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 	return {
 		field: column.field,
 		headerName,
+		headerClass: 'tlb-status-header-cell',
 		headerTooltip: column.headerTooltip ?? tooltipFallback,
 		editable: false,
 		pinned: 'left',

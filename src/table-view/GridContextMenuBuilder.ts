@@ -7,6 +7,7 @@ interface MenuBuilderOptions {
 	selectedRowCount: number;
 	actions: {
 		copySection: () => void;
+		editCopyTemplate: () => void;
 		insertAbove: () => void;
 		insertBelow: () => void;
 		duplicateSelection: () => void;
@@ -45,7 +46,8 @@ export function buildGridContextMenu(options: MenuBuilderOptions): HTMLElement {
 	};
 
 	if (options.isIndexColumn) {
-		addItem('gridInteraction.copySection', options.actions.copySection);
+		addItem('copyTemplate.menuCopy', options.actions.copySection);
+		addItem('copyTemplate.menuEdit', options.actions.editCopyTemplate);
 		addSeparator();
 	}
 

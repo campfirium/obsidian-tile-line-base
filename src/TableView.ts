@@ -24,6 +24,7 @@ import { initializeTableView } from "./table-view/TableViewSetup";
 import { renderTableView } from "./table-view/TableViewRenderer";
 import { handleOnClose } from "./table-view/TableViewInteractions";
 import { t } from "./i18n";
+import { CopyTemplateController } from "./table-view/CopyTemplateController";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 
@@ -38,6 +39,7 @@ export class TableView extends ItemView {
 	public schemaDirty = false;
 	public sparseCleanupRequired = false;
 	public hiddenSortableFields: Set<string> = new Set();
+	public copyTemplate: string | null = null;
 	public gridAdapter: GridAdapter | null = null;
 	public gridController = new GridController();
 	public columnLayoutStore = new ColumnLayoutStore(null);
@@ -53,6 +55,7 @@ export class TableView extends ItemView {
 	public gridLayoutController!: GridLayoutController;
 	public focusManager!: FocusManager;
 	public globalQuickFilterController!: GlobalQuickFilterController;
+	public copyTemplateController!: CopyTemplateController;
 	public tableContainer: HTMLElement | null = null;
 	public filterViewBar: FilterViewBar | null = null;
 	public filterViewController!: FilterViewController;

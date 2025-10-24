@@ -37,6 +37,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.configManager.reset();
 	view.filterStateStore.setFilePath(view.file.path);
 	view.filterStateStore.resetState();
+	view.copyTemplate = null;
 
 	const content = await view.app.vault.read(view.file);
 	const configBlock = await view.persistenceService.loadConfig();
@@ -47,6 +48,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 		if (configBlock.columnWidths) {
 			view.columnLayoutStore.applyConfig(configBlock.columnWidths);
+		}
+		if (typeof configBlock.copyTemplate === 'string') {
+			const loadedTemplate = configBlock.copyTemplate.replace(/\r\n/g, '\n');
+			view.copyTemplate = loadedTemplate.trim().length > 0 ? loadedTemplate : null;
 		}
 	}
 

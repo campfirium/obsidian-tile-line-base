@@ -15,6 +15,7 @@ interface TablePersistenceDeps {
 	filterStateStore: FilterStateStore;
 	getFile: () => TFile | null;
 	getFilterViewState: () => FileFilterViewState;
+	getCopyTemplate: () => string | null;
 }
 
 /**
@@ -83,7 +84,8 @@ export class TablePersistenceService {
 			filterViews: this.deps.getFilterViewState(),
 			columnWidths: widthPrefs,
 			columnConfigs,
-			viewPreference: 'table'
+			viewPreference: 'table',
+			copyTemplate: this.deps.getCopyTemplate()
 		});
 	}
 

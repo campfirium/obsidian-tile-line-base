@@ -73,16 +73,25 @@
     "focusAriaLabel": "Focus filter input"
   },
   "gridInteraction": {
-    "copySectionSuccess": "Copied entire section",
-    "copyFailedLog": "Copy failed:",
-    "copyFailedNotice": "Copy failed",
-    "copySection": "Copy section",
     "insertRowAbove": "Insert row above",
     "insertRowBelow": "Insert row below",
     "duplicateSelected": "Duplicate selected {{count}} rows",
     "deleteSelected": "Delete selected {{count}} rows",
     "duplicateRow": "Duplicate row",
     "deleteRow": "Delete row"
+  },
+  "copyTemplate": {
+    "menuCopy": "Copy as Template",
+    "menuEdit": "Edit Copy Template...",
+    "copySuccess": "Copied template content",
+    "copyFailedLog": "Copy failed:",
+    "copyFailedNotice": "Copy failed",
+    "modalTitle": "Edit copy template",
+    "modalDescription": "Use {column name} to insert column values. Additional tokens: {rowNumber}, {rowIndex}. Leave empty to copy original Markdown.",
+    "templatePlaceholder": "- {Title}\n- {Status}",
+    "saveButton": "Save",
+    "resetButton": "Reset to default",
+    "cancelButton": "Cancel"
   },
   "tableDataStore": {
     "newRowPrefix": "New item",

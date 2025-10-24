@@ -5,12 +5,14 @@ import type { TableDataStore } from './TableDataStore';
 import type { ColumnInteractionController } from './ColumnInteractionController';
 import { t } from '../i18n';
 import { buildGridContextMenu } from './GridContextMenuBuilder';
+import { CopyTemplateController } from './CopyTemplateController';
 
 interface GridInteractionDeps {
 	columnInteraction: ColumnInteractionController;
 	rowInteraction: RowInteractionController;
 	dataStore: TableDataStore;
 	getGridAdapter: () => GridAdapter | null;
+	copyTemplate: CopyTemplateController;
 }
 
 export class GridInteractionController {
@@ -148,25 +150,16 @@ export class GridInteractionController {
 		if (blockIndexes.length === 0) {
 			return;
 		}
-		const blocks = this.deps.dataStore.getBlocks();
-		const segments: string[] = [];
-		for (const index of blockIndexes) {
-			const block = blocks[index];
-			if (!block) {
-				continue;
-			}
-			segments.push(this.deps.dataStore.blockToMarkdown(block));
-		}
-		if (segments.length === 0) {
+		const clipboardPayload = this.deps.copyTemplate.generateClipboardPayload(blockIndexes);
+		if (!clipboardPayload) {
 			return;
 		}
-		const markdown = segments.join('\n\n');
 		try {
-			await navigator.clipboard.writeText(markdown);
-			new Notice(t('gridInteraction.copySectionSuccess'));
+			await navigator.clipboard.writeText(clipboardPayload);
+			new Notice(t('copyTemplate.copySuccess'));
 		} catch (error) {
-			console.error(t('gridInteraction.copyFailedLog'), error);
-			new Notice(t('gridInteraction.copyFailedNotice'));
+			console.error(t('copyTemplate.copyFailedLog'), error);
+			new Notice(t('copyTemplate.copyFailedNotice'));
 		}
 	}
 
@@ -196,6 +189,7 @@ export class GridInteractionController {
 		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
 		const isMultiSelect = selectedRows.length > 1;
 		const isIndexColumn = colId === '#';
+		const targetIndexes = this.resolveBlockIndexesForCopy(blockIndex);
 
 		this.contextMenu = buildGridContextMenu({
 			ownerDoc,
@@ -204,6 +198,7 @@ export class GridInteractionController {
 			selectedRowCount: selectedRows.length,
 			actions: {
 				copySection: () => this.copySection(blockIndex),
+				editCopyTemplate: () => this.deps.copyTemplate.openEditor(this.container, targetIndexes),
 				insertAbove: () => this.deps.rowInteraction.addRow(blockIndex),
 				insertBelow: () => this.deps.rowInteraction.addRow(blockIndex + 1),
 				duplicateSelection: () => this.deps.rowInteraction.duplicateRows(selectedRows),

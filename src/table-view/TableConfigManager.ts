@@ -7,6 +7,7 @@ export interface TableConfigData {
         columnWidths?: Record<string, number>;
         columnConfigs?: string[] | null;
         viewPreference?: 'table';
+        copyTemplate?: string | null;
 }
 
 interface CachedConfigMeta {
@@ -78,6 +79,9 @@ export class TableConfigManager {
                 }
                 if (data.columnConfigs && data.columnConfigs.length > 0) {
                         lines.push(`columnConfigs:${JSON.stringify(data.columnConfigs)}`);
+                }
+                if (data.copyTemplate && data.copyTemplate.trim().length > 0) {
+                        lines.push(`copyTemplate:${JSON.stringify(data.copyTemplate)}`);
                 }
                 if (data.viewPreference) {
                         lines.push(`viewPreference:${data.viewPreference}`);

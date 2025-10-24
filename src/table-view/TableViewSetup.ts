@@ -11,6 +11,7 @@ import { FocusManager } from './FocusManager';
 import { FilterViewController } from './filter/FilterViewController';
 import { TablePersistenceService } from './TablePersistenceService';
 import { t } from '../i18n';
+import { CopyTemplateController } from './CopyTemplateController';
 import {
 	getActiveFilterPrefills,
 	persistColumnStructureChange,
@@ -32,7 +33,8 @@ export function initializeTableView(view: TableView): void {
 		configManager: view.configManager,
 		filterStateStore: view.filterStateStore,
 		getFile: () => view.file,
-		getFilterViewState: () => view.filterViewState
+		getFilterViewState: () => view.filterViewState,
+		getCopyTemplate: () => view.copyTemplate ?? null
 	});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,
@@ -56,6 +58,17 @@ export function initializeTableView(view: TableView): void {
 		},
 		getActiveFilterPrefills: () => getActiveFilterPrefills(view)
 	});
+	view.copyTemplateController = new CopyTemplateController({
+		app: view.app,
+		dataStore: view.dataStore,
+		getSchema: () => view.schema,
+		getBlocks: () => view.blocks,
+		getTemplate: () => view.copyTemplate,
+		setTemplate: (template) => {
+			view.copyTemplate = template;
+		},
+		persistTemplate: () => view.persistenceService.saveConfig()
+	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
 		getGridAdapter: () => view.gridAdapter
 	});
@@ -73,7 +86,8 @@ export function initializeTableView(view: TableView): void {
 		columnInteraction: view.columnInteractionController,
 		rowInteraction: view.rowInteractionController,
 		dataStore: view.dataStore,
-		getGridAdapter: () => view.gridAdapter
+		getGridAdapter: () => view.gridAdapter,
+		copyTemplate: view.copyTemplateController
 	});
 	view.gridLayoutController = new GridLayoutController(view.app, view.gridController);
 	view.focusManager = new FocusManager({

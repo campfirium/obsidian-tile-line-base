@@ -72,16 +72,25 @@
     "focusAriaLabel": "聚焦过滤输入"
   },
   "gridInteraction": {
-    "copySectionSuccess": "已复制整段内容",
-    "copyFailedLog": "复制失败:",
-    "copyFailedNotice": "复制失败",
-    "copySection": "复制整段",
     "insertRowAbove": "在上方插入行",
     "insertRowBelow": "在下方插入行",
     "duplicateSelected": "复制选中的 {{count}} 行",
     "deleteSelected": "删除选中的 {{count}} 行",
     "duplicateRow": "复制此行",
     "deleteRow": "删除此行"
+  },
+  "copyTemplate": {
+    "menuCopy": "复制为模板",
+    "menuEdit": "编辑复制模板...",
+    "copySuccess": "已按模板复制内容",
+    "copyFailedLog": "复制失败:",
+    "copyFailedNotice": "复制失败",
+    "modalTitle": "编辑复制模板",
+    "modalDescription": "使用 {字段名} 插入列值，可用 {rowNumber}/{rowIndex} 获取序号。留空则恢复默认 Markdown 输出。",
+    "templatePlaceholder": "- {标题}\n- {状态}",
+    "saveButton": "保存",
+    "resetButton": "恢复默认",
+    "cancelButton": "取消"
   },
   "tableDataStore": {
     "newRowPrefix": "新条目",

@@ -4,6 +4,7 @@ import type { RowInteractionController } from './RowInteractionController';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnInteractionController } from './ColumnInteractionController';
 import { t } from '../i18n';
+import { buildGridContextMenu } from './GridContextMenuBuilder';
 
 interface GridInteractionDeps {
 	columnInteraction: ColumnInteractionController;
@@ -25,7 +26,6 @@ export class GridInteractionController {
 		if (this.container === container) {
 			return;
 		}
-
 		this.detach();
 		this.container = container;
 
@@ -76,7 +76,6 @@ export class GridInteractionController {
 		if (!container) {
 			return;
 		}
-
 		const target = event.target as HTMLElement | null;
 		if (!target) {
 			return;
@@ -102,7 +101,6 @@ export class GridInteractionController {
 		if (colId === 'status') {
 			return;
 		}
-
 		event.preventDefault();
 
 		const gridAdapter = this.deps.getGridAdapter();
@@ -110,7 +108,6 @@ export class GridInteractionController {
 		if (blockIndex === null || blockIndex === undefined) {
 			return;
 		}
-
 		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
 		if (!selectedRows.includes(blockIndex)) {
 			gridAdapter?.selectRow?.(blockIndex, { ensureVisible: true });
@@ -121,26 +118,23 @@ export class GridInteractionController {
 
 	private handleKeydown(event: KeyboardEvent): void {
 		const container = this.container;
-		if (!container) {
-			return;
-		}
-
-		const ownerDoc = container.ownerDocument;
-		const activeElement = ownerDoc.activeElement;
-		const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
-		if (isEditing) {
-			return;
-		}
-
-		const gridAdapter = this.deps.getGridAdapter();
-		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
-		const hasSelection = selectedRows.length > 0;
-
-		if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
-			event.preventDefault();
-			if (!hasSelection) {
+			if (!container) {
 				return;
 			}
+			const ownerDoc = container.ownerDocument;
+			const activeElement = ownerDoc.activeElement;
+			const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
+			if (isEditing) {
+				return;
+			}
+			const gridAdapter = this.deps.getGridAdapter();
+			const selectedRows = gridAdapter?.getSelectedRows?.() || [];
+			const hasSelection = selectedRows.length > 0;
+			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
+				event.preventDefault();
+				if (!hasSelection) {
+					return;
+				}
 			if (selectedRows.length > 1) {
 				this.deps.rowInteraction.duplicateRows(selectedRows);
 			} else {
@@ -163,11 +157,9 @@ export class GridInteractionController {
 			}
 			segments.push(this.deps.dataStore.blockToMarkdown(block));
 		}
-
 		if (segments.length === 0) {
 			return;
 		}
-
 		const markdown = segments.join('\n\n');
 		try {
 			await navigator.clipboard.writeText(markdown);
@@ -187,15 +179,12 @@ export class GridInteractionController {
 		if (validSelection.length > 1 && validSelection.includes(primaryIndex)) {
 			return validSelection;
 		}
-
 		if (primaryIndex >= 0 && primaryIndex < blocks.length) {
 			return [primaryIndex];
 		}
-
 		if (validSelection.length > 0) {
 			return validSelection;
 		}
-
 		return [];
 	}
 
@@ -208,70 +197,22 @@ export class GridInteractionController {
 		const isMultiSelect = selectedRows.length > 1;
 		const isIndexColumn = colId === '#';
 
-		this.contextMenu = ownerDoc.body.createDiv({ cls: 'tlb-context-menu' });
-		this.contextMenu.style.visibility = 'hidden';
-		this.contextMenu.style.left = '0px';
-		this.contextMenu.style.top = '0px';
-
-		if (isIndexColumn) {
-			const copySection = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			copySection.createSpan({ text: t('gridInteraction.copySection') });
-			copySection.addEventListener('click', () => {
-				this.copySection(blockIndex);
-				this.hideContextMenu();
-			});
-			this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
-		}
-
-		const insertAbove = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-		insertAbove.createSpan({ text: t('gridInteraction.insertRowAbove') });
-		insertAbove.addEventListener('click', () => {
-			this.deps.rowInteraction.addRow(blockIndex);
-			this.hideContextMenu();
+		this.contextMenu = buildGridContextMenu({
+			ownerDoc,
+			isIndexColumn,
+			isMultiSelect,
+			selectedRowCount: selectedRows.length,
+			actions: {
+				copySection: () => this.copySection(blockIndex),
+				insertAbove: () => this.deps.rowInteraction.addRow(blockIndex),
+				insertBelow: () => this.deps.rowInteraction.addRow(blockIndex + 1),
+				duplicateSelection: () => this.deps.rowInteraction.duplicateRows(selectedRows),
+				deleteSelection: () => this.deps.rowInteraction.deleteRows(selectedRows),
+				duplicateRow: () => this.deps.rowInteraction.duplicateRow(blockIndex),
+				deleteRow: () => this.deps.rowInteraction.deleteRow(blockIndex),
+				close: () => this.hideContextMenu()
+			}
 		});
-
-		const insertBelow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-		insertBelow.createSpan({ text: t('gridInteraction.insertRowBelow') });
-		insertBelow.addEventListener('click', () => {
-			this.deps.rowInteraction.addRow(blockIndex + 1);
-			this.hideContextMenu();
-		});
-
-		this.contextMenu.createDiv({ cls: 'tlb-context-menu-separator' });
-
-		if (isMultiSelect) {
-			const duplicateRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			duplicateRows.createSpan({
-				text: t('gridInteraction.duplicateSelected', { count: String(selectedRows.length) })
-			});
-			duplicateRows.addEventListener('click', () => {
-				this.deps.rowInteraction.duplicateRows(selectedRows);
-				this.hideContextMenu();
-			});
-
-			const deleteRows = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-			deleteRows.createSpan({
-				text: t('gridInteraction.deleteSelected', { count: String(selectedRows.length) })
-			});
-			deleteRows.addEventListener('click', () => {
-				this.deps.rowInteraction.deleteRows(selectedRows);
-				this.hideContextMenu();
-			});
-		} else {
-			const duplicateRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item' });
-			duplicateRow.createSpan({ text: t('gridInteraction.duplicateRow') });
-			duplicateRow.addEventListener('click', () => {
-				this.deps.rowInteraction.duplicateRow(blockIndex);
-				this.hideContextMenu();
-			});
-
-			const deleteRow = this.contextMenu.createDiv({ cls: 'tlb-context-menu-item tlb-context-menu-item-danger' });
-			deleteRow.createSpan({ text: t('gridInteraction.deleteRow') });
-			deleteRow.addEventListener('click', () => {
-				this.deps.rowInteraction.deleteRow(blockIndex);
-				this.hideContextMenu();
-			});
-		}
 
 		const defaultView = ownerDoc.defaultView || window;
 		const docElement = ownerDoc.documentElement;

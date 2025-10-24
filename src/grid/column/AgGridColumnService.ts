@@ -1,8 +1,11 @@
 import { ColDef, Column, ColumnMovedEvent, ColumnResizedEvent, ColumnState, GridApi } from 'ag-grid-community';
+
 import { ColumnDef as SchemaColumnDef, ROW_ID_FIELD, SortModelEntry } from '../GridAdapter';
-import { COLUMN_MAX_WIDTH, COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
-import { IconHeaderComponent } from '../headers/IconHeaderComponent';
-import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
+import { clampColumnWidth } from '../columnSizing';
+import { buildAgGridColumnDefs } from './ColumnDefinitionBuilder';
+import { ColumnLayoutManager } from './ColumnLayoutManager';
+import { applyQuickFilter as applyQuickFilterToGrid } from './QuickFilterManager';
+import { buildSortState, cloneColumnState } from './ColumnStateManager';
 
 export interface ColumnServiceCallbacks {
 	onColumnResize?: (field: string, width: number) => void;
@@ -29,6 +32,7 @@ type ColumnApiLike = {
 };
 
 export class AgGridColumnService {
+	private readonly columnLayoutManager: ColumnLayoutManager;
 	private gridApi: GridApi | null = null;
 	private columnApi: ColumnApiLike | null = null;
 	private columnLayoutInitialized = false;
@@ -36,7 +40,9 @@ export class AgGridColumnService {
 	private callbacks: ColumnServiceCallbacks = {};
 	private lastContainer: HTMLElement | null = null;
 
-	constructor(private readonly deps: ColumnServiceDependencies) {}
+	constructor(private readonly deps: ColumnServiceDependencies) {
+		this.columnLayoutManager = new ColumnLayoutManager({ getContainer: deps.getContainer });
+	}
 
 	configureCallbacks(callbacks: ColumnServiceCallbacks | undefined): void {
 		this.callbacks = callbacks ?? {};
@@ -69,119 +75,17 @@ export class AgGridColumnService {
 	}
 
 	buildColumnDefs(columns: SchemaColumnDef[]): ColDef[] {
-		const colDefs: ColDef[] = columns.map((col) => {
-			if (col.field === '#') {
-				return {
-					field: col.field,
-					headerName: col.headerName,
-					editable: false,
-					pinned: 'left',
-					lockPinned: true,
-					lockPosition: true,
-					suppressMovable: true,
-					width: 60,
-					maxWidth: 80,
-					sortable: true,
-					filter: false,
-					resizable: false,
-					suppressSizeToFit: true,
-					cellStyle: { textAlign: 'center' },
-					headerComponent: IconHeaderComponent,
-					headerComponentParams: {
-						icon: 'hashtag',
-						fallbacks: ['hash'],
-						tooltip: col.headerTooltip || col.headerName || 'Index'
-					}
-				};
-			}
-
-			if (col.field === 'status') {
-				const headerName = col.headerName ?? 'Status';
-				const tooltipFallback =
-					typeof headerName === 'string' && headerName.trim().length > 0 ? headerName : 'Status';
-
-				return {
-					field: col.field,
-					headerName,
-					headerTooltip: col.headerTooltip ?? tooltipFallback,
-					editable: false,
-					pinned: 'left',
-					lockPinned: true,
-					lockPosition: true,
-					suppressMovable: true,
-					width: 60,
-					resizable: false,
-					sortable: true,
-					filter: false,
-					suppressSizeToFit: true,
-					suppressNavigable: true,
-					cellRenderer: StatusCellRenderer,
-					cellStyle: {
-						textAlign: 'center',
-						cursor: 'pointer',
-						padding: '10px var(--ag-cell-horizontal-padding)'
-					},
-					headerComponent: IconHeaderComponent,
-					headerComponentParams: {
-						icon: 'list-checks',
-						fallbacks: ['checklist', 'check-square'],
-						tooltip: col.headerTooltip ?? tooltipFallback
-					}
-				};
-			}
-
-			const baseColDef: ColDef = {
-				field: col.field,
-				headerName: col.headerName,
-				editable: col.editable,
-				sortable: true,
-				filter: false,
-				resizable: true,
-				cellClass: 'tlb-cell-truncate'
-			};
-
-			const mergedColDef = { ...baseColDef, ...(col as any) };
-			if (typeof col.field === 'string' && col.field !== '#' && col.field !== 'status') {
-				mergedColDef.minWidth =
-					typeof mergedColDef.minWidth === 'number'
-						? clampColumnWidth(mergedColDef.minWidth)
-						: COLUMN_MIN_WIDTH;
-				mergedColDef.maxWidth =
-					typeof mergedColDef.maxWidth === 'number'
-						? clampColumnWidth(mergedColDef.maxWidth)
-						: COLUMN_MAX_WIDTH;
-			}
-
-			const pinnedFields = new Set(['任务', '任务名称', 'task', 'taskName', 'title', '标题']);
-			if (typeof col.field === 'string' && pinnedFields.has(col.field)) {
-				mergedColDef.pinned = 'left';
-				mergedColDef.lockPinned = true;
-			}
-
-			const explicitWidth = (mergedColDef as any).width;
-			if (typeof explicitWidth === 'number') {
-				const clamped = clampColumnWidth(explicitWidth);
-				(mergedColDef as any).width = clamped;
-				(mergedColDef as any).suppressSizeToFit = true;
-			}
-
-			return mergedColDef;
-		});
-
-		const statusColDef = colDefs.find((def) => def.field === 'status');
-		if (statusColDef) {
-			statusColDef.width = 80;
-			statusColDef.minWidth = 72;
-			statusColDef.maxWidth = 96;
-		}
-
-		return colDefs;
+		return buildAgGridColumnDefs(columns);
 	}
 
 	resizeColumns(): void {
 		const gridApi = this.gridApi;
+		if (!gridApi) {
+			return;
+		}
+
 		const container = this.deps.getContainer();
-		if (!gridApi || !container) {
+		if (!container) {
 			return;
 		}
 
@@ -198,14 +102,17 @@ export class AgGridColumnService {
 		gridApiAny?.doLayout?.();
 		gridApiAny?.checkGridSize?.();
 
-		const allColumns = gridApi.getAllDisplayedColumns() || [];
+		const columns = gridApi.getAllDisplayedColumns() || [];
 		if (!this.columnLayoutInitialized) {
-			this.initializeColumnSizing(allColumns);
+			const initialized = this.columnLayoutManager.initialize(gridApi, columns);
+			if (initialized) {
+				this.columnLayoutInitialized = true;
+			}
 			return;
 		}
 
-		this.applyWidthClamping(allColumns);
-		this.distributeSparseSpace(allColumns);
+		this.columnLayoutManager.applyWidthClamping(gridApi, columns);
+		this.columnLayoutManager.distributeSparseSpace(gridApi, columns);
 		gridApi.refreshHeader();
 		gridApi.refreshCells({ force: true });
 	}
@@ -284,7 +191,7 @@ export class AgGridColumnService {
 		if (!this.columnApi || typeof this.columnApi.getColumnState !== 'function') {
 			return null;
 		}
-		return this.cloneColumnState(this.columnApi.getColumnState());
+		return cloneColumnState(this.columnApi.getColumnState());
 	}
 
 	applyColumnState(state: ColumnState[] | null): void {
@@ -300,7 +207,7 @@ export class AgGridColumnService {
 		}
 
 		columnApi.applyColumnState({
-			state: this.cloneColumnState(state) ?? undefined,
+			state: cloneColumnState(state) ?? undefined,
 			applyOrder: true
 		});
 		this.applyQuickFilter();
@@ -312,15 +219,7 @@ export class AgGridColumnService {
 			return;
 		}
 
-		const state: ColumnState[] = Array.isArray(sortModel)
-			? sortModel
-					.filter((item) => typeof item?.field === 'string' && item.field.length > 0)
-					.map((item, index) => ({
-						colId: item.field,
-						sort: (item.direction === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc',
-						sortIndex: index
-					}))
-			: [];
+		const state = buildSortState(sortModel);
 
 		columnApi.applyColumnState({
 			defaultState: { sort: null, sortIndex: null },
@@ -337,228 +236,7 @@ export class AgGridColumnService {
 	}
 
 	applyQuickFilter(): void {
-		if (!this.gridApi) {
-			return;
-		}
-		const api = this.gridApi as GridApi & {
-			setQuickFilter?: (value: string) => void;
-			setQuickFilterColumns?: (columns: string[]) => void;
-			getColumns?: () => Column[] | null;
-			setGridOption?: (key: string, value: unknown) => void;
-			onFilterChanged?: () => void;
-		};
-
-		if (typeof api.setQuickFilterColumns === 'function' && typeof api.getColumns === 'function') {
-			const columns = api.getColumns() ?? [];
-			const filterable: string[] = [];
-			for (const column of columns) {
-				if (!column) {
-					continue;
-				}
-				const colId =
-					typeof column.getColId === 'function'
-						? column.getColId()
-						: typeof (column as any).getId === 'function'
-							? (column as any).getId()
-							: null;
-				if (!colId) {
-					continue;
-				}
-				if (colId === '#' || colId === ROW_ID_FIELD || colId === 'status') {
-					continue;
-				}
-				if (typeof column.isVisible === 'function' && !column.isVisible()) {
-					continue;
-				}
-				filterable.push(colId);
-			}
-			api.setQuickFilterColumns(filterable);
-		}
-
-		if (typeof api.setQuickFilter === 'function') {
-			api.setQuickFilter(this.quickFilterText);
-		} else if (typeof api.setGridOption === 'function') {
-			api.setGridOption('quickFilterText', this.quickFilterText);
-			if (typeof api.onFilterChanged === 'function') {
-				api.onFilterChanged();
-			}
-		}
+		applyQuickFilterToGrid(this.gridApi, this.quickFilterText);
 	}
 
-	private initializeColumnSizing(columns: Column[]): void {
-		const gridApi = this.gridApi;
-		const container = this.deps.getContainer();
-		if (!gridApi || !container) {
-			return;
-		}
-
-		const containerWidth = container.clientWidth ?? 0;
-		const containerHeight = container.clientHeight ?? 0;
-		if (containerWidth <= 0 || containerHeight <= 0) {
-			return;
-		}
-
-		if (columns.length === 0) {
-			this.columnLayoutInitialized = true;
-			return;
-		}
-
-		const storedWidths = new Map<string, number>();
-		const explicitWidths = new Map<string, number>();
-		let requiresAutoSize = false;
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
-				continue;
-			}
-
-			const colDef = column.getColDef() as any;
-			const stored = colDef.__tlbStoredWidth;
-			const explicit = colDef.width;
-
-			if (typeof stored === 'number') {
-				storedWidths.set(colId, clampColumnWidth(stored));
-			} else if (typeof explicit === 'number') {
-				explicitWidths.set(colId, clampColumnWidth(explicit));
-			} else {
-				requiresAutoSize = true;
-			}
-		}
-
-		if (requiresAutoSize && typeof gridApi.sizeColumnsToFit === 'function') {
-			gridApi.sizeColumnsToFit({
-				defaultMinWidth: COLUMN_MIN_WIDTH,
-				defaultMaxWidth: COLUMN_MAX_WIDTH,
-				columnLimits: columns
-					.filter((column) => {
-						const id = column.getColId();
-						return id && id !== '#' && id !== 'status';
-					})
-					.map((column) => ({
-						key: column.getColId(),
-						minWidth: COLUMN_MIN_WIDTH,
-						maxWidth: COLUMN_MAX_WIDTH
-					}))
-			});
-		}
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
-				continue;
-			}
-
-			if (storedWidths.has(colId)) {
-				const storedWidth = storedWidths.get(colId);
-				if (storedWidth !== undefined) {
-					gridApi.setColumnWidths([{ key: colId, newWidth: storedWidth }]);
-				}
-				continue;
-			}
-
-			if (explicitWidths.has(colId)) {
-				const explicitWidth = explicitWidths.get(colId);
-				if (explicitWidth !== undefined) {
-					gridApi.setColumnWidths([{ key: colId, newWidth: explicitWidth }]);
-				}
-			}
-		}
-
-		this.columnLayoutInitialized = true;
-		this.applyWidthClamping(columns);
-		this.distributeSparseSpace(columns);
-		gridApi.refreshHeader();
-		gridApi.refreshCells({ force: true });
-	}
-
-	private applyWidthClamping(columns: Column[]): void {
-		const gridApi = this.gridApi;
-		if (!gridApi) {
-			return;
-		}
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
-				continue;
-			}
-
-			const current = column.getActualWidth();
-			const clamped = clampColumnWidth(current);
-			if (Math.abs(clamped - current) > 0.5) {
-				gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
-			}
-		}
-	}
-
-	private distributeSparseSpace(columns: Column[]): void {
-		const gridApi = this.gridApi;
-		const container = this.deps.getContainer();
-		if (!gridApi || !container) {
-			return;
-		}
-
-		const viewportWidth = container.clientWidth ?? 0;
-		if (viewportWidth <= 0) {
-			return;
-		}
-
-		const totalWidth = columns.reduce((sum, column) => sum + column.getActualWidth(), 0);
-		let deficit = viewportWidth - totalWidth;
-		if (deficit <= 1) {
-			return;
-		}
-
-		const tolerance = 0.5;
-		let adjustable = columns.filter((column) => {
-			const id = column.getColId();
-			return id && id !== '#' && id !== 'status' && column.isResizable();
-		});
-
-		if (adjustable.length === 0) {
-			return;
-		}
-
-		while (deficit > tolerance && adjustable.length > 0) {
-			const share = deficit / adjustable.length;
-			let consumed = 0;
-			const nextRound: Column[] = [];
-
-			for (const column of adjustable) {
-				const current = column.getActualWidth();
-				const target = clampColumnWidth(current + share);
-				const delta = target - current;
-
-				if (delta > tolerance) {
-					const colId = column.getColId();
-					if (colId) {
-						gridApi.setColumnWidths([{ key: colId, newWidth: target }]);
-					}
-					consumed += delta;
-				}
-
-				if (target < COLUMN_MAX_WIDTH - tolerance) {
-					nextRound.push(column);
-				}
-			}
-
-			if (consumed <= tolerance) {
-				break;
-			}
-
-			deficit -= consumed;
-			adjustable =
-				nextRound.length > 0
-					? nextRound
-					: adjustable.filter((column) => column.getActualWidth() < COLUMN_MAX_WIDTH - tolerance);
-		}
-	}
-
-	private cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
-		if (!state) {
-			return null;
-		}
-		return state.map((item) => ({ ...item }));
-	}
 }

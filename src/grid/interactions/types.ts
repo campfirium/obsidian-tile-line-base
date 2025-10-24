@@ -82,6 +82,7 @@ export interface ClipboardOptions {
 	getGridApi(): GridApi | null;
 	getFocusedDocument(): Document | null;
 	getGridContext(): GridInteractionContext | undefined;
+	stopCellEditing(): void;
 	translate(key: string): string;
 	debug: DebugLogger;
 }

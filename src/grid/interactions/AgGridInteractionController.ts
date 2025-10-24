@@ -66,6 +66,7 @@ export class AgGridInteractionController {
 			getGridApi: () => this.deps.getGridApi(),
 			getFocusedDocument: () => this.focusedDoc,
 			getGridContext: () => this.deps.getGridContext(),
+			stopCellEditing: () => this.stopActiveEditingSession(),
 			translate: (key) => this.deps.translate(key),
 			debug: (...args) => this.debug(...args)
 		});
@@ -222,6 +223,17 @@ export class AgGridInteractionController {
 	private handleViewportActivity(reason: ViewportResizeReason): void {
 		this.debug('handleViewportActivity', reason);
 		this.composition.requestProxyRealign(reason);
+	}
+
+	private stopActiveEditingSession(): void {
+		if (!this.editing) {
+			return;
+		}
+		const api = this.deps.getGridApi();
+		if (!api) {
+			return;
+		}
+		api.stopEditing();
 	}
 
 	private debug(...args: unknown[]): void {

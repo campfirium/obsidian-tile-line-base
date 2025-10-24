@@ -47,12 +47,25 @@ export class AgGridInteractionController {
 	private viewportListenerCleanup: (() => void) | null = null;
 	private readonly viewportResizeCallbacks: Array<(reason: ViewportResizeReason) => void> = [];
 	private pendingEnterAtLastRow = false;
+	private pendingFocusShift: { rowDelta: number; colDelta: number } | null = null;
 
 	constructor(deps: InteractionControllerDeps) {
 		this.deps = deps;
 	}
 
+	private debug(...args: unknown[]): void {
+		const globalRef = globalThis as unknown as {
+			__TLB_DEBUG_INTERACTION__?: boolean;
+			console?: Console;
+		};
+		if (!globalRef.__TLB_DEBUG_INTERACTION__ || !globalRef.console?.debug) {
+			return;
+		}
+		globalRef.console.debug('[AgGridInteraction]', ...args);
+	}
+
 	setContainer(container: HTMLElement | null): void {
+		this.debug('setContainer', { hasContainer: Boolean(container) });
 		if (this.container !== container) {
 			this.unbindViewportListeners();
 		}
@@ -73,6 +86,7 @@ export class AgGridInteractionController {
 	}
 
 	bindViewportListeners(container: HTMLElement): void {
+		this.debug('bindViewportListeners');
 		this.unbindViewportListeners();
 
 		const onScroll = () => this.handleViewportActivity('scroll');
@@ -130,6 +144,11 @@ export class AgGridInteractionController {
 			event.node?.rowIndex ?? null,
 			keyEvent
 		);
+		this.debug('handleGridCellKeyDown', {
+			key: keyEvent.key,
+			ctrlKey: keyEvent.ctrlKey,
+			metaKey: keyEvent.metaKey
+		});
 	}
 
 	handleSuppressKeyboardEvent(params: {
@@ -142,15 +161,23 @@ export class AgGridInteractionController {
 		if (!keyEvent) {
 			return false;
 		}
-		return this.handleEnterAtLastRow(
+		const handled = this.handleEnterAtLastRow(
 			params.api,
 			params.column?.getColId?.() ?? null,
 			params.node?.rowIndex ?? null,
 			keyEvent
 		);
+		if (handled) {
+			this.debug('handleSuppressKeyboardEvent', { key: keyEvent.key });
+		}
+		return handled;
 	}
 
 	handleCellFocused(event: CellFocusedEvent): void {
+		this.debug('handleCellFocused', {
+			rowIndex: event.rowIndex,
+			columnId: (event as any).column?.getColId?.() ?? (event as any).columnId ?? null
+		});
 		this.focusedDoc = this.container?.ownerDocument || document;
 
 		if (event.rowIndex == null || !event.column) {
@@ -172,6 +199,7 @@ export class AgGridInteractionController {
 	}
 
 	handleCellEditingStarted(): void {
+		this.debug('handleCellEditingStarted');
 		this.editing = true;
 		this.cancelPendingCapture('editing-started');
 		if (this.focusedDoc) {
@@ -180,15 +208,19 @@ export class AgGridInteractionController {
 	}
 
 	handleCellEditingStopped(): void {
+		this.debug('handleCellEditingStopped');
 		this.editing = false;
 		this.armProxyForCurrentCell();
 	}
 
 	onLayoutInvalidated(): void {
+		this.debug('onLayoutInvalidated');
 		this.armProxyForCurrentCell();
+		this.applyPendingFocusShift();
 	}
 
 	destroy(): void {
+		this.debug('destroy');
 		this.cancelPendingCapture('destroy');
 		this.unbindViewportListeners();
 		if (this.proxyRealignTimer != null) {
@@ -201,10 +233,12 @@ export class AgGridInteractionController {
 		this.focusedRowIndex = null;
 		this.pendingEnterAtLastRow = false;
 		this.editing = false;
+		this.pendingFocusShift = null;
 		this.container = null;
 	}
 
 	private handleViewportActivity(reason: ViewportResizeReason): void {
+		this.debug('handleViewportActivity', reason);
 		this.notifyViewportResize(reason);
 		this.requestProxyRealign(reason);
 	}
@@ -230,18 +264,35 @@ export class AgGridInteractionController {
 		if (!event || typeof (event as { key?: unknown }).key !== 'string') {
 			return null;
 		}
-		const keyEvent = event as KeyboardEventLike;
-		if (typeof keyEvent.preventDefault !== 'function') {
-			keyEvent.preventDefault = () => {};
-		}
-		if (typeof keyEvent.stopPropagation !== 'function') {
-			keyEvent.stopPropagation = () => {};
-		}
-		keyEvent.ctrlKey = Boolean(keyEvent.ctrlKey);
-		keyEvent.metaKey = Boolean(keyEvent.metaKey);
-		keyEvent.altKey = Boolean(keyEvent.altKey);
-		keyEvent.shiftKey = Boolean(keyEvent.shiftKey);
-		return keyEvent;
+		const original = event as {
+			key: string;
+			ctrlKey?: boolean;
+			metaKey?: boolean;
+			altKey?: boolean;
+			shiftKey?: boolean;
+			preventDefault?: () => void;
+			stopPropagation?: () => void;
+		};
+
+		const normalized: KeyboardEventLike = {
+			key: original.key,
+			ctrlKey: Boolean(original.ctrlKey),
+			metaKey: Boolean(original.metaKey),
+			altKey: Boolean(original.altKey),
+			shiftKey: Boolean(original.shiftKey),
+			preventDefault: () => {
+				if (typeof original.preventDefault === 'function') {
+					original.preventDefault();
+				}
+			},
+			stopPropagation: () => {
+				if (typeof original.stopPropagation === 'function') {
+					original.stopPropagation();
+				}
+			}
+		};
+
+		return normalized;
 	}
 
 	private isPrintable(e: KeyboardEventLike): boolean {
@@ -321,6 +372,7 @@ export class AgGridInteractionController {
 	}
 
 	private cancelPendingCapture(reason?: string): void {
+		this.debug('cancelPendingCapture', reason);
 		if (this.pendingCaptureCancel) {
 			const cancel = this.pendingCaptureCancel;
 			this.pendingCaptureCancel = undefined;
@@ -344,6 +396,7 @@ export class AgGridInteractionController {
 			this.proxyRealignTimer = null;
 			this.armProxyForCurrentCell();
 		}, 80);
+		this.debug('requestProxyRealign scheduled', reason);
 	}
 
 	private notifyViewportResize(reason: ViewportResizeReason): void {
@@ -402,6 +455,12 @@ export class AgGridInteractionController {
 	}
 
 	private armProxyForCurrentCell(): void {
+		this.debug('armProxyForCurrentCell:start', {
+			editMode: this.editing,
+			hasFocusedDoc: Boolean(this.focusedDoc),
+			rowIndex: this.focusedRowIndex,
+			colId: this.focusedColId
+		});
 		const gridApi = this.getGridApi();
 		if (!gridApi) return;
 		if (this.editing) return;
@@ -415,6 +474,7 @@ export class AgGridInteractionController {
 		const colKey = this.focusedColId;
 		const cellEl = this.getCellElementFor(rowIndex, colKey, doc);
 		if (!cellEl) {
+			this.debug('armProxyForCurrentCell:cell-missing', { rowIndex, colKey });
 			this.cancelPendingCapture('cell-missing');
 			return;
 		}
@@ -432,6 +492,9 @@ export class AgGridInteractionController {
 				this.pendingCaptureCancel = undefined;
 				if (this.editing) return;
 				if (this.focusedRowIndex == null || !this.focusedColId) return;
+				this.debug('armProxyForCurrentCell:captureResolved', {
+					textLength: text?.length ?? 0
+				});
 				return this.startEditingWithCapturedText(doc, this.focusedRowIndex, this.focusedColId, text);
 			})
 			.catch((err) => {
@@ -447,6 +510,7 @@ export class AgGridInteractionController {
 				) {
 					return;
 				}
+				this.debug('armProxyForCurrentCell:captureError', err);
 				console.error(this.translate('agGrid.compositionCaptureFailed'), err);
 			});
 	}
@@ -458,6 +522,13 @@ export class AgGridInteractionController {
 		}
 		const gridApi = this.getGridApi();
 		if (!gridApi) return;
+
+		this.debug('handleProxyKeyDown', {
+			key: event.key,
+			ctrlKey: event.ctrlKey,
+			metaKey: event.metaKey,
+			shiftKey: event.shiftKey
+		});
 
 		if (this.isPrintable(event)) {
 			return;
@@ -519,6 +590,11 @@ export class AgGridInteractionController {
 		if (!gridApi) {
 			return;
 		}
+
+		this.debug('handleCopyShortcut', {
+			hasCellEvent: Boolean(cellEvent),
+			focusedCell: gridApi.getFocusedCell()
+		});
 
 		if (cellEvent) {
 			const colId = cellEvent.column?.getColId?.() ?? null;
@@ -604,10 +680,30 @@ export class AgGridInteractionController {
 		doc.body.removeChild(textarea);
 	}
 
+	private applyPendingFocusShift(): void {
+		if (!this.pendingFocusShift) {
+			return;
+		}
+		const shift = this.pendingFocusShift;
+		const success = this.moveFocus(shift.rowDelta, shift.colDelta);
+		if (success) {
+			this.debug('pendingFocusShift:applied', shift);
+			this.pendingFocusShift = null;
+		} else {
+			this.debug('pendingFocusShift:pending', shift);
+		}
+	}
+
 	private handleProxyEnter(shift: boolean): void {
 		const gridApi = this.getGridApi();
 		if (!gridApi) return;
 		if (this.focusedRowIndex == null || !this.focusedColId) return;
+
+		this.debug('handleProxyEnter', {
+			shift,
+			rowIndex: this.focusedRowIndex,
+			colId: this.focusedColId
+		});
 
 		if (shift) {
 			this.moveFocus(-1, 0);
@@ -624,6 +720,7 @@ export class AgGridInteractionController {
 			if (callback) {
 				callback(colId);
 			}
+			this.debug('handleProxyEnter:lastRow', { colId });
 			return;
 		}
 
@@ -636,6 +733,11 @@ export class AgGridInteractionController {
 
 		const focusedCell = gridApi.getFocusedCell();
 		if (!focusedCell) return;
+
+		this.debug('handleDeleteKey:start', {
+			rowIndex: focusedCell.rowIndex,
+			colId: focusedCell.column.getColId()
+		});
 
 		const field = focusedCell.column.getColId();
 		if (field === '#' || field === ROW_ID_FIELD || field === 'status') {
@@ -675,24 +777,25 @@ export class AgGridInteractionController {
 		}
 
 		this.armProxyForCurrentCell();
+		this.debug('handleDeleteKey:cleared', { blockIndex });
 	}
 
-	private moveFocus(rowDelta: number, colDelta: number): void {
+	private moveFocus(rowDelta: number, colDelta: number): boolean {
 		const gridApi = this.getGridApi();
-		if (!gridApi) return;
-		if (this.focusedRowIndex == null || !this.focusedColId) return;
+		if (!gridApi) return false;
+		if (this.focusedRowIndex == null || !this.focusedColId) return false;
 
 		const displayedColumns = gridApi.getAllDisplayedColumns();
-		if (!displayedColumns || displayedColumns.length === 0) return;
+		if (!displayedColumns || displayedColumns.length === 0) return false;
 
 		const currentColIndex = displayedColumns.findIndex((col) => col.getColId() === this.focusedColId);
-		if (currentColIndex === -1) return;
+		if (currentColIndex === -1) return false;
 
 		const targetColIndex = Math.max(0, Math.min(displayedColumns.length - 1, currentColIndex + colDelta));
 		const targetCol = displayedColumns[targetColIndex];
 
 		const rowCount = gridApi.getDisplayedRowCount();
-		if (rowCount === 0) return;
+		if (rowCount === 0) return false;
 		const targetRowIndex = Math.max(0, Math.min(rowCount - 1, this.focusedRowIndex + rowDelta));
 
 		this.cancelPendingCapture('focus-move');
@@ -701,6 +804,13 @@ export class AgGridInteractionController {
 		this.focusedRowIndex = targetRowIndex;
 		this.focusedColId = targetCol.getColId();
 		this.armProxyForCurrentCell();
+		this.debug('moveFocus', {
+			targetRowIndex,
+			targetColId: this.focusedColId,
+			rowDelta,
+			colDelta
+		});
+		return true;
 	}
 
 	private handleEnterAtLastRow(
@@ -717,6 +827,12 @@ export class AgGridInteractionController {
 		if (!callback) {
 			return false;
 		}
+
+		this.debug('handleEnterAtLastRow', {
+			columnId,
+			rowIndex,
+			focusedRowIndex: this.focusedRowIndex
+		});
 
 		const editingCells = typeof api.getEditingCells === 'function' ? api.getEditingCells() : [];
 		const activeEditingCell = editingCells.length > 0 ? editingCells[0] : undefined;
@@ -741,6 +857,7 @@ export class AgGridInteractionController {
 		keyEvent.preventDefault?.();
 
 		if (this.pendingEnterAtLastRow) {
+			this.debug('handleEnterAtLastRow:pending');
 			return true;
 		}
 		this.pendingEnterAtLastRow = true;
@@ -779,6 +896,9 @@ export class AgGridInteractionController {
 			setTimeout(() => {
 				try {
 					callback(nextColId);
+					this.pendingFocusShift = { rowDelta: 1, colDelta: 0 };
+					this.debug('handleEnterAtLastRow:callback', { nextColId });
+					this.applyPendingFocusShift();
 				} finally {
 					this.pendingEnterAtLastRow = false;
 				}

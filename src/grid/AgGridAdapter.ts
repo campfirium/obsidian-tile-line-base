@@ -54,6 +54,14 @@ export class AgGridAdapter implements GridAdapter {
 	private readonly lifecycle = new AgGridLifecycleManager();
 	private readonly interaction: AgGridInteractionController;
 
+	get gridApi(): GridApi | null {
+		return this.lifecycle.getGridApi();
+	}
+
+	get columnApi(): unknown {
+		return this.lifecycle.getColumnApi();
+	}
+
 	constructor() {
 		this.interaction = new AgGridInteractionController({
 			getGridApi: () => this.lifecycle.getGridApi(),

@@ -1,6 +1,8 @@
 import { ROW_ID_FIELD, type GridAdapter, type RowData } from '../grid/GridAdapter';
-import { debugLog } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 import type { Schema } from './SchemaBuilder';
+
+const logger = getLogger('table-view:focus');
 
 export interface FocusManagerDeps {
 	getSchema: () => Schema | null;
@@ -24,7 +26,7 @@ interface PendingFocusRequest {
 }
 
 /**
- * 负责聚焦到指定行并在必要时重试，避免 TableView 内部维护定时器与状态。
+ * 负责聚焦到指定行并在必要时重试，避免 TableView 内部维护定时器与状态�?
  */
 export class FocusManager {
 	private pendingRequest: PendingFocusRequest | null = null;
@@ -37,11 +39,11 @@ export class FocusManager {
 		const blockCount = this.deps.getBlockCount();
 
 		if (!schema) {
-			debugLog('[FocusDebug]', 'focusRow: missing schema', { rowIndex, field });
+			logger.trace('[FocusDebug]', 'focusRow: missing schema', { rowIndex, field });
 			return;
 		}
 		if (rowIndex < 0 || rowIndex >= blockCount) {
-			debugLog('[FocusDebug]', 'focusRow: index out of range', {
+			logger.trace('[FocusDebug]', 'focusRow: index out of range', {
 				rowIndex,
 				field,
 				blockCount
@@ -64,7 +66,7 @@ export class FocusManager {
 		};
 
 		const visibleRows = this.deps.getVisibleRows();
-		debugLog('[FocusDebug]', 'focusRow: request registered', {
+		logger.trace('[FocusDebug]', 'focusRow: request registered', {
 			rowIndex,
 			field: field ?? null,
 			maxRetries,
@@ -77,10 +79,10 @@ export class FocusManager {
 
 	handleGridModelUpdated(): void {
 		if (!this.pendingRequest) {
-			debugLog('[FocusDebug]', 'handleGridModelUpdated: no pending request');
+			logger.trace('[FocusDebug]', 'handleGridModelUpdated: no pending request');
 			return;
 		}
-		debugLog('[FocusDebug]', 'handleGridModelUpdated: reschedule', {
+		logger.trace('[FocusDebug]', 'handleGridModelUpdated: reschedule', {
 			rowIndex: this.pendingRequest.rowIndex,
 			field: this.pendingRequest.field ?? null,
 			retriesLeft: this.pendingRequest.retriesLeft
@@ -95,13 +97,13 @@ export class FocusManager {
 		}
 
 		if (this.pendingRequest) {
-			debugLog('[FocusDebug]', 'clearPendingFocus', {
+			logger.trace('[FocusDebug]', 'clearPendingFocus', {
 				reason: reason ?? 'unknown',
 				rowIndex: this.pendingRequest.rowIndex,
 				field: this.pendingRequest.field ?? null
 			});
 		} else {
-			debugLog('[FocusDebug]', 'clearPendingFocus', {
+			logger.trace('[FocusDebug]', 'clearPendingFocus', {
 				reason: reason ?? 'unknown',
 				skipped: true
 			});
@@ -117,7 +119,7 @@ export class FocusManager {
 	private scheduleFocusAttempt(delay: number, reason: string): void {
 		const request = this.pendingRequest;
 		if (!request) {
-			debugLog('[FocusDebug]', 'scheduleFocusAttempt: no pending request', { reason, delay });
+			logger.trace('[FocusDebug]', 'scheduleFocusAttempt: no pending request', { reason, delay });
 			return;
 		}
 
@@ -127,7 +129,7 @@ export class FocusManager {
 			this.retryTimer = null;
 		}
 
-		debugLog('[FocusDebug]', 'scheduleFocusAttempt', {
+		logger.trace('[FocusDebug]', 'scheduleFocusAttempt', {
 			reason,
 			delay: effectiveDelay,
 			rowIndex: request.rowIndex,
@@ -145,7 +147,7 @@ export class FocusManager {
 	private attemptFocusOnPendingRow(): void {
 		const request = this.pendingRequest;
 		if (!request) {
-			debugLog('[FocusDebug]', 'attemptFocus: skipped (no request)');
+			logger.trace('[FocusDebug]', 'attemptFocus: skipped (no request)');
 			return;
 		}
 
@@ -154,7 +156,7 @@ export class FocusManager {
 		const gridAdapter = this.deps.getGridAdapter();
 
 		if (!gridAdapter || !schema) {
-			debugLog('[FocusDebug]', 'attemptFocus: grid/schema not ready', {
+			logger.trace('[FocusDebug]', 'attemptFocus: grid/schema not ready', {
 				rowIndex: request.rowIndex,
 				field: request.field ?? null,
 				attemptIndex,
@@ -171,7 +173,7 @@ export class FocusManager {
 		const adapter: any = gridAdapter;
 		const api = adapter.gridApi;
 		if (!api) {
-			debugLog('[FocusDebug]', 'attemptFocus: grid API unavailable', {
+			logger.trace('[FocusDebug]', 'attemptFocus: grid API unavailable', {
 				rowIndex: request.rowIndex,
 				field: targetField,
 				attemptIndex,
@@ -199,7 +201,7 @@ export class FocusManager {
 		}
 
 		if (!targetNode) {
-			debugLog('[FocusDebug]', 'attemptFocus: target node missing', {
+			logger.trace('[FocusDebug]', 'attemptFocus: target node missing', {
 				rowIndex: request.rowIndex,
 				field: targetField,
 				attemptIndex,
@@ -216,7 +218,7 @@ export class FocusManager {
 		);
 
 		if (effectiveIndex === -1 || effectiveIndex === null) {
-			debugLog('[FocusDebug]', 'attemptFocus: effective index not found', {
+			logger.trace('[FocusDebug]', 'attemptFocus: effective index not found', {
 				rowIndex: request.rowIndex,
 				field: targetField,
 				attemptIndex,
@@ -243,7 +245,7 @@ export class FocusManager {
 
 		if (request.pendingVerification) {
 			if (hasFocus) {
-				debugLog('[FocusDebug]', 'attemptFocus: verification success', {
+				logger.trace('[FocusDebug]', 'attemptFocus: verification success', {
 					rowIndex: request.rowIndex,
 					field: targetField,
 					attemptIndex
@@ -251,7 +253,7 @@ export class FocusManager {
 				this.clearPendingFocus('verification-success');
 				return;
 			}
-			debugLog('[FocusDebug]', 'attemptFocus: verification failed', {
+			logger.trace('[FocusDebug]', 'attemptFocus: verification failed', {
 				rowIndex: request.rowIndex,
 				field: targetField,
 				attemptIndex
@@ -262,7 +264,7 @@ export class FocusManager {
 		}
 
 		if (hasFocus) {
-			debugLog('[FocusDebug]', 'attemptFocus: already focused', {
+			logger.trace('[FocusDebug]', 'attemptFocus: already focused', {
 				rowIndex: request.rowIndex,
 				field: targetField,
 				attemptIndex
@@ -287,7 +289,7 @@ export class FocusManager {
 			api.setFocusedCell(effectiveIndex, targetField);
 		}
 
-		debugLog('[FocusDebug]', 'attemptFocus: issued focus command', {
+		logger.trace('[FocusDebug]', 'attemptFocus: issued focus command', {
 			rowIndex: request.rowIndex,
 			field: targetField,
 			attemptIndex,
@@ -308,7 +310,7 @@ export class FocusManager {
 		}
 
 		if (request.retriesLeft <= 1) {
-			debugLog('[FocusDebug]', 'handleFocusRetry: exhausted', {
+			logger.trace('[FocusDebug]', 'handleFocusRetry: exhausted', {
 				reason,
 				rowIndex: request.rowIndex,
 				field: request.field ?? null
@@ -318,7 +320,7 @@ export class FocusManager {
 		}
 
 		request.retriesLeft -= 1;
-		debugLog('[FocusDebug]', 'handleFocusRetry: scheduling retry', {
+		logger.trace('[FocusDebug]', 'handleFocusRetry: scheduling retry', {
 			reason,
 			rowIndex: request.rowIndex,
 			field: request.field ?? null,

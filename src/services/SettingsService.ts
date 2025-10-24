@@ -1,21 +1,28 @@
 import type { Plugin } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition, SortRule } from '../types/filterView';
 import type { ConfigCacheEntry } from '../types/config';
+import type { LogLevelName, LoggingConfig } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 
-const LOG_PREFIX = '[TileLineBase]';
+const logger = getLogger('service:settings');
 
 export interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	configCache: Record<string, ConfigCacheEntry>;
+	logging: LoggingConfig;
 }
 
 export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	fileViewPrefs: {},
 	columnLayouts: {},
 	filterViews: {},
-	configCache: {}
+	configCache: {},
+	logging: {
+		globalLevel: 'warn',
+		scopeLevels: {}
+	}
 };
 
 export class SettingsService {
@@ -33,6 +40,7 @@ export class SettingsService {
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.configCache = { ...DEFAULT_SETTINGS.configCache, ...(merged.configCache ?? {}) };
+		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
@@ -87,7 +95,7 @@ export class SettingsService {
 		layout[field] = rounded;
 		this.settings.columnLayouts[filePath] = layout;
 		this.persist().catch((error) => {
-			console.error(LOG_PREFIX, 'Failed to persist column width preference', error);
+			logger.error('Failed to persist column width preference', error);
 		});
 		return true;
 	}
@@ -152,8 +160,61 @@ export class SettingsService {
 		try {
 			return JSON.parse(JSON.stringify(value)) as T;
 		} catch (error) {
-			console.warn(LOG_PREFIX, 'deepClone fallback failed, returning original reference', error);
+			logger.warn('deepClone fallback failed, returning original reference', error);
 			return value;
 		}
+	}
+
+	getLoggingConfig(): LoggingConfig {
+		return {
+			globalLevel: this.settings.logging.globalLevel,
+			scopeLevels: { ...this.settings.logging.scopeLevels }
+		};
+	}
+
+	async saveLoggingConfig(config: LoggingConfig): Promise<void> {
+		this.settings.logging = this.sanitizeLoggingConfig(config);
+		await this.persist();
+	}
+
+	private sanitizeLoggingConfig(raw: Partial<LoggingConfig> | undefined): LoggingConfig {
+		const defaultConfig: LoggingConfig = {
+			globalLevel: DEFAULT_SETTINGS.logging.globalLevel,
+			scopeLevels: { ...DEFAULT_SETTINGS.logging.scopeLevels }
+		};
+		if (!raw) {
+			return defaultConfig;
+		}
+		const normalize = (level: unknown): LogLevelName | null => {
+			if (typeof level !== 'string') {
+				return null;
+			}
+			switch (level) {
+				case 'error':
+				case 'warn':
+				case 'info':
+				case 'debug':
+				case 'trace':
+					return level;
+				default:
+					return null;
+			}
+		};
+
+		const scopeLevels: Record<string, LogLevelName> = {};
+		if (raw.scopeLevels && typeof raw.scopeLevels === 'object') {
+			for (const [scope, level] of Object.entries(raw.scopeLevels)) {
+				const normalized = normalize(level);
+				if (normalized) {
+					scopeLevels[scope] = normalized;
+				}
+			}
+		}
+
+		const globalLevel = normalize(raw.globalLevel) ?? defaultConfig.globalLevel;
+		return {
+			globalLevel,
+			scopeLevels
+		};
 	}
 }

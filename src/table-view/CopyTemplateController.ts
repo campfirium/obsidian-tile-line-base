@@ -4,6 +4,9 @@ import type { TableDataStore } from './TableDataStore';
 import type { Schema } from './SchemaBuilder';
 import type { H2Block } from './MarkdownBlockParser';
 import { CopyTemplateModal } from './CopyTemplateModal';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('table-view:copy-template');
 
 interface CopyTemplateControllerDeps {
 	app: App;
@@ -122,7 +125,7 @@ export class CopyTemplateController {
 		try {
 			await Promise.resolve(this.persistTemplate());
 		} catch (error) {
-			console.error('[TileLineBase] Failed to persist copy template', error);
+			logger.error('Failed to persist copy template', error);
 		}
 	}
 

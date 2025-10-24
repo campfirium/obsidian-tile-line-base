@@ -1,5 +1,8 @@
 import type TileLineBasePlugin from '../main';
 import type { ConfigCacheEntry, TlbConfigBlock } from '../types/config';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('cache:file');
 
 /**
  * 文件配置缓存管理器
@@ -57,7 +60,7 @@ export class FileCacheManager {
 		};
 		// 异步保存
 		this.save().catch((error) => {
-			console.error('[TileLineBase] Failed to save config cache:', error);
+			logger.error('Failed to save config cache', error);
 		});
 	}
 
@@ -67,7 +70,7 @@ export class FileCacheManager {
 	invalidateCache(fileId: string): void {
 		delete this.cache[fileId];
 		this.save().catch((error) => {
-			console.error('[TileLineBase] Failed to save config cache:', error);
+			logger.error('Failed to save config cache', error);
 		});
 	}
 
@@ -77,7 +80,7 @@ export class FileCacheManager {
 	clearAll(): void {
 		this.cache = {};
 		this.save().catch((error) => {
-			console.error('[TileLineBase] Failed to clear config cache:', error);
+			logger.error('Failed to clear config cache', error);
 		});
 	}
 }

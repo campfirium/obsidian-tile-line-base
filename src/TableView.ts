@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
 import type { ColumnState } from "ag-grid-community";
 import type { GridAdapter } from "./grid/GridAdapter";
-import { debugLog } from "./utils/logger";
+import { getLogger } from "./utils/logger";
 import { ColumnLayoutStore } from "./table-view/ColumnLayoutStore";
 import { GridController } from "./table-view/GridController";
 import { MarkdownBlockParser, H2Block } from "./table-view/MarkdownBlockParser";
@@ -27,6 +27,7 @@ import { t } from "./i18n";
 import { CopyTemplateController } from "./table-view/CopyTemplateController";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
+const logger = getLogger("view:table");
 
 export interface TableViewState extends Record<string, unknown> {
 	filePath: string;
@@ -77,7 +78,7 @@ export class TableView extends ItemView {
 	}
 
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
-		debugLog("[TableView] setState", state);
+		logger.debug("setState", state);
 		try {
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
 			if (file instanceof TFile) {
@@ -85,7 +86,7 @@ export class TableView extends ItemView {
 				await this.render();
 			}
 		} catch (error) {
-			console.error("[TableView] setState failed", error);
+			logger.error("setState failed", error);
 			throw error;
 		}
 	}

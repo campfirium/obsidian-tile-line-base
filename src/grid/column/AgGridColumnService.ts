@@ -139,7 +139,9 @@ export class AgGridColumnService {
 		}
 
 		const colDef = event.column.getColDef() as any;
-		colDef.__tlbStoredWidth = clamped;
+		const context = colDef.context ?? {};
+		context.tlbStoredWidth = clamped;
+		colDef.context = context;
 
 		this.callbacks.onColumnResize?.(colId, clamped);
 	}

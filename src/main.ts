@@ -1,6 +1,13 @@
-import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
-import { debugLog } from './utils/logger';
+import {
+	applyLoggingConfig,
+	getLogger,
+	getLoggingConfig,
+	installLoggerConsoleBridge,
+	setGlobalLogLevel,
+	subscribeLoggingConfig
+} from './utils/logger';
 import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
 import { FileCacheManager } from './cache/FileCacheManager';
@@ -8,6 +15,10 @@ import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './servi
 import { WindowContextManager } from './plugin/WindowContextManager';
 import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
+import type { LogLevelName } from './utils/logger';
+
+const logger = getLogger('plugin:main');
+const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
 
 function snapshotLeaf(manager: WindowContextManager, leaf: WorkspaceLeaf | null | undefined): Record<string, unknown> | null {
 	if (!leaf) {
@@ -35,6 +46,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private suppressAutoSwitchUntil = new Map<string, number>();
 	private viewCoordinator!: ViewSwitchCoordinator;
 	public cacheManager: FileCacheManager | null = null;
+	private unsubscribeLogging: (() => void) | null = null;
 
 	async onload() {
 		setPluginContext(this);
@@ -43,35 +55,49 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		await this.loadSettings();
 
+		applyLoggingConfig(this.settings.logging);
+		this.unsubscribeLogging = subscribeLoggingConfig((config) => {
+			this.settingsService.saveLoggingConfig(config).catch((error) => {
+				logger.error('Failed to persist logging configuration', error);
+			});
+		});
+		this.register(() => {
+			if (this.unsubscribeLogging) {
+				this.unsubscribeLogging();
+				this.unsubscribeLogging = null;
+			}
+		});
+		installLoggerConsoleBridge();
+
 		// Initialise cache manager
 		this.cacheManager = new FileCacheManager(this);
 		await this.cacheManager.load();
 
-		debugLog('========== Plugin onload start ==========');
-		debugLog('Registering TableView view');
-		debugLog('TABLE_VIEW_TYPE =', TABLE_VIEW_TYPE);
+		logger.info('Plugin onload start');
+		logger.debug('Registering TableView view', { viewType: TABLE_VIEW_TYPE });
 
 		this.registerView(
 			TABLE_VIEW_TYPE,
 			(leaf) => {
 				const leafWindow = this.windowContextManager.getLeafWindow(leaf);
-				debugLog('========== registerView factory invoked ==========' );
-				debugLog('leaf snapshot', snapshotLeaf(this.windowContextManager, leaf));
-				debugLog('leaf window already registered:', this.windowContextManager.hasWindow(leafWindow ?? window));
+				logger.debug('registerView factory invoked', {
+					leaf: snapshotLeaf(this.windowContextManager, leaf),
+					windowRegistered: this.windowContextManager.hasWindow(leafWindow ?? window)
+				});
 
 				const view = new TableView(leaf);
-				debugLog('TableView instance created');
+				logger.debug('TableView instance created');
 				return view;
 			}
 		);
-		debugLog('registerView completed');
+		logger.debug('registerView completed');
 
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 
 		this.registerEvent(
 			this.app.workspace.on('file-open', (openedFile) => {
-				debugLog('file-open event received', { file: openedFile?.path ?? null });
+				logger.debug('file-open event received', { file: openedFile?.path ?? null });
 				if (openedFile instanceof TFile) {
 					window.setTimeout(() => {
 						void this.viewCoordinator.maybeSwitchToTableView(openedFile);
@@ -92,7 +118,7 @@ export default class TileLineBasePlugin extends Plugin {
 					return;
 				}
 
-				debugLog('active-leaf-change: auto switch candidate', {
+				logger.debug('active-leaf-change: auto switch candidate', {
 					file: file.path,
 					leaf: snapshotLeaf(this.windowContextManager, leaf ?? null)
 				});
@@ -114,7 +140,7 @@ export default class TileLineBasePlugin extends Plugin {
 				const activeWindow = this.windowContextManager.getLeafWindow(activeLeaf) ?? window;
 				const context = this.windowContextManager.getWindowContext(activeWindow) ?? this.mainContext ?? { window, app: this.app };
 
-				debugLog('file-menu event received');
+				logger.debug('file-menu event received');
 				this.viewCoordinator.handleFileMenu(menu, file, context);
 			})
 		);
@@ -124,7 +150,7 @@ export default class TileLineBasePlugin extends Plugin {
 			name: 'Toggle TileLineBase table view',
 			checkCallback: (checking: boolean) => {
 				const activeLeaf = this.app.workspace.activeLeaf;
-				debugLog('toggle-table-view command', {
+				logger.debug('toggle-table-view command', {
 					checking,
 					activeLeaf: snapshotLeaf(this.windowContextManager, activeLeaf)
 				});
@@ -144,23 +170,34 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on('window-open', (workspaceWindow: WorkspaceWindow, win: Window) => {
-				debugLog('window-open', { window: this.windowContextManager.describeWindow(win) });
+				logger.debug('window-open', { window: this.windowContextManager.describeWindow(win) });
 				this.windowContextManager.registerWindow(win, workspaceWindow);
 			})
 		);
 
 		this.registerEvent(
 			this.app.workspace.on('window-close', (_workspaceWindow: WorkspaceWindow, win: Window) => {
-				debugLog('window-close', { window: this.windowContextManager.describeWindow(win) });
+				logger.debug('window-close', { window: this.windowContextManager.describeWindow(win) });
 				this.windowContextManager.unregisterWindow(win);
 			})
 		);
+
+		this.addCommand({
+			id: 'cycle-logging-verbosity',
+			name: 'Cycle TileLineBase logging verbosity',
+			callback: () => this.cycleLoggingVerbosity()
+		});
 	}
 
 	async onunload() {
 		setPluginContext(null);
-		debugLog('Detaching all table views');
+		logger.info('Plugin unload: detaching all table views');
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
+
+		if (this.unsubscribeLogging) {
+			this.unsubscribeLogging();
+			this.unsubscribeLogging = null;
+		}
 	}
 
 	getColumnLayout(filePath: string): Record<string, number> | undefined {
@@ -174,7 +211,7 @@ export default class TileLineBasePlugin extends Plugin {
 		const rounded = Math.round(width);
 		const changed = this.settingsService.updateColumnWidthPreference(filePath, field, width);
 		if (changed) {
-			debugLog('updateColumnWidthPreference', { filePath, field, width: rounded });
+			logger.debug('updateColumnWidthPreference', { filePath, field, width: rounded });
 		}
 	}
 
@@ -184,7 +221,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async saveFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<void> {
 		const sanitized = await this.settingsService.saveFilterViewsForFile(filePath, state);
-		debugLog('saveFilterViewsForFile', {
+		logger.debug('saveFilterViewsForFile', {
 			filePath,
 			viewCount: sanitized.views.length,
 			activeView: sanitized.activeViewId
@@ -198,6 +235,14 @@ export default class TileLineBasePlugin extends Plugin {
 	private async saveSettings(): Promise<void> {
 		await this.settingsService.persist();
 		this.settings = this.settingsService.getSettings();
+	}
+
+	private cycleLoggingVerbosity(): void {
+		const current = getLoggingConfig().globalLevel;
+		const index = VERBOSITY_SEQUENCE.indexOf(current);
+		const next = VERBOSITY_SEQUENCE[(index + 1) % VERBOSITY_SEQUENCE.length];
+		setGlobalLogLevel(next);
+		new Notice(`TileLineBase logging level: ${next.toUpperCase()}`);
 	}
 
 }

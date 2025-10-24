@@ -1,19 +1,22 @@
 import { Notice } from 'obsidian';
+import { getLogger } from '../utils/logger';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import type { TaskStatus } from '../renderers/StatusCellRenderer';
 import type { CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
 import type { TableView } from '../TableView';
 import { t } from '../i18n';
 
+const logger = getLogger('table-view:interactions');
+
 export function handleStatusChange(view: TableView, rowId: string, newStatus: TaskStatus): void {
 	if (!view.schema || !view.gridAdapter) {
-		console.error('Schema or GridAdapter not initialized');
+		logger.error('Schema or GridAdapter not initialized');
 		return;
 	}
 
 	const blockIndex = parseInt(rowId, 10);
 	if (isNaN(blockIndex) || blockIndex < 0 || blockIndex >= view.blocks.length) {
-		console.error('Invalid blockIndex:', blockIndex);
+		logger.error('Invalid blockIndex:', blockIndex);
 		return;
 	}
 
@@ -70,18 +73,18 @@ export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 	}
 
 	if (!view.schema) {
-		console.error('Schema not initialized');
+		logger.error('Schema not initialized');
 		return;
 	}
 
 	const blockIndex = view.dataStore.getBlockIndexFromRow(rowData);
 	if (blockIndex === null) {
-		console.error(t('tableViewInteractions.blockIndexMissing'), { rowData });
+		logger.error(t('tableViewInteractions.blockIndexMissing'), { rowData });
 		return;
 	}
 
 	if (blockIndex < 0 || blockIndex >= view.blocks.length) {
-		console.error('Invalid block index:', blockIndex);
+		logger.error('Invalid block index:', blockIndex);
 		return;
 	}
 
@@ -104,7 +107,7 @@ export function handleHeaderEditEvent(view: TableView, event: HeaderEditEvent): 
 
 export function handleHeaderEdit(view: TableView, colIndex: number, newValue: string): void {
 	if (!view.schema || colIndex < 0 || colIndex >= view.schema.columnNames.length) {
-		console.error('Invalid schema or column index');
+		logger.error('Invalid schema or column index');
 		return;
 	}
 	const oldName = view.schema.columnNames[colIndex];
@@ -139,7 +142,7 @@ export function persistColumnStructureChange(view: TableView, options?: { notice
 			await view.persistenceService.save();
 			await view.render();
 		} catch (error) {
-			console.error('[TileLineBase] Failed to persist column change', error);
+			logger.error('[TileLineBase] Failed to persist column change', error);
 		}
 	})();
 }

@@ -6,6 +6,9 @@ import type { ColumnInteractionController } from './ColumnInteractionController'
 import { t } from '../i18n';
 import { buildGridContextMenu } from './GridContextMenuBuilder';
 import { CopyTemplateController } from './CopyTemplateController';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('table-view:grid-interaction');
 
 interface GridInteractionDeps {
 	columnInteraction: ColumnInteractionController;
@@ -171,7 +174,7 @@ export class GridInteractionController {
 			await navigator.clipboard.writeText(payload);
 			new Notice(t(successKey));
 		} catch (error) {
-			console.error(t('copyTemplate.copyFailedLog'), error);
+			logger.error(t('copyTemplate.copyFailedLog'), error);
 			new Notice(t('copyTemplate.copyFailedNotice'));
 		}
 	}

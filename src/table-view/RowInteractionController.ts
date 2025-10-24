@@ -1,5 +1,8 @@
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('table-view:row-interaction');
 
 interface RowActionOptions {
 	focusField?: string | null;
@@ -43,7 +46,7 @@ export class RowInteractionController {
 		const filterPrefills = this.getActiveFilterPrefills();
 		const insertIndex = this.dataStore.addRow(beforeRowIndex, filterPrefills);
 		if (insertIndex < 0) {
-			console.error('Failed to add new row');
+			logger.error('Failed to add new row');
 			return;
 		}
 
@@ -112,7 +115,7 @@ export class RowInteractionController {
 
 		const blocks = this.dataStore.getBlocks();
 		if (rowIndex < 0 || rowIndex >= blocks.length) {
-			console.error('Invalid row index:', rowIndex);
+			logger.error('Invalid row index:', rowIndex);
 			return;
 		}
 
@@ -130,7 +133,7 @@ export class RowInteractionController {
 	private ensureSchema(): Schema | null {
 		const schema = this.getSchema();
 		if (!schema) {
-			console.error('Schema not initialized');
+			logger.error('Schema not initialized');
 			return null;
 		}
 		return schema;

@@ -1,7 +1,10 @@
 import { CellKeyDownEvent, GridApi } from 'ag-grid-community';
+import { getLogger } from '../../../utils/logger';
 import { KeyboardEventLike } from '../types';
 import { ROW_ID_FIELD, RowData } from '../../GridAdapter';
 import { ClipboardOptions } from '../types';
+
+const logger = getLogger('grid:clipboard');
 
 export class GridClipboardService {
 	private readonly getGridApi: () => GridApi | null;
@@ -107,7 +110,7 @@ export class GridClipboardService {
 		try {
 			doc.execCommand('copy');
 		} catch (error) {
-			console.warn(this.translate('agGrid.copyFailed'), error);
+			logger.warn(this.translate('agGrid.copyFailed'), error);
 		}
 		textarea.blur();
 		doc.body.removeChild(textarea);

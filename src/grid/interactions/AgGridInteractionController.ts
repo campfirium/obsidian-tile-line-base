@@ -15,6 +15,9 @@ import {
 	FocusStateAccess,
 	FocusShift
 } from './types';
+import { getLogger } from '../../utils/logger';
+
+const logger = getLogger('grid:interaction');
 
 export class AgGridInteractionController {
 	private readonly deps: InteractionControllerDeps;
@@ -222,13 +225,6 @@ export class AgGridInteractionController {
 	}
 
 	private debug(...args: unknown[]): void {
-		const globalRef = globalThis as unknown as {
-			__TLB_DEBUG_INTERACTION__?: boolean;
-			console?: Console;
-		};
-		if (!globalRef.__TLB_DEBUG_INTERACTION__ || !globalRef.console?.debug) {
-			return;
-		}
-		globalRef.console.debug('[AgGridInteraction]', ...args);
+		logger.trace(...args);
 	}
 }

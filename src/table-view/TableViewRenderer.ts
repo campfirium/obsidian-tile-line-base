@@ -1,11 +1,13 @@
 import type { TableView } from '../TableView';
 import { clampColumnWidth } from '../grid/columnSizing';
-import { debugLog } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
 import { renderFilterViewControls } from './TableViewFilterPresenter';
 import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
+
+const logger = getLogger('table-view:renderer');
 
 export async function renderTableView(view: TableView): Promise<void> {
 	const rootEl = view.containerEl;
@@ -21,7 +23,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	const ownerDoc = container.ownerDocument;
 	const ownerWindow = ownerDoc?.defaultView ?? null;
-	debugLog('TableView.render start', {
+	logger.debug('render start', {
 		file: view.file?.path,
 		containerTag: container.tagName,
 		containerClass: container.className,

@@ -44,6 +44,9 @@ const context = await esbuild.context({
 	},
 	entryPoints: ['src/main.ts'],
 	bundle: true,
+	define: {
+		__LOG_PROD__: prod ? 'true' : 'false'
+	},
 	external: [
 		'obsidian',
 		'electron',

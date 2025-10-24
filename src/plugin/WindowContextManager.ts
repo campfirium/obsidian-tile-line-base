@@ -1,7 +1,7 @@
 import type { App, Workspace, WorkspaceLeaf, WorkspaceWindow } from 'obsidian';
-import { debugLog } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 
-const LOG_PREFIX = '[TileLineBase]';
+const logger = getLogger('plugin:window-context');
 
 export interface WindowContext {
 	readonly window: Window;
@@ -22,7 +22,7 @@ export class WindowContextManager {
 		const existing = this.contexts.get(win);
 		if (existing) {
 			existing.workspaceWindow = workspaceWindow ?? existing.workspaceWindow;
-			debugLog('WindowContextManager.registerWindow: reuse existing', {
+			logger.debug('registerWindow: reuse existing', {
 				window: this.describeWindow(win)
 			});
 			return existing;
@@ -31,14 +31,14 @@ export class WindowContextManager {
 		const winApp = (win as any).app as App | undefined;
 		const resolvedApp = winApp ?? this.app;
 		if (!resolvedApp) {
-			console.warn(LOG_PREFIX, 'WindowContextManager.registerWindow: app not found', this.describeWindow(win));
+			logger.warn('registerWindow: app not found', this.describeWindow(win));
 			return null;
 		}
 
 		const context: WindowContext = { window: win, app: resolvedApp, workspaceWindow };
 		this.contexts.set(win, context);
 
-		debugLog('WindowContextManager.registerWindow: new context', {
+		logger.debug('registerWindow: new context', {
 			window: this.describeWindow(win),
 			total: this.contexts.size
 		});
@@ -48,7 +48,7 @@ export class WindowContextManager {
 	unregisterWindow(win: Window): boolean {
 		const removed = this.contexts.delete(win);
 		if (removed) {
-			debugLog('WindowContextManager.unregisterWindow', {
+			logger.debug('unregisterWindow', {
 				window: this.describeWindow(win)
 			});
 		}

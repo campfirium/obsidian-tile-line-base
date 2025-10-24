@@ -1,8 +1,10 @@
 import { App, Menu, TFile, Workspace, WorkspaceLeaf } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from '../TableView';
-import { debugLog, isDebugEnabled } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 import type { SettingsService } from '../services/SettingsService';
 import type { WindowContext, WindowContextManager } from './WindowContextManager';
+
+const logger = getLogger('plugin:view-switch');
 
 export interface ViewOpenContext {
 	leaf?: WorkspaceLeaf | null;
@@ -23,43 +25,27 @@ export class ViewSwitchCoordinator {
 	}
 
 	handleFileMenu(menu: Menu, file: TFile, context: WindowContext): void {
-		const targetWindow = context.window;
-		const debugEnabled = isDebugEnabled();
-		const targetConsole = debugEnabled ? ((targetWindow as any).console || console) : null;
-
 		if (!(file instanceof TFile)) {
-			if (debugEnabled) {
-				targetConsole?.log('[TileLineBase]', 'handleFileMenu: not a file target');
-			}
 			return;
 		}
 
 		menu.addItem((item) => {
-			if (debugEnabled) {
-				targetConsole?.log('[TileLineBase]', 'handleFileMenu: registering menu item');
-			}
+			logger.debug('handleFileMenu: registering menu item', { file: file.path });
 
 			const clickHandler = async (evt: MouseEvent) => {
-				const eventWindow = (evt?.view as Window) || targetWindow;
-				const eventConsole = debugEnabled ? ((eventWindow as any).console || console) : null;
-
-				if (debugEnabled) {
-					eventConsole?.log('[TileLineBase]', 'file-menu onClick', {
-						file: file.path,
-						eventType: evt?.type,
-						sameWindow: evt?.view === context.window
-					});
-				}
+				logger.debug('file-menu onClick', {
+					file: file.path,
+					eventType: evt?.type ?? null,
+					sameWindow: evt?.view === context.window
+				});
 
 				const resolution = this.resolveLeafFromEvent(evt, context);
 
-				if (debugEnabled) {
-					eventConsole?.log('[TileLineBase]', 'file-menu resolution', {
-						leaf: this.describeLeaf(resolution.leaf),
-						preferredWindow: this.describeWindow(resolution.preferredWindow),
-						workspace: resolution.workspace === this.app.workspace ? 'main' : 'other'
-					});
-				}
+				logger.debug('file-menu resolution', {
+					leaf: this.describeLeaf(resolution.leaf),
+					preferredWindow: this.describeWindow(resolution.preferredWindow),
+					workspace: resolution.workspace === this.app.workspace ? 'main' : 'other'
+				});
 
 				await this.openTableView(file, {
 					leaf: resolution.leaf,
@@ -72,39 +58,36 @@ export class ViewSwitchCoordinator {
 				.setTitle('Open in TileLineBase table view')
 				.setIcon('table')
 				.onClick(clickHandler);
-
-			if (debugEnabled) {
-				targetConsole?.log('[TileLineBase]', 'handleFileMenu: menu item ready');
-			}
+			logger.debug('handleFileMenu: menu item ready', { file: file.path });
 		});
 	}
 
 	async maybeSwitchToTableView(file: TFile): Promise<void> {
 		const suppressUntil = this.suppressAutoSwitchUntil.get(file.path);
 		if (suppressUntil && suppressUntil > Date.now()) {
-			debugLog('maybeSwitchToTableView: suppressed due to manual switch', { file: file.path });
+			logger.debug('maybeSwitchToTableView: suppressed due to manual switch', { file: file.path });
 			return;
 		}
 		this.suppressAutoSwitchUntil.delete(file.path);
 
 		if (!this.settingsService.shouldAutoOpen(file.path)) {
-			debugLog('maybeSwitchToTableView: skipped preference', { file: file.path });
+			logger.debug('maybeSwitchToTableView: skipped preference', { file: file.path });
 			return;
 		}
 
 		const activeLeaf = this.app.workspace.activeLeaf;
 		if (!activeLeaf) {
-			debugLog('maybeSwitchToTableView: no active leaf', { file: file.path });
+			logger.debug('maybeSwitchToTableView: no active leaf', { file: file.path });
 			return;
 		}
 
 		const viewType = activeLeaf.getViewState().type;
 		if (viewType === TABLE_VIEW_TYPE) {
-			debugLog('maybeSwitchToTableView: already in table view', { file: file.path });
+			logger.debug('maybeSwitchToTableView: already in table view', { file: file.path });
 			return;
 		}
 		if (viewType !== 'markdown' && viewType !== 'empty') {
-			debugLog('maybeSwitchToTableView: view type not eligible', { file: file.path, viewType });
+			logger.debug('maybeSwitchToTableView: view type not eligible', { file: file.path, viewType });
 			return;
 		}
 
@@ -112,13 +95,13 @@ export class ViewSwitchCoordinator {
 		const workspace = this.windowContextManager.getWorkspaceForLeaf(activeLeaf) ?? this.app.workspace;
 
 		try {
-			debugLog('maybeSwitchToTableView: switching', {
+			logger.debug('maybeSwitchToTableView: switching', {
 				file: file.path,
 				targetLeaf: this.describeLeaf(activeLeaf)
 			});
 			await this.openTableView(file, { leaf: activeLeaf, preferredWindow, workspace });
 		} catch (error) {
-			console.error('[TileLineBase]', 'Failed to auto switch to table view', error);
+			logger.error('Failed to auto switch to table view', error);
 		}
 	}
 
@@ -128,7 +111,7 @@ export class ViewSwitchCoordinator {
 		const workspace = options?.workspace ?? this.windowContextManager.getWorkspaceForLeaf(requestedLeaf) ?? this.app.workspace;
 
 		if (requestedLeaf?.view instanceof TableView && requestedLeaf.view.file?.path === file.path) {
-			debugLog('openTableView reuse requested table leaf', this.describeLeaf(requestedLeaf));
+			logger.debug('openTableView reuse requested table leaf', this.describeLeaf(requestedLeaf));
 			await this.settingsService.setFileViewPreference(file.path, 'table');
 			await workspace.revealLeaf(requestedLeaf);
 			return;
@@ -136,20 +119,20 @@ export class ViewSwitchCoordinator {
 
 		const existingTableLeaf = this.findLeafForFile(file, TABLE_VIEW_TYPE, preferredWindow);
 		if (existingTableLeaf) {
-			debugLog('openTableView reuse existing table leaf', this.describeLeaf(existingTableLeaf));
+			logger.debug('openTableView reuse existing table leaf', this.describeLeaf(existingTableLeaf));
 			await this.settingsService.setFileViewPreference(file.path, 'table');
 			if (requestedLeaf && requestedLeaf !== existingTableLeaf) {
 				try {
 					requestedLeaf.detach?.();
 				} catch (error) {
-					console.warn('[TileLineBase]', 'Failed to detach redundant leaf', this.describeLeaf(requestedLeaf), error);
+					logger.warn('Failed to detach redundant leaf', this.describeLeaf(requestedLeaf), error);
 				}
 			}
 			await workspace.revealLeaf(existingTableLeaf);
 			return;
 		}
 
-		debugLog('openTableView start', {
+		logger.debug('openTableView start', {
 			file: file.path,
 			requestedLeaf: this.describeLeaf(requestedLeaf),
 			preferredWindow: this.describeWindow(preferredWindow),
@@ -160,7 +143,7 @@ export class ViewSwitchCoordinator {
 		if (leaf && preferredWindow) {
 			const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 			if (leafWindow && leafWindow !== preferredWindow) {
-				debugLog('requested leaf window mismatch', {
+				logger.debug('requested leaf window mismatch', {
 					requestedLeaf: this.describeLeaf(leaf),
 					targetWindow: this.describeWindow(preferredWindow)
 				});
@@ -170,25 +153,25 @@ export class ViewSwitchCoordinator {
 
 		if (!leaf) {
 			leaf = this.selectLeaf(workspace, preferredWindow);
-			debugLog('openTableView selectLeaf result', this.describeLeaf(leaf));
+			logger.debug('openTableView selectLeaf result', this.describeLeaf(leaf));
 		}
 
 		if (!leaf && preferredWindow) {
 			leaf = this.createLeafInWindow(workspace, preferredWindow);
-			debugLog('openTableView createLeafInWindow result', this.describeLeaf(leaf));
+			logger.debug('openTableView createLeafInWindow result', this.describeLeaf(leaf));
 		}
 
 		if (!leaf) {
 			leaf = this.selectLeaf(this.app.workspace);
-			debugLog('openTableView global fallback leaf', this.describeLeaf(leaf));
+			logger.debug('openTableView global fallback leaf', this.describeLeaf(leaf));
 		}
 
 		if (!leaf) {
-			console.warn('[TileLineBase]', 'No leaf available, aborting openTableView');
+			logger.warn('No leaf available, aborting openTableView');
 			return;
 		}
 
-		debugLog('openTableView preparing leaf.setViewState', {
+		logger.debug('openTableView preparing leaf.setViewState', {
 			leaf: this.describeLeaf(leaf),
 			viewType: TABLE_VIEW_TYPE,
 			filePath: file.path
@@ -202,20 +185,20 @@ export class ViewSwitchCoordinator {
 					filePath: file.path
 				}
 			});
-			debugLog('openTableView setViewState completed', this.describeLeaf(leaf));
+			logger.debug('openTableView setViewState completed', this.describeLeaf(leaf));
 			await this.settingsService.setFileViewPreference(file.path, 'table');
 		} catch (error) {
-			console.error('[TileLineBase]', 'openTableView setViewState failed', error);
+			logger.error('openTableView setViewState failed', error);
 			throw error;
 		}
 
 		await workspace.revealLeaf(leaf);
-		debugLog('openTableView finish');
+		logger.debug('openTableView finish');
 	}
 
 	async toggleTableView(leaf: WorkspaceLeaf, context: WindowContext | null): Promise<void> {
 		const currentView = leaf.view;
-		debugLog('toggleTableView', this.describeLeaf(leaf));
+		logger.debug('toggleTableView', this.describeLeaf(leaf));
 
 		if (currentView.getViewType() === TABLE_VIEW_TYPE) {
 			const tableView = currentView as TableView;
@@ -249,7 +232,7 @@ export class ViewSwitchCoordinator {
 		const context = (targetWindow ? this.windowContextManager.getWindowContext(targetWindow) : null) ?? fallbackContext ?? null;
 		const workspace = context?.app.workspace ?? this.app.workspace;
 
-		debugLog('resolveLeafFromEvent', {
+		logger.debug('resolveLeafFromEvent', {
 			eventType: evt?.type,
 			targetWindow: this.describeWindow(targetWindow),
 			workspaceIsMain: workspace === this.app.workspace
@@ -257,18 +240,18 @@ export class ViewSwitchCoordinator {
 
 		if (!targetWindow) {
 			const leaf = this.selectLeaf(workspace);
-			debugLog('resolveLeafFromEvent default leaf', this.describeLeaf(leaf));
+			logger.debug('resolveLeafFromEvent default leaf', this.describeLeaf(leaf));
 			return { leaf, preferredWindow: null, workspace };
 		}
 
 		const matched = this.findLeafForWindow(workspace, targetWindow);
 		if (matched) {
-			debugLog('resolveLeafFromEvent matched leaf', this.describeLeaf(matched));
+			logger.debug('resolveLeafFromEvent matched leaf', this.describeLeaf(matched));
 			return { leaf: matched, preferredWindow: targetWindow, workspace };
 		}
 
 		const fallback = this.selectLeaf(workspace, targetWindow);
-		debugLog('resolveLeafFromEvent fallback leaf', this.describeLeaf(fallback));
+		logger.debug('resolveLeafFromEvent fallback leaf', this.describeLeaf(fallback));
 		return { leaf: fallback, preferredWindow: targetWindow, workspace };
 	}
 
@@ -308,10 +291,10 @@ export class ViewSwitchCoordinator {
 		try {
 			const leaf = workspace.getLeaf(true);
 			if (leaf) {
-				debugLog('createLeafInWindow via workspace.getLeaf(true)', this.describeLeaf(leaf));
+				logger.debug('createLeafInWindow via workspace.getLeaf(true)', this.describeLeaf(leaf));
 				const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 				if (leafWindow && leafWindow !== targetWindow) {
-					console.warn('[TileLineBase]', 'createLeafInWindow leaf belongs to another window', {
+					logger.warn('createLeafInWindow leaf belongs to another window', {
 						targetWindow: this.describeWindow(targetWindow),
 						leafWindow: this.describeWindow(leafWindow)
 					});
@@ -319,28 +302,28 @@ export class ViewSwitchCoordinator {
 				return leaf;
 			}
 		} catch (error) {
-			console.warn('[TileLineBase]', 'workspace.getLeaf(true) failed', error);
+			logger.warn('workspace.getLeaf(true) failed', error);
 		}
 
-		debugLog('createLeafInWindow unavailable', this.describeWindow(targetWindow));
+		logger.debug('createLeafInWindow unavailable', this.describeWindow(targetWindow));
 		return null;
 	}
 
 	private selectLeaf(workspace: Workspace, preferredWindow?: Window | null): WorkspaceLeaf | null {
-		debugLog('selectLeaf', {
+		logger.debug('selectLeaf', {
 			preferredWindow: this.describeWindow(preferredWindow),
 			workspaceIsMain: workspace === this.app.workspace
 		});
 
 		const activeLeaf = workspace.activeLeaf;
 		if (activeLeaf && (!preferredWindow || this.windowContextManager.getLeafWindow(activeLeaf) === preferredWindow)) {
-			debugLog('selectLeaf -> activeLeaf');
+			logger.debug('selectLeaf -> activeLeaf');
 			return activeLeaf;
 		}
 
 		const mostRecent = workspace.getMostRecentLeaf();
 		if (mostRecent && (!preferredWindow || this.windowContextManager.getLeafWindow(mostRecent) === preferredWindow)) {
-			debugLog('selectLeaf -> mostRecent');
+			logger.debug('selectLeaf -> mostRecent');
 			return mostRecent;
 		}
 
@@ -355,14 +338,14 @@ export class ViewSwitchCoordinator {
 				}
 			});
 			if (candidate) {
-				debugLog('selectLeaf -> candidateFromIteration', this.describeLeaf(candidate));
+				logger.debug('selectLeaf -> candidateFromIteration', this.describeLeaf(candidate));
 				return candidate;
 			}
 			return null;
 		}
 
 		const fallback = workspace.getLeaf(false);
-		debugLog('selectLeaf -> workspace.getLeaf(false)', this.describeLeaf(fallback));
+		logger.debug('selectLeaf -> workspace.getLeaf(false)', this.describeLeaf(fallback));
 		return fallback;
 	}
 

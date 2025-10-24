@@ -1,4 +1,7 @@
 import type { App, EventRef } from 'obsidian';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('table-view:grid-layout');
 import { GridController } from './GridController';
 
 type ResizeSource =
@@ -121,7 +124,7 @@ export class GridLayoutController {
 				this.visualViewportTarget.addEventListener('resize', this.visualViewportResizeHandler);
 			}
 		} else {
-			console.error('[TileLineBase] Failed to acquire owner window for grid layout controller');
+			logger.error('[TileLineBase] Failed to acquire owner window for grid layout controller');
 		}
 
 		this.workspaceResizeRef = this.app.workspace.on('resize', () => {

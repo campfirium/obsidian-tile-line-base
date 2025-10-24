@@ -8,15 +8,23 @@ import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 
 export async function renderTableView(view: TableView): Promise<void> {
-	const container = view.containerEl.children[1];
-	container.empty();
+	const rootEl = view.containerEl;
+	rootEl.classList.add('tile-line-base-view');
 
-	const ownerDoc = (container as HTMLElement).ownerDocument;
+	const container = rootEl.children[1] as HTMLElement | undefined;
+	if (!container) {
+		return;
+	}
+	container.empty();
+	container.classList.add('tlb-table-view-content');
+	container.classList.remove('tlb-has-grid');
+
+	const ownerDoc = container.ownerDocument;
 	const ownerWindow = ownerDoc?.defaultView ?? null;
 	debugLog('TableView.render start', {
 		file: view.file?.path,
-		containerTag: (container as HTMLElement).tagName,
-		containerClass: (container as HTMLElement).className,
+		containerTag: container.tagName,
+		containerClass: container.className,
 		window: describeWindow(ownerWindow)
 	});
 
@@ -91,6 +99,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	renderFilterViewControls(view, container);
+
+	container.classList.add('tlb-has-grid');
 
 	const primaryField = view.schema.columnNames[0] ?? null;
 	const columns = [

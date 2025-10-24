@@ -2,6 +2,11 @@
   "tableView": {
     "displayName": "TileLineBase Table"
   },
+  "settings": {
+    "generalHeading": "General",
+    "rightSidebarToggleLabel": "Show right sidebar",
+    "rightSidebarToggleDesc": "Display the table view right sidebar (column and filter panel)."
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Encountered an unrecognized character",
@@ -62,6 +67,7 @@
       "done": "Done",
       "inprogress": "In Progress",
       "onhold": "On Hold",
+      "someday": "Someday",
       "canceled": "Canceled"
     },
     "menuLabel": "Status options"

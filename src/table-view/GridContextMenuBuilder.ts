@@ -6,7 +6,8 @@ interface MenuBuilderOptions {
 	isMultiSelect: boolean;
 	selectedRowCount: number;
 	actions: {
-		copySection: () => void;
+		copySelection?: () => void;
+		copySelectionAsTemplate: () => void;
 		editCopyTemplate: () => void;
 		insertAbove: () => void;
 		insertBelow: () => void;
@@ -46,7 +47,10 @@ export function buildGridContextMenu(options: MenuBuilderOptions): HTMLElement {
 	};
 
 	if (options.isIndexColumn) {
-		addItem('copyTemplate.menuCopy', options.actions.copySection);
+		if (options.isMultiSelect && options.actions.copySelection) {
+			addItem('gridInteraction.menuCopySelection', options.actions.copySelection);
+		}
+		addItem('copyTemplate.menuCopy', options.actions.copySelectionAsTemplate);
 		addItem('copyTemplate.menuEdit', options.actions.editCopyTemplate);
 		addSeparator();
 	}

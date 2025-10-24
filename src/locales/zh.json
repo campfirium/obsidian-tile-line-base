@@ -77,7 +77,9 @@
     "duplicateSelected": "复制选中的 {{count}} 行",
     "deleteSelected": "删除选中的 {{count}} 行",
     "duplicateRow": "复制此行",
-    "deleteRow": "删除此行"
+    "deleteRow": "删除此行",
+    "menuCopySelection": "复制选中内容",
+    "copySelectionSuccess": "已复制选中内容"
   },
   "copyTemplate": {
     "menuCopy": "复制为模板",

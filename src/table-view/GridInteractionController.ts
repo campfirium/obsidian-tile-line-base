@@ -150,13 +150,26 @@ export class GridInteractionController {
 		if (blockIndexes.length === 0) {
 			return;
 		}
-		const clipboardPayload = this.deps.copyTemplate.generateClipboardPayload(blockIndexes);
-		if (!clipboardPayload) {
+		const clipboardPayload = this.deps.copyTemplate.generateMarkdownPayload(blockIndexes);
+		await this.writeClipboard(clipboardPayload, 'gridInteraction.copySelectionSuccess');
+	}
+
+	async copySectionAsTemplate(blockIndex: number): Promise<void> {
+		const blockIndexes = this.resolveBlockIndexesForCopy(blockIndex);
+		if (blockIndexes.length === 0) {
+			return;
+		}
+		const payload = this.deps.copyTemplate.generateClipboardPayload(blockIndexes);
+		await this.writeClipboard(payload, 'copyTemplate.copySuccess');
+	}
+
+	private async writeClipboard(payload: string, successKey: Parameters<typeof t>[0]): Promise<void> {
+		if (!payload || payload.trim().length === 0) {
 			return;
 		}
 		try {
-			await navigator.clipboard.writeText(clipboardPayload);
-			new Notice(t('copyTemplate.copySuccess'));
+			await navigator.clipboard.writeText(payload);
+			new Notice(t(successKey));
 		} catch (error) {
 			console.error(t('copyTemplate.copyFailedLog'), error);
 			new Notice(t('copyTemplate.copyFailedNotice'));
@@ -197,7 +210,8 @@ export class GridInteractionController {
 			isMultiSelect,
 			selectedRowCount: selectedRows.length,
 			actions: {
-				copySection: () => this.copySection(blockIndex),
+				copySelection: () => this.copySection(blockIndex),
+				copySelectionAsTemplate: () => this.copySectionAsTemplate(blockIndex),
 				editCopyTemplate: () => this.deps.copyTemplate.openEditor(this.container, targetIndexes),
 				insertAbove: () => this.deps.rowInteraction.addRow(blockIndex),
 				insertBelow: () => this.deps.rowInteraction.addRow(blockIndex + 1),

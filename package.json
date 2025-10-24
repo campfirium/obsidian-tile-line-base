@@ -5,8 +5,8 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "npx tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
+    "build": "npm run lint && npx tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "node scripts/run-lint.mjs",
     "deploy": "npm run build && node scripts/deploy.mjs",
     "deploy:wsl": "npm run build && node scripts/deploy-wsl.mjs",
     "version": "node version-bump.mjs && git add manifest.json versions.json"

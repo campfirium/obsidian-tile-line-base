@@ -30,14 +30,19 @@ module.exports = {
 		{
 			files: [
 				'src/TableView.ts',
+				'src/table-view/BaseTableView.ts',
 				'src/table-view/GridController.ts',
+				'src/table-view/GridInteractionController.ts',
 				'src/table-view/TableViewRenderer.ts',
-				'src/table-view/TableViewSetup.ts',
 				'src/table-view/TableViewInteractions.ts',
+				'src/table-view/TableViewSetup.ts',
 				'src/table-view/TableConfigManager.ts',
 				'src/table-view/TableDataStore.ts',
-				'src/table-view/MarkdownBlockParser.ts',
 				'src/table-view/SchemaBuilder.ts',
+				'src/table-view/MarkdownBlockParser.ts',
+				'src/grid/AgGridAdapter.ts',
+				'src/grid/column/AgGridColumnService.ts',
+				'src/grid/interactions/AgGridInteractionController.ts',
 			],
 			rules: {
 				// Core orchestration modules must remain lean (<=250 logical lines).

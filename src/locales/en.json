@@ -78,7 +78,9 @@
     "duplicateSelected": "Duplicate selected {{count}} rows",
     "deleteSelected": "Delete selected {{count}} rows",
     "duplicateRow": "Duplicate row",
-    "deleteRow": "Delete row"
+    "deleteRow": "Delete row",
+    "menuCopySelection": "Copy Selection",
+    "copySelectionSuccess": "Copied selection"
   },
   "copyTemplate": {
     "menuCopy": "Copy as Template",

@@ -50,34 +50,25 @@ export class CopyTemplateController {
 	}
 
 	generateClipboardPayload(blockIndexes: number[]): string {
+		const templatePayload = this.generateTemplatePayload(blockIndexes);
+		if (templatePayload && templatePayload.trim().length > 0) {
+			return templatePayload;
+		}
+		return this.generateMarkdownPayload(blockIndexes);
+	}
+
+	generateTemplatePayload(blockIndexes: number[]): string | null {
 		const template = this.normalizeTemplate(this.getTemplate());
-		const blocks = this.getBlocks();
-		const validIndexes = blockIndexes.filter((index) => index >= 0 && index < blocks.length);
-
-		if (validIndexes.length === 0) {
-			return '';
+		if (!template) {
+			return null;
 		}
 
-		const schema = this.getSchema();
-		const rowDataSnapshot = schema ? this.dataStore.extractRowData() : null;
-
-		if (!template || !schema) {
-			return validIndexes
-				.map((index) => {
-					const block = blocks[index];
-					if (!block) {
-						return '';
-					}
-					if (schema && rowDataSnapshot) {
-						return this.buildMarkdownFromRow(schema, block, rowDataSnapshot[index]);
-					}
-					return this.dataStore.blockToMarkdown(block);
-				})
-				.filter((segment) => segment.trim().length > 0)
-				.join('\n\n');
+		const { validIndexes, blocks, schema, rowDataSnapshot } = this.prepareSelectionContext(blockIndexes);
+		if (!schema || validIndexes.length === 0) {
+			return null;
 		}
 
-		return validIndexes
+		const segments = validIndexes
 			.map((blockIndex, selectionIndex) => {
 				const block = blocks[blockIndex];
 				if (!block) {
@@ -85,6 +76,28 @@ export class CopyTemplateController {
 				}
 				const row = rowDataSnapshot?.[blockIndex];
 				return this.renderTemplate(schema, block, selectionIndex, template, row);
+			})
+			.filter((segment) => segment.trim().length > 0);
+
+		return segments.length > 0 ? segments.join('\n\n') : null;
+	}
+
+	generateMarkdownPayload(blockIndexes: number[]): string {
+		const { validIndexes, blocks, schema, rowDataSnapshot } = this.prepareSelectionContext(blockIndexes);
+		if (validIndexes.length === 0) {
+			return '';
+		}
+
+		return validIndexes
+			.map((index) => {
+				const block = blocks[index];
+				if (!block) {
+					return '';
+				}
+				if (schema && rowDataSnapshot) {
+					return this.buildMarkdownFromRow(schema, block, rowDataSnapshot[index]);
+				}
+				return this.dataStore.blockToMarkdown(block);
 			})
 			.filter((segment) => segment.trim().length > 0)
 			.join('\n\n');
@@ -218,6 +231,27 @@ export class CopyTemplateController {
 			}
 		}
 		return fields;
+	}
+
+	private prepareSelectionContext(blockIndexes: number[]): {
+		validIndexes: number[];
+		blocks: H2Block[];
+		schema: Schema | null;
+		rowDataSnapshot: RowData[] | null;
+	} {
+		const blocks = this.getBlocks();
+		const validIndexes = blockIndexes.filter((index) => index >= 0 && index < blocks.length);
+		if (validIndexes.length === 0) {
+			return { validIndexes, blocks, schema: null, rowDataSnapshot: null };
+		}
+		const schema = this.getSchema();
+		const rowDataSnapshot = schema ? this.dataStore.extractRowData() : null;
+		return {
+			validIndexes,
+			blocks,
+			schema: schema ?? null,
+			rowDataSnapshot
+		};
 	}
 
 	private buildMarkdownFromRow(schema: Schema, block: H2Block, row?: RowData): string {

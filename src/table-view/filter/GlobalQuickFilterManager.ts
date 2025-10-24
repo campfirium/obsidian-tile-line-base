@@ -1,3 +1,7 @@
+import { getLogger } from '../../utils/logger';
+
+const logger = getLogger('table-view:global-quick-filter');
+
 type QuickFilterListener = (value: string, source: unknown) => void;
 
 class GlobalQuickFilterManager {
@@ -18,7 +22,7 @@ class GlobalQuickFilterManager {
 			try {
 				listener(value, source);
 			} catch (error) {
-				console.error('[TileLineBase]', 'global quick filter listener failed', error);
+				logger.error('[TileLineBase]', 'global quick filter listener failed', error);
 			}
 		}
 	}

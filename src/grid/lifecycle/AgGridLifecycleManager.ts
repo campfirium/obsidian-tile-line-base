@@ -1,5 +1,7 @@
 import { createGrid, GridApi, GridOptions } from 'ag-grid-community';
 import type { ColDef, ModelUpdatedEvent, RowDataUpdatedEvent } from 'ag-grid-community';
+import { getLogger } from '../../utils/logger';
+import type { Logger } from '../../utils/logger';
 
 export interface LifecycleApis {
 	gridApi: GridApi;
@@ -17,8 +19,10 @@ type AttachHandler = (context: LifecycleContext) => void | (() => void);
 
 interface LifecycleManagerDependencies {
 	createGrid?: (container: HTMLElement, options: GridOptions) => GridApi;
-	logger?: Pick<typeof console, 'error' | 'warn'>;
+	logger?: Pick<Logger, 'error' | 'warn'>;
 }
+
+const defaultLifecycleLogger = getLogger('grid:lifecycle');
 
 /**
  * AgGridLifecycleManager centralizes grid mounting, API exposure, and teardown.
@@ -27,7 +31,7 @@ interface LifecycleManagerDependencies {
  */
 export class AgGridLifecycleManager {
 	private readonly createGridImpl: (container: HTMLElement, options: GridOptions) => GridApi;
-	private readonly logger: Pick<typeof console, 'error' | 'warn'>;
+	private readonly logger: Pick<Logger, 'error' | 'warn'>;
 	private gridApi: GridApi | null = null;
 	private columnApi: unknown = null;
 	private container: HTMLElement | null = null;
@@ -38,7 +42,7 @@ export class AgGridLifecycleManager {
 
 	constructor(deps?: LifecycleManagerDependencies) {
 		this.createGridImpl = deps?.createGrid ?? createGrid;
-		this.logger = deps?.logger ?? console;
+		this.logger = deps?.logger ?? defaultLifecycleLogger;
 	}
 
 	mountGrid(
@@ -189,7 +193,7 @@ export class AgGridLifecycleManager {
 			try {
 				handler(apis);
 			} catch (error) {
-				console.error('[AgGridLifecycle] onReady handler failed', error);
+				this.logger.error('[AgGridLifecycle] onReady handler failed', error);
 			}
 		}
 	}
@@ -202,7 +206,7 @@ export class AgGridLifecycleManager {
 			try {
 				handler();
 			} catch (error) {
-				console.error('[AgGridLifecycle] onModelUpdated handler failed', error);
+				this.logger.error('[AgGridLifecycle] onModelUpdated handler failed', error);
 			}
 		}
 	}

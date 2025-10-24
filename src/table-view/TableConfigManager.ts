@@ -1,7 +1,9 @@
 import type { App, TFile } from 'obsidian';
 import { getPluginContext } from '../pluginContext';
 import type { FileFilterViewState } from '../types/filterView';
+import { getLogger } from '../utils/logger';
 
+const logger = getLogger('table-view:config');
 export interface TableConfigData {
         filterViews?: FileFilterViewState | null;
         columnWidths?: Record<string, number>;
@@ -16,7 +18,7 @@ interface CachedConfigMeta {
 }
 
 /**
- * 管理表格视图的配置块加载与保存，封装缓存交互逻辑。
+ * 管理表格视图的配置块加载与保存，封装缓存交互逻辑�?
  */
 export class TableConfigManager {
         private fileId: string | null = null;
@@ -50,12 +52,12 @@ export class TableConfigManager {
                 if (cachedVersion === meta.version) {
                         const cached = cacheManager?.getCache(meta.fileId);
                         if (cached) {
-                                console.log('[TileLineBase] Cache hit for file:', file.path);
+                                logger.trace('Cache hit for file', file.path);
                                 return cached as Record<string, any>;
                         }
                 }
 
-                console.log('[TileLineBase] Cache miss, parsing config block...');
+                logger.trace('Cache miss, parsing config block...');
                 const content = await this.app.vault.read(file);
                 const config = this.parseConfigBlock(content, meta.fileId);
 
@@ -201,7 +203,7 @@ export class TableConfigManager {
                         try {
                                 config[key] = JSON.parse(valueJson);
                         } catch (error) {
-                                console.error(`[TileLineBase] Failed to parse config line: ${key}`, error);
+                                logger.error(`Failed to parse config line: ${key}`, error);
                         }
                 }
 

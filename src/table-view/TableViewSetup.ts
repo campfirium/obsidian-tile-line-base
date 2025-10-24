@@ -1,5 +1,5 @@
 import { Notice } from 'obsidian';
-import { debugLog } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 import { TableConfigManager } from './TableConfigManager';
 import { ColumnInteractionController } from './ColumnInteractionController';
 import { RowInteractionController } from './RowInteractionController';
@@ -21,9 +21,11 @@ import {
 import { getAvailableColumns, persistFilterViews, syncFilterViewState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
 
+const logger = getLogger('table-view:setup');
+
 export function initializeTableView(view: TableView): void {
-	debugLog(t('tableViewSetup.constructorStart'));
-	debugLog('leaf:', view.leaf);
+	logger.info(t('tableViewSetup.constructorStart'));
+	logger.debug('leaf', view.leaf);
 
 	view.configManager = new TableConfigManager(view.app);
 	view.persistenceService = new TablePersistenceService({
@@ -110,5 +112,5 @@ export function initializeTableView(view: TableView): void {
 		}
 	});
 
-	debugLog(t('tableViewSetup.constructorComplete'));
+	logger.info(t('tableViewSetup.constructorComplete'));
 }

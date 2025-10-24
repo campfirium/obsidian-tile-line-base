@@ -61,7 +61,9 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		if (typeof storedWidth === 'number' && name !== '#' && name !== 'status') {
 			const width = clampWidth(storedWidth);
 			(baseColDef as any).width = width;
-			(baseColDef as any).__tlbStoredWidth = width;
+			const context = (baseColDef as any).context ?? {};
+			context.tlbStoredWidth = width;
+			(baseColDef as any).context = context;
 			(baseColDef as any).suppressSizeToFit = true;
 		}
 

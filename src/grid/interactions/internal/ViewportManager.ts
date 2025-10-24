@@ -1,4 +1,7 @@
 import { ViewportResizeReason, DebugLogger } from '../types';
+import { getLogger } from '../../../utils/logger';
+
+const logger = getLogger('grid:viewport');
 
 type ActivityHandler = (reason: ViewportResizeReason) => void;
 
@@ -88,7 +91,7 @@ export class ViewportManager {
 			try {
 				callback(reason);
 			} catch (error) {
-				console.error('[AgGridInteraction] viewport resize callback failed', error);
+				logger.error('[AgGridInteraction] viewport resize callback failed', error);
 			}
 		}
 	}

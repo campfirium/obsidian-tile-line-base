@@ -1,4 +1,7 @@
 import { t } from '../../i18n';
+import { getLogger } from '../../utils/logger';
+
+const logger = getLogger('grid:composition-proxy');
 
 /**
  * CompositionProxy - 常驻合成代理层
@@ -66,7 +69,7 @@ export class CompositionProxy {
 			try {
 				this.host.setSelectionRange(0, 0);
 			} catch (error) {
-				console.warn(t('compositionProxy.compositionResetFailed'), error);
+				logger.warn(t('compositionProxy.compositionResetFailed'), error);
 			}
 		});
 
@@ -154,7 +157,7 @@ export class CompositionProxy {
 			try {
 				this.host.setSelectionRange(0, 0);
 			} catch (error) {
-				console.warn(t('compositionProxy.caretResetFailed'), error);
+				logger.warn(t('compositionProxy.caretResetFailed'), error);
 			}
 		});
 	}

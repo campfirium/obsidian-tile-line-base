@@ -1,5 +1,6 @@
 import { GridApi } from 'ag-grid-community';
 import { CompositionProxy } from '../../utils/CompositionProxy';
+import { getLogger } from '../../../utils/logger';
 import { GridClipboardService } from './GridClipboardService';
 import { FocusNavigator } from './FocusNavigator';
 import {
@@ -8,6 +9,8 @@ import {
 	InteractionControllerDeps
 } from '../types';
 import { normalizeKeyboardEvent, isPrintableKey } from './keyboardUtils';
+
+const logger = getLogger('grid:composition-capture');
 
 interface CompositionManagerOptions {
 	focus: FocusStateAccess;
@@ -141,12 +144,13 @@ export class CompositionCaptureManager {
 					err === 'focus-cleared' ||
 					err === 'cell-missing' ||
 					err === 'destroyed' ||
-					err === 'focus-move'
+					err === 'focus-move' ||
+					err === 'scroll'
 				) {
 					return;
 				}
 				this.debug('composition:armProxyForCurrentCell:captureError', err);
-				console.error(this.translate('agGrid.compositionCaptureFailed'), err);
+				logger.error(this.translate('agGrid.compositionCaptureFailed'), err);
 			});
 	}
 
@@ -327,7 +331,7 @@ export class CompositionCaptureManager {
 				input.focus();
 			})
 			.catch((err) => {
-				console.warn(this.translate('agGrid.editorInputMissing'), err);
+				logger.warn(this.translate('agGrid.editorInputMissing'), err);
 			});
 	}
 

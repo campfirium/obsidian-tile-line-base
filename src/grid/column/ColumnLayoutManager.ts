@@ -36,7 +36,7 @@ export class ColumnLayoutManager {
 			}
 
 			const colDef = column.getColDef() as any;
-			const stored = colDef.__tlbStoredWidth;
+			const stored = colDef?.context?.tlbStoredWidth;
 			const explicit = colDef.width;
 
 			if (typeof stored === 'number') {

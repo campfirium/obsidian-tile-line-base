@@ -1,66 +1,69 @@
-ï»¿/**
- * StatusCellRenderer - çŠ¶æ€åˆ—è‡ªå®šä¹‰æ¸²æŸ“å™¨
+/**
+ * StatusCellRenderer - ×´Ì¬ÁĞ×Ô¶¨ÒåäÖÈ¾Æ÷
  *
- * åŠŸèƒ½ï¼š
- * - æ¸²æŸ“ 5 ç§ä»»åŠ¡çŠ¶æ€å›¾æ ‡ï¼ˆtodo, done, inprogress, onhold, canceledï¼‰
- * - å·¦é”®ç‚¹å‡»ï¼šåœ¨ todo â†” done ä¹‹é—´åˆ‡æ¢
- * - å³é”®ç‚¹å‡»ï¼šæ˜¾ç¤ºæ‰€æœ‰ 5 ç§çŠ¶æ€çš„èœå•
- * - æ”¯æŒå¯è®¿é—®æ€§ï¼ˆtitle, aria-labelï¼‰
+ * ¹¦ÄÜ£º
+ * - äÖÈ¾ 5 ÖÖÈÎÎñ×´Ì¬Í¼±ê£¨todo, done, inprogress, onhold, canceled£©
+ * - ×ó¼üµã»÷£ºÔÚ todo ? done Ö®¼äÇĞ»»
+ * - ÓÒ¼üµã»÷£ºÏÔÊ¾ËùÓĞ 5 ÖÖ×´Ì¬µÄ²Ëµ¥
+ * - Ö§³Ö¿É·ÃÎÊĞÔ£¨title, aria-label£©
  */
 
 import { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
 import { setIcon } from 'obsidian';
 import { t, type TranslationKey } from '../i18n';
+import { getLogger } from '../utils/logger';
 
-// çŠ¶æ€ç±»å‹å®šä¹‰
+const logger = getLogger('renderer:status-cell');
+
+// ×´Ì¬ÀàĞÍ¶¨Òå
 export type TaskStatus = 'todo' | 'done' | 'inprogress' | 'onhold' | 'canceled';
 
 /**
- * çŠ¶æ€è§„èŒƒåŒ–ï¼šå°†å„ç§åˆ«åç»Ÿä¸€ä¸ºæ ‡å‡†çŠ¶æ€å€¼
+ * ×´Ì¬¹æ·¶»¯£º½«¸÷ÖÖ±ğÃûÍ³Ò»Îª±ê×¼×´Ì¬Öµ
  */
 export function normalizeStatus(value: any): TaskStatus {
 	const str = String(value || 'todo').toLowerCase().trim();
 
-	// done çš„åˆ«å
+	// done µÄ±ğÃû
 	if (str === 'done' || str === 'completed') {
 		return 'done';
 	}
 
-	// inprogress çš„åˆ«å
+	// inprogress µÄ±ğÃû
 	if (str === 'inprogress' || str === 'in-progress' || str === 'in_progress' || str === 'doing') {
 		return 'inprogress';
 	}
 
-	// onhold çš„åˆ«å
+	// onhold µÄ±ğÃû
 	if (str === 'onhold' || str === 'on-hold' || str === 'on_hold' || str === 'hold' || str === 'paused') {
 		return 'onhold';
 	}
 
-	// canceled çš„åˆ«å
+	// canceled µÄ±ğÃû
 	if (str === 'canceled' || str === 'cancelled' || str === 'dropped') {
 		return 'canceled';
 	}
 
-	// é»˜è®¤ä¸º todo
+	// Ä¬ÈÏÎª todo
 	return 'todo';
 }
 
 /**
- * è·å–çŠ¶æ€å¯¹åº”çš„ Lucide å›¾æ ‡ ID
+ * »ñÈ¡×´Ì¬¶ÔÓ¦µÄ Lucide Í¼±ê ID
  */
 export function getStatusIcon(status: TaskStatus): string {
 	const icons: Record<TaskStatus, string> = {
-		'todo': 'square',           // â–¡ ç©ºæ–¹æ¡†ï¼ˆObsidian ä»»åŠ¡åˆ—è¡¨åŸç”Ÿï¼‰
-		'done': 'check-square',     // â˜‘ å·²å®Œæˆï¼ˆObsidian ä»»åŠ¡åˆ—è¡¨åŸç”Ÿï¼‰
-		'inprogress': 'circle-dashed',  // â—Œ è™šçº¿åœ†ï¼ˆæš—ç¤ºè¿›è¡Œä¸­ï¼‰
-		'onhold': 'pause-circle',   // â¸ æš‚åœå›¾æ ‡
-		'canceled': 'x-square'      // â˜’ å‰å·æ–¹æ¡†
+		'todo': 'square',           // ¡õ ¿Õ·½¿ò£¨Obsidian ÈÎÎñÁĞ±íÔ­Éú£©
+		'done': 'check-square',     // ? ÒÑÍê³É£¨Obsidian ÈÎÎñÁĞ±íÔ­Éú£©
+		'inprogress': 'circle-dashed',  // ? ĞéÏßÔ²£¨°µÊ¾½øĞĞÖĞ£©
+		'onhold': 'pause-circle',   // ? ÔİÍ£Í¼±ê
+		'canceled': 'x-square'      // ? ²æºÅ·½¿ò
 	};
 	return icons[status] || icons['todo'];
 }
 
 /**
- * è·å–çŠ¶æ€å¯¹åº”çš„æ–‡å­—æ ‡ç­¾ï¼ˆç”¨äºå¯è®¿é—®æ€§å’Œå¯¼å‡ºï¼‰
+ * »ñÈ¡×´Ì¬¶ÔÓ¦µÄÎÄ×Ö±êÇ©£¨ÓÃÓÚ¿É·ÃÎÊĞÔºÍµ¼³ö£©
  */
 const STATUS_LABEL_KEYS: Record<TaskStatus, TranslationKey> = {
 	todo: 'statusCell.labels.todo',
@@ -76,7 +79,7 @@ export function getStatusLabel(status: TaskStatus): string {
 }
 
 /**
- * StatusCellRenderer - AG Grid è‡ªå®šä¹‰å•å…ƒæ ¼æ¸²æŸ“å™¨
+ * StatusCellRenderer - AG Grid ×Ô¶¨Òåµ¥Ôª¸ñäÖÈ¾Æ÷
  */
 export class StatusCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
@@ -92,22 +95,22 @@ export class StatusCellRenderer implements ICellRendererComp {
 	private shouldRestoreFocusToCell = false;
 
 	/**
-	 * åˆå§‹åŒ–æ¸²æŸ“å™¨
+	 * ³õÊ¼»¯äÖÈ¾Æ÷
 	 */
 	init(params: ICellRendererParams): void {
 		this.params = params;
 
-		// ä» AG Grid çš„å•å…ƒæ ¼å…ƒç´ è·å–æ­£ç¡®çš„ documentï¼ˆæ”¯æŒ pop-out çª—å£ï¼‰
+		// ´Ó AG Grid µÄµ¥Ôª¸ñÔªËØ»ñÈ¡ÕıÈ·µÄ document£¨Ö§³Ö pop-out ´°¿Ú£©
 		const doc = (params.eGridCell?.ownerDocument || document);
 
-		// åˆ›å»ºå®¹å™¨å…ƒç´ 
+		// ´´½¨ÈİÆ÷ÔªËØ
 		this.eGui = doc.createElement('div');
 		this.eGui.className = 'tlb-status-cell';
 		this.eGui.style.display = 'flex';
 		this.eGui.style.alignItems = 'center';
 		this.eGui.style.justifyContent = 'center';
 		this.eGui.style.cursor = 'pointer';
-		this.eGui.style.userSelect = 'none';  // ç¦æ­¢æ–‡æœ¬é€‰æ‹©
+		this.eGui.style.userSelect = 'none';  // ½ûÖ¹ÎÄ±¾Ñ¡Ôñ
 		this.eGui.style.width = '100%';
 		this.eGui.style.height = '100%';
 		this.eGui.tabIndex = 0;
@@ -116,19 +119,19 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.setAttribute('aria-keyshortcuts', 'Space Enter Shift+F10');
 		this.eGui.setAttribute('data-tlb-status-cell', 'true');
 
-		// æ¸²æŸ“å›¾æ ‡
+		// äÖÈ¾Í¼±ê
 		this.renderIcon();
 
-		// ç»‘å®šå·¦é”®ç‚¹å‡»äº‹ä»¶ï¼ˆåˆ‡æ¢çŠ¶æ€ï¼‰
+		// °ó¶¨×ó¼üµã»÷ÊÂ¼ş£¨ÇĞ»»×´Ì¬£©
 		this.clickHandler = (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
-			this.hideContextMenu();  // éšè—å¯èƒ½å­˜åœ¨çš„èœå•
+			this.hideContextMenu();  // Òş²Ø¿ÉÄÜ´æÔÚµÄ²Ëµ¥
 			this.handleClick();
 		};
 
-		// ç»‘å®šå³é”®èœå•äº‹ä»¶ï¼ˆæ˜¾ç¤ºæ‰€æœ‰çŠ¶æ€é€‰é¡¹ï¼‰
+		// °ó¶¨ÓÒ¼ü²Ëµ¥ÊÂ¼ş£¨ÏÔÊ¾ËùÓĞ×´Ì¬Ñ¡Ïî£©
 		this.contextMenuHandler = (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -154,7 +157,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 				event.preventDefault();
 				event.stopPropagation();
 				const rect = this.eGui.getBoundingClientRect();
-				// å–å•å…ƒæ ¼ä¸­å¿ƒä½œä¸ºèœå•å®šä½ç‚¹ï¼Œé¿å…é®æŒ¡
+				// È¡µ¥Ôª¸ñÖĞĞÄ×÷Îª²Ëµ¥¶¨Î»µã£¬±ÜÃâÕÚµ²
 				const anchor = {
 					clientX: rect.left + rect.width / 2,
 					clientY: rect.top + rect.height / 2,
@@ -167,38 +170,38 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * æ¸²æŸ“å›¾æ ‡å’Œå¯è®¿é—®æ€§å±æ€§
+	 * äÖÈ¾Í¼±êºÍ¿É·ÃÎÊĞÔÊôĞÔ
 	 */
 	private renderIcon(): void {
 		const status = normalizeStatus(this.params.data?.status);
 		const iconId = getStatusIcon(status);
 		const label = getStatusLabel(status);
 
-		// æ¸…ç©ºå†…å®¹ï¼Œä½¿ç”¨ Obsidian çš„ Lucide å›¾æ ‡
+		// Çå¿ÕÄÚÈİ£¬Ê¹ÓÃ Obsidian µÄ Lucide Í¼±ê
 		this.eGui.innerHTML = '';
 		setIcon(this.eGui, iconId);
 
-		// æ·»åŠ å¯è®¿é—®æ€§æ”¯æŒ
+		// Ìí¼Ó¿É·ÃÎÊĞÔÖ§³Ö
 		this.eGui.title = label;
 		this.eGui.setAttribute('aria-label', label);
 		this.eGui.setAttribute('aria-expanded', this.contextMenu ? 'true' : 'false');
 	}
 
 	/**
-	 * å¤„ç†å·¦é”®ç‚¹å‡»ï¼šåˆ‡æ¢çŠ¶æ€
+	 * ´¦Àí×ó¼üµã»÷£ºÇĞ»»×´Ì¬
 	 */
 	private handleClick(): void {
-		// è·å–å½“å‰çŠ¶æ€
+		// »ñÈ¡µ±Ç°×´Ì¬
 		const currentStatus = normalizeStatus(this.params.data?.status);
 
-		// è®¡ç®—æ–°çŠ¶æ€ï¼ˆtodo â†” doneï¼Œå…¶ä»–çŠ¶æ€ç»Ÿä¸€å˜ä¸º doneï¼‰
+		// ¼ÆËãĞÂ×´Ì¬£¨todo ? done£¬ÆäËû×´Ì¬Í³Ò»±äÎª done£©
 		let newStatus: TaskStatus;
 		if (currentStatus === 'todo') {
 			newStatus = 'done';
 		} else if (currentStatus === 'done') {
 			newStatus = 'todo';
 		} else {
-			// inprogress, onhold, canceled ç‚¹å‡»åç»Ÿä¸€å˜ä¸º done
+			// inprogress, onhold, canceled µã»÷ºóÍ³Ò»±äÎª done
 			newStatus = 'done';
 		}
 
@@ -206,15 +209,15 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * æ˜¾ç¤ºå³é”®èœå•
+	 * ÏÔÊ¾ÓÒ¼ü²Ëµ¥
 	 */
 	private showContextMenu(options?: { clientX?: number; clientY?: number; triggeredByKeyboard?: boolean }): void {
-		// éšè—æ—§èœå•
+		// Òş²Ø¾É²Ëµ¥
 		this.hideContextMenu();
 
 		const currentStatus = normalizeStatus(this.params.data?.status);
 
-		// è·å–å®¹å™¨æ‰€åœ¨çš„ documentï¼ˆæ”¯æŒæ–°çª—å£ï¼‰
+		// »ñÈ¡ÈİÆ÷ËùÔÚµÄ document£¨Ö§³ÖĞÂ´°¿Ú£©
 		const ownerDoc = this.eGui.ownerDocument;
 		this.contextMenu = ownerDoc.createElement('div');
 		const menu = this.contextMenu;
@@ -230,7 +233,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		menu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
 		menu.style.minWidth = '120px';
 
-		// åˆ›å»ºèœå•é¡¹
+		// ´´½¨²Ëµ¥Ïî
 		const statuses: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'canceled'];
 
 		this.contextMenuItems = [];
@@ -249,22 +252,22 @@ export class StatusCellRenderer implements ICellRendererComp {
 			item.setAttribute('aria-label', label);
 			item.setAttribute('tabindex', '-1');
 
-			// åˆ›å»ºå›¾æ ‡å®¹å™¨
+			// ´´½¨Í¼±êÈİÆ÷
 			const iconContainer = ownerDoc.createElement('span');
 			iconContainer.style.display = 'inline-flex';
 			iconContainer.style.width = '16px';
 			iconContainer.style.height = '16px';
 			setIcon(iconContainer, getStatusIcon(status));
 
-			// åˆ›å»ºæ–‡æœ¬æ ‡ç­¾
+			// ´´½¨ÎÄ±¾±êÇ©
 			const labelSpan = ownerDoc.createElement('span');
 			labelSpan.textContent = label;
 
-			// ç»„è£…èœå•é¡¹
+			// ×é×°²Ëµ¥Ïî
 			item.appendChild(iconContainer);
 			item.appendChild(labelSpan);
 
-			// å½“å‰çŠ¶æ€ç¦ç”¨
+			// µ±Ç°×´Ì¬½ûÓÃ
 			if (status === currentStatus) {
 				item.style.opacity = '0.5';
 				item.style.cursor = 'default';
@@ -273,7 +276,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 				this.contextMenuItems.push({ element: item, status, disabled: true });
 			} else {
 				item.setAttribute('aria-checked', 'false');
-				// æ‚¬åœæ•ˆæœ
+				// ĞüÍ£Ğ§¹û
 				item.addEventListener('mouseenter', () => {
 					item.style.backgroundColor = 'var(--background-modifier-hover)';
 				});
@@ -281,7 +284,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 					item.style.backgroundColor = '';
 				});
 
-				// ç‚¹å‡»åˆ‡æ¢çŠ¶æ€
+				// µã»÷ÇĞ»»×´Ì¬
 				item.addEventListener('click', (e) => {
 					e.stopPropagation();
 					this.changeStatus(status);
@@ -293,12 +296,12 @@ export class StatusCellRenderer implements ICellRendererComp {
 			menu.appendChild(item);
 		}
 
-		// å®šä½èœå•
+		// ¶¨Î»²Ëµ¥
 		const defaultView = ownerDoc.defaultView || window;
 		const viewportWidth = defaultView.innerWidth;
 		const viewportHeight = defaultView.innerHeight;
 
-		// ä¸´æ—¶æ·»åŠ åˆ° DOM ä»¥è·å–å°ºå¯¸
+		// ÁÙÊ±Ìí¼Óµ½ DOM ÒÔ»ñÈ¡³ß´ç
 		ownerDoc.body.appendChild(menu);
 		const menuRect = menu.getBoundingClientRect();
 
@@ -306,7 +309,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		let left = options?.clientX ?? (fallbackRect.left + fallbackRect.width / 2);
 		let top = options?.clientY ?? (fallbackRect.top + fallbackRect.height);
 
-		// é˜²æ­¢è¶…å‡ºå±å¹•
+		// ·ÀÖ¹³¬³öÆÁÄ»
 		if (left + menuRect.width > viewportWidth - 8) {
 			left = viewportWidth - menuRect.width - 8;
 		}
@@ -384,17 +387,17 @@ export class StatusCellRenderer implements ICellRendererComp {
 			this.focusMenuItem(focusIndex);
 		}
 
-		// ç‚¹å‡»å¤–éƒ¨éšè—èœå•
+		// µã»÷Íâ²¿Òş²Ø²Ëµ¥
 		this.documentClickHandler = (e: MouseEvent) => {
-			// å¦‚æœç‚¹å‡»åœ¨èœå•å†…éƒ¨ï¼Œä¸éšè—
+			// Èç¹ûµã»÷ÔÚ²Ëµ¥ÄÚ²¿£¬²»Òş²Ø
 			if (this.contextMenu && this.contextMenu.contains(e.target as Node)) {
 				return;
 			}
-			// ç‚¹å‡»å¤–éƒ¨æˆ–å³é”®ï¼Œéšè—èœå•
+			// µã»÷Íâ²¿»òÓÒ¼ü£¬Òş²Ø²Ëµ¥
 			this.hideContextMenu();
 		};
 
-		// å»¶è¿Ÿæ·»åŠ ç›‘å¬å™¨ï¼Œé¿å…å½“å‰å³é”®äº‹ä»¶ç«‹å³è§¦å‘
+		// ÑÓ³ÙÌí¼Ó¼àÌıÆ÷£¬±ÜÃâµ±Ç°ÓÒ¼üÊÂ¼şÁ¢¼´´¥·¢
 		setTimeout(() => {
 			if (this.documentClickHandler) {
 				ownerDoc.addEventListener('click', this.documentClickHandler, { capture: true });
@@ -404,7 +407,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * éšè—å³é”®èœå•
+	 * Òş²ØÓÒ¼ü²Ëµ¥
 	 */
 	private hideContextMenu(): void {
 		if (this.contextMenu && this.menuKeydownHandler) {
@@ -419,7 +422,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui?.setAttribute('aria-expanded', 'false');
 		this.menuKeydownHandler = undefined;
 
-		// ç§»é™¤ document çš„ç‚¹å‡»ç›‘å¬å™¨
+		// ÒÆ³ı document µÄµã»÷¼àÌıÆ÷
 		if (this.documentClickHandler) {
 			const ownerDoc = this.eGui?.ownerDocument || document;
 			ownerDoc.removeEventListener('click', this.documentClickHandler);
@@ -478,43 +481,43 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * æ›´æ”¹çŠ¶æ€ï¼ˆé€šç”¨æ–¹æ³•ï¼‰
+	 * ¸ü¸Ä×´Ì¬£¨Í¨ÓÃ·½·¨£©
 	 */
 	private changeStatus(newStatus: TaskStatus): void {
-		// è·å– rowIdï¼ˆç¨³å®šæ ‡è¯†ï¼Œä¸å—æ’åº/è¿‡æ»¤å½±å“ï¼‰
+		// »ñÈ¡ rowId£¨ÎÈ¶¨±êÊ¶£¬²»ÊÜÅÅĞò/¹ıÂËÓ°Ïì£©
 		const rowId = this.params.node?.id;
 		if (!rowId) {
-			console.error('StatusCellRenderer: rowId is undefined');
+			logger.error('rowId is undefined');
 			return;
 		}
 
-		// é€šè¿‡å›è°ƒé€šçŸ¥ TableView è¿›è¡ŒçŠ¶æ€å˜æ›´
+		// Í¨¹ı»Øµ÷Í¨Öª TableView ½øĞĞ×´Ì¬±ä¸ü
 		if (this.params.context?.onStatusChange) {
 			this.params.context.onStatusChange(rowId, newStatus);
 		} else {
-			console.warn('StatusCellRenderer: onStatusChange callback not found in context');
+			logger.warn('onStatusChange callback not found in context');
 		}
 	}
 
 	/**
-	 * è¿”å› DOM å…ƒç´ 
+	 * ·µ»Ø DOM ÔªËØ
 	 */
 	getGui(): HTMLElement {
 		return this.eGui;
 	}
 
 	/**
-	 * åˆ·æ–°æ¸²æŸ“å™¨ï¼ˆæ”¯æŒå¢é‡æ›´æ–°ï¼‰
-	 * è¿”å› true è¡¨ç¤ºå¤ç”¨å½“å‰å®ä¾‹ï¼Œè¿”å› false è¡¨ç¤ºé‡æ–°åˆ›å»ºå®ä¾‹
+	 * Ë¢ĞÂäÖÈ¾Æ÷£¨Ö§³ÖÔöÁ¿¸üĞÂ£©
+	 * ·µ»Ø true ±íÊ¾¸´ÓÃµ±Ç°ÊµÀı£¬·µ»Ø false ±íÊ¾ÖØĞÂ´´½¨ÊµÀı
 	 */
 	refresh(params: ICellRendererParams): boolean {
 		this.params = params;
 		this.renderIcon();
-		return true;  // å¤ç”¨å®ä¾‹ï¼Œé¿å…é‡æ–°åˆ›å»º
+		return true;  // ¸´ÓÃÊµÀı£¬±ÜÃâÖØĞÂ´´½¨
 	}
 
 	/**
-	 * é”€æ¯æ¸²æŸ“å™¨ï¼ˆæ¸…ç†äº‹ä»¶ç›‘å¬å™¨ï¼‰
+	 * Ïú»ÙäÖÈ¾Æ÷£¨ÇåÀíÊÂ¼ş¼àÌıÆ÷£©
 	 */
 	destroy(): void {
 		this.shouldRestoreFocusToCell = false;

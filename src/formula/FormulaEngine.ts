@@ -12,6 +12,11 @@ interface FieldToken {
 	value: string;
 }
 
+interface StringToken {
+	type: 'string';
+	value: string;
+}
+
 interface OperatorToken {
 	type: 'operator';
 	value: Operator;
@@ -25,9 +30,9 @@ interface RightParenToken {
 	type: 'rightParen';
 }
 
-type Token = NumberToken | FieldToken | OperatorToken | LeftParenToken | RightParenToken;
+type Token = NumberToken | FieldToken | StringToken | OperatorToken | LeftParenToken | RightParenToken;
 
-type RpnToken = NumberToken | FieldToken | OperatorToken;
+type RpnToken = NumberToken | FieldToken | StringToken | OperatorToken;
 
 export interface CompiledFormula {
 	original: string;
@@ -58,7 +63,8 @@ const ERROR_KEYS = {
 	nonFiniteResult: 'formula.errors.nonFiniteResult',
 	emptyFormula: 'formula.errors.emptyFormula',
 	numericOutOfRange: 'formula.errors.numericOutOfRange',
-	unaryNotSupported: 'formula.errors.unaryNotSupported'
+	unaryNotSupported: 'formula.errors.unaryNotSupported',
+	unterminatedString: 'formula.errors.unterminatedString'
 } as const;
 
 export class FormulaCompilationError extends Error {
@@ -102,14 +108,20 @@ export function evaluateFormula(compiled: CompiledFormula, context: Record<strin
 		if (soleToken.type === 'number') {
 			return { value: formatResult(soleToken.value), error: null };
 		}
+		if (soleToken.type === 'string') {
+			return { value: soleToken.value, error: null };
+		}
 	}
 
 	try {
 		const result = evaluateRpn(compiled.rpn, context);
-		if (!Number.isFinite(result)) {
-			return { value: '#ERR', error: t(ERROR_KEYS.nonFiniteResult) };
+		if (result.kind === 'number') {
+			if (!Number.isFinite(result.value)) {
+				return { value: '#ERR', error: t(ERROR_KEYS.nonFiniteResult) };
+			}
+			return { value: formatResult(result.value), error: null };
 		}
-		return { value: formatResult(result), error: null };
+		return { value: result.value, error: null };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		return { value: '#ERR', error: message };
@@ -119,9 +131,9 @@ export function evaluateFormula(compiled: CompiledFormula, context: Record<strin
 function normalizeFormula(raw: string): string {
 	const trimmed = raw.trim();
 	if (trimmed.startsWith('=')) {
-		return trimmed.slice(1).trim();
+		return trimmed.slice(1).trim().replace(/[\u201C\u201D]/g, '"');
 	}
-	return trimmed;
+	return trimmed.replace(/[\u201C\u201D]/g, '"');
 }
 
 function tokenize(expression: string): Token[] {
@@ -148,6 +160,13 @@ function tokenize(expression: string): Token[] {
 			}
 			tokens.push({ type: 'field', value: fieldName });
 			index = closing + 1;
+			continue;
+		}
+
+		if (char === '"') {
+			const { literal, position } = readStringLiteral(expression, index + 1);
+			tokens.push({ type: 'string', value: literal });
+			index = position;
 			continue;
 		}
 
@@ -224,6 +243,10 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 				dependencies.add(token.value);
 				previousKind = token.type;
 				break;
+			case 'string':
+				output.push(token);
+				previousKind = token.type;
+				break;
 			case 'operator': {
 				if (isUnary(previousKind)) {
 					if (token.value === '+' || token.value === '-') {
@@ -288,50 +311,59 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 	return { rpn: output, dependencies };
 }
 
-function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): number {
-	const stack: number[] = [];
+function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): FormulaResultValue {
+	const stack: FormulaStackValue[] = [];
 
 	for (const token of tokens) {
 		switch (token.type) {
 			case 'number':
-				stack.push(token.value);
+				stack.push({ kind: 'number', value: token.value });
 				break;
 			case 'field': {
 				const raw = context[token.value];
-				const numeric = coerceNumber(raw);
-				stack.push(numeric);
+				stack.push({ kind: 'field', raw });
 				break;
 			}
+			case 'string':
+				stack.push({ kind: 'string', value: token.value });
+				break;
 			case 'operator': {
 				if (stack.length < 2) {
 					throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
 				}
 				const right = stack.pop();
 				const left = stack.pop();
-				if (right === undefined || left === undefined) {
+				if (!right || !left) {
 					throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
 				}
-				let result: number;
 				switch (token.value) {
-					case '+':
-						result = left + right;
+					case '+': {
+						if (shouldConcatenate(left, right)) {
+							const concatenated = toStringValue(left) + toStringValue(right);
+							stack.push({ kind: 'string', value: concatenated });
+						} else {
+							const result = toNumberValue(left) + toNumberValue(right);
+							stack.push({ kind: 'number', value: result });
+						}
 						break;
+					}
 					case '-':
-						result = left - right;
+						stack.push({ kind: 'number', value: toNumberValue(left) - toNumberValue(right) });
 						break;
 					case '*':
-						result = left * right;
+						stack.push({ kind: 'number', value: toNumberValue(left) * toNumberValue(right) });
 						break;
-					case '/':
-						if (Math.abs(right) < Number.EPSILON) {
+					case '/': {
+						const divisor = toNumberValue(right);
+						if (Math.abs(divisor) < Number.EPSILON) {
 							throw new FormulaEvaluationError(t(ERROR_KEYS.divideByZero));
 						}
-						result = left / right;
+						stack.push({ kind: 'number', value: toNumberValue(left) / divisor });
 						break;
+					}
 					default:
 						throw new FormulaEvaluationError(t(ERROR_KEYS.unexpectedChar));
 				}
-				stack.push(result);
 				break;
 			}
 		}
@@ -341,7 +373,11 @@ function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): numb
 		throw new FormulaEvaluationError(t(ERROR_KEYS.stackUnderflow));
 	}
 
-	return stack[0];
+	const [result] = stack;
+	if (result.kind === 'field') {
+		return { kind: 'string', value: toStringValue(result) };
+	}
+	return result;
 }
 
 function coerceNumber(value: unknown): number {
@@ -381,4 +417,91 @@ function isDigitOrDot(char: string): boolean {
 
 function isUnary(previous: Token['type'] | null): boolean {
 	return !previous || previous === 'operator' || previous === 'leftParen';
+}
+
+function readStringLiteral(source: string, start: number): { literal: string; position: number } {
+	let index = start;
+	let literal = '';
+	while (index < source.length) {
+		const char = source[index];
+		if (char === '"') {
+			return { literal, position: index + 1 };
+		}
+		if (char === '\\') {
+			const next = source[index + 1];
+			if (next === undefined) {
+				break;
+			}
+
+			switch (next) {
+				case '"':
+					literal += '"';
+					break;
+				case '\\':
+					literal += '\\';
+					break;
+				case 'n':
+					literal += '\n';
+					break;
+				case 't':
+					literal += '\t';
+					break;
+				case 'r':
+					literal += '\r';
+					break;
+				default:
+					literal += next;
+					break;
+			}
+			index += 2;
+			continue;
+		}
+		literal += char;
+		index++;
+	}
+	throw new FormulaCompilationError(t(ERROR_KEYS.unterminatedString));
+}
+
+type FormulaStackValue =
+	| { kind: 'number'; value: number }
+	| { kind: 'string'; value: string }
+	| { kind: 'field'; raw: unknown };
+
+type FormulaResultValue = { kind: 'number'; value: number } | { kind: 'string'; value: string };
+function shouldConcatenate(left: FormulaStackValue, right: FormulaStackValue): boolean {
+	return left.kind === 'string' || right.kind === 'string';
+}
+
+function toNumberValue(value: FormulaStackValue): number {
+	switch (value.kind) {
+		case 'number':
+			return value.value;
+		case 'string':
+			return coerceNumber(value.value);
+		case 'field':
+			return coerceNumber(value.raw);
+		default:
+			return 0;
+	}
+}
+
+function toStringValue(value: FormulaStackValue): string {
+	switch (value.kind) {
+		case 'string':
+			return value.value;
+		case 'number':
+			return formatResult(value.value);
+		case 'field': {
+			const raw = value.raw;
+			if (raw === null || raw === undefined) {
+				return '';
+			}
+			if (typeof raw === 'number') {
+				return formatResult(raw);
+			}
+			return String(raw);
+		}
+		default:
+			return '';
+	}
 }

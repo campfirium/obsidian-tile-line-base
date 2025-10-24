@@ -83,6 +83,7 @@ export class ColumnInteractionController {
 		const existing = configs.find((config) => config.name === field);
 		const initialType: ColumnFieldType = existing?.formula?.trim() ? 'formula' : 'text';
 		const initialFormula = existing?.formula ?? '';
+		const availableFields = schema.columnNames.filter((name) => name && name !== '#' && name !== ROW_ID_FIELD);
 		const validateName = (name: string): string | null => {
 			const trimmed = name.trim();
 			if (trimmed.length === 0) {
@@ -104,6 +105,7 @@ export class ColumnInteractionController {
 			initialType,
 			initialFormula,
 			validateName,
+			availableFields,
 			onSubmit: (result) => {
 				this.applyColumnEditResult(field, result);
 			},

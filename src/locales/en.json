@@ -14,7 +14,8 @@
       "nonFiniteResult": "Result is not a finite number",
       "emptyFormula": "Formula is empty",
       "numericOutOfRange": "Numeric value is out of range",
-      "unaryNotSupported": "Unary operator is not supported yet"
+      "unaryNotSupported": "Unary operator is not supported yet",
+      "unterminatedString": "String literal is not closed"
     }
   },
   "agGrid": {
@@ -32,7 +33,7 @@
     "typeTextOption": "Text",
     "typeFormulaOption": "Formula",
     "formulaLabel": "Formula",
-    "formulaDescription": "Reference a column with {field}; supports + - * / operators.",
+    "formulaDescription": "Reference a column with {field}; supports + - * / operators and \"text\" concatenation.",
     "formulaPlaceholder": "{points} + {cost}",
     "saveButton": "Save",
     "cancelButton": "Cancel",

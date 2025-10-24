@@ -1,6 +1,7 @@
 ﻿import { App, Modal, Setting } from 'obsidian';
 import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
+import { FormulaFieldSuggester } from './FormulaFieldSuggester';
 
 export type ColumnFieldType = 'text' | 'formula';
 
@@ -16,6 +17,7 @@ export interface ColumnEditorModalOptions {
 	initialFormula: string;
 	validateName?: (name: string) => string | null;
 	triggerElement?: HTMLElement | null;
+	availableFields?: string[];
 	onSubmit: (result: ColumnEditorResult) => void;
 	onCancel: () => void;
 }
@@ -31,6 +33,7 @@ export class ColumnEditorModal extends Modal {
 	private submitted = false;
 	private returnFocusTarget: HTMLElement | null = null;
 	private keydownHandler?: (event: KeyboardEvent) => void;
+	private formulaSuggester?: FormulaFieldSuggester;
 
 	constructor(app: App, options: ColumnEditorModalOptions) {
 		super(app);
@@ -41,12 +44,12 @@ export class ColumnEditorModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		const ownerDoc = contentEl.ownerDocument;
+		const ownerDoc = contentEl.ownerDocument ?? document;
 
 		const providedTrigger = this.options.triggerElement;
 		if (providedTrigger && providedTrigger instanceof HTMLElement) {
 			this.returnFocusTarget = providedTrigger;
-		} else if (ownerDoc?.activeElement instanceof HTMLElement) {
+		} else if (ownerDoc.activeElement instanceof HTMLElement) {
 			this.returnFocusTarget = ownerDoc.activeElement;
 		} else {
 			this.returnFocusTarget = null;
@@ -84,13 +87,26 @@ export class ColumnEditorModal extends Modal {
 		this.formulaSetting.setDesc(t('columnEditorModal.formulaDescription'));
 		this.formulaSetting.controlEl.empty();
 
+		const textareaWrapper = document.createElement('div');
+		textareaWrapper.className = 'tlb-column-formula-input-wrapper';
+
 		const textarea = document.createElement('textarea');
 		textarea.className = 'tlb-column-formula-input';
 		textarea.rows = 4;
 		textarea.placeholder = t('columnEditorModal.formulaPlaceholder');
 		textarea.value = this.options.initialFormula;
-		this.formulaSetting.controlEl.appendChild(textarea);
+		textareaWrapper.appendChild(textarea);
+		this.formulaSetting.controlEl.appendChild(textareaWrapper);
 		this.formulaInput = textarea;
+
+		const fields = this.options.availableFields ?? [];
+		if (fields.length > 0) {
+			this.formulaSuggester = new FormulaFieldSuggester({
+				input: textarea,
+				fields,
+				ownerDocument: ownerDoc
+			});
+		}
 
 		this.errorEl = contentEl.createDiv({ cls: 'tlb-column-editor-error' });
 		this.errorEl.style.display = 'none';
@@ -130,7 +146,7 @@ export class ColumnEditorModal extends Modal {
 		const focusNameInput = () => {
 			this.nameInput?.focus({ preventScroll: true });
 		};
-		const requestFrame = ownerDoc?.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
+		const requestFrame = ownerDoc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
 		if (typeof requestFrame === 'function') {
 			requestFrame(() => focusNameInput());
 		} else {
@@ -142,6 +158,10 @@ export class ColumnEditorModal extends Modal {
 		if (this.modalEl && this.keydownHandler) {
 			this.modalEl.removeEventListener('keydown', this.keydownHandler, true);
 			this.keydownHandler = undefined;
+		}
+		if (this.formulaSuggester) {
+			this.formulaSuggester.destroy();
+			this.formulaSuggester = undefined;
 		}
 
 		if (!this.submitted) {
@@ -164,6 +184,9 @@ export class ColumnEditorModal extends Modal {
 		}
 		if (this.formulaInput) {
 			this.formulaInput.disabled = hidden;
+		}
+		if (this.formulaSuggester) {
+			this.formulaSuggester.setEnabled(!hidden);
 		}
 	}
 

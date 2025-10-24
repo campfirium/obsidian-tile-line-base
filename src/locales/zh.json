@@ -14,7 +14,8 @@
       "nonFiniteResult": "结果不是有限数值",
       "emptyFormula": "公式为空",
       "numericOutOfRange": "数值超出范围",
-      "unaryNotSupported": "暂不支持一元运算符"
+      "unaryNotSupported": "暂不支持一元运算符",
+      "unterminatedString": "字符串未闭合"
     }
   },
   "agGrid": {
@@ -32,7 +33,7 @@
     "typeTextOption": "文本",
     "typeFormulaOption": "公式",
     "formulaLabel": "公式",
-    "formulaDescription": "使用 {字段} 引用列，支持 + - * / 运算符。",
+    "formulaDescription": "使用 {字段} 引用列，支持 + - * / 运算符，并可拼接 \"文本\"。",
     "saveButton": "保存",
     "cancelButton": "取消",
     "nameEmptyError": "列名称不能为空",

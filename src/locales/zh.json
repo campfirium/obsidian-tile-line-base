@@ -2,6 +2,11 @@
   "tableView": {
     "displayName": "TileLineBase 表格"
   },
+  "settings": {
+    "generalHeading": "常规",
+    "rightSidebarToggleLabel": "显示右侧边栏",
+    "rightSidebarToggleDesc": "显示表格视图右侧边栏（列管理与筛选面板）"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "存在无法识别的字符",
@@ -61,6 +66,7 @@
       "done": "已完成",
       "inprogress": "进行中",
       "onhold": "暂停",
+      "someday": "改天",
       "canceled": "已取消"
     },
     "menuLabel": "状态选项"

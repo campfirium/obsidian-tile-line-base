@@ -1,11 +1,11 @@
-/**
- * StatusCellRenderer - ×´Ì¬ÁĞ×Ô¶¨ÒåäÖÈ¾Æ÷
+ï»¿/**
+ * StatusCellRenderer - ×´Ì¬ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½
  *
- * ¹¦ÄÜ£º
- * - äÖÈ¾ 5 ÖÖÈÎÎñ×´Ì¬Í¼±ê£¨todo, done, inprogress, onhold, canceled£©
- * - ×ó¼üµã»÷£ºÔÚ todo ? done Ö®¼äÇĞ»»
- * - ÓÒ¼üµã»÷£ºÏÔÊ¾ËùÓĞ 5 ÖÖ×´Ì¬µÄ²Ëµ¥
- * - Ö§³Ö¿É·ÃÎÊĞÔ£¨title, aria-label£©
+ * ï¿½ï¿½ï¿½Ü£ï¿½
+ * - ï¿½ï¿½È¾ 6 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬Í¼ï¿½ê£¨todo, done, inprogress, onhold, someday, canceledï¿½ï¿½
+ * - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ todo ? done Ö®ï¿½ï¿½ï¿½Ğ»ï¿½
+ * - ï¿½Ò¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾È«ï¿½ï¿½×´Ì¬ï¿½Ä²Ëµï¿½
+ * - Ö§ï¿½Ö¿É·ï¿½ï¿½ï¿½ï¿½Ô£ï¿½title, aria-labelï¿½ï¿½
  */
 
 import { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
@@ -15,61 +15,74 @@ import { getLogger } from '../utils/logger';
 
 const logger = getLogger('renderer:status-cell');
 
-// ×´Ì¬ÀàĞÍ¶¨Òå
-export type TaskStatus = 'todo' | 'done' | 'inprogress' | 'onhold' | 'canceled';
+// ×´Ì¬ï¿½ï¿½ï¿½Í¶ï¿½ï¿½ï¿½
+export type TaskStatus = 'todo' | 'done' | 'inprogress' | 'onhold' | 'someday' | 'canceled';
 
 /**
- * ×´Ì¬¹æ·¶»¯£º½«¸÷ÖÖ±ğÃûÍ³Ò»Îª±ê×¼×´Ì¬Öµ
+ * ×´Ì¬ï¿½æ·¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½Í³Ò»Îªï¿½ï¿½×¼×´Ì¬Öµ
  */
 export function normalizeStatus(value: any): TaskStatus {
 	const str = String(value || 'todo').toLowerCase().trim();
+	const normalized = str.replace(/[\s_/-]+/g, '');
 
-	// done µÄ±ğÃû
-	if (str === 'done' || str === 'completed') {
+	// done ï¿½Ä±ï¿½ï¿½ï¿½
+	if (normalized === 'done' || normalized === 'completed') {
 		return 'done';
 	}
 
-	// inprogress µÄ±ğÃû
-	if (str === 'inprogress' || str === 'in-progress' || str === 'in_progress' || str === 'doing') {
+	// inprogress ï¿½Ä±ï¿½ï¿½ï¿½
+	if (normalized === 'inprogress' || normalized === 'doing') {
 		return 'inprogress';
 	}
 
-	// onhold µÄ±ğÃû
-	if (str === 'onhold' || str === 'on-hold' || str === 'on_hold' || str === 'hold' || str === 'paused') {
+	// onhold ï¿½Ä±ï¿½ï¿½ï¿½
+	if (normalized === 'onhold' || normalized === 'hold' || normalized === 'paused') {
 		return 'onhold';
 	}
 
-	// canceled µÄ±ğÃû
-	if (str === 'canceled' || str === 'cancelled' || str === 'dropped') {
+	// someday çš„åˆ«å
+	if (
+		normalized === 'someday' ||
+		normalized === 'later' ||
+		normalized === 'maybe' ||
+		normalized === 'somedaymaybe'
+	) {
+		return 'someday';
+	}
+
+	// canceled ï¿½Ä±ï¿½ï¿½ï¿½
+	if (normalized === 'canceled' || normalized === 'cancelled' || normalized === 'dropped') {
 		return 'canceled';
 	}
 
-	// Ä¬ÈÏÎª todo
+	// Ä¬ï¿½ï¿½Îª todo
 	return 'todo';
 }
 
 /**
- * »ñÈ¡×´Ì¬¶ÔÓ¦µÄ Lucide Í¼±ê ID
+ * ï¿½ï¿½È¡×´Ì¬ï¿½ï¿½Ó¦ï¿½ï¿½ Lucide Í¼ï¿½ï¿½ ID
  */
 export function getStatusIcon(status: TaskStatus): string {
 	const icons: Record<TaskStatus, string> = {
-		'todo': 'square',           // ¡õ ¿Õ·½¿ò£¨Obsidian ÈÎÎñÁĞ±íÔ­Éú£©
-		'done': 'check-square',     // ? ÒÑÍê³É£¨Obsidian ÈÎÎñÁĞ±íÔ­Éú£©
-		'inprogress': 'circle-dashed',  // ? ĞéÏßÔ²£¨°µÊ¾½øĞĞÖĞ£©
-		'onhold': 'pause-circle',   // ? ÔİÍ£Í¼±ê
-		'canceled': 'x-square'      // ? ²æºÅ·½¿ò
+		'todo': 'square',           // ï¿½ï¿½ ï¿½Õ·ï¿½ï¿½ï¿½Obsidian ï¿½ï¿½ï¿½ï¿½ï¿½Ğ±ï¿½Ô­ï¿½ï¿½ï¿½ï¿½
+		'done': 'check-square',     // ? ï¿½ï¿½ï¿½ï¿½É£ï¿½Obsidian ï¿½ï¿½ï¿½ï¿½ï¿½Ğ±ï¿½Ô­ï¿½ï¿½ï¿½ï¿½
+		'inprogress': 'loader-circle',  // Use spinning loader to indicate work in progress
+		'onhold': 'pause-circle',   // ? ï¿½ï¿½Í£Í¼ï¿½ï¿½
+		'someday': 'circle-dashed',   // Use dashed circle to express deferred/undecided status
+		'canceled': 'x-square'      // ? ï¿½ï¿½Å·ï¿½ï¿½ï¿½
 	};
 	return icons[status] || icons['todo'];
 }
 
 /**
- * »ñÈ¡×´Ì¬¶ÔÓ¦µÄÎÄ×Ö±êÇ©£¨ÓÃÓÚ¿É·ÃÎÊĞÔºÍµ¼³ö£©
+ * ï¿½ï¿½È¡×´Ì¬ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ï¿½Ú¿É·ï¿½ï¿½ï¿½ï¿½ÔºÍµï¿½ï¿½ï¿½ï¿½ï¿½
  */
 const STATUS_LABEL_KEYS: Record<TaskStatus, TranslationKey> = {
 	todo: 'statusCell.labels.todo',
 	done: 'statusCell.labels.done',
 	inprogress: 'statusCell.labels.inprogress',
 	onhold: 'statusCell.labels.onhold',
+	someday: 'statusCell.labels.someday',
 	canceled: 'statusCell.labels.canceled'
 };
 
@@ -79,7 +92,7 @@ export function getStatusLabel(status: TaskStatus): string {
 }
 
 /**
- * StatusCellRenderer - AG Grid ×Ô¶¨Òåµ¥Ôª¸ñäÖÈ¾Æ÷
+ * StatusCellRenderer - AG Grid ï¿½Ô¶ï¿½ï¿½åµ¥Ôªï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½
  */
 export class StatusCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
@@ -95,22 +108,22 @@ export class StatusCellRenderer implements ICellRendererComp {
 	private shouldRestoreFocusToCell = false;
 
 	/**
-	 * ³õÊ¼»¯äÖÈ¾Æ÷
+	 * ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½
 	 */
 	init(params: ICellRendererParams): void {
 		this.params = params;
 
-		// ´Ó AG Grid µÄµ¥Ôª¸ñÔªËØ»ñÈ¡ÕıÈ·µÄ document£¨Ö§³Ö pop-out ´°¿Ú£©
+		// ï¿½ï¿½ AG Grid ï¿½Äµï¿½Ôªï¿½ï¿½Ôªï¿½Ø»ï¿½È¡ï¿½ï¿½È·ï¿½ï¿½ documentï¿½ï¿½Ö§ï¿½ï¿½ pop-out ï¿½ï¿½ï¿½Ú£ï¿½
 		const doc = (params.eGridCell?.ownerDocument || document);
 
-		// ´´½¨ÈİÆ÷ÔªËØ
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½ï¿½
 		this.eGui = doc.createElement('div');
 		this.eGui.className = 'tlb-status-cell';
 		this.eGui.style.display = 'flex';
 		this.eGui.style.alignItems = 'center';
 		this.eGui.style.justifyContent = 'center';
 		this.eGui.style.cursor = 'pointer';
-		this.eGui.style.userSelect = 'none';  // ½ûÖ¹ÎÄ±¾Ñ¡Ôñ
+		this.eGui.style.userSelect = 'none';  // ï¿½ï¿½Ö¹ï¿½Ä±ï¿½Ñ¡ï¿½ï¿½
 		this.eGui.style.width = '100%';
 		this.eGui.style.height = '100%';
 		this.eGui.tabIndex = 0;
@@ -119,19 +132,19 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.setAttribute('aria-keyshortcuts', 'Space Enter Shift+F10');
 		this.eGui.setAttribute('data-tlb-status-cell', 'true');
 
-		// äÖÈ¾Í¼±ê
+		// ï¿½ï¿½È¾Í¼ï¿½ï¿½
 		this.renderIcon();
 
-		// °ó¶¨×ó¼üµã»÷ÊÂ¼ş£¨ÇĞ»»×´Ì¬£©
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Ğ»ï¿½×´Ì¬ï¿½ï¿½
 		this.clickHandler = (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
-			this.hideContextMenu();  // Òş²Ø¿ÉÄÜ´æÔÚµÄ²Ëµ¥
+			this.hideContextMenu();  // ï¿½ï¿½ï¿½Ø¿ï¿½ï¿½Ü´ï¿½ï¿½ÚµÄ²Ëµï¿½
 			this.handleClick();
 		};
 
-		// °ó¶¨ÓÒ¼ü²Ëµ¥ÊÂ¼ş£¨ÏÔÊ¾ËùÓĞ×´Ì¬Ñ¡Ïî£©
+		// ï¿½ï¿½ï¿½Ò¼ï¿½ï¿½Ëµï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½×´Ì¬Ñ¡ï¿½î£©
 		this.contextMenuHandler = (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -157,7 +170,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 				event.preventDefault();
 				event.stopPropagation();
 				const rect = this.eGui.getBoundingClientRect();
-				// È¡µ¥Ôª¸ñÖĞĞÄ×÷Îª²Ëµ¥¶¨Î»µã£¬±ÜÃâÕÚµ²
+				// È¡ï¿½ï¿½Ôªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Ëµï¿½ï¿½ï¿½Î»ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½
 				const anchor = {
 					clientX: rect.left + rect.width / 2,
 					clientY: rect.top + rect.height / 2,
@@ -170,38 +183,38 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * äÖÈ¾Í¼±êºÍ¿É·ÃÎÊĞÔÊôĞÔ
+	 * ï¿½ï¿½È¾Í¼ï¿½ï¿½Í¿É·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	private renderIcon(): void {
 		const status = normalizeStatus(this.params.data?.status);
 		const iconId = getStatusIcon(status);
 		const label = getStatusLabel(status);
 
-		// Çå¿ÕÄÚÈİ£¬Ê¹ÓÃ Obsidian µÄ Lucide Í¼±ê
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½Ê¹ï¿½ï¿½ Obsidian ï¿½ï¿½ Lucide Í¼ï¿½ï¿½
 		this.eGui.innerHTML = '';
 		setIcon(this.eGui, iconId);
 
-		// Ìí¼Ó¿É·ÃÎÊĞÔÖ§³Ö
+		// ï¿½ï¿½Ó¿É·ï¿½ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½
 		this.eGui.title = label;
 		this.eGui.setAttribute('aria-label', label);
 		this.eGui.setAttribute('aria-expanded', this.contextMenu ? 'true' : 'false');
 	}
 
 	/**
-	 * ´¦Àí×ó¼üµã»÷£ºÇĞ»»×´Ì¬
+	 * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ»ï¿½×´Ì¬
 	 */
 	private handleClick(): void {
-		// »ñÈ¡µ±Ç°×´Ì¬
+		// ï¿½ï¿½È¡ï¿½ï¿½Ç°×´Ì¬
 		const currentStatus = normalizeStatus(this.params.data?.status);
 
-		// ¼ÆËãĞÂ×´Ì¬£¨todo ? done£¬ÆäËû×´Ì¬Í³Ò»±äÎª done£©
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½todo ? doneï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬Í³Ò»ï¿½ï¿½Îª doneï¿½ï¿½
 		let newStatus: TaskStatus;
 		if (currentStatus === 'todo') {
 			newStatus = 'done';
 		} else if (currentStatus === 'done') {
 			newStatus = 'todo';
 		} else {
-			// inprogress, onhold, canceled µã»÷ºóÍ³Ò»±äÎª done
+			// inprogress, onhold, canceled ï¿½ï¿½ï¿½ï¿½ï¿½Í³Ò»ï¿½ï¿½Îª done
 			newStatus = 'done';
 		}
 
@@ -209,15 +222,15 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * ÏÔÊ¾ÓÒ¼ü²Ëµ¥
+	 * ï¿½ï¿½Ê¾ï¿½Ò¼ï¿½ï¿½Ëµï¿½
 	 */
 	private showContextMenu(options?: { clientX?: number; clientY?: number; triggeredByKeyboard?: boolean }): void {
-		// Òş²Ø¾É²Ëµ¥
+		// ï¿½ï¿½ï¿½Ø¾É²Ëµï¿½
 		this.hideContextMenu();
 
 		const currentStatus = normalizeStatus(this.params.data?.status);
 
-		// »ñÈ¡ÈİÆ÷ËùÔÚµÄ document£¨Ö§³ÖĞÂ´°¿Ú£©
+		// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ documentï¿½ï¿½Ö§ï¿½ï¿½ï¿½Â´ï¿½ï¿½Ú£ï¿½
 		const ownerDoc = this.eGui.ownerDocument;
 		this.contextMenu = ownerDoc.createElement('div');
 		const menu = this.contextMenu;
@@ -233,8 +246,8 @@ export class StatusCellRenderer implements ICellRendererComp {
 		menu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
 		menu.style.minWidth = '120px';
 
-		// ´´½¨²Ëµ¥Ïî
-		const statuses: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'canceled'];
+		// ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½
+		const statuses: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'];
 
 		this.contextMenuItems = [];
 		this.focusedMenuIndex = -1;
@@ -252,22 +265,22 @@ export class StatusCellRenderer implements ICellRendererComp {
 			item.setAttribute('aria-label', label);
 			item.setAttribute('tabindex', '-1');
 
-			// ´´½¨Í¼±êÈİÆ÷
+			// ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			const iconContainer = ownerDoc.createElement('span');
 			iconContainer.style.display = 'inline-flex';
 			iconContainer.style.width = '16px';
 			iconContainer.style.height = '16px';
 			setIcon(iconContainer, getStatusIcon(status));
 
-			// ´´½¨ÎÄ±¾±êÇ©
+			// ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½Ç©
 			const labelSpan = ownerDoc.createElement('span');
 			labelSpan.textContent = label;
 
-			// ×é×°²Ëµ¥Ïî
+			// ï¿½ï¿½×°ï¿½Ëµï¿½ï¿½ï¿½
 			item.appendChild(iconContainer);
 			item.appendChild(labelSpan);
 
-			// µ±Ç°×´Ì¬½ûÓÃ
+			// ï¿½ï¿½Ç°×´Ì¬ï¿½ï¿½ï¿½ï¿½
 			if (status === currentStatus) {
 				item.style.opacity = '0.5';
 				item.style.cursor = 'default';
@@ -276,7 +289,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 				this.contextMenuItems.push({ element: item, status, disabled: true });
 			} else {
 				item.setAttribute('aria-checked', 'false');
-				// ĞüÍ£Ğ§¹û
+				// ï¿½ï¿½Í£Ğ§ï¿½ï¿½
 				item.addEventListener('mouseenter', () => {
 					item.style.backgroundColor = 'var(--background-modifier-hover)';
 				});
@@ -284,7 +297,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 					item.style.backgroundColor = '';
 				});
 
-				// µã»÷ÇĞ»»×´Ì¬
+				// ï¿½ï¿½ï¿½ï¿½Ğ»ï¿½×´Ì¬
 				item.addEventListener('click', (e) => {
 					e.stopPropagation();
 					this.changeStatus(status);
@@ -296,12 +309,12 @@ export class StatusCellRenderer implements ICellRendererComp {
 			menu.appendChild(item);
 		}
 
-		// ¶¨Î»²Ëµ¥
+		// ï¿½ï¿½Î»ï¿½Ëµï¿½
 		const defaultView = ownerDoc.defaultView || window;
 		const viewportWidth = defaultView.innerWidth;
 		const viewportHeight = defaultView.innerHeight;
 
-		// ÁÙÊ±Ìí¼Óµ½ DOM ÒÔ»ñÈ¡³ß´ç
+		// ï¿½ï¿½Ê±ï¿½ï¿½Óµï¿½ DOM ï¿½Ô»ï¿½È¡ï¿½ß´ï¿½
 		ownerDoc.body.appendChild(menu);
 		const menuRect = menu.getBoundingClientRect();
 
@@ -309,7 +322,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		let left = options?.clientX ?? (fallbackRect.left + fallbackRect.width / 2);
 		let top = options?.clientY ?? (fallbackRect.top + fallbackRect.height);
 
-		// ·ÀÖ¹³¬³öÆÁÄ»
+		// ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»
 		if (left + menuRect.width > viewportWidth - 8) {
 			left = viewportWidth - menuRect.width - 8;
 		}
@@ -387,17 +400,17 @@ export class StatusCellRenderer implements ICellRendererComp {
 			this.focusMenuItem(focusIndex);
 		}
 
-		// µã»÷Íâ²¿Òş²Ø²Ëµ¥
+		// ï¿½ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½Ø²Ëµï¿½
 		this.documentClickHandler = (e: MouseEvent) => {
-			// Èç¹ûµã»÷ÔÚ²Ëµ¥ÄÚ²¿£¬²»Òş²Ø
+			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú²Ëµï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			if (this.contextMenu && this.contextMenu.contains(e.target as Node)) {
 				return;
 			}
-			// µã»÷Íâ²¿»òÓÒ¼ü£¬Òş²Ø²Ëµ¥
+			// ï¿½ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½Ò¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²Ëµï¿½
 			this.hideContextMenu();
 		};
 
-		// ÑÓ³ÙÌí¼Ó¼àÌıÆ÷£¬±ÜÃâµ±Ç°ÓÒ¼üÊÂ¼şÁ¢¼´´¥·¢
+		// ï¿½Ó³ï¿½ï¿½ï¿½Ó¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½âµ±Ç°ï¿½Ò¼ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		setTimeout(() => {
 			if (this.documentClickHandler) {
 				ownerDoc.addEventListener('click', this.documentClickHandler, { capture: true });
@@ -407,7 +420,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * Òş²ØÓÒ¼ü²Ëµ¥
+	 * ï¿½ï¿½ï¿½ï¿½ï¿½Ò¼ï¿½ï¿½Ëµï¿½
 	 */
 	private hideContextMenu(): void {
 		if (this.contextMenu && this.menuKeydownHandler) {
@@ -422,7 +435,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui?.setAttribute('aria-expanded', 'false');
 		this.menuKeydownHandler = undefined;
 
-		// ÒÆ³ı document µÄµã»÷¼àÌıÆ÷
+		// ï¿½Æ³ï¿½ document ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		if (this.documentClickHandler) {
 			const ownerDoc = this.eGui?.ownerDocument || document;
 			ownerDoc.removeEventListener('click', this.documentClickHandler);
@@ -481,17 +494,17 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * ¸ü¸Ä×´Ì¬£¨Í¨ÓÃ·½·¨£©
+	 * ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Í¨ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	private changeStatus(newStatus: TaskStatus): void {
-		// »ñÈ¡ rowId£¨ÎÈ¶¨±êÊ¶£¬²»ÊÜÅÅĞò/¹ıÂËÓ°Ïì£©
+		// ï¿½ï¿½È¡ rowIdï¿½ï¿½ï¿½È¶ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ì£©
 		const rowId = this.params.node?.id;
 		if (!rowId) {
 			logger.error('rowId is undefined');
 			return;
 		}
 
-		// Í¨¹ı»Øµ÷Í¨Öª TableView ½øĞĞ×´Ì¬±ä¸ü
+		// Í¨ï¿½ï¿½ï¿½Øµï¿½Í¨Öª TableView ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½
 		if (this.params.context?.onStatusChange) {
 			this.params.context.onStatusChange(rowId, newStatus);
 		} else {
@@ -500,24 +513,24 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * ·µ»Ø DOM ÔªËØ
+	 * ï¿½ï¿½ï¿½ï¿½ DOM Ôªï¿½ï¿½
 	 */
 	getGui(): HTMLElement {
 		return this.eGui;
 	}
 
 	/**
-	 * Ë¢ĞÂäÖÈ¾Æ÷£¨Ö§³ÖÔöÁ¿¸üĞÂ£©
-	 * ·µ»Ø true ±íÊ¾¸´ÓÃµ±Ç°ÊµÀı£¬·µ»Ø false ±íÊ¾ÖØĞÂ´´½¨ÊµÀı
+	 * Ë¢ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½
+	 * ï¿½ï¿½ï¿½ï¿½ true ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Ãµï¿½Ç°Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ false ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½Êµï¿½ï¿½
 	 */
 	refresh(params: ICellRendererParams): boolean {
 		this.params = params;
 		this.renderIcon();
-		return true;  // ¸´ÓÃÊµÀı£¬±ÜÃâÖØĞÂ´´½¨
+		return true;  // ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½
 	}
 
 	/**
-	 * Ïú»ÙäÖÈ¾Æ÷£¨ÇåÀíÊÂ¼ş¼àÌıÆ÷£©
+	 * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	destroy(): void {
 		this.shouldRestoreFocusToCell = false;

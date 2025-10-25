@@ -10,6 +10,7 @@ export class GridClipboardService {
 	private readonly getGridApi: () => GridApi | null;
 	private readonly getFocusedDocument: () => Document | null;
 	private readonly getGridContext: ClipboardOptions['getGridContext'];
+	private readonly stopCellEditing: ClipboardOptions['stopCellEditing'];
 	private readonly translate: ClipboardOptions['translate'];
 	private readonly debug: ClipboardOptions['debug'];
 
@@ -17,6 +18,7 @@ export class GridClipboardService {
 		this.getGridApi = options.getGridApi;
 		this.getFocusedDocument = options.getFocusedDocument;
 		this.getGridContext = options.getGridContext;
+		this.stopCellEditing = options.stopCellEditing;
 		this.translate = options.translate;
 		this.debug = options.debug;
 	}
@@ -43,6 +45,7 @@ export class GridClipboardService {
 						if (context?.onCopyH2Section) {
 							event.preventDefault?.();
 							event.stopPropagation?.();
+							this.stopCellEditing();
 							context.onCopyH2Section(blockIndex);
 							return;
 						}
@@ -60,6 +63,7 @@ export class GridClipboardService {
 		event.stopPropagation?.();
 		const doc = this.getFocusedDocument() || document;
 		this.copyTextToClipboard(doc, text);
+		this.stopCellEditing();
 	}
 
 	private extractFocusedCellText(): string | null {

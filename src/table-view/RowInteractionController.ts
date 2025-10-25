@@ -1,6 +1,7 @@
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
 import { getLogger } from '../utils/logger';
+import { isReservedColumnId } from '../grid/systemColumnUtils';
 
 const logger = getLogger('table-view:row-interaction');
 
@@ -138,7 +139,7 @@ export class RowInteractionController {
 		if (!this.ensureSchema()) {
 			return;
 		}
-		if (!field || field === '#') {
+		if (!field || isReservedColumnId(field)) {
 			return;
 		}
 		if (rowIndexes.length === 0) {

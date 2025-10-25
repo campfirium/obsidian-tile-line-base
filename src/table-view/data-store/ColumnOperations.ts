@@ -1,6 +1,6 @@
 import type { ColumnConfig, H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
-import { ROW_ID_FIELD } from '../../grid/GridAdapter';
+import { isReservedColumnId } from '../../grid/systemColumnUtils';
 import type { FormulaState } from './FormulaManager';
 
 export function reorderColumns(schema: Schema | null, orderedFields: string[]): boolean {
@@ -29,7 +29,7 @@ export function reorderColumns(schema: Schema | null, orderedFields: string[]): 
 
 	const normalizedOrder = orderedFields
 		.map((field) => (typeof field === 'string' ? field.trim() : ''))
-		.filter((field) => field.length > 0 && field !== '#' && field !== ROW_ID_FIELD);
+		.filter((field) => field.length > 0 && !isReservedColumnId(field));
 
 	const reorderedMovable: string[] = [];
 	for (const field of normalizedOrder) {
@@ -181,7 +181,7 @@ export function removeColumn(
 	}
 
 	const target = field.trim();
-	if (!target || target === '#' || target === 'status' || target === ROW_ID_FIELD) {
+	if (!target || isReservedColumnId(target)) {
 		return false;
 	}
 
@@ -225,7 +225,7 @@ export function renameColumn(
 		return false;
 	}
 	const trimmed = newName.trim();
-	if (!trimmed || trimmed === '#' || trimmed === 'status' || trimmed === ROW_ID_FIELD) {
+	if (!trimmed || isReservedColumnId(trimmed)) {
 		return false;
 	}
 	if (trimmed === oldName) {

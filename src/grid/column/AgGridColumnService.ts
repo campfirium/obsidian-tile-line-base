@@ -6,6 +6,7 @@ import { buildAgGridColumnDefs } from './ColumnDefinitionBuilder';
 import { ColumnLayoutManager } from './ColumnLayoutManager';
 import { applyQuickFilter as applyQuickFilterToGrid } from './QuickFilterManager';
 import { buildSortState, cloneColumnState } from './ColumnStateManager';
+import { isDisplayedSystemColumn } from '../systemColumnUtils';
 
 export interface ColumnServiceCallbacks {
 	onColumnResize?: (field: string, width: number) => void;
@@ -129,7 +130,7 @@ export class AgGridColumnService {
 		}
 
 		const colId = event.column.getColId();
-		if (!colId || colId === '#' || colId === 'status') {
+		if (isDisplayedSystemColumn(colId)) {
 			return;
 		}
 
@@ -153,7 +154,7 @@ export class AgGridColumnService {
 
 		const column = event.column ?? null;
 		const columnId = typeof column?.getColId === 'function' ? column.getColId() : null;
-		if (columnId === '#' || columnId === 'status' || columnId === ROW_ID_FIELD) {
+		if (isDisplayedSystemColumn(columnId) || columnId === ROW_ID_FIELD) {
 			return;
 		}
 
@@ -174,7 +175,7 @@ export class AgGridColumnService {
 			const field = colDef?.field;
 			const fallback = typeof gridColumn.getColId === 'function' ? gridColumn.getColId() : null;
 			const value = field ?? fallback;
-			if (!value || value === '#' || value === 'status' || value === ROW_ID_FIELD) {
+			if (!value || isDisplayedSystemColumn(value) || value === ROW_ID_FIELD) {
 				continue;
 			}
 			if (!orderedFields.includes(value)) {

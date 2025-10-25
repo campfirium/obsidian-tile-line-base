@@ -1,6 +1,7 @@
 import { Column, GridApi } from 'ag-grid-community';
 
 import { ROW_ID_FIELD } from '../GridAdapter';
+import { isDisplayedSystemColumn } from '../systemColumnUtils';
 
 type QuickFilterApi = GridApi & {
 	setQuickFilter?: (value: string) => void;
@@ -34,7 +35,7 @@ export function applyQuickFilter(gridApi: GridApi | null, quickFilterText: strin
 			if (!colId) {
 				continue;
 			}
-			if (colId === '#' || colId === ROW_ID_FIELD || colId === 'status') {
+			if (isDisplayedSystemColumn(colId) || colId === ROW_ID_FIELD) {
 				continue;
 			}
 			if (typeof column.isVisible === 'function' && !column.isVisible()) {

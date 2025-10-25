@@ -3,6 +3,7 @@ import type { GridAdapter } from '../grid/GridAdapter';
 import type { TableDataStore } from './TableDataStore';
 import type { RowInteractionController } from './RowInteractionController';
 import { GridBulkFillModal } from './GridBulkFillModal';
+import { isReservedColumnId } from '../grid/systemColumnUtils';
 
 interface FillSelectionDeps {
 	app: App;
@@ -26,7 +27,7 @@ export function createFillSelectionAction(
 	context: FillSelectionInput
 ): FillSelectionResult {
 	const { blockIndex, selectedRows, columnField } = context;
-	if (!columnField || columnField === '#' || selectedRows.length <= 1) {
+	if (!columnField || isReservedColumnId(columnField) || selectedRows.length <= 1) {
 		return {};
 	}
 	const columnType = deps.dataStore.getColumnDisplayType(columnField);

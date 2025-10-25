@@ -1,6 +1,7 @@
 import { Column, GridApi } from 'ag-grid-community';
 
 import { COLUMN_MAX_WIDTH, COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
+import { isDisplayedSystemColumn } from '../systemColumnUtils';
 
 interface ColumnLayoutDependencies {
 	getContainer: () => HTMLElement | null;
@@ -31,7 +32,7 @@ export class ColumnLayoutManager {
 
 		for (const column of columns) {
 			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
+			if (isDisplayedSystemColumn(colId)) {
 				continue;
 			}
 
@@ -67,7 +68,7 @@ export class ColumnLayoutManager {
 
 		for (const column of columns) {
 			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
+			if (isDisplayedSystemColumn(colId)) {
 				continue;
 			}
 
@@ -98,7 +99,7 @@ export class ColumnLayoutManager {
 	applyWidthClamping(gridApi: GridApi, columns: Column[]): void {
 		for (const column of columns) {
 			const colId = column.getColId();
-			if (!colId || colId === '#' || colId === 'status') {
+			if (isDisplayedSystemColumn(colId)) {
 				continue;
 			}
 

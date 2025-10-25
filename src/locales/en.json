@@ -222,6 +222,24 @@
     "unnamedGroup": "Unnamed group",
     "defaultGroupName": "Default",
     "emptyGroupLabel": "No saved filter views",
-    "buttonAriaLabel": "Tag groups: {{name}}"
+    "buttonAriaLabel": "Tag groups: {{name}}",
+    "menuRename": "Rename group",
+    "menuDelete": "Delete group",
+    "deleteNotice": "Deleted tag group: {{name}}",
+    "deleteDefaultBlocked": "Default tag group cannot be deleted",
+    "createModalTitle": "Create tag group",
+    "createModeLabel": "Group contents",
+    "createModeManual": "Empty group",
+    "createModeField": "Generate from field",
+    "createFieldLabel": "Field",
+    "createFieldPlaceholder": "Select a field",
+    "createFieldLimitNotice": "Up to {{limit}} values will be generated automatically.",
+    "createFieldValidation": "Please select a field",
+    "confirmButton": "Create",
+    "cancelButton": "Cancel",
+    "createFieldNoValues": "No values found for the selected field.",
+    "createFieldLimitExceeded": "Only the first {{limit}} values will be used.",
+    "createFieldNoViews": "Failed to generate filter views for the selected field.",
+    "emptyValueName": "(Empty) {{field}}"
   }
 }

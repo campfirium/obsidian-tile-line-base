@@ -130,6 +130,9 @@ export function initializeTableView(view: TableView): void {
 		app: view.app,
 		store: view.tagGroupStore,
 		getFilterViewState: () => view.filterViewState,
+		getAvailableColumns: () => getAvailableColumns(view),
+		getUniqueFieldValues: (field, limit) => collectUniqueFieldValues(view, field, limit),
+		ensureFilterViewsForFieldValues: (field, values) => view.filterViewController.ensureFilterViewsForFieldValues(field, values),
 		activateFilterView: (viewId) => view.filterViewController.activateFilterView(viewId),
 		renderBar: () => {
 			if (view.filterViewBar) {
@@ -141,4 +144,26 @@ export function initializeTableView(view: TableView): void {
 	});
 
 	logger.info(t('tableViewSetup.constructorComplete'));
+}
+function collectUniqueFieldValues(view: TableView, field: string, limit: number): string[] {
+	const rows = view.dataStore.extractRowData();
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const row of rows) {
+		const raw = row[field];
+		if (raw == null) {
+			continue;
+		}
+		const value = typeof raw === 'string' ? raw : String(raw);
+		const trimmed = value.trim();
+		if (!trimmed || seen.has(trimmed)) {
+			continue;
+		}
+		seen.add(trimmed);
+		result.push(trimmed);
+		if (Number.isFinite(limit) && limit > 0 && result.length >= limit) {
+			break;
+		}
+	}
+	return result;
 }

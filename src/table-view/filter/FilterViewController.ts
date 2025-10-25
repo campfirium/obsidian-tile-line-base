@@ -317,6 +317,102 @@ export class FilterViewController {
 		}
 	}
 
+	ensureFilterViewsForFieldValues(field: string, values: string[]): FilterViewDefinition[] {
+		const trimmedField = field.trim();
+		if (!trimmedField) {
+			return [];
+		}
+		const uniqueValues: string[] = [];
+		const seen = new Set<string>();
+		for (const raw of values) {
+			const trimmed = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
+			if (!trimmed || seen.has(trimmed)) {
+				continue;
+			}
+			seen.add(trimmed);
+			uniqueValues.push(trimmed);
+		}
+		if (uniqueValues.length === 0) {
+			return [];
+		}
+
+		const createdIds: string[] = [];
+		let anyCreated = false;
+		this.stateStore.updateState((state) => {
+			const usedNames = new Set(state.views.map((view) => view.name));
+			for (const value of uniqueValues) {
+				const existing = state.views.find((view) => this.matchesFieldEqualsFilter(view, trimmedField, value));
+				if (existing) {
+					createdIds.push(existing.id);
+					continue;
+				}
+				const name = this.composeAutoViewName(trimmedField, value, usedNames);
+				const definition: FilterViewDefinition = {
+					id: this.generateFilterViewId(),
+					name,
+					filterRule: {
+						combineMode: 'AND',
+						conditions: [
+							{
+								column: trimmedField,
+								operator: 'equals',
+								value
+							}
+						]
+					},
+					sortRules: [],
+					columnState: null,
+					quickFilter: null
+				};
+				state.views.push(definition);
+				createdIds.push(definition.id);
+				usedNames.add(definition.name);
+				anyCreated = true;
+			}
+		});
+
+		this.runStateEffects({ persist: anyCreated, apply: false });
+
+		const currentState = this.stateStore.getState();
+		const resolved: FilterViewDefinition[] = [];
+		for (const value of uniqueValues) {
+			const match = currentState.views.find((view) => this.matchesFieldEqualsFilter(view, trimmedField, value));
+			if (match) {
+				resolved.push(match);
+			}
+		}
+		return resolved;
+	}
+
+	private matchesFieldEqualsFilter(view: FilterViewDefinition, field: string, value: string): boolean {
+		if (!view.filterRule || view.filterRule.combineMode !== 'AND') {
+			return false;
+		}
+		const conditions = Array.isArray(view.filterRule.conditions) ? view.filterRule.conditions : [];
+		if (conditions.length !== 1) {
+			return false;
+		}
+		const condition = conditions[0];
+		return condition.column === field && condition.operator === 'equals' && (condition.value ?? '') === value;
+	}
+
+	private composeAutoViewName(field: string, value: string, usedNames: Set<string>): string {
+		let baseName = value.trim();
+		if (!baseName) {
+			baseName = t('tagGroups.emptyValueName', { field });
+		}
+		if (!baseName || baseName.trim().length === 0) {
+			baseName = field;
+		}
+		let candidate = baseName;
+		let index = 2;
+		while (usedNames.has(candidate)) {
+			candidate = `${baseName} (${index})`;
+			index += 1;
+		}
+		return candidate;
+	}
+
 	private generateFilterViewId(): string {
 		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
 			return crypto.randomUUID();

@@ -4,20 +4,29 @@ import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
 import { openFilterViewNameModal } from '../FilterViewModals';
 import type { TagGroupStore } from './TagGroupStore';
+import { openTagGroupCreateModal } from './TagGroupCreateModal';
 
 interface TagGroupControllerOptions {
 	app: App;
 	store: TagGroupStore;
 	getFilterViewState: () => FileFilterViewState;
+	getAvailableColumns: () => string[];
+	getUniqueFieldValues: (field: string, limit: number) => string[];
+	ensureFilterViewsForFieldValues: (field: string, values: string[]) => FilterViewDefinition[];
 	activateFilterView: (viewId: string | null) => void;
 	renderBar: () => void;
 	persist: () => Promise<void> | void;
 }
 
+const MAX_FIELD_GROUP_ITEMS = 20;
+
 export class TagGroupController {
 	private readonly app: App;
 	private readonly store: TagGroupStore;
 	private readonly getFilterViewState: () => FileFilterViewState;
+	private readonly getAvailableColumns: () => string[];
+	private readonly getUniqueFieldValues: (field: string, limit: number) => string[];
+	private readonly ensureFilterViewsForFieldValues: (field: string, values: string[]) => FilterViewDefinition[];
 	private readonly activateFilterView: (viewId: string | null) => void;
 	private readonly renderBar: () => void;
 	private readonly persist: () => Promise<void> | void;
@@ -27,6 +36,9 @@ export class TagGroupController {
 		this.app = options.app;
 		this.store = options.store;
 		this.getFilterViewState = options.getFilterViewState;
+		this.getAvailableColumns = options.getAvailableColumns;
+		this.getUniqueFieldValues = options.getUniqueFieldValues;
+		this.ensureFilterViewsForFieldValues = options.ensureFilterViewsForFieldValues;
 		this.activateFilterView = options.activateFilterView;
 		this.renderBar = options.renderBar;
 		this.persist = options.persist;
@@ -60,7 +72,7 @@ export class TagGroupController {
 						event.preventDefault();
 						event.stopPropagation();
 						menu.hide();
-						void this.promptRenameGroup(group);
+						this.openGroupContextMenu(group, { x: event.pageX, y: event.pageY });
 					});
 					rowEl.classList.add('tlb-tag-group-menu-row');
 					rowEl.classList.toggle('is-active', isActive);
@@ -74,7 +86,7 @@ export class TagGroupController {
 				.setTitle(t('tagGroups.menuCreate'))
 				.setIcon('plus-circle')
 				.onClick(() => {
-					this.createGroup({ activate: false, showNotice: true });
+					void this.handleCreateGroup({ activate: false, showNotice: true });
 				});
 		});
 
@@ -202,10 +214,12 @@ export class TagGroupController {
 					.setTitle(t('tagGroups.menuCreateAndAdd'))
 					.setIcon('plus-circle')
 					.onClick(() => {
-						const group = this.createGroup({ activate: false, showNotice: false });
-						if (group) {
-							this.addViewToGroup(group, view);
-						}
+						void (async () => {
+							const group = await this.handleCreateGroup({ activate: false, showNotice: false });
+							if (group) {
+								this.addViewToGroup(group, view);
+							}
+						})();
 					});
 			});
 		} else {
@@ -228,10 +242,12 @@ export class TagGroupController {
 					.setTitle(t('tagGroups.menuCreateAndAdd'))
 					.setIcon('plus-circle')
 					.onClick(() => {
-						const group = this.createGroup({ activate: false, showNotice: false });
-						if (group) {
-							this.addViewToGroup(group, view);
-						}
+						void (async () => {
+							const group = await this.handleCreateGroup({ activate: false, showNotice: false });
+							if (group) {
+								this.addViewToGroup(group, view);
+							}
+						})();
 					});
 			});
 		}
@@ -250,6 +266,31 @@ export class TagGroupController {
 		this.store.setActiveGroup(group.id);
 		this.ensureVisibleFilterSelection();
 		void this.persistAndRender();
+	}
+
+	private openGroupContextMenu(group: TagGroupDefinition, position: { x: number; y: number }): void {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item
+				.setTitle(t('tagGroups.menuRename'))
+				.setIcon('pencil')
+				.onClick(() => {
+					void this.promptRenameGroup(group);
+				});
+		});
+
+		if (group.id !== this.defaultGroupId) {
+			menu.addItem((item) => {
+				item
+					.setTitle(t('tagGroups.menuDelete'))
+					.setIcon('trash')
+					.onClick(() => {
+						this.deleteGroup(group);
+					});
+			});
+		}
+
+		menu.showAtPosition(position);
 	}
 
 	private async promptRenameGroup(group: TagGroupDefinition): Promise<void> {
@@ -275,36 +316,125 @@ export class TagGroupController {
 		});
 	}
 
-	private createGroup(options: { activate: boolean; showNotice: boolean }): TagGroupDefinition | null {
-		const name = this.getNewGroupName();
-		let groupId: string | null = null;
-		const candidate: TagGroupDefinition = {
-			id: this.generateGroupId(),
-			name,
-			viewIds: []
-		};
-		this.store.updateState((state) => {
-			state.groups.push(candidate);
-			if (options.activate) {
-				state.activeGroupId = candidate.id;
-			}
-			groupId = candidate.id;
+	private async handleCreateGroup(options: { activate: boolean; showNotice: boolean }): Promise<TagGroupDefinition | null> {
+		this.syncWithAvailableViews();
+		const columns = this.getAvailableColumns();
+		if (columns.length === 0) {
+			const created = await this.createManualGroup(options);
+			return created;
+		}
+
+		const result = await openTagGroupCreateModal(this.app, {
+			columns,
+			maxAutoGroups: MAX_FIELD_GROUP_ITEMS
 		});
+		if (!result) {
+			return null;
+		}
+
+		if (result.mode === 'field' && result.field) {
+			const uniqueValues = this.getUniqueFieldValues(result.field, MAX_FIELD_GROUP_ITEMS + 1);
+			if (uniqueValues.length === 0) {
+				new Notice(t('tagGroups.createFieldNoValues'));
+				return null;
+			}
+			let values = uniqueValues;
+			if (uniqueValues.length > MAX_FIELD_GROUP_ITEMS) {
+				values = uniqueValues.slice(0, MAX_FIELD_GROUP_ITEMS);
+				new Notice(t('tagGroups.createFieldLimitExceeded', { limit: String(MAX_FIELD_GROUP_ITEMS) }));
+			}
+			const filterViews = this.ensureFilterViewsForFieldValues(result.field, values);
+			if (filterViews.length === 0) {
+				new Notice(t('tagGroups.createFieldNoViews'));
+				return null;
+			}
+			const group = this.insertGroup(result.field, filterViews.map((view) => view.id), options.activate);
+			if (!group) {
+				return null;
+			}
+			if (options.showNotice) {
+				new Notice(t('tagGroups.createSuccess', { name: this.getGroupDisplayName(group) }));
+			}
+			await this.persistAndRender();
+			return group;
+		}
+
+		const manualGroup = await this.createManualGroup(options);
+		return manualGroup;
+	}
+
+	private async createManualGroup(options: { activate: boolean; showNotice: boolean }): Promise<TagGroupDefinition | null> {
+		const group = this.insertGroup(this.getNewGroupName(), [], options.activate);
+		if (!group) {
+			return null;
+		}
+		if (options.showNotice) {
+			const displayName = this.getGroupDisplayName(group);
+			new Notice(t('tagGroups.createSuccess', { name: displayName }));
+		}
+		await this.persistAndRender();
+		return group;
+	}
+
+	private insertGroup(name: string, viewIds: string[], activate: boolean): TagGroupDefinition | null {
+		const uniqueViewIds = Array.from(
+			new Set(
+				viewIds
+					.map((id) => (typeof id === 'string' ? id.trim() : ''))
+					.filter((id): id is string => id.length > 0)
+			)
+		);
+		const effectiveName = name.trim().length > 0 ? name.trim() : this.getNewGroupName();
+		const existingNames = new Set(
+			this.store.getState().groups.map((group) => group.name.trim().toLowerCase())
+		);
+		let candidateName = effectiveName;
+		let suffix = 2;
+		while (existingNames.has(candidateName.trim().toLowerCase())) {
+			candidateName = `${effectiveName} (${suffix})`;
+			suffix += 1;
+		}
+
+		let groupId: string | null = null;
+		this.store.updateState((state) => {
+			const group: TagGroupDefinition = {
+				id: this.generateGroupId(),
+				name: candidateName,
+				viewIds: uniqueViewIds
+			};
+			const defaultIndex = state.groups.findIndex((entry) => entry.id === this.defaultGroupId);
+			if (defaultIndex !== -1) {
+				state.groups.splice(defaultIndex + 1, 0, group);
+			} else {
+				state.groups.push(group);
+			}
+			if (activate) {
+				state.activeGroupId = group.id;
+			}
+			groupId = group.id;
+		});
+
+		if (activate) {
+			this.ensureVisibleFilterSelection();
+		}
 
 		if (!groupId) {
 			return null;
 		}
-		const ensuredGroup = this.store.getState().groups.find((entry) => entry.id === groupId) ?? candidate;
-		if (options.activate) {
-			this.ensureVisibleFilterSelection();
-		}
-		if (options.showNotice) {
-			const displayName = ensuredGroup.name || this.getGroupFallbackName(ensuredGroup);
-			new Notice(t('tagGroups.createSuccess', { name: displayName }));
-		}
+		const created = this.store.getState().groups.find((group) => group.id === groupId) ?? null;
+		return created;
+	}
 
+	private deleteGroup(group: TagGroupDefinition): void {
+		if (group.id === this.defaultGroupId) {
+			new Notice(t('tagGroups.deleteDefaultBlocked'));
+			return;
+		}
+		const displayName = this.getGroupDisplayName(group);
+		this.store.removeGroup(group.id);
+		this.normalizeActiveGroupAfterChange();
+		new Notice(t('tagGroups.deleteNotice', { name: displayName }));
 		void this.persistAndRender();
-		return ensuredGroup;
 	}
 
 	private addViewToGroup(group: TagGroupDefinition, view: FilterViewDefinition): void {
@@ -317,7 +447,8 @@ export class TagGroupController {
 				target.viewIds.push(view.id);
 			}
 		});
-		const displayName = group.name || this.getGroupFallbackName(group);
+		const updatedGroup = this.store.getState().groups.find((entry) => entry.id === group.id) ?? group;
+		const displayName = updatedGroup.name || this.getGroupFallbackName(updatedGroup);
 		new Notice(t('tagGroups.addViewSuccess', { view: view.name, group: displayName }));
 		void this.persistAndRender();
 	}

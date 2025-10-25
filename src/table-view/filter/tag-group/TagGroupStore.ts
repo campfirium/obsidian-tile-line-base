@@ -99,6 +99,18 @@ export class TagGroupStore {
 		return changed;
 	}
 
+	removeGroup(groupId: string): void {
+		if (!groupId || groupId === DEFAULT_TAG_GROUP_ID) {
+			return;
+		}
+		this.updateState((state) => {
+			state.groups = state.groups.filter((group) => group.id !== groupId);
+			if (state.activeGroupId === groupId) {
+				state.activeGroupId = DEFAULT_TAG_GROUP_ID;
+			}
+		});
+	}
+
 	getVisibleViewIds(): Set<string> | null {
 		const active = this.getActiveGroup();
 		if (!active || active.id === DEFAULT_TAG_GROUP_ID) {

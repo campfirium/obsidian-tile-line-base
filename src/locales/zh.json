@@ -222,6 +222,24 @@
     "unnamedGroup": "δ������ǩ��",
     "defaultGroupName": "Ĭ�ϱ�ǩ��",
     "emptyGroupLabel": "���޹�����ͼ",
-    "buttonAriaLabel": "��ǩ�飺{{name}}"
+    "buttonAriaLabel": "��ǩ�飺{{name}}",
+    "menuRename": "��������ǩ��",
+    "menuDelete": "ɾ����ǩ��",
+    "deleteNotice": "��ɾ����ǩ�飺{{name}}",
+    "deleteDefaultBlocked": "Ĭ�ϱ�ǩ�鲻��ɾ��",
+    "createModalTitle": "�½���ǩ��",
+    "createModeLabel": "����������Դ",
+    "createModeManual": "����",
+    "createModeField": "���ֶ�����",
+    "createFieldLabel": "ѡ���ֶ�",
+    "createFieldPlaceholder": "��ѡ���ֶ�",
+    "createFieldLimitNotice": "����Զ����� {{limit}} ��ɸѡ��ͼ��",
+    "createFieldValidation": "��ѡ��Ҫ���ڷ�����ֶ�",
+    "confirmButton": "����",
+    "cancelButton": "ȡ��",
+    "createFieldNoValues": "��ѡ�ֶ�û�п��õ�ֵ��",
+    "createFieldLimitExceeded": "��ʹ��ǰ {{limit}} ��ֵ���ɱ�ǩ�顣",
+    "createFieldNoViews": "�޷�������ѡ�ֶ����ɹ�����ͼ��",
+    "emptyValueName": "{{field}}����ֵ��"
   }
 }

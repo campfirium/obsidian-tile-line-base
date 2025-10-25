@@ -1,20 +1,23 @@
 ﻿import { App, Modal, Setting } from 'obsidian';
 import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
+import { normalizeDateFormatPreset, type DateFormatPreset } from '../utils/datetime';
 import { FormulaFieldSuggester } from './FormulaFieldSuggester';
 
-export type ColumnFieldType = 'text' | 'formula';
+export type ColumnFieldType = 'text' | 'date' | 'formula';
 
 export interface ColumnEditorResult {
 	name: string;
 	type: ColumnFieldType;
 	formula: string;
+	dateFormat?: DateFormatPreset;
 }
 
 export interface ColumnEditorModalOptions {
 	columnName: string;
 	initialType: ColumnFieldType;
 	initialFormula: string;
+	initialDateFormat?: DateFormatPreset;
 	validateName?: (name: string) => string | null;
 	triggerElement?: HTMLElement | null;
 	availableFields?: string[];
@@ -34,12 +37,15 @@ export class ColumnEditorModal extends Modal {
 	private returnFocusTarget: HTMLElement | null = null;
 	private keydownHandler?: (event: KeyboardEvent) => void;
 	private formulaSuggester?: FormulaFieldSuggester;
+	private dateFormat: DateFormatPreset;
+	private dateFormatSetting!: Setting;
 
 	constructor(app: App, options: ColumnEditorModalOptions) {
 		super(app);
 		this.options = options;
 		this.type = options.initialType;
 		this.nameValue = options.columnName;
+		this.dateFormat = normalizeDateFormatPreset(options.initialDateFormat ?? 'iso');
 	}
 
 	onOpen(): void {
@@ -74,11 +80,31 @@ export class ColumnEditorModal extends Modal {
 		typeSetting.setName(t('columnEditorModal.typeLabel'));
 		typeSetting.addDropdown((dropdown) => {
 			dropdown.addOption('text', t('columnEditorModal.typeTextOption'));
+			dropdown.addOption('date', t('columnEditorModal.typeDateOption'));
 			dropdown.addOption('formula', t('columnEditorModal.typeFormulaOption'));
 			dropdown.setValue(this.type);
 			dropdown.onChange((value) => {
-				this.type = value === 'formula' ? 'formula' : 'text';
-				this.updateFormulaVisibility();
+				if (value === 'formula') {
+					this.type = 'formula';
+				} else if (value === 'date') {
+					this.type = 'date';
+				} else {
+					this.type = 'text';
+				}
+				this.updateFieldVisibility();
+			});
+		});
+
+		this.dateFormatSetting = new Setting(contentEl);
+		this.dateFormatSetting.setName(t('columnEditorModal.dateFormatLabel'));
+		this.dateFormatSetting.setDesc(t('columnEditorModal.dateFormatDescription'));
+		this.dateFormatSetting.addDropdown((dropdown) => {
+			dropdown.addOption('iso', t('columnEditorModal.dateFormatIsoOption'));
+			dropdown.addOption('short', t('columnEditorModal.dateFormatShortOption'));
+			dropdown.addOption('long', t('columnEditorModal.dateFormatLongOption'));
+			dropdown.setValue(this.dateFormat);
+			dropdown.onChange((value) => {
+				this.dateFormat = normalizeDateFormatPreset(value);
 			});
 		});
 
@@ -138,10 +164,10 @@ export class ColumnEditorModal extends Modal {
 		actionSetting.addButton((button) => {
 			button.setButtonText(t('columnEditorModal.cancelButton')).onClick(() => {
 				this.close();
-			});
+				});
 		});
 
-		this.updateFormulaVisibility();
+		this.updateFieldVisibility();
 
 		const focusNameInput = () => {
 			this.nameInput?.focus({ preventScroll: true });
@@ -176,17 +202,21 @@ export class ColumnEditorModal extends Modal {
 		this.returnFocusTarget = null;
 	}
 
-	private updateFormulaVisibility(): void {
-		const hidden = this.type !== 'formula';
+	private updateFieldVisibility(): void {
+		const formulaHidden = this.type !== 'formula';
 		if (this.formulaSetting) {
-			const el = this.formulaSetting.settingEl as HTMLElement;
-			el.style.display = hidden ? 'none' : '';
+			const formulaEl = this.formulaSetting.settingEl as HTMLElement;
+			formulaEl.style.display = formulaHidden ? 'none' : '';
 		}
 		if (this.formulaInput) {
-			this.formulaInput.disabled = hidden;
+			this.formulaInput.disabled = formulaHidden;
 		}
 		if (this.formulaSuggester) {
-			this.formulaSuggester.setEnabled(!hidden);
+			this.formulaSuggester.setEnabled(!formulaHidden);
+		}
+		if (this.dateFormatSetting) {
+			const dateEl = this.dateFormatSetting.settingEl as HTMLElement;
+			dateEl.style.display = this.type === 'date' ? '' : 'none';
 		}
 	}
 
@@ -235,6 +265,14 @@ export class ColumnEditorModal extends Modal {
 				return;
 			}
 			this.options.onSubmit({ name: trimmedName, type: 'formula', formula });
+			this.submitted = true;
+			this.close();
+			return;
+		}
+
+		if (this.type === 'date') {
+			const preset = normalizeDateFormatPreset(this.dateFormat);
+			this.options.onSubmit({ name: trimmedName, type: 'date', formula: '', dateFormat: preset });
 			this.submitted = true;
 			this.close();
 			return;

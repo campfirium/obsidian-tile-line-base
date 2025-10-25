@@ -1,9 +1,16 @@
+import type { DateFormatPreset } from '../utils/datetime';
+import { normalizeDateFormatPreset } from '../utils/datetime';
+
+export type ColumnFieldDisplayType = 'text' | 'date';
+
 export interface ColumnConfig {
 	name: string;
 	width?: string;
 	unit?: string;
 	formula?: string;
 	hide?: boolean;
+	type?: ColumnFieldDisplayType;
+	dateFormat?: DateFormatPreset;
 }
 
 export interface H2Block {
@@ -209,6 +216,20 @@ export class MarkdownBlockParser {
 			case 'formula':
 				config.formula = value;
 				break;
+			case 'type': {
+				const normalizedType = value.trim().toLowerCase();
+				if (normalizedType === 'date') {
+					config.type = 'date';
+				} else if (normalizedType === 'text') {
+					config.type = 'text';
+				}
+				break;
+			}
+			case 'dateFormat': {
+				const preset = normalizeDateFormatPreset(value);
+				config.dateFormat = preset;
+				break;
+			}
 		}
 	}
 
@@ -225,7 +246,7 @@ export class MarkdownBlockParser {
 			return false;
 		}
 		const key = segment.slice(0, colonIndex).trim().toLowerCase();
-		return key === 'width' || key === 'unit' || key === 'formula';
+		return key === 'width' || key === 'unit' || key === 'formula' || key === 'type' || key === 'dateformat';
 	}
 
 	private findMatchingParenthesis(source: string, startIndex: number): number {

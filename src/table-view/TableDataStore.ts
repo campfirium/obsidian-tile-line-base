@@ -1,5 +1,5 @@
 import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
-import { getCurrentLocalDateTime } from '../utils/datetime';
+import { getCurrentLocalDateTime, normalizeDateFormatPreset, type DateFormatPreset } from '../utils/datetime';
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
 import type { Schema, SchemaBuildResult } from './SchemaBuilder';
 import { t } from '../i18n';
@@ -65,6 +65,33 @@ export class TableDataStore {
 
 	getColumnConfigs(): ColumnConfig[] | undefined {
 		return this.schema?.columnConfigs;
+	}
+
+	getColumnConfig(name: string): ColumnConfig | null {
+		const configs = this.schema?.columnConfigs;
+		if (!configs) {
+			return null;
+		}
+		return configs.find((config) => config.name === name) ?? null;
+	}
+
+	getColumnDisplayType(name: string): 'formula' | 'date' | 'text' {
+		if (this.isFormulaColumn(name)) {
+			return 'formula';
+		}
+		const config = this.getColumnConfig(name);
+		if (config?.type === 'date') {
+			return 'date';
+		}
+		return 'text';
+	}
+
+	getDateFormat(name: string): DateFormatPreset {
+		const config = this.getColumnConfig(name);
+		if (config && config.type === 'date') {
+			return normalizeDateFormatPreset(config.dateFormat ?? null);
+		}
+		return 'iso';
 	}
 
 	setColumnConfigs(configs: ColumnConfig[] | undefined): void {

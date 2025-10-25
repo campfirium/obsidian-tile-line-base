@@ -6,6 +6,7 @@
  * 而不需要修改业务逻辑代码。
  */
 import type { ColumnState } from 'ag-grid-community';
+import type { DateFormatPreset } from '../utils/datetime';
 
 export const ROW_ID_FIELD = '__tlb_row_id';
 
@@ -17,6 +18,8 @@ export interface ColumnDef {
 	headerName: string;  // 表头显示名称
 	headerTooltip?: string;  // 表头提示
 	editable: boolean;   // 是否可编辑
+	editorType?: 'text' | 'date';  // 编辑器类型
+	dateFormat?: DateFormatPreset; // 日期展示格式
 }
 
 /**

@@ -1,11 +1,15 @@
 import type { ColumnConfig } from '../MarkdownBlockParser';
+import { normalizeDateFormatPreset } from '../../utils/datetime';
 
 export function hasColumnConfigContent(config: ColumnConfig): boolean {
+	const preset = config.dateFormat ? normalizeDateFormatPreset(config.dateFormat) : null;
 	return Boolean(
 		(config.width && config.width.trim().length > 0) ||
 		(config.unit && config.unit.trim().length > 0) ||
 		config.hide ||
-		(config.formula && config.formula.trim().length > 0)
+		(config.formula && config.formula.trim().length > 0) ||
+		config.type === 'date' ||
+		(preset && preset !== 'iso')
 	);
 }
 
@@ -19,6 +23,13 @@ export function serializeColumnConfig(config: ColumnConfig): string {
 	}
 	if (config.formula && config.formula.trim().length > 0) {
 		segments.push(`formula: ${config.formula.trim()}`);
+	}
+	if (config.type === 'date') {
+		segments.push('type: date');
+		const preset = normalizeDateFormatPreset(config.dateFormat ?? null);
+		if (preset !== 'iso') {
+			segments.push(`dateFormat: ${preset}`);
+		}
 	}
 	if (config.hide) {
 		segments.push('hide');

@@ -464,3 +464,76 @@
   background: var(--background-modifier-hover, rgba(33, 150, 243, 0.12));
   color: var(--text-normal, #2e3338);
 }
+
+.tlb-date-editor {
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary) 8%);
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 70%, transparent);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.theme-dark .tlb-date-editor {
+  background: color-mix(in srgb, var(--background-secondary, #202020) 90%, var(--background-primary, #161616) 10%);
+  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+}
+
+.tlb-date-editor:focus-within {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 28%, transparent);
+}
+
+.tlb-date-editor-input {
+  flex: 1 1 auto;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.tlb-date-editor-input:focus {
+  outline: none;
+}
+
+.tlb-date-editor-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.theme-dark .tlb-date-editor-button {
+  color: var(--text-faint);
+}
+
+.tlb-date-editor-button:hover,
+.tlb-date-editor-button:focus-visible {
+  color: var(--interactive-accent);
+  background-color: color-mix(in srgb, var(--background-modifier-hover, rgba(128, 128, 128, 0.12)) 80%, transparent);
+}
+
+.tlb-date-editor-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 32%, transparent);
+}
+
+.tlb-date-editor-hidden-picker {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+

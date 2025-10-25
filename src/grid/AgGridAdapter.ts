@@ -37,6 +37,7 @@ export class AgGridAdapter implements GridAdapter {
 	private enterAtLastRowCallback?: (field: string) => void;
 	private gridContext?: GridInteractionContext;
 	private containerEl: HTMLElement | null = null;
+	private sideBarVisible = true;
 	private readonly columnService = new AgGridColumnService({
 		getContainer: () => this.containerEl
 	});
@@ -100,6 +101,8 @@ export class AgGridAdapter implements GridAdapter {
 		rows: RowData[],
 		context?: GridInteractionContext
 	): void {
+		const sideBarVisible = context?.sideBarVisible !== false;
+		this.sideBarVisible = sideBarVisible;
 		this.containerEl = container;
 		this.gridContext = context;
 		this.interaction.setContainer(container);
@@ -122,6 +125,9 @@ export class AgGridAdapter implements GridAdapter {
 
 		this.lifecycle.mountGrid(container, colDefs, rows, gridOptions);
 		this.interaction.bindViewportListeners(container);
+		if (!sideBarVisible) {
+			this.setSideBarVisible(false);
+		}
 	}
 
 	updateData(rows: RowData[]): void {
@@ -145,6 +151,26 @@ export class AgGridAdapter implements GridAdapter {
 
 	setQuickFilter(value: string | null): void {
 		this.state.setQuickFilter(value);
+	}
+
+	setSideBarVisible(visible: boolean): void {
+		this.sideBarVisible = visible;
+		this.lifecycle.runWhenReady(() => {
+			const api = this.lifecycle.getGridApi();
+			if (!api) {
+				return;
+			}
+			const gridApi = api as GridApi & {
+				setSideBarVisible?: (flag: boolean) => void;
+				closeToolPanel?: () => void;
+			};
+			if (typeof gridApi.setSideBarVisible === 'function') {
+				gridApi.setSideBarVisible(visible);
+			}
+			if (!visible && typeof gridApi.closeToolPanel === 'function') {
+				gridApi.closeToolPanel();
+			}
+		});
 	}
 
 	getColumnState(): ColumnState[] | null {

@@ -1,11 +1,11 @@
-ï»¿{
+{
   "tableView": {
     "displayName": "TileLineBase Table"
   },
   "settings": {
     "generalHeading": "General",
-    "rightSidebarToggleLabel": "Show right sidebar",
-    "rightSidebarToggleDesc": "Display the table view right sidebar (column and filter panel)."
+    "hideRightSidebarLabel": "Hide right sidebar in table view",
+    "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever the TileLineBase table view is active. Other views remain unaffected."
   },
   "formula": {
     "errors": {
@@ -194,8 +194,8 @@
     "addSortButton": "+ Add sort",
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
-    "sortDirectionAsc": "Ascending (A â†’ Z)",
-    "sortDirectionDesc": "Descending (Z â†’ A)"
+    "sortDirectionAsc": "Ascending (A ¡ú Z)",
+    "sortDirectionDesc": "Descending (Z ¡ú A)"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
@@ -205,3 +205,4 @@
     "openPickerLabel": "Open date picker"
   }
 }
+

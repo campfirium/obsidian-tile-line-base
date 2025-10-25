@@ -11,6 +11,7 @@ export interface TileLineBaseSettings {
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	configCache: Record<string, ConfigCacheEntry>;
+	hideRightSidebar: boolean;
 	logging: LoggingConfig;
 }
 
@@ -19,6 +20,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	columnLayouts: {},
 	filterViews: {},
 	configCache: {},
+	hideRightSidebar: false,
 	logging: {
 		globalLevel: 'warn',
 		scopeLevels: {}
@@ -40,6 +42,9 @@ export class SettingsService {
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.configCache = { ...DEFAULT_SETTINGS.configCache, ...(merged.configCache ?? {}) };
+		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
+			? (merged as TileLineBaseSettings).hideRightSidebar
+			: DEFAULT_SETTINGS.hideRightSidebar;
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
@@ -58,6 +63,19 @@ export class SettingsService {
 
 	getSettings(): TileLineBaseSettings {
 		return this.settings;
+	}
+
+	getHideRightSidebar(): boolean {
+		return this.settings.hideRightSidebar;
+	}
+
+	async setHideRightSidebar(value: boolean): Promise<boolean> {
+		if (this.settings.hideRightSidebar === value) {
+			return false;
+		}
+		this.settings.hideRightSidebar = value;
+		await this.persist();
+		return true;
 	}
 
 	async persist(): Promise<void> {

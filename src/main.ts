@@ -16,6 +16,7 @@ import { WindowContextManager } from './plugin/WindowContextManager';
 import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
+import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
 
 const logger = getLogger('plugin:main');
 const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
@@ -47,6 +48,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private viewCoordinator!: ViewSwitchCoordinator;
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
+	private rightSidebarState = { applied: false, wasCollapsed: false };
 
 	async onload() {
 		setPluginContext(this);
@@ -108,6 +110,8 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (leaf) => {
+				this.applyRightSidebarForLeaf(leaf ?? null);
+
 				const markdownView = leaf?.view instanceof MarkdownView ? leaf.view : null;
 				const file = markdownView?.file ?? null;
 				if (!file) {
@@ -187,11 +191,15 @@ export default class TileLineBasePlugin extends Plugin {
 			name: 'Cycle TileLineBase logging verbosity',
 			callback: () => this.cycleLoggingVerbosity()
 		});
+
+		this.addSettingTab(new TileLineBaseSettingTab(this.app, this));
+		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
 	}
 
 	async onunload() {
 		setPluginContext(null);
 		logger.info('Plugin unload: detaching all table views');
+		this.restoreRightSidebarIfNeeded();
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 
 		if (this.unsubscribeLogging) {
@@ -228,6 +236,19 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 	}
 
+	isHideRightSidebarEnabled(): boolean {
+		return this.settings.hideRightSidebar === true;
+	}
+
+	async setHideRightSidebarEnabled(value: boolean): Promise<void> {
+		const changed = await this.settingsService.setHideRightSidebar(value);
+		if (!changed) {
+			return;
+		}
+		this.settings = this.settingsService.getSettings();
+		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
+	}
+
 	private async loadSettings(): Promise<void> {
 		this.settings = await this.settingsService.load();
 	}
@@ -243,6 +264,96 @@ export default class TileLineBasePlugin extends Plugin {
 		const next = VERBOSITY_SEQUENCE[(index + 1) % VERBOSITY_SEQUENCE.length];
 		setGlobalLogLevel(next);
 		new Notice(`TileLineBase logging level: ${next.toUpperCase()}`);
+	}
+
+	private applyRightSidebarForLeaf(leaf: WorkspaceLeaf | null | undefined): void {
+		if (!this.isHideRightSidebarEnabled()) {
+			this.restoreRightSidebarIfNeeded();
+			return;
+		}
+
+		const isTableView = leaf?.view instanceof TableView;
+		if (isTableView) {
+			this.hideRightSidebar();
+		} else {
+			this.restoreRightSidebarIfNeeded();
+		}
+	}
+
+	private hideRightSidebar(): void {
+		const split = this.getRightSplit();
+		if (!split) {
+			return;
+		}
+		const wasCollapsed = this.isRightSplitCollapsed(split);
+		if (wasCollapsed) {
+			this.rightSidebarState = { applied: false, wasCollapsed: true };
+			return;
+		}
+
+		if (typeof split.collapse === 'function') {
+			try {
+				split.collapse();
+				this.rightSidebarState = { applied: true, wasCollapsed };
+				return;
+			} catch (error) {
+				logger.warn('Failed to collapse right sidebar via API', error);
+			}
+		}
+
+		const toggled = this.toggleRightSidebarViaCommand();
+		this.rightSidebarState = { applied: toggled, wasCollapsed };
+	}
+
+	private restoreRightSidebarIfNeeded(): void {
+		if (!this.rightSidebarState.applied) {
+			return;
+		}
+		const split = this.getRightSplit();
+		if (!split) {
+			this.rightSidebarState = { applied: false, wasCollapsed: false };
+			return;
+		}
+		if (!this.rightSidebarState.wasCollapsed) {
+			if (typeof split.expand === 'function') {
+				try {
+					split.expand();
+				} catch (error) {
+					logger.warn('Failed to expand right sidebar via API', error);
+					this.toggleRightSidebarViaCommand();
+				}
+			} else {
+				this.toggleRightSidebarViaCommand();
+			}
+		}
+		this.rightSidebarState = { applied: false, wasCollapsed: false };
+	}
+
+	private getRightSplit(): { collapsed?: boolean; collapse?: () => void; expand?: () => void } | null {
+		const workspaceAny = this.app.workspace as unknown as { rightSplit?: { collapsed?: boolean; collapse?: () => void; expand?: () => void } };
+		return workspaceAny?.rightSplit ?? null;
+	}
+
+	private isRightSplitCollapsed(split: { collapsed?: boolean }): boolean {
+		if (typeof split?.collapsed === 'boolean') {
+			return split.collapsed;
+		}
+		return false;
+	}
+
+	private toggleRightSidebarViaCommand(): boolean {
+		const beforeSplit = this.getRightSplit();
+		const before = beforeSplit ? this.isRightSplitCollapsed(beforeSplit) : undefined;
+		const commandManager = (this.app as any).commands;
+		const executed = typeof commandManager?.executeCommandById === 'function'
+			? commandManager.executeCommandById('workspace:toggle-right-sidebar')
+			: false;
+		const afterSplit = this.getRightSplit();
+		const after = afterSplit ? this.isRightSplitCollapsed(afterSplit) : undefined;
+		if (executed) {
+			return true;
+		}
+		return before !== after;
 	}
 
 }

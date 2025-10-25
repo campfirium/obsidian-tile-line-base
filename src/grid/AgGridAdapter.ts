@@ -27,6 +27,7 @@ import { AgGridLifecycleManager } from './lifecycle/AgGridLifecycleManager';
 import { createAgGridOptions } from './options/createAgGridOptions';
 import { AgGridSelectionController } from './selection/AgGridSelectionController';
 import { AgGridStateService } from './state/AgGridStateService';
+import { SideBarController } from './sidebar/SideBarController';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -42,6 +43,9 @@ export class AgGridAdapter implements GridAdapter {
 		getContainer: () => this.containerEl
 	});
 	private readonly lifecycle = new AgGridLifecycleManager();
+	private readonly sideBar = new SideBarController({
+		getGridApi: () => this.lifecycle.getGridApi()
+	});
 	private readonly interaction: AgGridInteractionController;
 	private readonly selection: AgGridSelectionController;
 	private readonly state: AgGridStateService;
@@ -103,6 +107,7 @@ export class AgGridAdapter implements GridAdapter {
 	): void {
 		const sideBarVisible = context?.sideBarVisible !== false;
 		this.sideBarVisible = sideBarVisible;
+		this.sideBar.reset();
 		this.containerEl = container;
 		this.gridContext = context;
 		this.interaction.setContainer(container);
@@ -157,20 +162,7 @@ export class AgGridAdapter implements GridAdapter {
 	setSideBarVisible(visible: boolean): void {
 		this.sideBarVisible = visible;
 		this.lifecycle.runWhenReady(() => {
-			const api = this.lifecycle.getGridApi();
-			if (!api) {
-				return;
-			}
-			const gridApi = api as GridApi & {
-				setSideBarVisible?: (flag: boolean) => void;
-				closeToolPanel?: () => void;
-			};
-			if (typeof gridApi.setSideBarVisible === 'function') {
-				gridApi.setSideBarVisible(visible);
-			}
-			if (!visible && typeof gridApi.closeToolPanel === 'function') {
-				gridApi.closeToolPanel();
-			}
+			this.sideBar.setVisible(visible);
 		});
 	}
 
@@ -207,6 +199,7 @@ export class AgGridAdapter implements GridAdapter {
 
 	destroy(): void {
 		this.lifecycle.destroy();
+		this.sideBar.reset();
 		this.columnService.detachApis();
 		this.columnService.configureCallbacks(undefined);
 		this.columnService.setContainer(null);

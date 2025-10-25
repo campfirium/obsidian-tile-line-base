@@ -164,7 +164,8 @@
     "renameModalTitle": "Rename view",
     "renamePlaceholder": "Enter new name",
     "duplicateNameSuffix": "copy",
-    "duplicateNotice": "Duplicated view: {{name}}"
+    "duplicateNotice": "Duplicated view: {{name}}",
+    "duplicateModalTitle": "Duplicate view: {{name}}"
   },
   "filterViewModals": {
     "saveButton": "Save",

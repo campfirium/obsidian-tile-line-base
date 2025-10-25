@@ -95,7 +95,7 @@ export class FilterViewController {
 
 		menu.addItem((item) => {
 			item.setTitle(t('filterViewController.menuDuplicate')).setIcon('copy').onClick(() => {
-				this.duplicateFilterView(view.id);
+				void this.duplicateFilterView(view.id);
 			});
 		});
 
@@ -170,43 +170,74 @@ export class FilterViewController {
 		this.runStateEffects({ persist: true, apply: false });
 	}
 
-	duplicateFilterView(viewId: string): void {
+	async duplicateFilterView(viewId: string): Promise<void> {
 		const sourceView = this.stateStore.getState().views.find((view) => view.id === viewId);
 		if (!sourceView) {
 			return;
 		}
-		const duplicatedName = `${sourceView.name} ${t('filterViewController.duplicateNameSuffix')}`.trim();
 
-		const duplicatedView: FilterViewDefinition = {
-			id: this.generateFilterViewId(),
-			name: duplicatedName,
-			filterRule: sourceView.filterRule
-				? {
-					conditions: sourceView.filterRule.conditions.map((condition) => ({ ...condition })),
-					combineMode: sourceView.filterRule.combineMode
-				}
-				: null,
-			sortRules: this.stateStore.sanitizeSortRules(sourceView.sortRules),
-			columnState: this.stateStore.cloneColumnState(sourceView.columnState),
-			quickFilter: sourceView.quickFilter
-		};
-
-		let inserted = false;
-		this.stateStore.updateState((state) => {
-			const sourceIndex = state.views.findIndex((view) => view.id === viewId);
-			if (sourceIndex === -1) {
-				return;
-			}
-			state.views.splice(sourceIndex + 1, 0, duplicatedView);
-			state.activeViewId = duplicatedView.id;
-			inserted = true;
-		});
-		if (!inserted) {
+		const columns = this.getAvailableColumns();
+		if (columns.length === 0) {
+			new Notice(t('filterViewController.noColumns'));
 			return;
 		}
 
-		this.runStateEffects({ persist: true, apply: true });
-		new Notice(t('filterViewController.duplicateNotice', { name: duplicatedView.name }));
+		const initialRule: FilterRule | null = sourceView.filterRule
+			? {
+				conditions: sourceView.filterRule.conditions.map((condition) => ({ ...condition })),
+				combineMode: sourceView.filterRule.combineMode
+			}
+			: null;
+		const initialSortRules: SortRule[] = Array.isArray(sourceView.sortRules)
+			? sourceView.sortRules.map((rule) => ({ column: rule.column, direction: rule.direction === 'desc' ? 'desc' : 'asc' }))
+			: [];
+		const duplicatedName = `${sourceView.name} ${t('filterViewController.duplicateNameSuffix')}`.trim();
+		const sourceColumnState = this.stateStore.cloneColumnState(sourceView.columnState);
+		const sourceQuickFilter = sourceView.quickFilter ?? null;
+
+		await new Promise<void>((resolve) => {
+			const modal = new FilterViewEditorModal(this.app, {
+				title: t('filterViewController.duplicateModalTitle', { name: sourceView.name }),
+				columns,
+				initialName: duplicatedName,
+				initialRule,
+				initialSortRules,
+				onSubmit: (name, rule, sortRules) => {
+					let inserted = false;
+					const sanitizedSortRules: SortRule[] = this.stateStore.sanitizeSortRules(sortRules);
+					const clonedRule: FilterRule = {
+						combineMode: rule.combineMode,
+						conditions: rule.conditions.map((condition) => ({ ...condition }))
+					};
+
+					this.stateStore.updateState((state) => {
+						const sourceIndex = state.views.findIndex((view) => view.id === viewId);
+						if (sourceIndex === -1) {
+							return;
+						}
+						const duplicatedView: FilterViewDefinition = {
+							id: this.generateFilterViewId(),
+							name,
+							filterRule: clonedRule,
+							sortRules: sanitizedSortRules,
+							columnState: sourceColumnState,
+							quickFilter: sourceQuickFilter
+						};
+						state.views.splice(sourceIndex + 1, 0, duplicatedView);
+						state.activeViewId = duplicatedView.id;
+						inserted = true;
+					});
+
+					if (inserted) {
+						this.runStateEffects({ persist: true, apply: true });
+						new Notice(t('filterViewController.duplicateNotice', { name }));
+					}
+					resolve();
+				},
+				onCancel: () => resolve()
+			});
+			modal.open();
+		});
 	}
 
 	deleteFilterView(viewId: string): void {

@@ -48,7 +48,8 @@ export class GridController {
 			onColumnResize: handlers.onColumnResize,
 			onCopyH2Section: handlers.onCopyH2Section,
 			onColumnOrderChange: handlers.onColumnOrderChange,
-			sideBarVisible
+			sideBarVisible,
+			getContainerEl: () => container
 		});
 
 		adapter.onCellEdit((event) => {

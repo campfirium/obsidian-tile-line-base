@@ -588,3 +588,26 @@
   pointer-events: none;
 }
 
+/* Tooltip restyle: limit width and align with AG Grid theme */
+.tlb-table-container .ag-tooltip {
+  max-width: 480px;
+  min-width: 300px;
+  padding: 24px 32px;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1.6;
+  font-family: inherit;
+  white-space: normal;
+  word-break: break-word;
+  background: color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary, #f2f2f2) 10%);
+  color: var(--text-normal);
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.theme-dark .tlb-table-container .ag-tooltip {
+  background: color-mix(in srgb, var(--background-secondary, #151515) 86%, var(--background-primary) 14%);
+  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+

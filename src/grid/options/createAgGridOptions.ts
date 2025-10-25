@@ -18,6 +18,7 @@ const DEFAULT_ROW_HEIGHT = 40;
 
 interface GridOptionsParams {
 	ownerDocument: Document | null | undefined;
+	popupParent: HTMLElement | null | undefined;
 	columnService: AgGridColumnService;
 	interaction: AgGridInteractionController;
 	getGridContext: () => GridInteractionContext | undefined;
@@ -28,6 +29,7 @@ interface GridOptionsParams {
 
 export function createAgGridOptions({
 	ownerDocument,
+	popupParent,
 	columnService,
 	interaction,
 	getGridContext,
@@ -36,16 +38,16 @@ export function createAgGridOptions({
 	resizeColumns
 }: GridOptionsParams): GridOptions {
 	return {
-		popupParent: ownerDocument?.body ?? document.body,
+		popupParent: popupParent ?? ownerDocument?.body ?? document.body,
 		rowHeight: DEFAULT_ROW_HEIGHT,
 		onFirstDataRendered: () => {
 			resizeColumns();
 		},
 		getRowId: params => String((params.data as RowData)[ROW_ID_FIELD]),
 		context: getGridContext() || {},
-		enableBrowserTooltips: true,
+		enableBrowserTooltips: false,
 		tooltipShowDelay: 0,
-		tooltipHideDelay: 200,
+		tooltipHideDelay: 2147483647,
 		onCellKeyDown: (event: CellKeyDownEvent) => {
 			interaction.handleGridCellKeyDown(event);
 		},

@@ -1,5 +1,6 @@
 import { App, Menu, Notice } from 'obsidian';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
+import { isDisplayedSystemColumn, isReservedColumnId } from '../grid/systemColumnUtils';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
@@ -55,6 +56,10 @@ export class ColumnInteractionController {
 
 		if (field === 'status') {
 			this.openStatusColumnMenu(event);
+			return;
+		}
+
+		if (isDisplayedSystemColumn(field)) {
 			return;
 		}
 
@@ -162,7 +167,7 @@ export class ColumnInteractionController {
 				: 'text';
 		const initialFormula = existing?.formula ?? '';
 		const initialDateFormat = existing?.type === 'date' ? existing.dateFormat ?? 'iso' : undefined;
-		const availableFields = schema.columnNames.filter((name) => name && name !== '#' && name !== ROW_ID_FIELD);
+		const availableFields = schema.columnNames.filter((name) => name && !isReservedColumnId(name));
 		const validateName = (name: string): string | null => {
 			const trimmed = name.trim();
 			if (trimmed.length === 0) {
@@ -171,7 +176,7 @@ export class ColumnInteractionController {
 			if (trimmed === field) {
 				return null;
 			}
-			if (trimmed === '#' || trimmed === ROW_ID_FIELD || trimmed === 'status') {
+			if (isReservedColumnId(trimmed)) {
 				return t('columnInteraction.nameReservedError');
 			}
 			if (this.getSchema()?.columnNames?.some((item) => item === trimmed)) {
@@ -288,7 +293,7 @@ export class ColumnInteractionController {
 			return;
 		}
 		const target = field.trim();
-		if (!target || target === '#' || target === 'status' || target === ROW_ID_FIELD) {
+		if (!target || isReservedColumnId(target)) {
 			return;
 		}
 		const removed = this.dataStore.removeColumn(target);
@@ -306,7 +311,7 @@ export class ColumnInteractionController {
 			return;
 		}
 		const target = field.trim();
-		if (!target || target === '#' || target === ROW_ID_FIELD) {
+		if (!target || isReservedColumnId(target)) {
 			return;
 		}
 

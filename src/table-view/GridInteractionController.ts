@@ -9,6 +9,7 @@ import { buildGridContextMenu } from './GridContextMenuBuilder';
 import { CopyTemplateController } from './CopyTemplateController';
 import { getLogger } from '../utils/logger';
 import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInteractionMenuHelpers';
+import { isReservedColumnId } from '../grid/systemColumnUtils';
 
 const logger = getLogger('table-view:grid-interaction');
 
@@ -187,9 +188,10 @@ export class GridInteractionController {
 		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
 		const isMultiSelect = selectedRows.length > 1;
 		const isIndexColumn = colId === '#';
+		const isSystemColumn = colId ? isReservedColumnId(colId) : true;
 		const targetIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
 		let fillSelection: ReturnType<typeof createFillSelectionAction> = {};
-		if (isMultiSelect && !isIndexColumn) {
+		if (isMultiSelect && !isSystemColumn) {
 			fillSelection = createFillSelectionAction(
 				{
 					app: this.deps.app,

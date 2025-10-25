@@ -56,23 +56,9 @@ export function createAgGridOptions({
 		stopEditingWhenCellsLoseFocus: true,
 		enterNavigatesVertically: true,
 		enterNavigatesVerticallyAfterEdit: true,
-		rowSelection: {
-			mode: 'multiRow',
-			enableClickSelection: true,
-			enableSelectionWithoutKeys: false,
-			checkboxes: false,
-			checkboxLocation: 'autoGroupColumn'
-		},
-		selectionColumnDef: {
-			width: 0,
-			minWidth: 0,
-			maxWidth: 0,
-			resizable: false,
-			suppressSizeToFit: true,
-			headerName: '',
-			suppressHeaderMenuButton: true,
-			suppressHeaderContextMenu: true
-		},
+		rowSelection: 'multiple',
+		rowMultiSelectWithClick: false,
+		suppressRowClickSelection: false,
 		onCellEditingStopped: onCellEditingStopped,
 		onCellEditingStarted: () => {
 			interaction.handleCellEditingStarted();

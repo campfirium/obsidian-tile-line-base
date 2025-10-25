@@ -2,6 +2,7 @@ import { GridApi } from 'ag-grid-community';
 import { InteractionControllerDeps } from '../types';
 import { FocusStateAccess, NavigationCallbacks, DebugLogger } from '../types';
 import { ROW_ID_FIELD, RowData } from '../../GridAdapter';
+import { isReservedColumnId } from '../../systemColumnUtils';
 
 interface FocusNavigatorOptions {
 	focus: FocusStateAccess;
@@ -70,7 +71,7 @@ export class FocusNavigator {
 		});
 
 		const field = focusedCell.column.getColId();
-		if (field === '#' || field === ROW_ID_FIELD || field === 'status') {
+		if (isReservedColumnId(field)) {
 			return;
 		}
 

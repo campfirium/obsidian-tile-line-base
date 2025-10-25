@@ -5,6 +5,7 @@ import type { TaskStatus } from '../renderers/StatusCellRenderer';
 import type { CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
 import type { TableView } from '../TableView';
 import { t } from '../i18n';
+import { isReservedColumnId } from '../grid/systemColumnUtils';
 
 const logger = getLogger('table-view:interactions');
 
@@ -71,7 +72,7 @@ export function getActiveFilterPrefills(view: TableView): Record<string, string>
 export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 	const { rowData, field, newValue } = event;
 
-	if (field === '#') {
+	if (isReservedColumnId(field)) {
 		return;
 	}
 
@@ -231,7 +232,7 @@ export async function handleOnClose(view: TableView): Promise<void> {
 }
 
 export function handleColumnResize(view: TableView, field: string, width: number): void {
-	if (!view.file || field === '#' || field === 'status') {
+	if (!view.file || isReservedColumnId(field)) {
 		return;
 	}
 	if (!view.columnLayoutStore.updateWidth(field, width)) {

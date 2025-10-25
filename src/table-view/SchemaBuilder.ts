@@ -16,6 +16,45 @@ export interface SchemaBuildResult {
 }
 
 const HIDDEN_SYSTEM_FIELDS = new Set(['statusChanged']);
+const STATUS_FIELD = 'status';
+const STATUS_ALIASES = new Set(['状态', '狀態', 'status', 'Status', 'STATUS']);
+
+function resolveStatusFieldName(key: string): string {
+	const trimmed = key.trim();
+	if (trimmed.length === 0) {
+		return key;
+	}
+
+	if (STATUS_ALIASES.has(trimmed) || STATUS_ALIASES.has(trimmed.toLowerCase())) {
+		return STATUS_FIELD;
+	}
+	return key;
+}
+
+function normalizeStatusFieldOnBlock(block: H2Block): void {
+	const originalKeys = Object.keys(block.data);
+	for (const key of originalKeys) {
+		const resolved = resolveStatusFieldName(key);
+		if (resolved === key) {
+			continue;
+		}
+
+		if (block.data[resolved] === undefined || block.data[resolved] === '') {
+			block.data[resolved] = block.data[key];
+		}
+		delete block.data[key];
+	}
+}
+
+function normalizeStatusFieldOnConfigs(columnConfigs: ColumnConfig[] | null | undefined): void {
+	if (!columnConfigs) {
+		return;
+	}
+	for (const config of columnConfigs) {
+		const resolved = resolveStatusFieldName(config.name);
+		config.name = resolved;
+	}
+}
 
 export class SchemaBuilder {
 	buildSchema(blocks: H2Block[], columnConfigs: ColumnConfig[] | null): SchemaBuildResult {
@@ -34,6 +73,10 @@ export class SchemaBuilder {
 		}
 
 		const schemaBlock = blocks[0];
+		for (const block of blocks) {
+			normalizeStatusFieldOnBlock(block);
+		}
+		normalizeStatusFieldOnConfigs(columnConfigs);
 		const columnNames: string[] = [];
 		const seenKeys = new Set<string>();
 
@@ -94,15 +137,15 @@ export class SchemaBuilder {
 			}
 		}
 
-		const statusIndex = columnNames.indexOf('status');
+		const statusIndex = columnNames.indexOf(STATUS_FIELD);
 		if (statusIndex !== -1) {
 			columnNames.splice(statusIndex, 1);
 		}
 		const insertIndex = columnNames.length > 0 ? 1 : 0;
-		columnNames.splice(insertIndex, 0, 'status');
-		seenKeys.add('status');
-		if (statusIndex === -1 && schemaBlock.data['status'] === undefined) {
-			schemaBlock.data['status'] = 'todo';
+		columnNames.splice(insertIndex, 0, STATUS_FIELD);
+		seenKeys.add(STATUS_FIELD);
+		if (statusIndex === -1 && schemaBlock.data[STATUS_FIELD] === undefined) {
+			schemaBlock.data[STATUS_FIELD] = 'todo';
 			if (schemaBlock.data['statusChanged'] === undefined) {
 				schemaBlock.data['statusChanged'] = getCurrentLocalDateTime();
 			}

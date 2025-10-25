@@ -12,18 +12,23 @@ interface TagGroupCreateModalOptions {
 	app: App;
 	columns: string[];
 	maxAutoGroups: number;
+	modes: TagGroupCreateMode[];
+	initialMode: TagGroupCreateMode;
 	onSubmit: (result: TagGroupCreateResult) => void;
 	onCancel: () => void;
 }
 
 export class TagGroupCreateModal extends Modal {
 	private readonly options: TagGroupCreateModalOptions;
-	private mode: TagGroupCreateMode = 'manual';
+	private readonly availableModes: TagGroupCreateMode[];
+	private mode: TagGroupCreateMode;
 	private fieldSelect: HTMLSelectElement | null = null;
 
 	constructor(options: TagGroupCreateModalOptions) {
 		super(options.app);
 		this.options = options;
+		this.availableModes = options.modes.length > 0 ? options.modes : ['manual', 'field'];
+		this.mode = this.availableModes.includes(options.initialMode) ? options.initialMode : this.availableModes[0];
 	}
 
 	onOpen(): void {
@@ -32,17 +37,23 @@ export class TagGroupCreateModal extends Modal {
 		contentEl.addClass('tlb-tag-group-create-modal');
 		this.titleEl.setText(t('tagGroups.createModalTitle'));
 
-		const modeSetting = new Setting(contentEl);
-		modeSetting.setName(t('tagGroups.createModeLabel'));
-		modeSetting.addDropdown((dropdown) => {
-			dropdown.addOption('manual', t('tagGroups.createModeManual'));
-			dropdown.addOption('field', t('tagGroups.createModeField'));
-			dropdown.setValue(this.mode);
-			dropdown.onChange((value) => {
-				this.mode = (value as TagGroupCreateMode) ?? 'manual';
-				this.renderFieldSelection(contentEl);
+		if (this.availableModes.length > 1) {
+			const modeSetting = new Setting(contentEl);
+			modeSetting.setName(t('tagGroups.createModeLabel'));
+			modeSetting.addDropdown((dropdown) => {
+				if (this.availableModes.includes('manual')) {
+					dropdown.addOption('manual', t('tagGroups.createModeManual'));
+				}
+				if (this.availableModes.includes('field')) {
+					dropdown.addOption('field', t('tagGroups.createModeField'));
+				}
+				dropdown.setValue(this.mode);
+				dropdown.onChange((value) => {
+					this.mode = (value as TagGroupCreateMode) ?? this.availableModes[0];
+					this.renderFieldSelection(contentEl);
+				});
 			});
-		});
+		}
 
 		this.renderFieldSelection(contentEl);
 
@@ -58,7 +69,7 @@ export class TagGroupCreateModal extends Modal {
 	private renderFieldSelection(container: HTMLElement): void {
 		container.querySelectorAll('.tlb-tag-group-create-field').forEach((el) => el.remove());
 
-		if (this.mode !== 'field') {
+		if (this.mode !== 'field' || !this.availableModes.includes('field')) {
 			this.fieldSelect = null;
 			return;
 		}
@@ -70,7 +81,7 @@ export class TagGroupCreateModal extends Modal {
 			for (const column of this.options.columns) {
 				dropdown.addOption(column, column);
 			}
-			dropdown.onChange((_value) => {
+			dropdown.onChange(() => {
 				this.fieldSelect = dropdown.selectEl;
 			});
 			this.fieldSelect = dropdown.selectEl;
@@ -104,12 +115,14 @@ export class TagGroupCreateModal extends Modal {
 	}
 }
 
-export function openTagGroupCreateModal(app: App, options: { columns: string[]; maxAutoGroups: number }): Promise<TagGroupCreateResult | null> {
+export function openTagGroupCreateModal(app: App, options: { columns: string[]; maxAutoGroups: number; modes?: TagGroupCreateMode[]; initialMode?: TagGroupCreateMode }): Promise<TagGroupCreateResult | null> {
 	return new Promise((resolve) => {
 		const modal = new TagGroupCreateModal({
 			app,
 			columns: options.columns,
 			maxAutoGroups: options.maxAutoGroups,
+			modes: options.modes ?? ['manual', 'field'],
+			initialMode: options.initialMode ?? 'manual',
 			onSubmit: (result) => resolve(result),
 			onCancel: () => resolve(null)
 		});

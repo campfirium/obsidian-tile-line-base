@@ -1,10 +1,10 @@
-import { App, Menu, Notice } from 'obsidian';
+import { App, Menu, Notice, setIcon } from 'obsidian';
 import type { FilterViewDefinition, FileFilterViewState } from '../../../types/filterView';
 import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
 import { openFilterViewNameModal } from '../FilterViewModals';
 import type { TagGroupStore } from './TagGroupStore';
-import { openTagGroupCreateModal } from './TagGroupCreateModal';
+import { openTagGroupCreateModal, type TagGroupCreateMode } from './TagGroupCreateModal';
 
 interface TagGroupControllerOptions {
 	app: App;
@@ -49,66 +49,108 @@ export class TagGroupController {
 		this.store.syncWithFilterViews(this.getFilterViewState(), t('tagGroups.defaultGroupName'));
 	}
 
-	openTagGroupMenu(anchorEl: HTMLElement): void {
-		this.syncWithAvailableViews();
-		const filterState = this.getFilterViewState();
-		const state = this.store.getState();
-		const menu = new Menu();
-		const doc = anchorEl.ownerDocument ?? document;
+openTagGroupMenu(anchorEl: HTMLElement): void {
+	this.syncWithAvailableViews();
+	const filterState = this.getFilterViewState();
+	const state = this.store.getState();
+	const menu = new Menu();
+	const doc = anchorEl.ownerDocument ?? document;
 
-		for (const group of state.groups) {
-			menu.addItem((menuItem) => {
-				const isActive = group.id === state.activeGroupId || (!state.activeGroupId && group.id === this.defaultGroupId);
-				menuItem.setChecked(isActive);
-				menuItem.setIcon(group.id === this.defaultGroupId ? 'layers' : 'bookmark');
-				menuItem.setTitle(this.buildGroupMenuContent(group, filterState));
-				menuItem.onClick(() => {
-					this.activateGroup(group);
-				});
-
-				const rowEl = (menuItem as unknown as { dom?: HTMLElement }).dom;
-				if (rowEl) {
-					rowEl.addEventListener('contextmenu', (event: MouseEvent) => {
-						event.preventDefault();
-						event.stopPropagation();
-						menu.hide();
-						this.openGroupContextMenu(group, { x: event.pageX, y: event.pageY });
-					});
-					rowEl.classList.add('tlb-tag-group-menu-row');
-					rowEl.classList.toggle('is-active', isActive);
-				}
+	for (const group of state.groups) {
+		menu.addItem((menuItem) => {
+			const isActive = group.id === state.activeGroupId || (!state.activeGroupId && group.id === this.defaultGroupId);
+			const { content, renameButton, deleteButton } = this.buildGroupMenuContent(group, filterState);
+			menuItem.setChecked(isActive);
+			menuItem.setIcon('layers-2');
+			menuItem.setTitle(content);
+			menuItem.onClick(() => {
+				this.activateGroup(group);
 			});
-		}
 
-		menu.addSeparator();
-		menu.addItem((item) => {
-			item
-				.setTitle(t('tagGroups.menuCreate'))
-				.setIcon('plus-circle')
-				.onClick(() => {
-					void this.handleCreateGroup({ activate: false, showNotice: true });
-				});
+			const rowEl = (menuItem as unknown as { dom?: HTMLElement }).dom;
+			if (rowEl) {
+				rowEl.classList.add('tlb-tag-group-menu-row');
+				rowEl.classList.toggle('is-active', isActive);
+			}
+
+			renameButton?.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				menu.hide();
+				void this.promptRenameGroup(group);
+			});
+
+			deleteButton?.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				menu.hide();
+				this.deleteGroup(group);
+			});
 		});
-
-		const rect = anchorEl.getBoundingClientRect();
-		menu.showAtPosition(
-			{
-				x: rect.left,
-				y: rect.bottom
-			},
-			doc
-		);
 	}
 
-	private buildGroupMenuContent(group: TagGroupDefinition, filterState: FileFilterViewState): DocumentFragment {
+	menu.addSeparator();
+	menu.addItem((item) => {
+		item
+			.setTitle(t('tagGroups.menuCreateEmpty'))
+			.setIcon('plus-circle')
+			.onClick(() => {
+				void this.handleCreateGroup({ activate: false, showNotice: true, mode: 'manual' });
+			});
+	});
+	menu.addItem((item) => {
+		item
+			.setTitle(t('tagGroups.menuCreateFromField'))
+			.setIcon('list-plus')
+			.onClick(() => {
+				void this.handleCreateGroup({ activate: false, showNotice: true, mode: 'field' });
+			});
+	});
+
+	const rect = anchorEl.getBoundingClientRect();
+	menu.showAtPosition(
+		{
+			x: rect.left,
+			y: rect.bottom
+		},
+		doc
+	);
+}
+
+	private buildGroupMenuContent(group: TagGroupDefinition, filterState: FileFilterViewState): { content: DocumentFragment; renameButton: HTMLButtonElement | null; deleteButton: HTMLButtonElement | null } {
 		const fragment = document.createDocumentFragment();
 		const container = document.createElement('div');
 		container.className = 'tlb-tag-group-menu-item';
 
+		const headerEl = document.createElement('div');
+		headerEl.className = 'tlb-tag-group-menu-item__header';
+		container.appendChild(headerEl);
+
 		const titleEl = document.createElement('div');
 		titleEl.className = 'tlb-tag-group-menu-item__name';
 		titleEl.textContent = this.getGroupDisplayName(group);
-		container.appendChild(titleEl);
+		headerEl.appendChild(titleEl);
+
+		const actionsEl = document.createElement('div');
+		actionsEl.className = 'tlb-tag-group-menu-item__actions';
+		headerEl.appendChild(actionsEl);
+
+		const renameButton = document.createElement('button');
+		renameButton.type = 'button';
+		renameButton.className = 'tlb-tag-group-menu-item__action tlb-tag-group-menu-item__action--rename';
+		renameButton.setAttribute('aria-label', t('tagGroups.menuRename'));
+		setIcon(renameButton, 'pencil');
+		actionsEl.appendChild(renameButton);
+
+		let deleteButton: HTMLButtonElement | null = null;
+		if (group.id !== this.defaultGroupId) {
+			deleteButton = document.createElement('button');
+			deleteButton.type = 'button';
+			deleteButton.className = 'tlb-tag-group-menu-item__action tlb-tag-group-menu-item__action--delete';
+			deleteButton.setAttribute('aria-label', t('tagGroups.menuDelete'));
+			setIcon(deleteButton, 'trash');
+			actionsEl.appendChild(deleteButton);
+		}
 
 		const tagsEl = document.createElement('div');
 		tagsEl.className = 'tlb-tag-group-menu-item__tags';
@@ -129,7 +171,7 @@ export class TagGroupController {
 		}
 
 		fragment.appendChild(container);
-		return fragment;
+		return { content: fragment, renameButton, deleteButton };
 	}
 
 	private appendTag(container: HTMLElement, label: string): void {
@@ -213,13 +255,11 @@ export class TagGroupController {
 				item
 					.setTitle(t('tagGroups.menuCreateAndAdd'))
 					.setIcon('plus-circle')
-					.onClick(() => {
-						void (async () => {
-							const group = await this.handleCreateGroup({ activate: false, showNotice: false });
-							if (group) {
-								this.addViewToGroup(group, view);
-							}
-						})();
+					.onClick(async () => {
+						const group = await this.handleCreateGroup({ activate: false, showNotice: false, mode: 'manual' });
+						if (group) {
+							this.addViewToGroup(group, view);
+						}
 					});
 			});
 		} else {
@@ -241,13 +281,11 @@ export class TagGroupController {
 				item
 					.setTitle(t('tagGroups.menuCreateAndAdd'))
 					.setIcon('plus-circle')
-					.onClick(() => {
-						void (async () => {
-							const group = await this.handleCreateGroup({ activate: false, showNotice: false });
-							if (group) {
-								this.addViewToGroup(group, view);
-							}
-						})();
+					.onClick(async () => {
+						const group = await this.handleCreateGroup({ activate: false, showNotice: false, mode: 'manual' });
+						if (group) {
+							this.addViewToGroup(group, view);
+						}
 					});
 			});
 		}
@@ -266,31 +304,6 @@ export class TagGroupController {
 		this.store.setActiveGroup(group.id);
 		this.ensureVisibleFilterSelection();
 		void this.persistAndRender();
-	}
-
-	private openGroupContextMenu(group: TagGroupDefinition, position: { x: number; y: number }): void {
-		const menu = new Menu();
-		menu.addItem((item) => {
-			item
-				.setTitle(t('tagGroups.menuRename'))
-				.setIcon('pencil')
-				.onClick(() => {
-					void this.promptRenameGroup(group);
-				});
-		});
-
-		if (group.id !== this.defaultGroupId) {
-			menu.addItem((item) => {
-				item
-					.setTitle(t('tagGroups.menuDelete'))
-					.setIcon('trash')
-					.onClick(() => {
-						this.deleteGroup(group);
-					});
-			});
-		}
-
-		menu.showAtPosition(position);
 	}
 
 	private async promptRenameGroup(group: TagGroupDefinition): Promise<void> {
@@ -316,51 +329,52 @@ export class TagGroupController {
 		});
 	}
 
-	private async handleCreateGroup(options: { activate: boolean; showNotice: boolean }): Promise<TagGroupDefinition | null> {
+	private async handleCreateGroup(options: { activate: boolean; showNotice: boolean; mode: TagGroupCreateMode }): Promise<TagGroupDefinition | null> {
 		this.syncWithAvailableViews();
+		if (options.mode === 'manual') {
+			return this.createManualGroup({ activate: options.activate, showNotice: options.showNotice });
+		}
+
 		const columns = this.getAvailableColumns();
 		if (columns.length === 0) {
-			const created = await this.createManualGroup(options);
-			return created;
+			new Notice(t('tagGroups.createFieldNoColumns'));
+			return null;
 		}
 
 		const result = await openTagGroupCreateModal(this.app, {
 			columns,
-			maxAutoGroups: MAX_FIELD_GROUP_ITEMS
+			maxAutoGroups: MAX_FIELD_GROUP_ITEMS,
+			modes: ['field'],
+			initialMode: 'field'
 		});
-		if (!result) {
+		if (!result || result.mode !== 'field' || !result.field) {
 			return null;
 		}
 
-		if (result.mode === 'field' && result.field) {
-			const uniqueValues = this.getUniqueFieldValues(result.field, MAX_FIELD_GROUP_ITEMS + 1);
-			if (uniqueValues.length === 0) {
-				new Notice(t('tagGroups.createFieldNoValues'));
-				return null;
-			}
-			let values = uniqueValues;
-			if (uniqueValues.length > MAX_FIELD_GROUP_ITEMS) {
-				values = uniqueValues.slice(0, MAX_FIELD_GROUP_ITEMS);
-				new Notice(t('tagGroups.createFieldLimitExceeded', { limit: String(MAX_FIELD_GROUP_ITEMS) }));
-			}
-			const filterViews = this.ensureFilterViewsForFieldValues(result.field, values);
-			if (filterViews.length === 0) {
-				new Notice(t('tagGroups.createFieldNoViews'));
-				return null;
-			}
-			const group = this.insertGroup(result.field, filterViews.map((view) => view.id), options.activate);
-			if (!group) {
-				return null;
-			}
-			if (options.showNotice) {
-				new Notice(t('tagGroups.createSuccess', { name: this.getGroupDisplayName(group) }));
-			}
-			await this.persistAndRender();
-			return group;
+		const uniqueValues = this.getUniqueFieldValues(result.field, MAX_FIELD_GROUP_ITEMS + 1);
+		if (uniqueValues.length === 0) {
+			new Notice(t('tagGroups.createFieldNoValues'));
+			return null;
 		}
-
-		const manualGroup = await this.createManualGroup(options);
-		return manualGroup;
+		let values = uniqueValues;
+		if (uniqueValues.length > MAX_FIELD_GROUP_ITEMS) {
+			values = uniqueValues.slice(0, MAX_FIELD_GROUP_ITEMS);
+			new Notice(t('tagGroups.createFieldLimitExceeded', { limit: String(MAX_FIELD_GROUP_ITEMS) }));
+		}
+		const filterViews = this.ensureFilterViewsForFieldValues(result.field, values);
+		if (filterViews.length === 0) {
+			new Notice(t('tagGroups.createFieldNoViews'));
+			return null;
+		}
+		const group = this.insertGroup(result.field, filterViews.map((view) => view.id), options.activate);
+		if (!group) {
+			return null;
+		}
+		if (options.showNotice) {
+			new Notice(t('tagGroups.createSuccess', { name: this.getGroupDisplayName(group) }));
+		}
+		await this.persistAndRender();
+		return group;
 	}
 
 	private async createManualGroup(options: { activate: boolean; showNotice: boolean }): Promise<TagGroupDefinition | null> {

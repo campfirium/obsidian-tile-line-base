@@ -212,7 +212,7 @@
     "menuCreate": "�½���ǩ��",
     "menuCreateAndAdd": "�½�������",
     "menuAddFilterView": "�����ǩ��",
-    "defaultName": "�±�ǩ��{{index}}",
+    "defaultName": "��ǩ��{{index}}",
     "renamePlaceholder": "�����ǩ������",
     "renameModalTitle": "��������ǩ��",
     "createSuccess": "�Ѵ�����ǩ�飺{{name}}",
@@ -240,6 +240,9 @@
     "createFieldNoValues": "��ѡ�ֶ�û�п��õ�ֵ��",
     "createFieldLimitExceeded": "��ʹ��ǰ {{limit}} ��ֵ���ɱ�ǩ�顣",
     "createFieldNoViews": "�޷�������ѡ�ֶ����ɹ�����ͼ��",
-    "emptyValueName": "{{field}}����ֵ��"
+    "emptyValueName": "{{field}}����ֵ��",
+    "menuCreateEmpty": "�½��ձ�ǩ��",
+    "menuCreateFromField": "���ֶ����ɱ�ǩ��",
+    "createFieldNoColumns": "��ǰû�п����ڷ�����ֶΡ�"
   }
 }

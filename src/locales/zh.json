@@ -1,207 +1,208 @@
-ï»¿{
+{
   "tableView": {
-    "displayName": "TileLineBase è¡¨æ ¼"
+    "displayName": "TileLineBase ±í¸ñ"
   },
   "settings": {
-    "generalHeading": "å¸¸è§„",
-    "rightSidebarToggleLabel": "æ˜¾ç¤ºå³ä¾§è¾¹æ ",
-    "rightSidebarToggleDesc": "æ˜¾ç¤ºè¡¨æ ¼è§†å›¾å³ä¾§è¾¹æ ï¼ˆåˆ—ç®¡ç†ä¸ç­›é€‰é¢æ¿ï¼‰"
+    "generalHeading": "³£¹æ",
+    "hideRightSidebarLabel": "ÇĞ»»±í¸ñÊ±Òş²ØÓÒ²à±ßÀ¸",
+    "hideRightSidebarDesc": "ÆôÓÃºó£¬ÔÚ½øÈë TileLineBase ±í¸ñÊÓÍ¼Ê±×Ô¶¯ÕÛµş Obsidian ÓÒ²à±ßÀ¸£¬Àë¿ª±í¸ñÊÓÍ¼Ê±»Ö¸´Ô­×´Ì¬¡£"
   },
   "formula": {
     "errors": {
-      "unexpectedChar": "å­˜åœ¨æ— æ³•è¯†åˆ«çš„å­—ç¬¦",
-      "unexpectedCharWithValue": "å­˜åœ¨æ— æ³•è¯†åˆ«çš„å­—ç¬¦ï¼šâ€œ{{char}}â€",
-      "unmatchedBrace": "èŠ±æ‹¬å·æœªé—­åˆ",
-      "emptyField": "å­—æ®µåä¸èƒ½ä¸ºç©º",
-      "unmatchedParen": "æ‹¬å·ä¸åŒ¹é…",
-      "stackUnderflow": "è¿ç®—æ ˆä¸å¹³è¡¡",
-      "divideByZero": "é™¤æ•°ä¸º 0",
-      "nonFiniteResult": "ç»“æœä¸æ˜¯æœ‰é™æ•°å€¼",
-      "emptyFormula": "å…¬å¼ä¸ºç©º",
-      "numericOutOfRange": "æ•°å€¼è¶…å‡ºèŒƒå›´",
-      "unaryNotSupported": "æš‚ä¸æ”¯æŒä¸€å…ƒè¿ç®—ç¬¦",
-      "unterminatedString": "å­—ç¬¦ä¸²æœªé—­åˆ"
+      "unexpectedChar": "´æÔÚÎŞ·¨Ê¶±ğµÄ×Ö·û",
+      "unexpectedCharWithValue": "´æÔÚÎŞ·¨Ê¶±ğµÄ×Ö·û£º¡°{{char}}¡±",
+      "unmatchedBrace": "»¨À¨ºÅÎ´±ÕºÏ",
+      "emptyField": "×Ö¶ÎÃû²»ÄÜÎª¿Õ",
+      "unmatchedParen": "À¨ºÅ²»Æ¥Åä",
+      "stackUnderflow": "ÔËËãÕ»²»Æ½ºâ",
+      "divideByZero": "³ıÊıÎª 0",
+      "nonFiniteResult": "½á¹û²»ÊÇÓĞÏŞÊıÖµ",
+      "emptyFormula": "¹«Ê½Îª¿Õ",
+      "numericOutOfRange": "ÊıÖµ³¬³ö·¶Î§",
+      "unaryNotSupported": "Ôİ²»Ö§³ÖÒ»ÔªÔËËã·û",
+      "unterminatedString": "×Ö·û´®Î´±ÕºÏ"
     }
   },
   "agGrid": {
-    "editorInputMissing": "[AgGridAdapter] æœªæ‰¾åˆ°ç¼–è¾‘å™¨è¾“å…¥æ¡†",
-    "documentBodyUnavailable": "document.body ä¸å¯ç”¨",
-    "editorWaitTimeout": "ç­‰å¾…ç¼–è¾‘å™¨è¶…æ—¶",
-    "compositionCaptureFailed": "[AgGridAdapter] CompositionProxy æ•è·å¤±è´¥",
-    "copyFailed": "[AgGridAdapter] execCommand å¤åˆ¶å¤±è´¥"
+    "editorInputMissing": "[AgGridAdapter] Î´ÕÒµ½±à¼­Æ÷ÊäÈë¿ò",
+    "documentBodyUnavailable": "document.body ²»¿ÉÓÃ",
+    "editorWaitTimeout": "µÈ´ı±à¼­Æ÷³¬Ê±",
+    "compositionCaptureFailed": "[AgGridAdapter] CompositionProxy ²¶»ñÊ§°Ü",
+    "copyFailed": "[AgGridAdapter] execCommand ¸´ÖÆÊ§°Ü"
   },
   "columnEditorModal": {
-    "title": "ç¼–è¾‘åˆ—ï¼š{{columnName}}",
-    "nameLabel": "åˆ—å",
-    "namePlaceholder": "è¯·è¾“å…¥åˆ—åç§°",
-    "typeLabel": "åˆ—ç±»å‹",
-    "typeTextOption": "æ–‡æœ¬",
-    "typeFormulaOption": "å…¬å¼",
-    "typeDateOption": "æ—¥æœŸ",
-    "formulaLabel": "å…¬å¼",
-    "formulaDescription": "ä½¿ç”¨ {å­—æ®µ} å¼•ç”¨åˆ—ï¼Œæ”¯æŒ + - * / è¿ç®—ç¬¦ï¼Œå¹¶å¯æ‹¼æ¥ \"æ–‡æœ¬\"ã€‚",
+    "title": "±à¼­ÁĞ£º{{columnName}}",
+    "nameLabel": "ÁĞÃû",
+    "namePlaceholder": "ÇëÊäÈëÁĞÃû³Æ",
+    "typeLabel": "ÁĞÀàĞÍ",
+    "typeTextOption": "ÎÄ±¾",
+    "typeFormulaOption": "¹«Ê½",
+    "typeDateOption": "ÈÕÆÚ",
+    "formulaLabel": "¹«Ê½",
+    "formulaDescription": "Ê¹ÓÃ {×Ö¶Î} ÒıÓÃÁĞ£¬Ö§³Ö + - * / ÔËËã·û£¬²¢¿ÉÆ´½Ó \"ÎÄ±¾\"¡£",
     "formulaPlaceholder": "{points} + {cost}",
-    "dateFormatLabel": "æ—¥æœŸæ˜¾ç¤ºæ ¼å¼",
-    "dateFormatDescription": "é€‰æ‹©åœ¨è¡¨æ ¼ä¸­æ˜¾ç¤ºæ—¥æœŸçš„æ–¹å¼ã€‚",
-    "dateFormatIsoOption": "ISOï¼ˆ2024-01-31ï¼‰",
-    "dateFormatShortOption": "çŸ­æ ¼å¼ï¼ˆä¾‹ï¼š24/1/31ï¼‰",
-    "dateFormatLongOption": "é•¿æ ¼å¼ï¼ˆä¾‹ï¼š2024å¹´1æœˆ31æ—¥ï¼‰",
-    "saveButton": "ä¿å­˜",
-    "cancelButton": "å–æ¶ˆ",
-    "nameEmptyError": "åˆ—åç§°ä¸èƒ½ä¸ºç©º",
-    "formulaEmptyError": "å…¬å¼ä¸èƒ½ä¸ºç©º",
-    "formulaValidationFailed": "å…¬å¼æ ¡éªŒå¤±è´¥ï¼š{{message}}"
+    "dateFormatLabel": "ÈÕÆÚÏÔÊ¾¸ñÊ½",
+    "dateFormatDescription": "Ñ¡ÔñÔÚ±í¸ñÖĞÏÔÊ¾ÈÕÆÚµÄ·½Ê½¡£",
+    "dateFormatIsoOption": "ISO£¨2024-01-31£©",
+    "dateFormatShortOption": "¶Ì¸ñÊ½£¨Àı£º24/1/31£©",
+    "dateFormatLongOption": "³¤¸ñÊ½£¨Àı£º2024Äê1ÔÂ31ÈÕ£©",
+    "saveButton": "±£´æ",
+    "cancelButton": "È¡Ïû",
+    "nameEmptyError": "ÁĞÃû³Æ²»ÄÜÎª¿Õ",
+    "formulaEmptyError": "¹«Ê½²»ÄÜÎª¿Õ",
+    "formulaValidationFailed": "¹«Ê½Ğ£ÑéÊ§°Ü£º{{message}}"
   },
   "columnInteraction": {
-    "menuEdit": "ç¼–è¾‘åˆ—",
-    "menuDuplicate": "å¤åˆ¶åˆ—",
-    "menuInsert": "æ’å…¥åˆ—",
-    "menuHide": "éšè—åˆ—",
-    "menuDelete": "åˆ é™¤åˆ—",
-    "nameEmptyError": "åˆ—åç§°ä¸èƒ½ä¸ºç©º",
-    "nameReservedError": "åˆ—åå·²è¢«ç³»ç»Ÿä¿ç•™",
-    "nameExistsError": "åˆ—åå·²å­˜åœ¨",
-    "renameFailed": "é‡å‘½ååˆ—å¤±è´¥ï¼š{{target}}",
-    "duplicateFailed": "å¤åˆ¶åˆ—å¤±è´¥ï¼Œè¯·ç¨åé‡è¯•",
-    "duplicateSuccess": "å·²å¤åˆ¶åˆ—ï¼š{{name}}",
-    "insertFailed": "æ’å…¥æ–°åˆ—å¤±è´¥ï¼Œè¯·ç¨åé‡è¯•",
-    "insertSuccess": "å·²æ’å…¥åˆ—ï¼š{{name}}",
-    "deleteSuccess": "å·²åˆ é™¤åˆ—ï¼š{{name}}"
+    "menuEdit": "±à¼­ÁĞ",
+    "menuDuplicate": "¸´ÖÆÁĞ",
+    "menuInsert": "²åÈëÁĞ",
+    "menuHide": "Òş²ØÁĞ",
+    "menuDelete": "É¾³ıÁĞ",
+    "nameEmptyError": "ÁĞÃû³Æ²»ÄÜÎª¿Õ",
+    "nameReservedError": "ÁĞÃûÒÑ±»ÏµÍ³±£Áô",
+    "nameExistsError": "ÁĞÃûÒÑ´æÔÚ",
+    "renameFailed": "ÖØÃüÃûÁĞÊ§°Ü£º{{target}}",
+    "duplicateFailed": "¸´ÖÆÁĞÊ§°Ü£¬ÇëÉÔºóÖØÊÔ",
+    "duplicateSuccess": "ÒÑ¸´ÖÆÁĞ£º{{name}}",
+    "insertFailed": "²åÈëĞÂÁĞÊ§°Ü£¬ÇëÉÔºóÖØÊÔ",
+    "insertSuccess": "ÒÑ²åÈëÁĞ£º{{name}}",
+    "deleteSuccess": "ÒÑÉ¾³ıÁĞ£º{{name}}"
   },
   "columnVisibility": {
-    "menuTitle": "æ˜¾ç¤ºéšè—åˆ—",
-    "empty": "å½“å‰æ²¡æœ‰å·²éšè—çš„åˆ—",
-    "hideNotice": "å·²éšè—åˆ—ï¼š{{name}}",
-    "showNotice": "å·²æ˜¾ç¤ºåˆ—ï¼š{{name}}"
+    "menuTitle": "ÏÔÊ¾Òş²ØÁĞ",
+    "empty": "µ±Ç°Ã»ÓĞÒÑÒş²ØµÄÁĞ",
+    "hideNotice": "ÒÑÒş²ØÁĞ£º{{name}}",
+    "showNotice": "ÒÑÏÔÊ¾ÁĞ£º{{name}}"
   },
   "statusCell": {
     "labels": {
-      "todo": "å¾…åŠ",
-      "done": "å·²å®Œæˆ",
-      "inprogress": "è¿›è¡Œä¸­",
-      "onhold": "æš‚åœ",
-      "someday": "æ”¹å¤©",
-      "canceled": "å·²å–æ¶ˆ"
+      "todo": "´ı°ì",
+      "done": "ÒÑÍê³É",
+      "inprogress": "½øĞĞÖĞ",
+      "onhold": "ÔİÍ£",
+      "someday": "¸ÄÌì",
+      "canceled": "ÒÑÈ¡Ïû"
     },
-    "menuLabel": "çŠ¶æ€é€‰é¡¹"
+    "menuLabel": "×´Ì¬Ñ¡Ïî"
   },
   "quickFilter": {
-    "clearAriaLabel": "æ¸…é™¤è¿‡æ»¤",
-    "placeholder": "å…¨å±€è¿‡æ»¤",
-    "inputAriaLabel": "å…¨å±€è¿‡æ»¤å…³é”®å­—",
-    "focusAriaLabel": "èšç„¦è¿‡æ»¤è¾“å…¥"
+    "clearAriaLabel": "Çå³ı¹ıÂË",
+    "placeholder": "È«¾Ö¹ıÂË",
+    "inputAriaLabel": "È«¾Ö¹ıÂË¹Ø¼ü×Ö",
+    "focusAriaLabel": "¾Û½¹¹ıÂËÊäÈë"
   },
   "gridInteraction": {
-    "insertRowAbove": "åœ¨ä¸Šæ–¹æ’å…¥è¡Œ",
-    "insertRowBelow": "åœ¨ä¸‹æ–¹æ’å…¥è¡Œ",
-    "fillSelectedColumn": "ä¸ºé€‰ä¸­çš„ {{count}} è¡Œå¡«å…… {{column}} åˆ—",
-    "duplicateSelected": "å¤åˆ¶é€‰ä¸­çš„ {{count}} è¡Œ",
-    "deleteSelected": "åˆ é™¤é€‰ä¸­çš„ {{count}} è¡Œ",
-    "duplicateRow": "å¤åˆ¶æ­¤è¡Œ",
-    "deleteRow": "åˆ é™¤æ­¤è¡Œ",
-    "menuCopySelection": "å¤åˆ¶é€‰ä¸­å†…å®¹",
-    "copySelectionSuccess": "å·²å¤åˆ¶é€‰ä¸­å†…å®¹"
+    "insertRowAbove": "ÔÚÉÏ·½²åÈëĞĞ",
+    "insertRowBelow": "ÔÚÏÂ·½²åÈëĞĞ",
+    "fillSelectedColumn": "ÎªÑ¡ÖĞµÄ {{count}} ĞĞÌî³ä {{column}} ÁĞ",
+    "duplicateSelected": "¸´ÖÆÑ¡ÖĞµÄ {{count}} ĞĞ",
+    "deleteSelected": "É¾³ıÑ¡ÖĞµÄ {{count}} ĞĞ",
+    "duplicateRow": "¸´ÖÆ´ËĞĞ",
+    "deleteRow": "É¾³ı´ËĞĞ",
+    "menuCopySelection": "¸´ÖÆÑ¡ÖĞÄÚÈİ",
+    "copySelectionSuccess": "ÒÑ¸´ÖÆÑ¡ÖĞÄÚÈİ"
   },
   "gridFillModal": {
-    "title": "æ‰¹é‡å¡«å†™åˆ—ï¼š{{column}}",
-    "valueLabel": "å¡«å†™å†…å®¹",
-    "textPlaceholder": "è¯·è¾“å…¥å€¼",
-    "datePlaceholder": "è¯·è¾“å…¥æ—¥æœŸï¼ˆYYYY-MM-DDï¼‰",
-    "dateHint": "å½“å‰æ˜¾ç¤ºæ ¼å¼ï¼š{{format}}",
-    "confirmButton": "åº”ç”¨",
-    "cancelButton": "å–æ¶ˆ",
-    "invalidDate": "è¯·è¾“å…¥æœ‰æ•ˆçš„æ—¥æœŸï¼ˆYYYY-MM-DDï¼‰"
+    "title": "ÅúÁ¿ÌîĞ´ÁĞ£º{{column}}",
+    "valueLabel": "ÌîĞ´ÄÚÈİ",
+    "textPlaceholder": "ÇëÊäÈëÖµ",
+    "datePlaceholder": "ÇëÊäÈëÈÕÆÚ£¨YYYY-MM-DD£©",
+    "dateHint": "µ±Ç°ÏÔÊ¾¸ñÊ½£º{{format}}",
+    "confirmButton": "Ó¦ÓÃ",
+    "cancelButton": "È¡Ïû",
+    "invalidDate": "ÇëÊäÈëÓĞĞ§µÄÈÕÆÚ£¨YYYY-MM-DD£©"
   },
   "copyTemplate": {
-    "menuCopy": "å¤åˆ¶ä¸ºæ¨¡æ¿",
-    "menuEdit": "ç¼–è¾‘å¤åˆ¶æ¨¡æ¿...",
-    "copySuccess": "å·²æŒ‰æ¨¡æ¿å¤åˆ¶å†…å®¹",
-    "copyFailedLog": "å¤åˆ¶å¤±è´¥:",
-    "copyFailedNotice": "å¤åˆ¶å¤±è´¥",
-    "modalTitle": "ç¼–è¾‘å¤åˆ¶æ¨¡æ¿",
-    "modalDescription": "ä½¿ç”¨ {å­—æ®µå} æ’å…¥åˆ—å€¼ï¼Œå¯ç”¨ {rowNumber}/{rowIndex} è·å–åºå·ã€‚ç•™ç©ºåˆ™æ¢å¤é»˜è®¤ Markdown è¾“å‡ºã€‚",
-    "templatePlaceholder": "- {æ ‡é¢˜}\n- {çŠ¶æ€}",
-    "saveButton": "ä¿å­˜",
-    "resetButton": "æ¢å¤é»˜è®¤",
-    "cancelButton": "å–æ¶ˆ"
+    "menuCopy": "¸´ÖÆÎªÄ£°å",
+    "menuEdit": "±à¼­¸´ÖÆÄ£°å...",
+    "copySuccess": "ÒÑ°´Ä£°å¸´ÖÆÄÚÈİ",
+    "copyFailedLog": "¸´ÖÆÊ§°Ü:",
+    "copyFailedNotice": "¸´ÖÆÊ§°Ü",
+    "modalTitle": "±à¼­¸´ÖÆÄ£°å",
+    "modalDescription": "Ê¹ÓÃ {×Ö¶ÎÃû} ²åÈëÁĞÖµ£¬¿ÉÓÃ {rowNumber}/{rowIndex} »ñÈ¡ĞòºÅ¡£Áô¿ÕÔò»Ö¸´Ä¬ÈÏ Markdown Êä³ö¡£",
+    "templatePlaceholder": "- {±êÌâ}\n- {×´Ì¬}",
+    "saveButton": "±£´æ",
+    "resetButton": "»Ö¸´Ä¬ÈÏ",
+    "cancelButton": "È¡Ïû"
   },
   "tableDataStore": {
-    "newRowPrefix": "æ–°æ¡ç›®",
-    "newColumnName": "æ–°åˆ—",
-    "formulaSelfReference": "å…¬å¼ä¸å…è®¸å¼•ç”¨è‡ªèº«",
-    "formulaParseFailed": "å…¬å¼è§£æå¤±è´¥ï¼š{{error}}",
-    "formulaDisabled": "å…¬å¼åˆ—å·²åœç”¨ï¼ˆè¡Œæ•°è¶…è¿‡ {{limit}}ï¼‰",
-    "formulaError": "å…¬å¼é”™è¯¯ï¼š{{error}}",
-    "duplicateColumnBase": "{{field}} (å‰¯æœ¬)"
+    "newRowPrefix": "ĞÂÌõÄ¿",
+    "newColumnName": "ĞÂÁĞ",
+    "formulaSelfReference": "¹«Ê½²»ÔÊĞíÒıÓÃ×ÔÉí",
+    "formulaParseFailed": "¹«Ê½½âÎöÊ§°Ü£º{{error}}",
+    "formulaDisabled": "¹«Ê½ÁĞÒÑÍ£ÓÃ£¨ĞĞÊı³¬¹ı {{limit}}£©",
+    "formulaError": "¹«Ê½´íÎó£º{{error}}",
+    "duplicateColumnBase": "{{field}} (¸±±¾)"
   },
   "tablePersistence": {
-    "saveFailed": "ä¿å­˜å¤±è´¥ï¼Œè¯·æŸ¥çœ‹æ§åˆ¶å°æ—¥å¿—"
+    "saveFailed": "±£´æÊ§°Ü£¬Çë²é¿´¿ØÖÆÌ¨ÈÕÖ¾"
   },
   "tableViewInteractions": {
-    "blockIndexMissing": "æ— æ³•å®šä½å¯¹åº”çš„å—ç´¢å¼•",
-    "renameFailed": "é‡å‘½ååˆ—å¤±è´¥ï¼š{{name}}"
+    "blockIndexMissing": "ÎŞ·¨¶¨Î»¶ÔÓ¦µÄ¿éË÷Òı",
+    "renameFailed": "ÖØÃüÃûÁĞÊ§°Ü£º{{name}}"
   },
   "tableViewRenderer": {
-    "noFile": "æœªé€‰æ‹©æ–‡ä»¶",
-    "missingH2": "è¯¥æ–‡ä»¶ç¼ºå°‘ H2 æ®µè½ï¼Œæ— æ³•æ˜¾ç¤ºä¸ºè¡¨æ ¼",
-    "noSchema": "æ— æ³•è·å–æ•°æ®ç»“æ„"
+    "noFile": "Î´Ñ¡ÔñÎÄ¼ş",
+    "missingH2": "¸ÃÎÄ¼şÈ±ÉÙ H2 ¶ÎÂä£¬ÎŞ·¨ÏÔÊ¾Îª±í¸ñ",
+    "noSchema": "ÎŞ·¨»ñÈ¡Êı¾İ½á¹¹"
   },
   "tableViewSetup": {
-    "constructorStart": "=== TableView æ„é€ å‡½æ•°å¼€å§‹ ===",
-    "constructorComplete": "=== TableView æ„é€ å‡½æ•°å®Œæˆ ===",
-    "formulaLimitNotice": "å…¬å¼è®¡ç®—æš‚åœï¼Œè¶…è¿‡é™åˆ¶ {{limit}} è¡Œ"
+    "constructorStart": "=== TableView ¹¹Ôìº¯Êı¿ªÊ¼ ===",
+    "constructorComplete": "=== TableView ¹¹Ôìº¯ÊıÍê³É ===",
+    "formulaLimitNotice": "¹«Ê½¼ÆËãÔİÍ££¬³¬¹ıÏŞÖÆ {{limit}} ĞĞ"
   },
   "filterViewBar": {
-    "allTabLabel": "å…¨éƒ¨"
+    "allTabLabel": "È«²¿"
   },
   "filterViewController": {
-    "noColumns": "æ— æ³•è·å–åˆ—ä¿¡æ¯ï¼Œè¯·ç¨åé‡è¯•",
-    "createModalTitle": "æ–°å»ºè¿‡æ»¤è§†å›¾",
-    "menuEdit": "ç¼–è¾‘",
-    "menuDuplicate": "å¤åˆ¶",
-    "menuDelete": "åˆ é™¤",
-    "editModalTitle": "ç¼–è¾‘è§†å›¾: {{name}}",
-    "renameModalTitle": "é‡å‘½åè§†å›¾",
-    "renamePlaceholder": "è¾“å…¥æ–°åç§°",
-    "duplicateNameSuffix": "å‰¯æœ¬",
-    "duplicateNotice": "å·²å¤åˆ¶è§†å›¾: {{name}}",
-    "duplicateModalTitle": "å¤åˆ¶è§†å›¾: {{name}}"
+    "noColumns": "ÎŞ·¨»ñÈ¡ÁĞĞÅÏ¢£¬ÇëÉÔºóÖØÊÔ",
+    "createModalTitle": "ĞÂ½¨¹ıÂËÊÓÍ¼",
+    "menuEdit": "±à¼­",
+    "menuDuplicate": "¸´ÖÆ",
+    "menuDelete": "É¾³ı",
+    "editModalTitle": "±à¼­ÊÓÍ¼: {{name}}",
+    "renameModalTitle": "ÖØÃüÃûÊÓÍ¼",
+    "renamePlaceholder": "ÊäÈëĞÂÃû³Æ",
+    "duplicateNameSuffix": "¸±±¾",
+    "duplicateNotice": "ÒÑ¸´ÖÆÊÓÍ¼: {{name}}",
+    "duplicateModalTitle": "¸´ÖÆÊÓÍ¼: {{name}}"
   },
   "filterViewModals": {
-    "saveButton": "ä¿å­˜",
-    "cancelButton": "å–æ¶ˆ",
-    "viewNameLabel": "è§†å›¾åç§°",
-    "viewNamePlaceholder": "è¾“å…¥è§†å›¾åç§°",
-    "combineModeLabel": "æ¡ä»¶ç»„åˆæ¨¡å¼",
-    "combineModeOptionAll": "æ»¡è¶³æ‰€æœ‰æ¡ä»¶ï¼ˆä¸ï¼‰",
-    "combineModeOptionAny": "æ»¡è¶³ä»»ä¸€æ¡ä»¶ï¼ˆæˆ–ï¼‰",
-    "conditionsHeading": "è¿‡æ»¤æ¡ä»¶",
-    "conditionsEmptyHint": "å°šæœªé…ç½®è¿‡æ»¤æ¡ä»¶ï¼Œè¯·ä½¿ç”¨ã€Œæ–°å¢æ¡ä»¶ã€è¿›è¡Œè®¾ç½®ã€‚",
-    "addConditionButton": "+ æ–°å¢æ¡ä»¶",
+    "saveButton": "±£´æ",
+    "cancelButton": "È¡Ïû",
+    "viewNameLabel": "ÊÓÍ¼Ãû³Æ",
+    "viewNamePlaceholder": "ÊäÈëÊÓÍ¼Ãû³Æ",
+    "combineModeLabel": "Ìõ¼ş×éºÏÄ£Ê½",
+    "combineModeOptionAll": "Âú×ãËùÓĞÌõ¼ş£¨Óë£©",
+    "combineModeOptionAny": "Âú×ãÈÎÒ»Ìõ¼ş£¨»ò£©",
+    "conditionsHeading": "¹ıÂËÌõ¼ş",
+    "conditionsEmptyHint": "ÉĞÎ´ÅäÖÃ¹ıÂËÌõ¼ş£¬ÇëÊ¹ÓÃ¡¸ĞÂÔöÌõ¼ş¡¹½øĞĞÉèÖÃ¡£",
+    "addConditionButton": "+ ĞÂÔöÌõ¼ş",
     "operators": {
-      "equals": "ç­‰äº",
-      "notEquals": "ä¸ç­‰äº",
-      "contains": "åŒ…å«",
-      "notContains": "ä¸åŒ…å«",
-      "startsWith": "ä»¥...å¼€å¤´",
-      "endsWith": "ä»¥...ç»“å°¾",
-      "isEmpty": "ä¸ºç©º",
-      "isNotEmpty": "ä¸ä¸ºç©º"
+      "equals": "µÈÓÚ",
+      "notEquals": "²»µÈÓÚ",
+      "contains": "°üº¬",
+      "notContains": "²»°üº¬",
+      "startsWith": "ÒÔ...¿ªÍ·",
+      "endsWith": "ÒÔ...½áÎ²",
+      "isEmpty": "Îª¿Õ",
+      "isNotEmpty": "²»Îª¿Õ"
     },
-    "valuePlaceholder": "è¾“å…¥å€¼",
-    "removeButton": "ç§»é™¤",
-    "sortHeading": "æ’åºè§„åˆ™",
-    "addSortButton": "+ æ–°å¢æ’åº",
-    "sortsEmptyHint": "å°šæœªé…ç½®æ’åºè§„åˆ™ï¼Œè¯·ä½¿ç”¨ã€Œæ–°å¢æ’åºã€è¿›è¡Œè®¾ç½®ã€‚",
-    "sortsNoColumnsHint": "æ²¡æœ‰å¯ç”¨åˆ—ï¼Œæ— æ³•é…ç½®æ’åºã€‚",
-    "sortDirectionAsc": "å‡åº (A â†’ Z)",
-    "sortDirectionDesc": "é™åº (Z â†’ A)"
+    "valuePlaceholder": "ÊäÈëÖµ",
+    "removeButton": "ÒÆ³ı",
+    "sortHeading": "ÅÅĞò¹æÔò",
+    "addSortButton": "+ ĞÂÔöÅÅĞò",
+    "sortsEmptyHint": "ÉĞÎ´ÅäÖÃÅÅĞò¹æÔò£¬ÇëÊ¹ÓÃ¡¸ĞÂÔöÅÅĞò¡¹½øĞĞÉèÖÃ¡£",
+    "sortsNoColumnsHint": "Ã»ÓĞ¿ÉÓÃÁĞ£¬ÎŞ·¨ÅäÖÃÅÅĞò¡£",
+    "sortDirectionAsc": "ÉıĞò (A ¡ú Z)",
+    "sortDirectionDesc": "½µĞò (Z ¡ú A)"
   },
   "compositionProxy": {
-    "compositionResetFailed": "[CompositionProxy] æ— æ³•åœ¨ compositionstart é‡ç½®å…‰æ ‡",
-    "caretResetFailed": "[CompositionProxy] æ— æ³•é‡ç½®å…‰æ ‡ä½ç½®"
+    "compositionResetFailed": "[CompositionProxy] ÎŞ·¨ÔÚ compositionstart ÖØÖÃ¹â±ê",
+    "caretResetFailed": "[CompositionProxy] ÎŞ·¨ÖØÖÃ¹â±êÎ»ÖÃ"
   },
   "dateCellEditor": {
-    "openPickerLabel": "æ‰“å¼€æ—¥æœŸé€‰æ‹©å™¨"
+    "openPickerLabel": "´ò¿ªÈÕÆÚÑ¡ÔñÆ÷"
   }
 }
+

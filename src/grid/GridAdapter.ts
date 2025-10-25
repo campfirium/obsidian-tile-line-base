@@ -171,4 +171,6 @@ export interface GridAdapter {
 	 * 设置跨列的快速过滤文本
 	 */
 	setQuickFilter?(value: string | null): void;
+
+	setSideBarVisible?(visible: boolean): void;
 }

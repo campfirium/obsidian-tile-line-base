@@ -125,10 +125,11 @@ interface GridMountParams {
 	columns: ColumnDef[];
 	rowData: RowData[];
 	handlers: GridMountHandlers;
+	sideBarVisible?: boolean;
 }
 
 export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; container: HTMLElement } {
-	const { gridController, container, columns, rowData, handlers } = params;
+	const { gridController, container, columns, rowData, handlers, sideBarVisible } = params;
 
 	const result = gridController.mount(container, columns, rowData, {
 		onStatusChange: handlers.onStatusChange,
@@ -140,6 +141,8 @@ export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; 
 		onHeaderEdit: handlers.onHeaderEdit,
 		onColumnHeaderContextMenu: handlers.onColumnHeaderContextMenu,
 		onEnterAtLastRow: handlers.onEnterAtLastRow
+	}, {
+		sideBarVisible: sideBarVisible !== false
 	});
 
 	return {

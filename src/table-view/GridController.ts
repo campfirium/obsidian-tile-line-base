@@ -19,6 +19,10 @@ export interface GridMountResult {
 	container: HTMLElement;
 }
 
+export interface GridMountOptions {
+	sideBarVisible?: boolean;
+}
+
 /**
  * 负责管理表格适配器的生命周期与事件绑定。
  * 将挂载/销毁、初始列宽补偿等操作集中到单独模块，降低 TableView 复杂度。
@@ -32,16 +36,19 @@ export class GridController {
 		container: HTMLElement,
 		columns: ColumnDef[],
 		rows: RowData[],
-		handlers: GridControllerHandlers
+		handlers: GridControllerHandlers,
+		options?: GridMountOptions
 	): GridMountResult {
 		this.destroy();
 
+		const sideBarVisible = options?.sideBarVisible !== false;
 		const adapter = new AgGridAdapter();
 		adapter.mount(container, columns, rows, {
 			onStatusChange: handlers.onStatusChange,
 			onColumnResize: handlers.onColumnResize,
 			onCopyH2Section: handlers.onCopyH2Section,
-			onColumnOrderChange: handlers.onColumnOrderChange
+			onColumnOrderChange: handlers.onColumnOrderChange,
+			sideBarVisible
 		});
 
 		adapter.onCellEdit((event) => {

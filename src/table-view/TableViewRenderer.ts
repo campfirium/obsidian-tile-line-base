@@ -6,6 +6,7 @@ import { renderFilterViewControls } from './TableViewFilterPresenter';
 import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
+import { getPluginContext } from '../pluginContext';
 
 const logger = getLogger('table-view:renderer');
 
@@ -130,6 +131,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 	const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
 	const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
 	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
+	const plugin = getPluginContext();
+	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
+	const sideBarVisible = !hideRightSidebar;
 
 	const containerWindow = ownerDoc?.defaultView ?? window;
 	const executeMount = () => {
@@ -138,6 +142,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			container: tableContainer,
 			columns,
 			rowData: view.filterOrchestrator.getVisibleRows(),
+			sideBarVisible,
 			handlers: {
 				onStatusChange: (rowId, newStatus) => handleStatusChange(view, rowId, newStatus),
 				onColumnResize: (field, width) => handleColumnResize(view, field, width),

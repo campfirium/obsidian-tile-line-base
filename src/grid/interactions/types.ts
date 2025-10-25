@@ -10,6 +10,7 @@ export interface GridInteractionContext {
 	onColumnResize?: (field: string, width: number) => void;
 	onCopyH2Section?: (rowIndex: number) => void;
 	onColumnOrderChange?: (fields: string[]) => void;
+	sideBarVisible?: boolean;
 }
 
 export interface InteractionControllerDeps {

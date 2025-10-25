@@ -1,7 +1,7 @@
+import { Menu } from 'obsidian';
 import { t } from '../i18n';
 
 interface MenuBuilderOptions {
-	ownerDoc: Document;
 	isIndexColumn: boolean;
 	isMultiSelect: boolean;
 	selectedRowCount: number;
@@ -21,59 +21,74 @@ interface MenuBuilderOptions {
 	};
 }
 
-export function buildGridContextMenu(options: MenuBuilderOptions): HTMLElement {
-	const menu = options.ownerDoc.body.createDiv({ cls: 'tlb-context-menu' });
-	menu.style.visibility = 'hidden';
-	menu.style.left = '0px';
-	menu.style.top = '0px';
+interface MenuItemConfig {
+	danger?: boolean;
+	params?: Record<string, string>;
+}
+
+function withClose(handler: () => void, close: () => void): () => void {
+	return () => {
+		handler();
+		close();
+	};
+}
+
+export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
+	const menu = new Menu();
 
 	const addItem = (
 		labelKey: Parameters<typeof t>[0],
-		handler: () => void,
-		config?: { danger?: boolean; params?: Record<string, string> }
+		icon: string,
+		handler: (() => void) | undefined,
+		config?: MenuItemConfig
 	): void => {
-		const classes = ['tlb-context-menu-item'];
-		if (config?.danger) {
-			classes.push('tlb-context-menu-item-danger');
+		if (!handler) {
+			return;
 		}
-		const item = menu.createDiv({ cls: classes.join(' ') });
-		item.createSpan({ text: t(labelKey, config?.params) });
-		item.addEventListener('click', () => {
-			handler();
-			options.actions.close();
+		menu.addItem((item) => {
+			item.setTitle(t(labelKey, config?.params));
+			item.setIcon(icon);
+			if (config?.danger) {
+				const dom = (item as unknown as { dom?: HTMLElement }).dom;
+				dom?.classList.add('tlb-menu-item-danger');
+			}
+			item.onClick(withClose(handler, options.actions.close));
 		});
 	};
 
 	const addSeparator = () => {
-		menu.createDiv({ cls: 'tlb-context-menu-separator' });
+		menu.addSeparator();
 	};
 
 	if (options.isIndexColumn) {
 		if (options.isMultiSelect && options.actions.copySelection) {
-			addItem('gridInteraction.menuCopySelection', options.actions.copySelection);
+			addItem('gridInteraction.menuCopySelection', 'copy', options.actions.copySelection);
 		}
-		addItem('copyTemplate.menuCopy', options.actions.copySelectionAsTemplate);
-		addItem('copyTemplate.menuEdit', options.actions.editCopyTemplate);
+		addItem('copyTemplate.menuCopy', 'clipboard', options.actions.copySelectionAsTemplate);
+		addItem('copyTemplate.menuEdit', 'pencil', options.actions.editCopyTemplate);
 		addSeparator();
 	}
 
-	addItem('gridInteraction.insertRowAbove', options.actions.insertAbove);
-	addItem('gridInteraction.insertRowBelow', options.actions.insertBelow);
+	addItem('gridInteraction.insertRowAbove', 'arrow-up', options.actions.insertAbove);
+	addItem('gridInteraction.insertRowBelow', 'arrow-down', options.actions.insertBelow);
 
 	addSeparator();
 
 	if (options.isMultiSelect) {
 		if (options.actions.fillSelectionWithValue && options.fillSelectionLabelParams) {
-			addItem('gridInteraction.fillSelectedColumn', options.actions.fillSelectionWithValue, {
-				params: options.fillSelectionLabelParams
-			});
+			addItem(
+				'gridInteraction.fillSelectedColumn',
+				'repeat',
+				options.actions.fillSelectionWithValue,
+				{ params: options.fillSelectionLabelParams }
+			);
 		}
 		const params = { count: String(options.selectedRowCount) };
-		addItem('gridInteraction.duplicateSelected', options.actions.duplicateSelection, { params });
-		addItem('gridInteraction.deleteSelected', options.actions.deleteSelection, { params, danger: true });
+		addItem('gridInteraction.duplicateSelected', 'copy', options.actions.duplicateSelection, { params });
+		addItem('gridInteraction.deleteSelected', 'trash', options.actions.deleteSelection, { params, danger: true });
 	} else {
-		addItem('gridInteraction.duplicateRow', options.actions.duplicateRow);
-		addItem('gridInteraction.deleteRow', options.actions.deleteRow, { danger: true });
+		addItem('gridInteraction.duplicateRow', 'copy', options.actions.duplicateRow);
+		addItem('gridInteraction.deleteRow', 'trash', options.actions.deleteRow, { danger: true });
 	}
 
 	return menu;

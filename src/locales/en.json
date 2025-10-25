@@ -50,6 +50,7 @@
     "menuEdit": "Edit column",
     "menuDuplicate": "Duplicate column",
     "menuInsert": "Insert column",
+    "menuHide": "Hide column",
     "menuDelete": "Delete column",
     "nameEmptyError": "Column name cannot be empty",
     "nameReservedError": "Column name is reserved by the system",
@@ -60,6 +61,12 @@
     "insertFailed": "Failed to insert column, please try again later",
     "insertSuccess": "Inserted column: {{name}}",
     "deleteSuccess": "Deleted column: {{name}}"
+  },
+  "columnVisibility": {
+    "menuTitle": "Show hidden columns",
+    "empty": "No hidden columns",
+    "hideNotice": "Hidden column: {{name}}",
+    "showNotice": "Shown column: {{name}}"
   },
   "statusCell": {
     "labels": {

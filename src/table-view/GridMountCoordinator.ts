@@ -16,8 +16,11 @@ interface ColumnBuilderParams {
 
 export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[] {
 	const { schema, columnConfigs, primaryField, dataStore, columnLayoutStore, clampWidth } = params;
+	const hiddenColumns = new Set(
+		(columnConfigs ?? []).filter((config) => config.hide).map((config) => config.name)
+	);
 
-	return schema.columnNames.map((name) => {
+	return schema.columnNames.filter((name) => !hiddenColumns.has(name)).map((name) => {
 		const baseColDef: ColumnDef = {
 			field: name,
 			headerName: name,

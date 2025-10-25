@@ -37,14 +37,27 @@ export class ColumnInteractionController {
 	}
 
 	handleColumnHeaderContextMenu(field: string, event: MouseEvent): void {
-		if (!this.getSchema()) {
+		const schema = this.getSchema();
+		if (!schema) {
 			return;
 		}
-		if (!field || field === '#' || field === ROW_ID_FIELD || field === 'status') {
+		if (!field || field === ROW_ID_FIELD) {
 			return;
 		}
+
 		event.preventDefault();
 		event.stopPropagation();
+
+		if (field === '#') {
+			this.openIndexHeaderMenu(event);
+			return;
+		}
+
+		if (field === 'status') {
+			this.openStatusColumnMenu(event);
+			return;
+		}
+
 		this.openColumnHeaderMenu(field, event);
 	}
 
@@ -65,6 +78,11 @@ export class ColumnInteractionController {
 				this.insertColumnAfter(field);
 			});
 		});
+		menu.addItem((item) => {
+			item.setTitle(t('columnInteraction.menuHide')).setIcon('eye-off').onClick(() => {
+				this.setColumnHidden(field, true);
+			});
+		});
 		menu.addSeparator();
 		menu.addItem((item) => {
 			item.setTitle(t('columnInteraction.menuDelete')).setIcon('trash').onClick(() => {
@@ -72,6 +90,62 @@ export class ColumnInteractionController {
 			});
 		});
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+	}
+
+	private openStatusColumnMenu(event: MouseEvent): void {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle(t('columnInteraction.menuHide')).setIcon('eye-off').onClick(() => {
+				this.setColumnHidden('status', true);
+			});
+		});
+		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+	}
+
+	private openIndexHeaderMenu(event: MouseEvent): void {
+		const schema = this.getSchema();
+		if (!schema) {
+			return;
+		}
+
+		const hiddenSet = new Set(
+			(schema.columnConfigs ?? []).filter((config) => config.hide).map((config) => config.name)
+		);
+		const hiddenColumns = schema.columnNames.filter((name) => hiddenSet.has(name));
+
+		const menu = new Menu();
+		if (hiddenColumns.length === 0) {
+			menu.addItem((item) => {
+				item.setTitle(t('columnVisibility.empty')).setDisabled(true);
+			});
+			menu.showAtPosition({ x: event.pageX, y: event.pageY });
+			return;
+		}
+
+		menu.addItem((item) => {
+			item.setTitle(t('columnVisibility.menuTitle')).setIcon('eye').onClick(() => {
+				this.openHiddenColumnChooser(hiddenColumns, {
+					x: event.pageX + 12,
+					y: event.pageY + 12
+				});
+			});
+		});
+		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+	}
+
+	private openHiddenColumnChooser(hiddenColumns: string[], anchor: { x: number; y: number }): void {
+		if (hiddenColumns.length === 0) {
+			return;
+		}
+		const menu = new Menu();
+		for (const columnName of hiddenColumns) {
+			menu.addItem((item) => {
+				item.setTitle(columnName).setIcon('eye').onClick(() => {
+					this.setColumnHidden(columnName, false);
+				});
+			});
+		}
+		menu.showAtPosition(anchor);
 	}
 
 	private openColumnEditModal(field: string): void {
@@ -205,5 +279,55 @@ export class ColumnInteractionController {
 		this.columnLayoutStore.remove(target);
 		this.removeColumnFromFilterViews(target);
 		this.persistColumnStructureChange({ notice: t('columnInteraction.deleteSuccess', { name: target }) });
+	}
+
+	private setColumnHidden(field: string, hidden: boolean): void {
+		const schema = this.getSchema();
+		if (!schema) {
+			return;
+		}
+		const target = field.trim();
+		if (!target || target === '#' || target === ROW_ID_FIELD) {
+			return;
+		}
+
+		const existingConfigs = (schema.columnConfigs ?? []) as ColumnConfig[];
+		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
+		let config = nextConfigs.find((item) => item.name === target);
+
+		if (!config && hidden) {
+			config = { name: target };
+			nextConfigs.push(config);
+		}
+
+		if (!config) {
+			return;
+		}
+		if (hidden && config.hide) {
+			return;
+		}
+		if (!hidden && !config.hide) {
+			return;
+		}
+
+		if (hidden) {
+			config.hide = true;
+		} else {
+			delete config.hide;
+		}
+
+		if (!this.dataStore.hasColumnConfigContent(config)) {
+			const index = nextConfigs.findIndex((item) => item.name === target);
+			if (index !== -1) {
+				nextConfigs.splice(index, 1);
+			}
+		}
+
+		const normalized = this.dataStore.normalizeColumnConfigs(nextConfigs);
+		schema.columnConfigs = normalized;
+		this.dataStore.setColumnConfigs(normalized);
+
+		const noticeKey = hidden ? 'columnVisibility.hideNotice' : 'columnVisibility.showNotice';
+		this.persistColumnStructureChange({ notice: t(noticeKey, { name: target }) });
 	}
 }

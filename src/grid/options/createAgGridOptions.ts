@@ -3,7 +3,8 @@ import type {
 	CellEditingStoppedEvent,
 	CellFocusedEvent,
 	CellKeyDownEvent,
-	GridOptions
+	GridOptions,
+	PasteEndEvent
 } from 'ag-grid-community';
 import { normalizeStatus } from '../../renderers/StatusCellRenderer';
 import { createTextCellEditor } from '../editors/TextCellEditor';
@@ -81,6 +82,9 @@ export function createAgGridOptions({
 		},
 		onColumnMoved: event => {
 			columnService.handleColumnMoved(event);
+		},
+		onPasteEnd: (_event: PasteEndEvent) => {
+			interaction.handlePasteEnd();
 		},
 		onCellDoubleClicked: (event: CellDoubleClickedEvent) => {
 			const colId = event.column?.getColId?.() ?? null;

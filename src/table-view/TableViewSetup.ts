@@ -9,6 +9,7 @@ import { GridInteractionController } from './GridInteractionController';
 import { GridLayoutController } from './GridLayoutController';
 import { FocusManager } from './FocusManager';
 import { FilterViewController } from './filter/FilterViewController';
+import { TagGroupController } from './filter/tag-group/TagGroupController';
 import { TablePersistenceService } from './TablePersistenceService';
 import { t } from '../i18n';
 import { CopyTemplateController } from './CopyTemplateController';
@@ -18,7 +19,7 @@ import {
 	renameColumnInFilterViews,
 	removeColumnFromFilterViews
 } from './TableViewInteractions';
-import { getAvailableColumns, persistFilterViews, syncFilterViewState } from './TableViewFilterPresenter';
+import { getAvailableColumns, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
 
 const logger = getLogger('table-view:setup');
@@ -36,6 +37,7 @@ export function initializeTableView(view: TableView): void {
 		filterStateStore: view.filterStateStore,
 		getFile: () => view.file,
 		getFilterViewState: () => view.filterViewState,
+		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null
 	});
 	view.columnInteractionController = new ColumnInteractionController({
@@ -108,9 +110,34 @@ export function initializeTableView(view: TableView): void {
 		syncState: () => syncFilterViewState(view),
 		renderBar: () => {
 			if (view.filterViewBar) {
+				updateFilterViewBarTagGroupState(view);
 				view.filterViewBar.render(view.filterViewState);
 			}
+		},
+		tagGroupSupport: {
+			onFilterViewRemoved: (viewId) => {
+				view.tagGroupController?.handleFilterViewRemoval(viewId);
+			},
+			onShowAddToGroupMenu: (filterView, evt) => {
+				view.tagGroupController?.openAddToGroupMenu(filterView, evt);
+			},
+			onFilterViewsUpdated: () => {
+				view.tagGroupController?.syncWithAvailableViews();
+			}
 		}
+	});
+	view.tagGroupController = new TagGroupController({
+		app: view.app,
+		store: view.tagGroupStore,
+		getFilterViewState: () => view.filterViewState,
+		activateFilterView: (viewId) => view.filterViewController.activateFilterView(viewId),
+		renderBar: () => {
+			if (view.filterViewBar) {
+				updateFilterViewBarTagGroupState(view);
+				view.filterViewBar.render(view.filterViewState);
+			}
+		},
+		persist: () => persistTagGroups(view)
 	});
 
 	logger.info(t('tableViewSetup.constructorComplete'));

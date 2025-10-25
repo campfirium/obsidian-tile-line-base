@@ -12,6 +12,11 @@ interface FilterViewControllerOptions {
 	applyActiveFilterView: () => void;
 	syncState: () => void;
 	renderBar: () => void;
+	tagGroupSupport?: {
+		onFilterViewRemoved: (viewId: string) => void;
+		onShowAddToGroupMenu: (view: FilterViewDefinition, event: MouseEvent) => void;
+		onFilterViewsUpdated?: () => void;
+	};
 }
 
 interface StateChangeOptions {
@@ -28,6 +33,11 @@ export class FilterViewController {
 	private readonly applyActiveFilterView: () => void;
 	private readonly syncState: () => void;
 	private readonly renderBar: () => void;
+	private readonly tagGroupSupport?: {
+		onFilterViewRemoved: (viewId: string) => void;
+		onShowAddToGroupMenu: (view: FilterViewDefinition, event: MouseEvent) => void;
+		onFilterViewsUpdated?: () => void;
+	};
 
 	constructor(options: FilterViewControllerOptions) {
 		this.app = options.app;
@@ -37,6 +47,7 @@ export class FilterViewController {
 		this.applyActiveFilterView = options.applyActiveFilterView;
 		this.syncState = options.syncState;
 		this.renderBar = options.renderBar;
+		this.tagGroupSupport = options.tagGroupSupport;
 	}
 
 	async promptCreateFilterView(): Promise<void> {
@@ -106,6 +117,20 @@ export class FilterViewController {
 				this.deleteFilterView(view.id);
 			});
 		});
+
+		if (this.tagGroupSupport) {
+			menu.addItem((item) => {
+				item
+					.setTitle(t('tagGroups.menuAddFilterView'))
+					.setIcon('bookmark-plus')
+					.onClick((evt) => {
+						const triggerEvent = evt instanceof MouseEvent ? evt : event;
+						if (this.tagGroupSupport) {
+							this.tagGroupSupport.onShowAddToGroupMenu(view, triggerEvent);
+						}
+					});
+			});
+		}
 
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });
 	}
@@ -256,6 +281,9 @@ export class FilterViewController {
 		if (!removed) {
 			return;
 		}
+		if (this.tagGroupSupport) {
+			this.tagGroupSupport.onFilterViewRemoved(viewId);
+		}
 		this.runStateEffects({ persist: true, apply: true });
 	}
 
@@ -277,6 +305,7 @@ export class FilterViewController {
 
 	private runStateEffects(options: StateChangeOptions): void {
 		this.syncState();
+		this.tagGroupSupport?.onFilterViewsUpdated?.();
 		if (options.render !== false) {
 			this.renderBar();
 		}

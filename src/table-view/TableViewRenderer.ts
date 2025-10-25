@@ -2,7 +2,7 @@ import type { TableView } from '../TableView';
 import { clampColumnWidth } from '../grid/columnSizing';
 import { getLogger } from '../utils/logger';
 import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
-import { renderFilterViewControls } from './TableViewFilterPresenter';
+import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
 import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
@@ -40,6 +40,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.configManager.reset();
 	view.filterStateStore.setFilePath(view.file.path);
 	view.filterStateStore.resetState();
+	view.tagGroupStore.setFilePath(view.file.path);
+	view.tagGroupStore.resetState();
+	syncTagGroupState(view);
 	view.copyTemplate = null;
 
 	const content = await view.app.vault.read(view.file);
@@ -48,6 +51,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (configBlock) {
 		if (configBlock.filterViews) {
 			view.filterStateStore.setState(configBlock.filterViews);
+		}
+		if (configBlock.tagGroups) {
+			view.tagGroupStore.setState(configBlock.tagGroups);
 		}
 		if (configBlock.columnWidths) {
 			view.columnLayoutStore.applyConfig(configBlock.columnWidths);
@@ -59,6 +65,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	view.filterViewState = view.filterStateStore.getState();
+	syncTagGroupState(view);
 
 	let columnConfigs = view.markdownParser.parseHeaderConfig(content);
 	if ((!columnConfigs || columnConfigs.length === 0) && configBlock?.columnConfigs) {
@@ -98,6 +105,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.filterStateStore.loadFromSettings();
 		view.filterViewState = view.filterStateStore.getState();
 	}
+	if (!configBlock || configBlock.tagGroups == null) {
+		view.tagGroupStore.loadFromSettings();
+	}
+	syncTagGroupState(view);
+	view.tagGroupController.syncWithAvailableViews();
+	syncTagGroupState(view);
 
 	view.filterOrchestrator.refresh();
 	view.initialColumnState = null;

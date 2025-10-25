@@ -1,5 +1,6 @@
 import type { Plugin } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition, SortRule } from '../types/filterView';
+import type { FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -10,6 +11,7 @@ export interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
+	tagGroups: Record<string, FileTagGroupState>;
 	configCache: Record<string, ConfigCacheEntry>;
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
@@ -19,6 +21,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	fileViewPrefs: {},
 	columnLayouts: {},
 	filterViews: {},
+	tagGroups: {},
 	configCache: {},
 	hideRightSidebar: false,
 	logging: {
@@ -41,6 +44,7 @@ export class SettingsService {
 		merged.fileViewPrefs = { ...DEFAULT_SETTINGS.fileViewPrefs, ...(merged.fileViewPrefs ?? {}) };
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
+		merged.tagGroups = { ...DEFAULT_SETTINGS.tagGroups, ...(merged.tagGroups ?? {}) };
 		merged.configCache = { ...DEFAULT_SETTINGS.configCache, ...(merged.configCache ?? {}) };
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
@@ -139,6 +143,18 @@ export class SettingsService {
 		return sanitized;
 	}
 
+	getTagGroupsForFile(filePath: string): FileTagGroupState {
+		const stored = this.settings.tagGroups[filePath];
+		return this.cloneTagGroupState(stored ?? null);
+	}
+
+	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
+		const sanitized = this.cloneTagGroupState(state);
+		this.settings.tagGroups[filePath] = sanitized;
+		await this.persist();
+		return sanitized;
+	}
+
 	getConfigCache(): Record<string, ConfigCacheEntry> {
 		return this.settings.configCache;
 	}
@@ -233,6 +249,52 @@ export class SettingsService {
 		return {
 			globalLevel,
 			scopeLevels
+		};
+	}
+
+	private cloneTagGroupState(source: FileTagGroupState | null): FileTagGroupState {
+		if (!source) {
+			return { activeGroupId: null, groups: [] };
+		}
+		const seenIds = new Set<string>();
+		const groups: TagGroupDefinition[] = [];
+
+		for (const entry of source.groups ?? []) {
+			if (!entry) {
+				continue;
+			}
+			const id = typeof entry.id === 'string' ? entry.id.trim() : '';
+			if (!id || seenIds.has(id)) {
+				continue;
+			}
+			const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+			const rawViewIds = Array.isArray(entry.viewIds) ? entry.viewIds : [];
+			const viewIds: string[] = [];
+			const seenViewIds = new Set<string>();
+			for (const raw of rawViewIds) {
+				if (typeof raw !== 'string') {
+					continue;
+				}
+				const trimmed = raw.trim();
+				if (!trimmed || seenViewIds.has(trimmed)) {
+					continue;
+				}
+				seenViewIds.add(trimmed);
+				viewIds.push(trimmed);
+			}
+			groups.push({
+				id,
+				name: name.length > 0 ? name : id,
+				viewIds
+			});
+			seenIds.add(id);
+		}
+
+		const activeGroupId = groups.some((group) => group.id === source.activeGroupId) ? source.activeGroupId : null;
+
+		return {
+			activeGroupId,
+			groups
 		};
 	}
 }

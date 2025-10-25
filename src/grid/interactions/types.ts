@@ -11,6 +11,7 @@ export interface GridInteractionContext {
 	onCopyH2Section?: (rowIndex: number) => void;
 	onColumnOrderChange?: (fields: string[]) => void;
 	sideBarVisible?: boolean;
+	getContainerEl?: () => HTMLElement | null;
 }
 
 export interface InteractionControllerDeps {

@@ -48,6 +48,7 @@ export function createAgGridOptions({
 		enableBrowserTooltips: false,
 		tooltipShowDelay: 0,
 		tooltipHideDelay: 2147483647,
+		tooltipShowMode: 'whenTruncated',
 		onCellKeyDown: (event: CellKeyDownEvent) => {
 			interaction.handleGridCellKeyDown(event);
 		},
@@ -115,7 +116,10 @@ export function createAgGridOptions({
 		defaultColDef: {
 			tooltipValueGetter: params => {
 				const value = params.value;
-				return value == null ? '' : String(value);
+				if (value == null || value === '') {
+					return '';
+				}
+				return String(value);
 			},
 			editable: true,
 			sortable: true,

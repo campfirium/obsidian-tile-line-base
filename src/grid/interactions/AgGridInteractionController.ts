@@ -9,6 +9,7 @@ import { FocusNavigator } from './internal/FocusNavigator';
 import { EnterKeyCoordinator } from './internal/EnterKeyCoordinator';
 import { normalizeKeyboardEvent } from './internal/keyboardUtils';
 import { ViewportManager } from './internal/ViewportManager';
+import { PasteExitController } from './internal/PasteExitController';
 import {
 	InteractionControllerDeps,
 	ViewportResizeReason,
@@ -16,9 +17,7 @@ import {
 	FocusShift
 } from './types';
 import { getLogger } from '../../utils/logger';
-
 const logger = getLogger('grid:interaction');
-
 export class AgGridInteractionController {
 	private readonly deps: InteractionControllerDeps;
 	private container: HTMLElement | null = null;
@@ -26,19 +25,18 @@ export class AgGridInteractionController {
 	private focusedDoc: Document | null = null;
 	private focusedRowIndex: number | null = null;
 	private focusedColId: string | null = null;
-	private pendingFocusShift: FocusShift | null = null;
-	private editing = false;
-
-	private readonly focusAccess: FocusStateAccess;
+private pendingFocusShift: FocusShift | null = null;
+private editing = false;
+private readonly focusAccess: FocusStateAccess;
 	private readonly clipboard: GridClipboardService;
 	private readonly navigator: FocusNavigator;
 	private readonly composition: CompositionCaptureManager;
 	private readonly enterCoordinator: EnterKeyCoordinator;
 	private readonly viewport: ViewportManager;
+	private readonly pasteExit: PasteExitController;
 
 	constructor(deps: InteractionControllerDeps) {
 		this.deps = deps;
-
 		this.focusAccess = {
 			getCoordinates: () => ({
 				rowIndex: this.focusedRowIndex,
@@ -66,7 +64,9 @@ export class AgGridInteractionController {
 			getGridApi: () => this.deps.getGridApi(),
 			getFocusedDocument: () => this.focusedDoc,
 			getGridContext: () => this.deps.getGridContext(),
-			stopCellEditing: () => this.stopActiveEditingSession(),
+			stopCellEditing: () => {
+				void this.stopActiveEditingSession('copy');
+			},
 			translate: (key) => this.deps.translate(key),
 			debug: (...args) => this.debug(...args)
 		});
@@ -110,8 +110,12 @@ export class AgGridInteractionController {
 			debug: (...args) => this.debug(...args),
 			shiftController: this.navigator
 		});
-	}
 
+		this.pasteExit = new PasteExitController({
+			stopEditing: (reason) => this.stopActiveEditingSession(reason),
+			log: (label, details) => this.debug('pasteExit', label, details)
+		});
+	}
 	setContainer(container: HTMLElement | null): void {
 		this.debug('setContainer', { hasContainer: Boolean(container) });
 		if (this.container !== container) {
@@ -119,19 +123,19 @@ export class AgGridInteractionController {
 		}
 		this.container = container;
 		this.composition.setContainer(container);
-		if (container) {
-			this.focusAccess.setDocument(container.ownerDocument || document);
-		}
+		const ownerDoc = container?.ownerDocument ?? null;
+		this.pasteExit.bindDocument(ownerDoc);
+		this.focusAccess.setDocument(ownerDoc ?? document);
 	}
-
 	onViewportResize(callback: (reason: ViewportResizeReason) => void): () => void {
 		return this.viewport.onViewportResize(callback);
 	}
-
 	bindViewportListeners(container: HTMLElement): void {
 		this.viewport.bind(container, (reason) => this.handleViewportActivity(reason));
 	}
-
+	handlePasteEnd(): void {
+		this.pasteExit.handlePasteEnd();
+	}
 	handleGridCellKeyDown(event: CellKeyDownEvent): void {
 		const keyEvent = normalizeKeyboardEvent(event.event);
 		if (!keyEvent) {
@@ -141,6 +145,13 @@ export class AgGridInteractionController {
 		if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key.toLowerCase() === 'c') {
 			this.clipboard.handleCopyShortcut(keyEvent, event);
 			return;
+		}
+
+		if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key.toLowerCase() === 'v') {
+			this.pasteExit.handleKeydown({
+				rowIndex: event.node?.rowIndex ?? null,
+				colId: event.column?.getColId?.() ?? null
+			});
 		}
 
 		const handled = this.enterCoordinator.handleEnterAtLastRow(
@@ -153,7 +164,6 @@ export class AgGridInteractionController {
 			this.debug('handleGridCellKeyDown:enterAtLastRow', keyEvent.key);
 		}
 	}
-
 	handleSuppressKeyboardEvent(params: {
 		api: GridApi;
 		column?: { getColId?: () => string };
@@ -175,7 +185,6 @@ export class AgGridInteractionController {
 		}
 		return handled;
 	}
-
 	handleCellFocused(event: CellFocusedEvent): void {
 		const columnId = (event as any).column?.getColId?.() ?? (event as any).columnId ?? null;
 		this.debug('handleCellFocused', {
@@ -199,43 +208,43 @@ export class AgGridInteractionController {
 
 		this.composition.armProxyForCurrentCell();
 	}
-
 	handleCellEditingStarted(): void {
 		this.composition.handleEditingStarted();
+		this.pasteExit.handleEditingStarted();
 	}
-
-	handleCellEditingStopped(): void {
-		this.composition.handleEditingStopped();
-	}
-
-	onLayoutInvalidated(): void {
-		this.composition.handleLayoutInvalidated();
-	}
-
+	handleCellEditingStopped(): void { this.composition.handleEditingStopped(); }
+	onLayoutInvalidated(): void { this.composition.handleLayoutInvalidated(); }
 	destroy(): void {
 		this.debug('destroy');
 		this.composition.destroy();
 		this.viewport.unbind();
 		this.viewport.clearListeners();
+		this.pasteExit.destroy();
 		this.container = null;
 	}
-
 	private handleViewportActivity(reason: ViewportResizeReason): void {
 		this.debug('handleViewportActivity', reason);
 		this.composition.requestProxyRealign(reason);
 	}
-
-	private stopActiveEditingSession(): void {
-		if (!this.editing) {
-			return;
-		}
+	private stopActiveEditingSession(reason: string): 'success' | 'pending' | 'noApi' {
 		const api = this.deps.getGridApi();
 		if (!api) {
-			return;
+			this.debug('stopEditing:noApi', { reason });
+			return 'noApi';
 		}
-		api.stopEditing();
+		const getEditors = (api as any).getCellEditorInstances?.bind(api);
+		const editorInstances = getEditors ? getEditors() : [];
+		const hasEditor = Array.isArray(editorInstances) && editorInstances.length > 0;
+		if (!this.editing && !hasEditor) {
+			this.debug('stopEditing:pending', { reason, editing: this.editing, hasEditor });
+			return 'pending';
+		}
+		api.stopEditing(false);
+		this.focusAccess.setEditing(false);
+		this.editing = false;
+		this.debug('stopEditing:success', { reason, hasEditor });
+		return 'success';
 	}
-
 	private debug(...args: unknown[]): void {
 		logger.trace(...args);
 	}

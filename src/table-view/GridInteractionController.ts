@@ -1,4 +1,5 @@
 import { Notice } from 'obsidian';
+import type { App } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
 import type { RowInteractionController } from './RowInteractionController';
 import type { TableDataStore } from './TableDataStore';
@@ -7,10 +8,12 @@ import { t } from '../i18n';
 import { buildGridContextMenu } from './GridContextMenuBuilder';
 import { CopyTemplateController } from './CopyTemplateController';
 import { getLogger } from '../utils/logger';
+import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInteractionMenuHelpers';
 
 const logger = getLogger('table-view:grid-interaction');
 
 interface GridInteractionDeps {
+	app: App;
 	columnInteraction: ColumnInteractionController;
 	rowInteraction: RowInteractionController;
 	dataStore: TableDataStore;
@@ -123,23 +126,18 @@ export class GridInteractionController {
 
 	private handleKeydown(event: KeyboardEvent): void {
 		const container = this.container;
-			if (!container) {
-				return;
-			}
-			const ownerDoc = container.ownerDocument;
-			const activeElement = ownerDoc.activeElement;
-			const isEditing = activeElement?.classList.contains('ag-cell-edit-input');
-			if (isEditing) {
-				return;
-			}
-			const gridAdapter = this.deps.getGridAdapter();
-			const selectedRows = gridAdapter?.getSelectedRows?.() || [];
-			const hasSelection = selectedRows.length > 0;
-			if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
-				event.preventDefault();
-				if (!hasSelection) {
-					return;
-				}
+		if (!container) {
+			return;
+		}
+		const ownerDoc = container.ownerDocument;
+		const activeElement = ownerDoc.activeElement;
+		if (activeElement?.classList.contains('ag-cell-edit-input')) {
+			return;
+		}
+		const gridAdapter = this.deps.getGridAdapter();
+		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
+		if ((event.metaKey || event.ctrlKey) && event.key === 'd' && selectedRows.length > 0) {
+			event.preventDefault();
 			if (selectedRows.length > 1) {
 				this.deps.rowInteraction.duplicateRows(selectedRows);
 			} else {
@@ -149,7 +147,7 @@ export class GridInteractionController {
 	}
 
 	async copySection(blockIndex: number): Promise<void> {
-		const blockIndexes = this.resolveBlockIndexesForCopy(blockIndex);
+		const blockIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
 		if (blockIndexes.length === 0) {
 			return;
 		}
@@ -158,7 +156,7 @@ export class GridInteractionController {
 	}
 
 	async copySectionAsTemplate(blockIndex: number): Promise<void> {
-		const blockIndexes = this.resolveBlockIndexesForCopy(blockIndex);
+		const blockIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
 		if (blockIndexes.length === 0) {
 			return;
 		}
@@ -179,24 +177,6 @@ export class GridInteractionController {
 		}
 	}
 
-	private resolveBlockIndexesForCopy(primaryIndex: number): number[] {
-		const gridAdapter = this.deps.getGridAdapter();
-		const selected = gridAdapter?.getSelectedRows?.() ?? [];
-		const blocks = this.deps.dataStore.getBlocks();
-		const validSelection = selected.filter((index) => index >= 0 && index < blocks.length);
-
-		if (validSelection.length > 1 && validSelection.includes(primaryIndex)) {
-			return validSelection;
-		}
-		if (primaryIndex >= 0 && primaryIndex < blocks.length) {
-			return [primaryIndex];
-		}
-		if (validSelection.length > 0) {
-			return validSelection;
-		}
-		return [];
-	}
-
 	private showContextMenu(event: MouseEvent, blockIndex: number, colId?: string): void {
 		this.hideContextMenu();
 
@@ -205,19 +185,32 @@ export class GridInteractionController {
 		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
 		const isMultiSelect = selectedRows.length > 1;
 		const isIndexColumn = colId === '#';
-		const targetIndexes = this.resolveBlockIndexesForCopy(blockIndex);
+		const targetIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
+		let fillSelection: ReturnType<typeof createFillSelectionAction> = {};
+		if (isMultiSelect && !isIndexColumn) {
+			fillSelection = createFillSelectionAction(
+				{
+					app: this.deps.app,
+					dataStore: this.deps.dataStore,
+					rowInteraction: this.deps.rowInteraction
+				},
+				{ blockIndex, selectedRows, columnField: colId ?? null }
+			);
+		}
 
 		this.contextMenu = buildGridContextMenu({
 			ownerDoc,
 			isIndexColumn,
 			isMultiSelect,
 			selectedRowCount: selectedRows.length,
+			fillSelectionLabelParams: fillSelection.params,
 			actions: {
 				copySelection: () => this.copySection(blockIndex),
 				copySelectionAsTemplate: () => this.copySectionAsTemplate(blockIndex),
 				editCopyTemplate: () => this.deps.copyTemplate.openEditor(this.container, targetIndexes),
 				insertAbove: () => this.deps.rowInteraction.addRow(blockIndex),
 				insertBelow: () => this.deps.rowInteraction.addRow(blockIndex + 1),
+				fillSelectionWithValue: fillSelection.action,
 				duplicateSelection: () => this.deps.rowInteraction.duplicateRows(selectedRows),
 				deleteSelection: () => this.deps.rowInteraction.deleteRows(selectedRows),
 				duplicateRow: () => this.deps.rowInteraction.duplicateRow(blockIndex),

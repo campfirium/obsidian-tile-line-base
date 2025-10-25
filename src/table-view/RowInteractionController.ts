@@ -8,6 +8,10 @@ interface RowActionOptions {
 	focusField?: string | null;
 }
 
+interface FillColumnOptions extends RowActionOptions {
+	focusRowIndex?: number;
+}
+
 interface RowInteractionDeps {
 	dataStore: TableDataStore;
 	getSchema: () => Schema | null;
@@ -125,6 +129,53 @@ export class RowInteractionController {
 
 		if (newIndex !== null && newIndex >= 0) {
 			this.focusRow(newIndex, focusField);
+		}
+
+		this.scheduleSave();
+	}
+
+	fillColumnWithValue(rowIndexes: number[], field: string, value: string, options?: FillColumnOptions): void {
+		if (!this.ensureSchema()) {
+			return;
+		}
+		if (!field || field === '#') {
+			return;
+		}
+		if (rowIndexes.length === 0) {
+			return;
+		}
+		if (this.dataStore.isFormulaColumn(field)) {
+			logger.warn('fillColumnWithValue ignored for formula column', field);
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
+
+		let updated = false;
+		for (const rowIndex of rowIndexes) {
+			if (rowIndex < 0 || rowIndex >= blocks.length) {
+				continue;
+			}
+			const currentValue = blocks[rowIndex]?.data?.[field] ?? '';
+			if (currentValue === normalizedValue) {
+				continue;
+			}
+			if (this.dataStore.updateCell(rowIndex, field, normalizedValue)) {
+				updated = true;
+			}
+		}
+
+		if (!updated) {
+			return;
+		}
+
+		this.refreshGridData();
+
+		const focusField = this.resolveFocusField(options) ?? field;
+		const focusRowIndex = options?.focusRowIndex ?? rowIndexes[0];
+		if (focusRowIndex !== null && focusRowIndex !== undefined) {
+			this.focusRow(focusRowIndex, focusField);
 		}
 
 		this.scheduleSave();

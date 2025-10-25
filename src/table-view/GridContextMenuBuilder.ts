@@ -5,12 +5,14 @@ interface MenuBuilderOptions {
 	isIndexColumn: boolean;
 	isMultiSelect: boolean;
 	selectedRowCount: number;
+	fillSelectionLabelParams?: Record<string, string>;
 	actions: {
 		copySelection?: () => void;
 		copySelectionAsTemplate: () => void;
 		editCopyTemplate: () => void;
 		insertAbove: () => void;
 		insertBelow: () => void;
+		fillSelectionWithValue?: () => void;
 		duplicateSelection: () => void;
 		deleteSelection: () => void;
 		duplicateRow: () => void;
@@ -61,6 +63,11 @@ export function buildGridContextMenu(options: MenuBuilderOptions): HTMLElement {
 	addSeparator();
 
 	if (options.isMultiSelect) {
+		if (options.actions.fillSelectionWithValue && options.fillSelectionLabelParams) {
+			addItem('gridInteraction.fillSelectedColumn', options.actions.fillSelectionWithValue, {
+				params: options.fillSelectionLabelParams
+			});
+		}
 		const params = { count: String(options.selectedRowCount) };
 		addItem('gridInteraction.duplicateSelected', options.actions.duplicateSelection, { params });
 		addItem('gridInteraction.deleteSelected', options.actions.deleteSelection, { params, danger: true });

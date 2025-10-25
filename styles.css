@@ -421,6 +421,85 @@
 .ag-theme-alpine-dark .ag-cell-range-selected:not(.ag-cell-inline-editing) {
   border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
 }
+.ag-theme-alpine .ag-cell-inline-editing,
+.ag-theme-alpine-dark .ag-cell-inline-editing {
+  font-size: calc(var(--ag-font-size, 13px) + 2px);
+  font-weight: 500;
+}
+
+.ag-theme-alpine .ag-cell-inline-editing .ag-cell-edit-input,
+.ag-theme-alpine-dark .ag-cell-inline-editing .ag-cell-edit-input {
+  font-size: inherit;
+  line-height: 1.5;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--interactive-accent, #6aa5ff) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 30%, transparent);
+  box-sizing: border-box;
+  background-color: transparent;
+  color: color-mix(in srgb, var(--text-normal, #2e3338) 80%, var(--text-muted, #7a7f87) 20%);
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
+}
+
+.ag-theme-alpine .ag-cell-inline-editing.ag-cell-focus .ag-cell-edit-input,
+.ag-theme-alpine-dark .ag-cell-inline-editing.ag-cell-focus .ag-cell-edit-input,
+.ag-theme-alpine .ag-cell-inline-editing:focus-within .ag-cell-edit-input,
+.ag-theme-alpine-dark .ag-cell-inline-editing:focus-within .ag-cell-edit-input {
+  color: var(--text-normal, #2e3338);
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 80%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
+}
+
+.ag-theme-alpine .ag-cell-inline-editing:not(.ag-cell-focus) .ag-cell-edit-input,
+.ag-theme-alpine-dark .ag-cell-inline-editing:not(.ag-cell-focus) .ag-cell-edit-input {
+  color: color-mix(in srgb, var(--text-muted, #7a7f87) 75%, var(--text-normal, #2e3338) 25%);
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 25%, transparent);
+}
+
+.ag-theme-alpine .ag-cell-inline-editing .ag-cell-edit-input::selection,
+.ag-theme-alpine-dark .ag-cell-inline-editing .ag-cell-edit-input::selection {
+  background-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 80%, transparent);
+  color: var(--text-on-accent, #ffffff);
+}
+
+.theme-dark .ag-theme-alpine-dark .ag-cell-inline-editing .ag-cell-edit-input {
+  background-color: transparent;
+  color: color-mix(in srgb, var(--text-normal, #dadada) 85%, var(--text-muted, #9aa0ab) 15%);
+}
+
+.theme-dark .ag-theme-alpine-dark .ag-cell-inline-editing.ag-cell-focus .ag-cell-edit-input,
+.theme-dark .ag-theme-alpine-dark .ag-cell-inline-editing:focus-within .ag-cell-edit-input {
+  color: var(--text-normal, #f0f0f0);
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 80%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 55%, transparent);
+}
+
+.theme-dark .ag-theme-alpine-dark .ag-cell-inline-editing:not(.ag-cell-focus) .ag-cell-edit-input {
+  color: color-mix(in srgb, var(--text-muted, #9aa0ab) 75%, var(--text-normal, #dadada) 25%);
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 32%, transparent);
+}
+
+.ag-theme-alpine .ag-row-selected.ag-row-even .ag-cell-inline-editing,
+.ag-theme-alpine .ag-row-focus.ag-row-even .ag-cell-inline-editing {
+  background-color: var(--ag-background-color, var(--background-primary, #ffffff));
+}
+
+.ag-theme-alpine .ag-row-selected.ag-row-odd .ag-cell-inline-editing,
+.ag-theme-alpine .ag-row-focus.ag-row-odd .ag-cell-inline-editing {
+  background-color: var(--ag-odd-row-background-color, var(--ag-background-color, var(--background-primary, #ffffff)));
+}
+
+.ag-theme-alpine-dark .ag-row-selected.ag-row-even .ag-cell-inline-editing,
+.ag-theme-alpine-dark .ag-row-focus.ag-row-even .ag-cell-inline-editing {
+  background-color: var(--ag-background-color, var(--background-secondary, #1f1f1f));
+}
+
+.ag-theme-alpine-dark .ag-row-selected.ag-row-odd .ag-cell-inline-editing,
+.ag-theme-alpine-dark .ag-row-focus.ag-row-odd .ag-cell-inline-editing {
+  background-color: var(--ag-odd-row-background-color, var(--ag-background-color, var(--background-secondary, #1f1f1f)));
+}
 .tlb-column-formula-input-wrapper {
   position: relative;
 }

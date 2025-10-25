@@ -115,6 +115,7 @@ export class AgGridAdapter implements GridAdapter {
 		const colDefs = this.columnService.buildColumnDefs(columns);
 		const gridOptions = createAgGridOptions({
 			ownerDocument: container.ownerDocument,
+			popupParent: container,
 			columnService: this.columnService,
 			interaction: this.interaction,
 			getGridContext: () => this.gridContext,

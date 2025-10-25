@@ -155,8 +155,13 @@ export class ColumnInteractionController {
 		}
 		const configs = schema.columnConfigs ?? [];
 		const existing = configs.find((config) => config.name === field);
-		const initialType: ColumnFieldType = existing?.formula?.trim() ? 'formula' : 'text';
+		const initialType: ColumnFieldType = existing?.formula?.trim()
+			? 'formula'
+			: existing?.type === 'date'
+				? 'date'
+				: 'text';
 		const initialFormula = existing?.formula ?? '';
+		const initialDateFormat = existing?.type === 'date' ? existing.dateFormat ?? 'iso' : undefined;
 		const availableFields = schema.columnNames.filter((name) => name && name !== '#' && name !== ROW_ID_FIELD);
 		const validateName = (name: string): string | null => {
 			const trimmed = name.trim();
@@ -178,6 +183,7 @@ export class ColumnInteractionController {
 			columnName: field,
 			initialType,
 			initialFormula,
+			initialDateFormat,
 			validateName,
 			availableFields,
 			onSubmit: (result) => {
@@ -220,8 +226,21 @@ export class ColumnInteractionController {
 
 		if (result.type === 'formula') {
 			config.formula = result.formula;
+			delete config.type;
+			delete config.dateFormat;
+		} else if (result.type === 'date') {
+			delete config.formula;
+			config.type = 'date';
+			const preset = result.dateFormat ?? 'iso';
+			if (preset === 'iso') {
+				delete config.dateFormat;
+			} else {
+				config.dateFormat = preset;
+			}
 		} else {
 			delete config.formula;
+			delete config.type;
+			delete config.dateFormat;
 		}
 
 		if (!this.dataStore.hasColumnConfigContent(config)) {

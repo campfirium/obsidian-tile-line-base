@@ -37,9 +37,15 @@
     "typeLabel": "Column type",
     "typeTextOption": "Text",
     "typeFormulaOption": "Formula",
+    "typeDateOption": "Date",
     "formulaLabel": "Formula",
     "formulaDescription": "Reference a column with {field}; supports + - * / operators and \"text\" concatenation.",
     "formulaPlaceholder": "{points} + {cost}",
+    "dateFormatLabel": "Date display format",
+    "dateFormatDescription": "Choose how the date is shown in the grid.",
+    "dateFormatIsoOption": "ISO (2024-01-31)",
+    "dateFormatShortOption": "Short (e.g. 1/31/24)",
+    "dateFormatLongOption": "Long (e.g. January 31, 2024)",
     "saveButton": "Save",
     "cancelButton": "Cancel",
     "nameEmptyError": "Column name cannot be empty",
@@ -182,5 +188,8 @@
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
     "caretResetFailed": "[CompositionProxy] Unable to reset caret position"
+  },
+  "dateCellEditor": {
+    "openPickerLabel": "Open date picker"
   }
 }

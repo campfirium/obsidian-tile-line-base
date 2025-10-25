@@ -1,9 +1,11 @@
 import { ColDef } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
+import { createDateCellEditor } from '../editors/DateCellEditor';
 import { COLUMN_MAX_WIDTH, COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
 import { IconHeaderComponent } from '../headers/IconHeaderComponent';
 import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
+import { formatDateForDisplay } from '../../utils/datetime';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
@@ -102,6 +104,19 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 
 	const mergedColDef = { ...baseColDef, ...(column as unknown as ColDef) };
 
+	if ((column as any).editorType === 'date') {
+		const format = (column as any).dateFormat ?? 'iso';
+		(mergedColDef as any).cellEditor = createDateCellEditor();
+		(mergedColDef as any).valueFormatter = (params: any) => formatDateForDisplay(params.value, format);
+		if (!mergedColDef.tooltipField && !mergedColDef.tooltipValueGetter) {
+			(mergedColDef as any).tooltipValueGetter = (params: any) => formatDateForDisplay(params.value, format);
+		}
+		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-date-cell');
+	}
+
+	delete (mergedColDef as any).editorType;
+	delete (mergedColDef as any).dateFormat;
+
 	if (typeof column.field === 'string' && column.field !== INDEX_FIELD && column.field !== STATUS_FIELD) {
 		mergedColDef.minWidth =
 			typeof mergedColDef.minWidth === 'number'
@@ -126,6 +141,24 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 	}
 
 	return mergedColDef;
+}
+
+function appendCellClass(existing: ColDef['cellClass'], className: string): ColDef['cellClass'] {
+	if (!existing) {
+		return className;
+	}
+	if (typeof existing === 'string') {
+		const segments = existing.split(' ').filter((segment) => segment.trim().length > 0);
+		if (segments.includes(className)) {
+			return existing;
+		}
+		const appended = (existing + ' ' + className).trim();
+		return appended;
+	}
+	if (Array.isArray(existing)) {
+		return existing.includes(className) ? existing : [...existing, className];
+	}
+	return existing;
 }
 
 function applyStatusColumnSizing(colDefs: ColDef[]): void {

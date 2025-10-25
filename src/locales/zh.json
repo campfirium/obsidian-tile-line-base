@@ -37,8 +37,15 @@
     "typeLabel": "列类型",
     "typeTextOption": "文本",
     "typeFormulaOption": "公式",
+    "typeDateOption": "日期",
     "formulaLabel": "公式",
     "formulaDescription": "使用 {字段} 引用列，支持 + - * / 运算符，并可拼接 \"文本\"。",
+    "formulaPlaceholder": "{points} + {cost}",
+    "dateFormatLabel": "日期显示格式",
+    "dateFormatDescription": "选择在表格中显示日期的方式。",
+    "dateFormatIsoOption": "ISO（2024-01-31）",
+    "dateFormatShortOption": "短格式（例：24/1/31）",
+    "dateFormatLongOption": "长格式（例：2024年1月31日）",
     "saveButton": "保存",
     "cancelButton": "取消",
     "nameEmptyError": "列名称不能为空",
@@ -181,5 +188,8 @@
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] 无法在 compositionstart 重置光标",
     "caretResetFailed": "[CompositionProxy] 无法重置光标位置"
+  },
+  "dateCellEditor": {
+    "openPickerLabel": "打开日期选择器"
   }
 }

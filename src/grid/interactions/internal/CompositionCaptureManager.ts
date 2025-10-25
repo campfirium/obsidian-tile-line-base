@@ -30,6 +30,7 @@ export class CompositionCaptureManager {
 	private readonly navigator: FocusNavigator;
 	private container: HTMLElement | null = null;
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
+	private readonly proxies = new Set<CompositionProxy>();
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private proxyRealignTimer: number | null = null;
 
@@ -144,6 +145,7 @@ export class CompositionCaptureManager {
 					err === 'focus-cleared' ||
 					err === 'cell-missing' ||
 					err === 'destroyed' ||
+					err === 'destroy' ||
 					err === 'focus-move' ||
 					err === 'scroll'
 				) {
@@ -248,7 +250,7 @@ export class CompositionCaptureManager {
 
 	destroy(): void {
 		this.debug('composition:destroy');
-		this.cancelPendingCapture('destroy');
+		this.cancelPendingCapture('destroyed');
 		if (this.proxyRealignTimer != null) {
 			window.clearTimeout(this.proxyRealignTimer);
 			this.proxyRealignTimer = null;
@@ -258,7 +260,7 @@ export class CompositionCaptureManager {
 		this.focus.setPendingFocusShift(null);
 		this.focus.setEditing(false);
 		this.container = null;
-		this.proxyByDoc = new WeakMap();
+		this.destroyAllProxies();
 	}
 
 	private getProxy(doc: Document): CompositionProxy {
@@ -266,6 +268,7 @@ export class CompositionCaptureManager {
 		if (!proxy) {
 			proxy = new CompositionProxy(doc);
 			this.proxyByDoc.set(doc, proxy);
+			this.proxies.add(proxy);
 		}
 		return proxy;
 	}
@@ -373,5 +376,13 @@ export class CompositionCaptureManager {
 
 			observer.observe(body, { childList: true, subtree: true });
 		});
+	}
+
+	private destroyAllProxies(): void {
+		for (const proxy of this.proxies) {
+			proxy.destroy();
+		}
+		this.proxies.clear();
+		this.proxyByDoc = new WeakMap();
 	}
 }

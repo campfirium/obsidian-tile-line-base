@@ -21,18 +21,21 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 	}
 
 	const block = view.blocks[blockIndex];
+	const timestamp = getCurrentLocalDateTime();
 	block.data['status'] = newStatus;
-	block.data['statusChanged'] = getCurrentLocalDateTime();
+	block.data['statusChanged'] = timestamp;
 
 	const gridApi = (view.gridAdapter as any).gridApi;
 	if (gridApi) {
 		const rowNode = gridApi.getRowNode(rowId);
 		if (rowNode) {
 			rowNode.setDataValue('status', newStatus);
+			rowNode.setDataValue('statusChanged', timestamp);
 			gridApi.redrawRows({ rowNodes: [rowNode] });
 		}
 	}
 
+	view.filterOrchestrator.refresh();
 	view.persistenceService.scheduleSave();
 }
 

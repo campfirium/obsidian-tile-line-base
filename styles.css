@@ -198,44 +198,16 @@
 }
 
 /* 自定义右键菜单样式 */
-.tlb-context-menu {
-  position: fixed;
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  padding: 4px;
-  min-width: 180px;
-  z-index: 10000;
-}
-
-.tlb-context-menu-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 14px;
-  color: var(--text-normal);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tlb-context-menu-item:hover {
-  background: var(--background-modifier-hover);
-}
-
-.tlb-context-menu-item-danger {
+.menu-item.tlb-menu-item-danger {
   color: var(--text-error);
 }
 
-.tlb-context-menu-item-danger:hover {
-  background: rgba(var(--color-red-rgb), 0.1);
+.menu-item.tlb-menu-item-danger .menu-item-icon svg {
+  color: var(--text-error);
 }
 
-.tlb-context-menu-separator {
-  height: 1px;
-  background: var(--background-modifier-border);
-  margin: 4px 0;
+.menu-item.tlb-menu-item-danger:hover {
+  background: rgba(var(--color-red-rgb), 0.1);
 }
 
 .tlb-table {

@@ -1,5 +1,5 @@
 import { Notice } from 'obsidian';
-import type { App } from 'obsidian';
+import type { App, Menu } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
 import type { RowInteractionController } from './RowInteractionController';
 import type { TableDataStore } from './TableDataStore';
@@ -23,7 +23,7 @@ interface GridInteractionDeps {
 
 export class GridInteractionController {
 	private container: HTMLElement | null = null;
-	private contextMenu: HTMLElement | null = null;
+	private contextMenu: Menu | null = null;
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
 	private documentClickHandler: (() => void) | null = null;
 	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -73,10 +73,12 @@ export class GridInteractionController {
 	}
 
 	hideContextMenu(): void {
-		if (this.contextMenu) {
-			this.contextMenu.remove();
-			this.contextMenu = null;
+		if (!this.contextMenu) {
+			return;
 		}
+		const activeMenu = this.contextMenu;
+		this.contextMenu = null;
+		activeMenu.hide();
 	}
 
 	private handleContextMenu(event: MouseEvent): void {
@@ -198,8 +200,7 @@ export class GridInteractionController {
 			);
 		}
 
-		this.contextMenu = buildGridContextMenu({
-			ownerDoc,
+		const menu = buildGridContextMenu({
 			isIndexColumn,
 			isMultiSelect,
 			selectedRowCount: selectedRows.length,
@@ -219,31 +220,13 @@ export class GridInteractionController {
 			}
 		});
 
-		const defaultView = ownerDoc.defaultView || window;
-		const docElement = ownerDoc.documentElement;
-		const viewportWidth = defaultView.innerWidth ?? docElement?.clientWidth ?? 0;
-		const viewportHeight = defaultView.innerHeight ?? docElement?.clientHeight ?? 0;
-		const menuRect = this.contextMenu.getBoundingClientRect();
-		const margin = 8;
+		menu.onHide(() => {
+			if (this.contextMenu === menu) {
+				this.contextMenu = null;
+			}
+		});
 
-		let left = event.clientX;
-		let top = event.clientY;
-
-		if (left + menuRect.width > viewportWidth - margin) {
-			left = Math.max(margin, viewportWidth - menuRect.width - margin);
-		}
-		if (top + menuRect.height > viewportHeight - margin) {
-			top = Math.max(margin, viewportHeight - menuRect.height - margin);
-		}
-		if (left < margin) {
-			left = margin;
-		}
-		if (top < margin) {
-			top = margin;
-		}
-
-		this.contextMenu.style.left = `${left}px`;
-		this.contextMenu.style.top = `${top}px`;
-		this.contextMenu.style.visibility = 'visible';
+		this.contextMenu = menu;
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDoc);
 	}
 }

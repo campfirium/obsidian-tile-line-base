@@ -164,7 +164,8 @@
     "renameModalTitle": "重命名视图",
     "renamePlaceholder": "输入新名称",
     "duplicateNameSuffix": "副本",
-    "duplicateNotice": "已复制视图: {{name}}"
+    "duplicateNotice": "已复制视图: {{name}}",
+    "duplicateModalTitle": "复制视图: {{name}}"
   },
   "filterViewModals": {
     "saveButton": "保存",

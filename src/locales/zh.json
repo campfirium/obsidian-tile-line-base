@@ -94,12 +94,23 @@
   "gridInteraction": {
     "insertRowAbove": "在上方插入行",
     "insertRowBelow": "在下方插入行",
+    "fillSelectedColumn": "为选中的 {{count}} 行填充 {{column}} 列",
     "duplicateSelected": "复制选中的 {{count}} 行",
     "deleteSelected": "删除选中的 {{count}} 行",
     "duplicateRow": "复制此行",
     "deleteRow": "删除此行",
     "menuCopySelection": "复制选中内容",
     "copySelectionSuccess": "已复制选中内容"
+  },
+  "gridFillModal": {
+    "title": "批量填写列：{{column}}",
+    "valueLabel": "填写内容",
+    "textPlaceholder": "请输入值",
+    "datePlaceholder": "请输入日期（YYYY-MM-DD）",
+    "dateHint": "当前显示格式：{{format}}",
+    "confirmButton": "应用",
+    "cancelButton": "取消",
+    "invalidDate": "请输入有效的日期（YYYY-MM-DD）"
   },
   "copyTemplate": {
     "menuCopy": "复制为模板",

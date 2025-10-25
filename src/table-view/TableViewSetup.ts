@@ -85,6 +85,7 @@ export function initializeTableView(view: TableView): void {
 		}
 	});
 	view.gridInteractionController = new GridInteractionController({
+		app: view.app,
 		columnInteraction: view.columnInteractionController,
 		rowInteraction: view.rowInteractionController,
 		dataStore: view.dataStore,

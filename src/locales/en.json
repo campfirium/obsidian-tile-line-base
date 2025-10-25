@@ -94,12 +94,23 @@
   "gridInteraction": {
     "insertRowAbove": "Insert row above",
     "insertRowBelow": "Insert row below",
+    "fillSelectedColumn": "Fill '{{column}}' for selected {{count}} rows",
     "duplicateSelected": "Duplicate selected {{count}} rows",
     "deleteSelected": "Delete selected {{count}} rows",
     "duplicateRow": "Duplicate row",
     "deleteRow": "Delete row",
     "menuCopySelection": "Copy Selection",
     "copySelectionSuccess": "Copied selection"
+  },
+  "gridFillModal": {
+    "title": "Fill column: {{column}}",
+    "valueLabel": "New value",
+    "textPlaceholder": "Enter value",
+    "datePlaceholder": "Enter date (YYYY-MM-DD)",
+    "dateHint": "Current display format: {{format}}",
+    "confirmButton": "Apply",
+    "cancelButton": "Cancel",
+    "invalidDate": "Please enter a valid date in YYYY-MM-DD format"
   },
   "copyTemplate": {
     "menuCopy": "Copy as Template",

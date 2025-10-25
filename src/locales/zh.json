@@ -49,6 +49,7 @@
     "menuEdit": "编辑列",
     "menuDuplicate": "复制列",
     "menuInsert": "插入列",
+    "menuHide": "隐藏列",
     "menuDelete": "删除列",
     "nameEmptyError": "列名称不能为空",
     "nameReservedError": "列名已被系统保留",
@@ -59,6 +60,12 @@
     "insertFailed": "插入新列失败，请稍后重试",
     "insertSuccess": "已插入列：{{name}}",
     "deleteSuccess": "已删除列：{{name}}"
+  },
+  "columnVisibility": {
+    "menuTitle": "显示隐藏列",
+    "empty": "当前没有已隐藏的列",
+    "hideNotice": "已隐藏列：{{name}}",
+    "showNotice": "已显示列：{{name}}"
   },
   "statusCell": {
     "labels": {

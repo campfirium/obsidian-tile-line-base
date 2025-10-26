@@ -159,6 +159,7 @@ export class EditorConfigBlockController {
 		this.cancelCollapsedSync(state);
 
 		if (root) {
+			this.clearResolvedBackground(view);
 			if (state.rootClickHandler) {
 				root.removeEventListener('click', state.rootClickHandler, true);
 				state.rootClickHandler = null;
@@ -278,6 +279,7 @@ export class EditorConfigBlockController {
 			this.scheduleCollapsedSync(view, state);
 		} else {
 			this.cancelCollapsedSync(state);
+			this.clearResolvedBackground(view);
 		}
 	}
 
@@ -363,6 +365,37 @@ export class EditorConfigBlockController {
 		}
 		this.tagExistingLines(view, state);
 		this.updateHeadingToggleState(root, true);
+		this.resolveConfigBackground(view);
+	}
+
+	private resolveConfigBackground(view: MarkdownView): void {
+		const root = this.getSourceRoot(view);
+		if (!root) {
+			return;
+		}
+		const candidates = Array.from(
+			root.querySelectorAll<HTMLElement>('.tlb-config-code-line, .tlb-config-code-line .cm-lineContent')
+		);
+		let background: string | null = null;
+		for (const candidate of candidates) {
+			const target = candidate.matches('.cm-lineContent') ? candidate : candidate.querySelector<HTMLElement>('.cm-lineContent') ?? candidate;
+			const computed = window.getComputedStyle(target);
+			const value = computed.backgroundColor;
+			if (value && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') {
+				background = value;
+				break;
+			}
+		}
+		if (background) {
+			root.style.setProperty('--tlb-config-card-background-resolved', background);
+		} else {
+			this.clearResolvedBackground(view);
+		}
+	}
+
+	private clearResolvedBackground(view: MarkdownView): void {
+		const root = this.getSourceRoot(view);
+		root?.style.removeProperty('--tlb-config-card-background-resolved');
 	}
 
 	private ensureHeadingToggle(contentEl: HTMLElement): void {

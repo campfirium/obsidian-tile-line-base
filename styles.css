@@ -694,7 +694,8 @@
 
 /* Editing view config block handling */
 .markdown-source-view.mod-cm6.tlb-has-config-block {
-	--tlb-config-card-background: var(--code-background, var(--background-secondary-alt));
+	--tlb-config-card-background-default: var(--code-background, var(--background-secondary-alt));
+	--tlb-config-card-background: var(--tlb-config-card-background-resolved, var(--tlb-config-card-background-default));
 	--tlb-config-toggle-expand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
 	--tlb-config-toggle-collapse: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
 }

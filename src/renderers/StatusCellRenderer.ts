@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StatusCellRenderer - ״̬���Զ�����Ⱦ��
  *
  * ���ܣ�
@@ -91,6 +91,8 @@ export function getStatusLabel(status: TaskStatus): string {
 	return t(key);
 }
 
+const STATUS_MENU_STATUSES: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'];
+
 /**
  * StatusCellRenderer - AG Grid �Զ��嵥Ԫ����Ⱦ��
  */
@@ -106,6 +108,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 	private contextMenuItems: Array<{ element: HTMLElement; status: TaskStatus; disabled: boolean }> = [];
 	private focusedMenuIndex = -1;
 	private shouldRestoreFocusToCell = false;
+	private srLabelElement: HTMLElement | null = null;
 
 	/**
 	 * ��ʼ����Ⱦ��
@@ -157,9 +160,10 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 		this.keydownHandler = (event: KeyboardEvent) => {
 			const key = event.key;
-			if (key === ' ' || key === 'Space' || key === 'Spacebar' || key === 'Enter') {
+			if (key === 'Enter') {
 				event.preventDefault();
 				event.stopPropagation();
+				event.stopImmediatePropagation();
 				this.hideContextMenu();
 				this.handleClick();
 				return;
@@ -195,8 +199,29 @@ export class StatusCellRenderer implements ICellRendererComp {
 		setIcon(this.eGui, iconId);
 
 		// ��ӿɷ�����֧��
-		this.eGui.title = label;
-		this.eGui.setAttribute('aria-label', label);
+		if (this.srLabelElement && this.srLabelElement.isConnected) {
+			this.srLabelElement.remove();
+		}
+		const doc = this.eGui.ownerDocument || document;
+		const srLabel = doc.createElement('span');
+		srLabel.textContent = label;
+		srLabel.style.position = 'absolute';
+		srLabel.style.width = '1px';
+		srLabel.style.height = '1px';
+		srLabel.style.padding = '0';
+		srLabel.style.margin = '-1px';
+		srLabel.style.overflow = 'hidden';
+		srLabel.style.clip = 'rect(0, 0, 0, 0)';
+		srLabel.style.whiteSpace = 'nowrap';
+		srLabel.style.border = '0';
+		const srId =
+			this.params.node?.id != null
+				? `tlb-status-sr-${this.params.node.id}`
+				: `tlb-status-sr-${Date.now()}`;
+		srLabel.id = srId;
+		this.eGui.appendChild(srLabel);
+		this.eGui.setAttribute('aria-labelledby', srId);
+		this.srLabelElement = srLabel;
 		this.eGui.setAttribute('aria-expanded', this.contextMenu ? 'true' : 'false');
 	}
 
@@ -247,11 +272,9 @@ export class StatusCellRenderer implements ICellRendererComp {
 		menu.style.minWidth = '120px';
 
 		// �����˵���
-		const statuses: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'];
-
 		this.contextMenuItems = [];
 		this.focusedMenuIndex = -1;
-		for (const status of statuses) {
+		for (const status of STATUS_MENU_STATUSES) {
 			const label = getStatusLabel(status);
 			const item = ownerDoc.createElement('div');
 			item.className = 'tlb-status-menu-item';
@@ -550,5 +573,11 @@ export class StatusCellRenderer implements ICellRendererComp {
 			this.eGui.removeEventListener('keydown', this.keydownHandler);
 			this.keydownHandler = undefined;
 		}
+
+		if (this.srLabelElement && this.srLabelElement.isConnected) {
+			this.srLabelElement.remove();
+			this.srLabelElement = null;
+		}
+
 	}
 }

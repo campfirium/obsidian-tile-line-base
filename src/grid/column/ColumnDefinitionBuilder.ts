@@ -57,14 +57,12 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 
 function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 	const headerName = column.headerName ?? 'Status';
-	const tooltipFallback =
-		typeof headerName === 'string' && headerName.trim().length > 0 ? headerName : 'Status';
 
 	return {
 		field: column.field,
 		headerName,
 		headerClass: 'tlb-status-header-cell',
-		headerTooltip: column.headerTooltip ?? tooltipFallback,
+		headerTooltip: undefined,
 		editable: false,
 		pinned: 'left',
 		lockPinned: true,
@@ -77,6 +75,7 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 		suppressSizeToFit: true,
 		suppressNavigable: true,
 		cellRenderer: StatusCellRenderer,
+		tooltipValueGetter: () => null,
 		cellStyle: {
 			textAlign: 'center',
 			cursor: 'pointer',
@@ -86,7 +85,7 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 		headerComponentParams: {
 			icon: 'list-checks',
 			fallbacks: ['checklist', 'check-square'],
-			tooltip: column.headerTooltip ?? tooltipFallback
+			tooltip: undefined
 		}
 	};
 }

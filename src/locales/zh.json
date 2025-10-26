@@ -7,6 +7,9 @@
     "hideRightSidebarLabel": "�л�����ʱ�����Ҳ����",
     "hideRightSidebarDesc": "���ú��ڽ��� TileLineBase ������ͼʱ�Զ��۵� Obsidian �Ҳ�������뿪������ͼʱ�ָ�ԭ״̬��"
   },
+  "readingView": {
+    "configBlockTitle": "TLB CONFIG BLOCK"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "�����޷�ʶ����ַ�",
@@ -41,6 +44,19 @@
     "formulaLabel": "��ʽ",
     "formulaDescription": "ʹ�� {�ֶ�} �����У�֧�� + - * / �����������ƴ�� \"�ı�\"��",
     "formulaPlaceholder": "{points} + {cost}",
+    "formulaFormatLabel": "������ʾ��ʽ",
+    "formulaFormatDescription": "ѡ�����ʾ���ӿ���ָ����ֵ��ʾ��ʽ��",
+    "formulaFormatOptionAuto": "1234.56789~",
+    "formulaFormatOptionFixed0": "1234",
+    "formulaFormatOptionFixed1": "1234.5",
+    "formulaFormatOptionFixed2": "1234.56",
+    "formulaFormatOptionFixed3": "1234.567",
+    "formulaFormatOptionFixed4": "1234.5678",
+    "formulaFormatOptionFixed5": "1234.56789",
+    "formulaFormatOptionFixed6": "1234.567890",
+    "formulaFormatOptionThousandFixed0": "1,234",
+    "formulaFormatOptionThousandFixed2": "1,234.56",
+    "formulaFormatOptionPercentFixed2": "12.34%",
     "dateFormatLabel": "������ʾ��ʽ",
     "dateFormatDescription": "ѡ���ڱ�������ʾ���ڵķ�ʽ��",
     "dateFormatIsoOption": "ISO��2024-01-31��",

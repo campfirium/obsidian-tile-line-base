@@ -7,6 +7,9 @@
     "hideRightSidebarLabel": "Hide right sidebar in table view",
     "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever the TileLineBase table view is active. Other views remain unaffected."
   },
+  "readingView": {
+    "configBlockTitle": "TLB CONFIG BLOCK"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Encountered an unrecognized character",
@@ -41,6 +44,19 @@
     "formulaLabel": "Formula",
     "formulaDescription": "Reference a column with {field}; supports + - * / operators and \"text\" concatenation.",
     "formulaPlaceholder": "{points} + {cost}",
+    "formulaFormatLabel": "Number format",
+    "formulaFormatDescription": "Choose a sample to control how numbers display.",
+    "formulaFormatOptionAuto": "1234.56789~",
+    "formulaFormatOptionFixed0": "1234",
+    "formulaFormatOptionFixed1": "1234.5",
+    "formulaFormatOptionFixed2": "1234.56",
+    "formulaFormatOptionFixed3": "1234.567",
+    "formulaFormatOptionFixed4": "1234.5678",
+    "formulaFormatOptionFixed5": "1234.56789",
+    "formulaFormatOptionFixed6": "1234.567890",
+    "formulaFormatOptionThousandFixed0": "1,234",
+    "formulaFormatOptionThousandFixed2": "1,234.56",
+    "formulaFormatOptionPercentFixed2": "12.34%",
     "dateFormatLabel": "Date display format",
     "dateFormatDescription": "Choose how the date is shown in the grid.",
     "dateFormatIsoOption": "ISO (2024-01-31)",

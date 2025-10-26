@@ -222,6 +222,7 @@ export class ColumnInteractionController {
 		}
 
 		const existingConfigs = (schema.columnConfigs ?? []) as ColumnConfig[];
+		const previousConfig = existingConfigs.find((item) => item.name === activeField) ?? null;
 		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
 		let config = nextConfigs.find((item) => item.name === activeField);
 		if (!config) {
@@ -244,8 +245,12 @@ export class ColumnInteractionController {
 			}
 		} else {
 			delete config.formula;
-			delete config.type;
 			delete config.dateFormat;
+			if (previousConfig?.type === 'date' || previousConfig?.type === 'text') {
+				config.type = 'text';
+			} else {
+				delete config.type;
+			}
 		}
 
 		if (!this.dataStore.hasColumnConfigContent(config)) {

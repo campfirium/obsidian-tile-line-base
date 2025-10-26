@@ -9,6 +9,7 @@ export function hasColumnConfigContent(config: ColumnConfig): boolean {
 		config.hide ||
 		(config.formula && config.formula.trim().length > 0) ||
 		config.type === 'date' ||
+		config.type === 'text' ||
 		(preset && preset !== 'iso')
 	);
 }
@@ -30,6 +31,8 @@ export function serializeColumnConfig(config: ColumnConfig): string {
 		if (preset !== 'iso') {
 			segments.push(`dateFormat: ${preset}`);
 		}
+	} else if (config.type === 'text') {
+		segments.push('type: text');
 	}
 	if (config.hide) {
 		segments.push('hide');

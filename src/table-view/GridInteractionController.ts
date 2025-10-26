@@ -10,6 +10,7 @@ import { CopyTemplateController } from './CopyTemplateController';
 import { getLogger } from '../utils/logger';
 import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInteractionMenuHelpers';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
+import { GridCellClipboardController } from './GridCellClipboardController';
 
 const logger = getLogger('table-view:grid-interaction');
 
@@ -28,8 +29,16 @@ export class GridInteractionController {
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
 	private documentClickHandler: (() => void) | null = null;
 	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
+	private readonly cellClipboard: GridCellClipboardController;
 
-	constructor(private readonly deps: GridInteractionDeps) {}
+	constructor(private readonly deps: GridInteractionDeps) {
+		this.cellClipboard = new GridCellClipboardController({
+			dataStore: deps.dataStore,
+			rowInteraction: deps.rowInteraction,
+			getOwnerDocument: () => this.container?.ownerDocument ?? document,
+			writeClipboard: (payload, successKey, options) => this.writeClipboard(payload, successKey, options)
+		});
+	}
 
 	attach(container: HTMLElement): void {
 		if (this.container === container) {
@@ -167,12 +176,17 @@ export class GridInteractionController {
 		await this.writeClipboard(payload, 'copyTemplate.copySuccess');
 	}
 
-	private async writeClipboard(payload: string, successKey: Parameters<typeof t>[0]): Promise<void> {
-		if (!payload || payload.trim().length === 0) {
+	private async writeClipboard(
+		payload: string | null | undefined,
+		successKey: Parameters<typeof t>[0],
+		options?: { allowEmpty?: boolean }
+	): Promise<void> {
+		const normalized = typeof payload === 'string' ? payload : payload == null ? '' : String(payload);
+		if (!options?.allowEmpty && normalized.trim().length === 0) {
 			return;
 		}
 		try {
-			await navigator.clipboard.writeText(payload);
+			await navigator.clipboard.writeText(normalized);
 			new Notice(t(successKey));
 		} catch (error) {
 			logger.error(t('copyTemplate.copyFailedLog'), error);
@@ -202,11 +216,33 @@ export class GridInteractionController {
 			);
 		}
 
+		const columnField = typeof colId === 'string' ? colId : null;
+		const canCopyCell = columnField !== null && this.cellClipboard.canCopy(columnField);
+		const canPasteCell = columnField !== null && this.cellClipboard.canPaste(columnField);
+		let cellMenu: { copy?: () => void; paste?: () => void; disablePaste?: boolean } | undefined;
+		if (columnField && (canCopyCell || canPasteCell)) {
+			const fieldForMenu = columnField;
+			cellMenu = {
+				copy: canCopyCell
+					? () => {
+							void this.cellClipboard.copyCellValue(blockIndex, fieldForMenu);
+						}
+					: undefined,
+				paste: canPasteCell
+					? () => {
+							void this.cellClipboard.pasteCellValue(blockIndex, fieldForMenu);
+						}
+					: undefined,
+				disablePaste: canCopyCell && !canPasteCell
+			};
+		}
+
 		const menu = buildGridContextMenu({
 			isIndexColumn,
 			isMultiSelect,
 			selectedRowCount: selectedRows.length,
 			fillSelectionLabelParams: fillSelection.params,
+			cellMenu,
 			actions: {
 				copySelection: () => this.copySection(blockIndex),
 				copySelectionAsTemplate: () => this.copySectionAsTemplate(blockIndex),

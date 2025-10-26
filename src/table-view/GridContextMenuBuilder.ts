@@ -6,6 +6,11 @@ interface MenuBuilderOptions {
 	isMultiSelect: boolean;
 	selectedRowCount: number;
 	fillSelectionLabelParams?: Record<string, string>;
+	cellMenu?: {
+		copy?: () => void;
+		paste?: () => void;
+		disablePaste?: boolean;
+	};
 	actions: {
 		copySelection?: () => void;
 		copySelectionAsTemplate: () => void;
@@ -24,6 +29,7 @@ interface MenuBuilderOptions {
 interface MenuItemConfig {
 	danger?: boolean;
 	params?: Record<string, string>;
+	disabled?: boolean;
 }
 
 function withClose(handler: () => void, close: () => void): () => void {
@@ -42,7 +48,7 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 		handler: (() => void) | undefined,
 		config?: MenuItemConfig
 	): void => {
-		if (!handler) {
+		if (!handler && !config?.disabled) {
 			return;
 		}
 		menu.addItem((item) => {
@@ -52,13 +58,35 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 				const dom = (item as unknown as { dom?: HTMLElement }).dom;
 				dom?.classList.add('tlb-menu-item-danger');
 			}
-			item.onClick(withClose(handler, options.actions.close));
+			if (config?.disabled) {
+				item.setDisabled(true);
+				return;
+			}
+			if (handler) {
+				item.onClick(withClose(handler, options.actions.close));
+			}
 		});
 	};
 
 	const addSeparator = () => {
 		menu.addSeparator();
 	};
+
+	if (!options.isIndexColumn && options.cellMenu) {
+		if (options.cellMenu.copy) {
+			addItem('gridInteraction.menuCopyCell', 'copy', options.cellMenu.copy);
+		}
+		if (options.cellMenu.paste || options.cellMenu.disablePaste) {
+			const disablePaste = options.cellMenu.disablePaste ?? false;
+			addItem(
+				'gridInteraction.menuPasteCell',
+				'clipboard',
+				options.cellMenu.paste,
+				{ disabled: disablePaste || !options.cellMenu.paste }
+			);
+		}
+		addSeparator();
+	}
 
 	if (options.isIndexColumn) {
 		if (options.isMultiSelect && options.actions.copySelection) {

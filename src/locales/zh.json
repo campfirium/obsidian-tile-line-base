@@ -92,15 +92,21 @@
     "focusAriaLabel": "�۽���������"
   },
   "gridInteraction": {
-    "insertRowAbove": "���Ϸ�������",
-    "insertRowBelow": "���·�������",
-    "fillSelectedColumn": "Ϊѡ�е� {{count}} ����� {{column}} ��",
-    "duplicateSelected": "����ѡ�е� {{count}} ��",
-    "deleteSelected": "ɾ��ѡ�е� {{count}} ��",
-    "duplicateRow": "���ƴ���",
-    "deleteRow": "ɾ������",
-    "menuCopySelection": "����ѡ������",
-    "copySelectionSuccess": "�Ѹ���ѡ������"
+    "insertRowAbove": "向上插入行",
+    "insertRowBelow": "向下插入行",
+    "fillSelectedColumn": "为选中的 {{count}} 行填充 {{column}}",
+    "duplicateSelected": "复制选中的 {{count}} 行",
+    "deleteSelected": "删除选中的 {{count}} 行",
+    "duplicateRow": "复制行",
+    "deleteRow": "删除行",
+    "menuCopyCell": "复制单元格",
+    "menuPasteCell": "粘贴单元格",
+    "menuCopySelection": "复制选中内容",
+    "copyCellSuccess": "已复制单元格内容",
+    "copySelectionSuccess": "已复制选中内容",
+    "pasteCellFailed": "粘贴单元格失败",
+    "pasteCellFailedLog": "粘贴单元格失败：",
+    "pasteCellFormulaDisabled": "无法覆盖公式列"
   },
   "gridFillModal": {
     "title": "������д�У�{{column}}",

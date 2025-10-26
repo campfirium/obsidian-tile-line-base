@@ -52,6 +52,19 @@
     "formulaEmptyError": "��ʽ����Ϊ��",
     "formulaValidationFailed": "��ʽУ��ʧ�ܣ�{{message}}"
   },
+  "dateFormats": {
+    "iso": "ISO��2024-01-31��",
+    "ymdSlash": "��/��/�գ�2024/01/31��",
+    "ymdDot": "��.��.�գ�2024.01.31��",
+    "mdySlash": "��/��/�꣨01/31/2024��",
+    "dmySlash": "��/��/�꣨31/01/2024��",
+    "short": "ϵͳ�̸�ʽ������24/1/31��",
+    "long": "ϵͳ����ʽ������2024��1��31�գ�",
+    "mdyLong": "Ӣ��月日年��January 31, 2024��",
+    "dmyLong": "Ӣ��日月年��31 January 2024��",
+    "monthDay": "月日��Jan 31��",
+    "chineseLong": "������ʽ������2024��1��31�գ�"
+  },
   "columnInteraction": {
     "menuEdit": "�༭��",
     "menuDuplicate": "������",

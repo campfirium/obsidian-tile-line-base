@@ -1,14 +1,45 @@
+import { t, type TranslationKey } from '../i18n';
+
 /**
- * 日期时间工具函数
+ * Date/time helpers
  */
 
-export type DateFormatPreset = 'iso' | 'short' | 'long';
+export type DateFormatPreset =
+	| 'iso'
+	| 'ymd_slash'
+	| 'ymd_dot'
+	| 'mdy_slash'
+	| 'dmy_slash'
+	| 'short'
+	| 'long'
+	| 'mdy_long'
+	| 'dmy_long'
+	| 'month_day'
+	| 'chinese_long';
 
-const DATE_FORMAT_PRESETS: DateFormatPreset[] = ['iso', 'short', 'long'];
+const DATE_FORMAT_PRESETS: readonly DateFormatPreset[] = [
+	'iso',
+	'ymd_slash',
+	'ymd_dot',
+	'mdy_slash',
+	'dmy_slash',
+	'short',
+	'long',
+	'mdy_long',
+	'dmy_long',
+	'month_day',
+	'chinese_long'
+] as const;
+
+type DateFormatFormatter = (parts: DateParts, locale: string) => string;
+
+interface DateFormatDefinition {
+	labelKey: TranslationKey;
+	formatter: DateFormatFormatter;
+}
 
 /**
- * 将 Date 对象格式化为本地时间字符串
- * 格式：2025-10-13 14:30:25
+ * Format a Date instance as local datetime string (YYYY-MM-DD HH:mm:ss)
  */
 export function formatLocalDateTime(date: Date): string {
 	const year = date.getFullYear();
@@ -21,22 +52,20 @@ export function formatLocalDateTime(date: Date): string {
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-/**
- * 获取当前本地时间字符串
- */
 export function getCurrentLocalDateTime(): string {
 	return formatLocalDateTime(new Date());
 }
 
 /**
- * 规范化日期格式配置，返回支持的预设值（默认 iso）
+ * Normalise a user-provided preset into a supported value.
  */
 export function normalizeDateFormatPreset(value: string | null | undefined): DateFormatPreset {
-	const trimmed = value?.trim().toLowerCase();
+	const trimmed = value?.trim();
 	if (!trimmed) {
 		return 'iso';
 	}
-	return (DATE_FORMAT_PRESETS.includes(trimmed as DateFormatPreset) ? trimmed : 'iso') as DateFormatPreset;
+	const normalized = trimmed.toLowerCase().replace(/[\s-]+/g, '_');
+	return isKnownDateFormat(normalized) ? (normalized as DateFormatPreset) : 'iso';
 }
 
 interface DateParts {
@@ -119,8 +148,7 @@ function getDisplayLocale(): string {
 }
 
 /**
- * 将用户输入的日期字符串规范化为 ISO 格式（yyyy-MM-dd）。
- * 若无法解析则返回原始输入的裁剪值。
+ * Normalise user input into ISO format (yyyy-MM-dd).
  */
 export function normalizeDateInput(value: string): string {
 	const trimmed = (value ?? '').trim();
@@ -135,9 +163,63 @@ export function normalizeDateInput(value: string): string {
 	return formatIsoFromParts(parts);
 }
 
+const DATE_FORMAT_DEFINITIONS: Record<DateFormatPreset, DateFormatDefinition> = {
+	iso: {
+		labelKey: 'dateFormats.iso',
+		formatter: (parts) => formatIsoFromParts(parts)
+	},
+	ymd_slash: {
+		labelKey: 'dateFormats.ymdSlash',
+		formatter: (parts) => `${parts.year}/${pad2(parts.month)}/${pad2(parts.day)}`
+	},
+	ymd_dot: {
+		labelKey: 'dateFormats.ymdDot',
+		formatter: (parts) => `${parts.year}.${pad2(parts.month)}.${pad2(parts.day)}`
+	},
+	mdy_slash: {
+		labelKey: 'dateFormats.mdySlash',
+		formatter: (parts) => `${pad2(parts.month)}/${pad2(parts.day)}/${parts.year}`
+	},
+	dmy_slash: {
+		labelKey: 'dateFormats.dmySlash',
+		formatter: (parts) => `${pad2(parts.day)}/${pad2(parts.month)}/${parts.year}`
+	},
+	short: {
+		labelKey: 'dateFormats.short',
+		formatter: (parts, locale) => formatWithIntl(locale, { dateStyle: 'short' }, parts)
+	},
+	long: {
+		labelKey: 'dateFormats.long',
+		formatter: (parts, locale) => formatWithIntl(locale, { dateStyle: 'long' }, parts)
+	},
+	mdy_long: {
+		labelKey: 'dateFormats.mdyLong',
+		formatter: (parts) => formatWithIntl('en-US', { month: 'long', day: 'numeric', year: 'numeric' }, parts)
+	},
+	dmy_long: {
+		labelKey: 'dateFormats.dmyLong',
+		formatter: (parts) => formatWithIntl('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }, parts)
+	},
+	month_day: {
+		labelKey: 'dateFormats.monthDay',
+		formatter: (parts, locale) => formatWithIntl(locale, { month: 'short', day: 'numeric' }, parts)
+	},
+	chinese_long: {
+		labelKey: 'dateFormats.chineseLong',
+		formatter: (parts) => `${parts.year}年${parts.month}月${parts.day}日`
+	}
+};
+
+function isKnownDateFormat(value: string): value is DateFormatPreset {
+	return (DATE_FORMAT_PRESETS as readonly string[]).includes(value);
+}
+
+function getDefinition(format: DateFormatPreset): DateFormatDefinition {
+	return DATE_FORMAT_DEFINITIONS[format] ?? DATE_FORMAT_DEFINITIONS.iso;
+}
+
 /**
- * 按预设样式格式化日期值用于展示。
- * 若无法解析则回退为原始字符串。
+ * Format value according to preset for display in the grid.
  */
 export function formatDateForDisplay(
 	value: unknown,
@@ -154,14 +236,33 @@ export function formatDateForDisplay(
 		return stringValue;
 	}
 
-	if (format === 'iso') {
+	const locale = localeOverride?.trim() || getDisplayLocale();
+	const definition = getDefinition(format);
+	try {
+		return definition.formatter(parts, locale);
+	} catch (error) {
+		console.error('[TileLineBase] Failed to format date', { format, value, error });
 		return formatIsoFromParts(parts);
 	}
+}
 
-	const locale = localeOverride?.trim() || getDisplayLocale();
+function formatWithIntl(
+	locale: string,
+	options: Intl.DateTimeFormatOptions,
+	parts: DateParts
+): string {
 	const date = new Date(parts.year, parts.month - 1, parts.day);
-	const formatter = new Intl.DateTimeFormat(locale, {
-		dateStyle: format === 'long' ? 'long' : 'short'
-	});
-	return formatter.format(date);
+	return new Intl.DateTimeFormat(locale, options).format(date);
+}
+
+export function getDateFormatLabel(format: DateFormatPreset): string {
+	const definition = getDefinition(format);
+	return t(definition.labelKey);
+}
+
+export function getDateFormatOptions(): Array<{ value: DateFormatPreset; label: string }> {
+	return DATE_FORMAT_PRESETS.map((preset) => ({
+		value: preset,
+		label: getDateFormatLabel(preset)
+	}));
 }

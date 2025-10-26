@@ -1,7 +1,11 @@
 ﻿import { App, Modal, Setting } from 'obsidian';
 import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
-import { normalizeDateFormatPreset, type DateFormatPreset } from '../utils/datetime';
+import {
+	getDateFormatOptions,
+	normalizeDateFormatPreset,
+	type DateFormatPreset
+} from '../utils/datetime';
 import { FormulaFieldSuggester } from './FormulaFieldSuggester';
 
 export type ColumnFieldType = 'text' | 'date' | 'formula';
@@ -99,9 +103,14 @@ export class ColumnEditorModal extends Modal {
 		this.dateFormatSetting.setName(t('columnEditorModal.dateFormatLabel'));
 		this.dateFormatSetting.setDesc(t('columnEditorModal.dateFormatDescription'));
 		this.dateFormatSetting.addDropdown((dropdown) => {
-			dropdown.addOption('iso', t('columnEditorModal.dateFormatIsoOption'));
-			dropdown.addOption('short', t('columnEditorModal.dateFormatShortOption'));
-			dropdown.addOption('long', t('columnEditorModal.dateFormatLongOption'));
+			const options = getDateFormatOptions();
+			for (const option of options) {
+				dropdown.addOption(option.value, option.label);
+			}
+			// Ensure value is set even if stored preset is no longer part of the list.
+			if (!options.some((option) => option.value === this.dateFormat)) {
+				this.dateFormat = 'iso';
+			}
 			dropdown.setValue(this.dateFormat);
 			dropdown.onChange((value) => {
 				this.dateFormat = normalizeDateFormatPreset(value);

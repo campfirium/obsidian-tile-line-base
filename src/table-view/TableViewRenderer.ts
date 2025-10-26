@@ -67,10 +67,11 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.filterViewState = view.filterStateStore.getState();
 	syncTagGroupState(view);
 
-	let columnConfigs = view.markdownParser.parseHeaderConfig(content);
-	if ((!columnConfigs || columnConfigs.length === 0) && configBlock?.columnConfigs) {
-		columnConfigs = deserializeColumnConfigs(view, configBlock.columnConfigs);
-	}
+	const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
+	const persistedColumnConfigs = configBlock?.columnConfigs
+		? deserializeColumnConfigs(view, configBlock.columnConfigs)
+		: null;
+	const columnConfigs = mergeColumnConfigs(headerColumnConfigs, persistedColumnConfigs);
 
 	const parsedBlocks = view.markdownParser.parseH2Blocks(content);
 	if (parsedBlocks.length === 0) {
@@ -190,19 +191,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 }
 
-function describeWindow(win: Window | null | undefined): Record<string, unknown> | null {
-	if (!win) {
-		return null;
-	}
-	let href: string | undefined;
-	try {
-		href = win.location?.href;
-	} catch {
-		href = undefined;
-	}
-	return { href, isMain: win === window };
-}
-
 function deserializeColumnConfigs(view: TableView, raw: unknown): ColumnConfig[] | null {
 	if (!Array.isArray(raw)) {
 		return null;
@@ -218,5 +206,51 @@ function deserializeColumnConfigs(view: TableView, raw: unknown): ColumnConfig[]
 		}
 	}
 	return result.length > 0 ? result : null;
+}
+
+
+function mergeColumnConfigs(
+	headerConfigs: ColumnConfig[] | null,
+	persistedConfigs: ColumnConfig[] | null
+): ColumnConfig[] | null {
+	const baseList = headerConfigs ? headerConfigs.map((config) => ({ ...config })) : [];
+	const overrideList = persistedConfigs ? persistedConfigs.map((config) => ({ ...config })) : [];
+	if (baseList.length === 0 && overrideList.length === 0) {
+		return null;
+	}
+	if (baseList.length === 0) {
+		return overrideList;
+	}
+	const overrideMap = new Map<string, ColumnConfig>();
+	for (const config of overrideList) {
+		overrideMap.set(config.name, config);
+	}
+	const merged: ColumnConfig[] = [];
+	for (const base of baseList) {
+		const override = overrideMap.get(base.name);
+		if (override) {
+			merged.push({ ...base, ...override });
+			overrideMap.delete(base.name);
+		} else {
+			merged.push(base);
+		}
+	}
+	for (const remaining of overrideMap.values()) {
+		merged.push(remaining);
+	}
+	return merged;
+}
+
+function describeWindow(win: Window | null | undefined): Record<string, unknown> | null {
+	if (!win) {
+		return null;
+	}
+	let href: string | undefined;
+	try {
+		href = win.location?.href;
+	} catch {
+		href = undefined;
+	}
+	return { href, isMain: win === window };
 }
 

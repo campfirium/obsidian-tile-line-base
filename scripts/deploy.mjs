@@ -30,14 +30,19 @@ function assertNotSymlink(targetPath) {
 	}
 }
 
-function safeEmptyDir(targetPath) {
+function ensureTargetDir(targetPath) {
 	if (!fs.existsSync(targetPath)) {
 		fs.mkdirSync(targetPath, { recursive: true });
 		return;
 	}
 
-	fs.rmSync(targetPath, { recursive: true, force: true });
-	fs.mkdirSync(targetPath, { recursive: true });
+	const stats = fs.statSync(targetPath);
+	if (!stats.isDirectory()) {
+		console.log("⚠️ 目标路径存在但不是目录。");
+		console.log(`   位置: ${targetPath}`);
+		console.log("💡 请手动处理该路径后重新运行部署。");
+		process.exit(1);
+	}
 }
 
 function copyDir(source, target) {
@@ -87,8 +92,8 @@ console.log(`🎯 目标目录: ${PLUGIN_DIR}`);
 ensureDistExists();
 assertNotSymlink(PLUGIN_DIR);
 
-console.log("🧹 清理目标目录...");
-safeEmptyDir(PLUGIN_DIR);
+console.log("📂 确保目标目录可用...");
+ensureTargetDir(PLUGIN_DIR);
 
 console.log("📦 复制 dist 内容...");
 copyDir(DIST_DIR, PLUGIN_DIR);

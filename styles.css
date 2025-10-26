@@ -694,10 +694,9 @@
 
 /* Editing view config block handling */
 .markdown-source-view.mod-cm6.tlb-has-config-block {
-	--tlb-config-card-border: var(--background-modifier-border);
 	--tlb-config-card-background: var(--code-background, var(--background-secondary-alt));
-	--tlb-config-toggle-expand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E");
-	--tlb-config-toggle-collapse: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+	--tlb-config-toggle-expand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+	--tlb-config-toggle-collapse: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line {
@@ -706,61 +705,35 @@
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line {
 	margin: 16px 0;
-	padding: 12px 14px 16px;
+	padding: 36px 24px 24px;
 	border-radius: 8px;
-	border: 1px solid var(--tlb-config-card-border);
+	border: none;
 	background-color: var(--tlb-config-card-background);
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tlb-config-card-border) 32%, transparent);
+	box-shadow: none;
 	font-family: var(--font-monospace);
-	color: var(--text-normal);
 	line-height: 1.45;
 	user-select: none;
 	cursor: pointer;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	display: block;
 	min-height: 6.2em;
-	transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+	transition: background-color 140ms ease;
+	color: transparent;
+	text-shadow: none;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line:is(:hover, :focus-visible) {
-	border-color: var(--interactive-accent);
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 40%, transparent);
+	background-color: color-mix(in srgb, var(--tlb-config-card-background) 94%, transparent);
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line::before {
 	content: 'TLB CONFIG BLOCK';
+	display: block;
 	font-family: var(--font-interface);
-	font-size: 0.72em;
+	font-size: 0.74em;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
 	color: var(--text-faint);
-	line-height: 1.2;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	gap: 0.5em;
-	min-width: 0;
-	width: 100%;
-	color: transparent;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content::after {
-	content: attr(data-tlb-heading);
-	position: relative;
-	color: var(--text-normal);
-	font-size: 0.95em;
-	font-weight: 500;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-line:not(.tlb-config-heading-line) {
-	display: none;
+	margin-bottom: 14px;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content {
@@ -770,35 +743,62 @@
 	min-width: 0;
 }
 
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-end;
+	min-width: 0;
+	width: 100%;
+	font-size: 0;
+	line-height: 1;
+	color: transparent;
+	text-shadow: none;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content > :not(.tlb-config-heading-toggle) {
+	display: none !important;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-line:not(.tlb-config-heading-line) {
+	display: none;
+}
+
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 16px;
-	height: 16px;
+	width: 20px;
+	height: 20px;
 	background-color: var(--text-muted);
 	mask: var(--tlb-config-toggle-collapse) no-repeat center / 100% 100%;
 	cursor: pointer;
-	transition: transform 120ms ease, background-color 120ms ease;
+	transition: background-color 120ms ease;
 	flex: 0 0 auto;
+	border-radius: 4px;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle[data-state='collapsed'] {
 	mask-image: var(--tlb-config-toggle-expand);
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover {
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-toggle {
+	position: absolute;
+	top: 26px;
+	right: 24px;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover,
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
 	background-color: var(--text-normal);
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
 	outline: none;
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
-	border-radius: 4px;
 }
 
 .theme-dark .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line {
-	background-color: color-mix(in srgb, var(--tlb-config-card-background) 88%, transparent);
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tlb-config-card-border) 45%, transparent);
+	background-color: color-mix(in srgb, var(--tlb-config-card-background) 90%, transparent);
 }
 

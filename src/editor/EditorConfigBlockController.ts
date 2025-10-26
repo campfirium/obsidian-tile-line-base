@@ -14,6 +14,7 @@ interface ViewState {
 	observer: MutationObserver | null;
 	rootClickHandler: ((event: MouseEvent) => void) | null;
 	rootKeyHandler: ((event: KeyboardEvent) => void) | null;
+	collapseSyncHandle: number | null;
 }
 
 export class EditorConfigBlockController {
@@ -124,7 +125,8 @@ export class EditorConfigBlockController {
 				collapsed: true,
 				observer: null,
 				rootClickHandler: null,
-				rootKeyHandler: null
+				rootKeyHandler: null,
+				collapseSyncHandle: null
 			};
 			this.viewStates.set(view, state);
 			return state;
@@ -154,6 +156,7 @@ export class EditorConfigBlockController {
 			state.observer.disconnect();
 			state.observer = null;
 		}
+		this.cancelCollapsedSync(state);
 
 		if (root) {
 			if (state.rootClickHandler) {
@@ -195,6 +198,9 @@ export class EditorConfigBlockController {
 			for (const mutation of mutations) {
 				if (mutation.type === 'childList') {
 					this.tagExistingLines(view, state);
+					if (state.collapsed) {
+						this.scheduleCollapsedSync(view, state);
+					}
 					break;
 				}
 			}
@@ -268,6 +274,11 @@ export class EditorConfigBlockController {
 		root.dataset.tlbConfigState = state.collapsed ? 'collapsed' : 'expanded';
 		this.updateHeadingToggleState(root, state.collapsed);
 		this.tagExistingLines(view, state);
+		if (state.collapsed) {
+			this.scheduleCollapsedSync(view, state);
+		} else {
+			this.cancelCollapsedSync(state);
+		}
 	}
 
 	private updateHeadingToggleState(root: HTMLElement, collapsed: boolean): void {
@@ -317,6 +328,41 @@ export class EditorConfigBlockController {
 		} else if (wasCodeLine) {
 			lineEl.classList.remove('tlb-config-code-line', 'tlb-config-line');
 		}
+	}
+
+	private scheduleCollapsedSync(view: MarkdownView, state: ViewState): void {
+		if (state.collapseSyncHandle !== null) {
+			return;
+		}
+		state.collapseSyncHandle = window.setTimeout(() => {
+			state.collapseSyncHandle = null;
+			if (!state.collapsed) {
+				return;
+			}
+			window.requestAnimationFrame(() => {
+				if (!state.collapsed) {
+					return;
+				}
+				this.runCollapsedSync(view, state);
+			});
+		}, 16);
+	}
+
+	private cancelCollapsedSync(state: ViewState): void {
+		if (state.collapseSyncHandle === null) {
+			return;
+		}
+		window.clearTimeout(state.collapseSyncHandle);
+		state.collapseSyncHandle = null;
+	}
+
+	private runCollapsedSync(view: MarkdownView, state: ViewState): void {
+		const root = this.getSourceRoot(view);
+		if (!root || !state.collapsed) {
+			return;
+		}
+		this.tagExistingLines(view, state);
+		this.updateHeadingToggleState(root, true);
 	}
 
 	private ensureHeadingToggle(contentEl: HTMLElement): void {

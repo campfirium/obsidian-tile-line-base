@@ -1,13 +1,11 @@
 import { App, MarkdownView, Plugin } from 'obsidian';
 import type { Editor, MarkdownFileInfo } from 'obsidian';
-
 interface ConfigBlockInfo {
 	headingLine: number;
 	headingLabel: string;
 	codeStartLine: number;
 	codeEndLine: number;
 }
-
 interface ViewState {
 	info: ConfigBlockInfo;
 	collapsed: boolean;
@@ -23,39 +21,30 @@ export class EditorConfigBlockController {
 
 	constructor(private readonly app: App) {}
 
-	start(plugin: Plugin): void {
-		const syncActive = () => {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (view) {
-				this.processMarkdownView(view);
-			}
-		};
-
-		plugin.registerEvent(
-			this.app.workspace.on('active-leaf-change', () => {
-				syncActive();
-			})
-		);
-		plugin.registerEvent(
-			this.app.workspace.on('file-open', () => {
-				syncActive();
-			})
-		);
-		plugin.registerEvent(
-			this.app.workspace.on('layout-change', () => {
-				syncActive();
-			})
-		);
-		plugin.registerEvent(
-			this.app.workspace.on('editor-change', (_editor, info) => {
-				const view = info instanceof MarkdownView ? info : this.findViewFromInfo(info);
-				if (view) {
-					this.scheduleProcess(view);
+		start(plugin: Plugin): void {
+			const syncActive = () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) return;
+				const state = this.viewStates.get(view);
+				if (state) {
+					state.collapsed = true;
 				}
-			})
-		);
+				this.processMarkdownView(view);
+			};
 
-		syncActive();
+			plugin.registerEvent(this.app.workspace.on('active-leaf-change', syncActive));
+			plugin.registerEvent(this.app.workspace.on('file-open', syncActive));
+			plugin.registerEvent(this.app.workspace.on('layout-change', syncActive));
+			plugin.registerEvent(
+				this.app.workspace.on('editor-change', (_editor, info) => {
+					const view = info instanceof MarkdownView ? info : this.findViewFromInfo(info);
+					if (view) {
+						this.scheduleProcess(view);
+					}
+				})
+			);
+
+			syncActive();
 	}
 
 	dispose(): void {
@@ -217,25 +206,22 @@ export class EditorConfigBlockController {
 		}
 		if (!state.rootClickHandler) {
 			const handler = (event: MouseEvent) => {
-				const target = event.target as HTMLElement | null;
-				if (!target) {
-					return;
-				}
-				const toggle = target.closest('.tlb-config-heading-toggle');
-				if (toggle) {
-					event.preventDefault();
-					this.toggleCollapsedState(view, state);
-					return;
-				}
-				if (!state.collapsed) {
-					return;
-				}
-				if (target.closest('.tlb-config-heading-line')) {
-					event.preventDefault();
-					this.toggleCollapsedState(view, state);
-				}
-			};
-			root.addEventListener('click', handler, true);
+			const target = event.target as HTMLElement | null;
+			if (!target) {
+				return;
+			}
+			const toggle = target.closest('.tlb-config-heading-toggle');
+			if (toggle) {
+				event.preventDefault();
+				this.toggleCollapsedState(view, state);
+				return;
+			}
+			if (target.closest('.tlb-config-heading-line')) {
+				event.preventDefault();
+				this.toggleCollapsedState(view, state);
+			}
+		};
+		root.addEventListener('click', handler, true);
 			state.rootClickHandler = handler;
 		}
 
@@ -313,17 +299,17 @@ export class EditorConfigBlockController {
 			if (contentEl) {
 				contentEl.classList.add('tlb-config-heading-content');
 				contentEl.dataset.tlbHeading = state.info.headingLabel;
-				this.ensureHeadingToggle(contentEl);
-			}
-		} else if (wasHeadingLine) {
-			lineEl.classList.remove('tlb-config-heading-line', 'tlb-config-line');
-			lineEl.removeAttribute('data-tlb-heading');
-			contentEl?.classList.remove('tlb-config-heading-content');
+					this.ensureHeadingToggle(contentEl);
+				}
+			} else if (wasHeadingLine) {
+				lineEl.classList.remove('tlb-config-heading-line', 'tlb-config-line');
+				lineEl.removeAttribute('data-tlb-heading');
+				contentEl?.classList.remove('tlb-config-heading-content');
 			if (contentEl) {
 				delete contentEl.dataset.tlbHeading;
 			}
-			contentEl?.querySelectorAll('.tlb-config-heading-toggle').forEach((toggle) => toggle.remove());
-		}
+				contentEl?.querySelectorAll('.tlb-config-heading-toggle').forEach((toggle) => toggle.remove());
+			}
 
 		if (isCodeLine) {
 			lineEl.classList.add('tlb-config-code-line', 'tlb-config-line');

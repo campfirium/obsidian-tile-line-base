@@ -709,7 +709,7 @@
 	padding: 36px 24px 24px;
 	border-radius: 8px;
 	border: none;
-	background-color: var(--tlb-config-card-background);
+	background-color: transparent;
 	box-shadow: none;
 	font-family: var(--font-monospace);
 	line-height: 1.45;
@@ -720,49 +720,69 @@
 	transition: background-color 140ms ease;
 	color: transparent;
 	text-shadow: none;
+	position: relative;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line:is(:hover, :focus-visible) {
-	background-color: color-mix(in srgb, var(--tlb-config-card-background) 94%, transparent);
+	background-color: transparent;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 8px;
+	background: var(--tlb-config-card-background) !important;
+	z-index: 0;
+	pointer-events: none;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line::before {
 	content: 'TLB CONFIG BLOCK';
 	display: block;
 	font-family: var(--font-interface);
-	font-size: 0.74em;
+	font-size: 0.75rem;
+	font-weight: 600;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
 	color: var(--text-faint);
 	margin-bottom: 14px;
+	position: relative;
+	z-index: 1;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.5em;
-	min-width: 0;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content {
-	position: relative;
 	display: flex;
-	align-items: flex-start;
-	justify-content: flex-end;
+	align-items: center;
+	gap: 8px;
 	min-width: 0;
 	width: 100%;
-	font-size: 0;
-	line-height: 1;
-	color: transparent;
-	text-shadow: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content > :not(.tlb-config-heading-toggle) {
-	display: none !important;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-line:not(.tlb-config-heading-line) {
 	display: none;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	justify-content: space-between;
+	z-index: 1;
+	background: transparent !important;
+	width: 100%;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent > :not(.tlb-config-heading-toggle) {
+	display: none !important;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line .cm-lineContent {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle {
@@ -777,16 +797,13 @@
 	transition: background-color 120ms ease;
 	flex: 0 0 auto;
 	border-radius: 4px;
+	margin-left: auto;
+	position: relative;
+	z-index: 2;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle[data-state='collapsed'] {
 	mask-image: var(--tlb-config-toggle-expand);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-toggle {
-	position: absolute;
-	top: 26px;
-	right: 24px;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover,
@@ -799,7 +816,24 @@
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
 }
 
-.theme-dark .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line {
-	background-color: color-mix(in srgb, var(--tlb-config-card-background) 90%, transparent);
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content::before {
+	content: '';
+	display: none;
+	font-family: var(--font-interface);
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.18em;
+	color: var(--text-faint);
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content::before {
+	content: 'TLB CONFIG BLOCK';
+	display: block;
+	margin-right: auto;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content > :not(.tlb-config-heading-toggle) {
+	display: none !important;
 }
 

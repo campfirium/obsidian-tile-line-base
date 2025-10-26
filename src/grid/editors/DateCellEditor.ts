@@ -18,12 +18,22 @@ function createTextInput(doc: Document, value: string): HTMLInputElement {
 	return input;
 }
 
+function injectCalendarGlyph(button: HTMLButtonElement): void {
+	button.innerHTML =
+		'<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><rect x="8" y="14" width="4" height="4" rx="1"></rect></svg>';
+}
+
 function createTriggerButton(doc: Document): HTMLButtonElement {
 	const button = doc.createElement('button');
 	button.type = 'button';
 	button.classList.add('tlb-date-editor-button');
 	button.setAttribute('aria-label', t('dateCellEditor.openPickerLabel'));
 	setIcon(button, 'calendar');
+	queueMicrotask(() => {
+		if (!button.firstElementChild) {
+			injectCalendarGlyph(button);
+		}
+	});
 	return button;
 }
 
@@ -46,8 +56,9 @@ export function createDateCellEditor() {
 		private hiddenPicker!: HTMLInputElement;
 		private params!: ICellEditorParams;
 		private initialValue = '';
-		private readonly isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+		private lastValidValue = '';
 		private invalidNotice: Notice | null = null;
+		private readonly isoPattern = /^\d{4}-\d{2}-\d{2}$/;
 
 		private blurHandler = () => {
 			this.applyNormalizedInput();
@@ -69,7 +80,7 @@ export function createDateCellEditor() {
 			if (event.key === 'Enter' || event.key === 'Tab') {
 				event.stopPropagation();
 				const normalized = this.applyNormalizedInput();
-				if (normalized !== null || this.textInput.value.trim().length === 0) {
+				if (normalized !== null) {
 					this.params.stopEditing(false);
 				}
 			} else if (event.key === 'Escape') {
@@ -82,16 +93,17 @@ export function createDateCellEditor() {
 			this.params = params;
 			const doc = params.eGridCell?.ownerDocument || document;
 			this.initialValue = String(params.value ?? '').trim();
+			this.lastValidValue = this.determineInitialValidValue(this.initialValue);
 
 			this.wrapper = createWrapper(doc);
 			this.textInput = createTextInput(doc, this.initialValue);
 			this.triggerButton = createTriggerButton(doc);
 			this.hiddenPicker = createHiddenPicker(doc);
-			this.applyColorScheme();
 
 			this.wrapper.appendChild(this.textInput);
 			this.wrapper.appendChild(this.triggerButton);
 			this.wrapper.appendChild(this.hiddenPicker);
+			this.applyColorScheme();
 
 			this.textInput.addEventListener('blur', this.blurHandler);
 			this.textInput.addEventListener('keydown', this.keydownHandler);
@@ -112,7 +124,11 @@ export function createDateCellEditor() {
 
 		getValue(): string {
 			const normalized = this.applyNormalizedInput();
-			return normalized ?? normalizeDateInput(this.textInput.value || '');
+			if (normalized === null) {
+				return this.lastValidValue;
+			}
+			this.lastValidValue = normalized;
+			return normalized;
 		}
 
 		destroy(): void {
@@ -120,10 +136,7 @@ export function createDateCellEditor() {
 			this.textInput.removeEventListener('keydown', this.keydownHandler);
 			this.triggerButton.removeEventListener('click', this.triggerClickHandler);
 			this.hiddenPicker.removeEventListener('change', this.pickerChangeHandler);
-			if (this.invalidNotice) {
-				this.invalidNotice.hide();
-				this.invalidNotice = null;
-			}
+			this.dismissNotice();
 		}
 
 		isPopup(): boolean {
@@ -132,7 +145,8 @@ export function createDateCellEditor() {
 
 		private openPicker(): void {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
-			this.hiddenPicker.value = valid && normalized ? normalized : '';
+			this.hiddenPicker.value = valid && normalized !== null ? normalized : '';
+			this.applyColorScheme();
 			try {
 				if (typeof (this.hiddenPicker as any).showPicker === 'function') {
 					(this.hiddenPicker as any).showPicker();
@@ -149,26 +163,30 @@ export function createDateCellEditor() {
 			const { normalized, valid } = this.prepareNormalizedValue(rawValue);
 			if (valid && normalized !== null) {
 				this.textInput.value = normalized;
-				this.params.stopEditing(false);
+				this.lastValidValue = normalized;
 				this.dismissNotice();
+				this.params.stopEditing(false);
 			} else {
 				this.textInput.focus({ preventScroll: true });
+				this.handleInvalidInput();
 			}
 		}
 
 		private applyNormalizedInput(): string | null {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
-			if (valid && normalized !== null && normalized !== this.textInput.value) {
+			if (!valid) {
+				this.handleInvalidInput();
+				return null;
+			}
+			if (normalized === null) {
+				return '';
+			}
+			if (normalized !== this.textInput.value) {
 				this.textInput.value = normalized;
 			}
-
-			if (!valid && this.textInput.value.trim().length > 0) {
-				this.handleInvalidInput();
-			} else {
-				this.dismissNotice();
-			}
-
-			return valid ? normalized : null;
+			this.lastValidValue = normalized;
+			this.dismissNotice();
+			return normalized;
 		}
 
 		private prepareNormalizedValue(value: string): { normalized: string | null; valid: boolean } {
@@ -184,11 +202,18 @@ export function createDateCellEditor() {
 			};
 		}
 
+		private determineInitialValidValue(rawValue: string): string {
+			if (!rawValue) {
+				return '';
+			}
+			const normalized = normalizeDateInput(rawValue);
+			return this.isoPattern.test(normalized) ? normalized : '';
+		}
+
 		private handleInvalidInput(): void {
 			if (!this.invalidNotice) {
-				this.invalidNotice = new Notice(t('dateCellEditor.invalidInput'), 2500);
+				this.invalidNotice = new Notice(t('dateCellEditor.invalidInput'), 2000);
 			}
-			this.openPicker();
 		}
 
 		private dismissNotice(): void {
@@ -199,12 +224,15 @@ export function createDateCellEditor() {
 		}
 
 		private applyColorScheme(): void {
+			if (!this.hiddenPicker) {
+				return;
+			}
 			const ownerDoc = this.wrapper?.ownerDocument || document;
 			const isDark = ownerDoc?.body?.classList.contains('theme-dark') ?? false;
 			try {
 				this.hiddenPicker.style.setProperty('color-scheme', isDark ? 'dark' : 'light');
 			} catch {
-				// Some browsers might not support `color-scheme`; ignore errors.
+				// Ignore if the browser does not support color-scheme.
 			}
 		}
 	};

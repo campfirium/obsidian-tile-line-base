@@ -598,17 +598,19 @@
 }
 
 .tlb-date-editor {
-  display: flex;
-  align-items: center;
-  position: relative;
-  gap: 4px;
-  width: 100%;
-  height: 100%;
-  padding: 0 6px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary) 8%);
-  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 70%, transparent);
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	position: relative;
+	gap: 4px;
+	width: 100%;
+	height: 100%;
+	padding: 0 4px;
+	border-radius: 6px;
+	box-sizing: border-box;
+	background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary) 8%);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 70%, transparent);
+	transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .theme-dark .tlb-date-editor {
@@ -622,13 +624,14 @@
 }
 
 .tlb-date-editor-input {
-  flex: 1 1 auto;
-  height: 100%;
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  font: inherit;
+	width: 100%;
+	min-width: 0;
+	height: 100%;
+	border: none;
+	background: transparent;
+	padding: 0;
+	color: inherit;
+	font: inherit;
 }
 
 .tlb-date-editor-input:focus {
@@ -636,16 +639,17 @@
 }
 
 .tlb-date-editor-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	border-radius: 4px;
+	padding: 0;
 }
 
 .theme-dark .tlb-date-editor-button {

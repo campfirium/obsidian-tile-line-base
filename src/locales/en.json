@@ -99,8 +99,14 @@
     "deleteSelected": "Delete selected {{count}} rows",
     "duplicateRow": "Duplicate row",
     "deleteRow": "Delete row",
+    "menuCopyCell": "Copy cell",
+    "menuPasteCell": "Paste cell",
     "menuCopySelection": "Copy Selection",
-    "copySelectionSuccess": "Copied selection"
+    "copyCellSuccess": "Copied cell value",
+    "copySelectionSuccess": "Copied selection",
+    "pasteCellFailed": "Failed to paste cell value",
+    "pasteCellFailedLog": "Paste cell failed:",
+    "pasteCellFormulaDisabled": "Formulas cannot be overwritten"
   },
   "gridFillModal": {
     "title": "Fill column: {{column}}",

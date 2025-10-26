@@ -1,5 +1,5 @@
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
-import { setIcon } from 'obsidian';
+import { Notice, setIcon } from 'obsidian';
 
 import { normalizeDateInput } from '../../utils/datetime';
 import { t } from '../../i18n';
@@ -45,8 +45,10 @@ export function createDateCellEditor() {
 		private triggerButton!: HTMLButtonElement;
 		private hiddenPicker!: HTMLInputElement;
 		private params!: ICellEditorParams;
+		private readonly referenceDate = new Date();
 		private initialValue = '';
 		private readonly isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+		private invalidNotice: Notice | null = null;
 		private blurHandler = () => {
 			this.applyNormalizedInput();
 		};
@@ -63,8 +65,10 @@ export function createDateCellEditor() {
 		private keydownHandler = (event: KeyboardEvent) => {
 			if (event.key === 'Enter' || event.key === 'Tab') {
 				event.stopPropagation();
-				this.applyNormalizedInput();
-				this.params.stopEditing(false);
+				const normalized = this.applyNormalizedInput();
+				if (normalized !== null || this.textInput.value.trim().length === 0) {
+					this.params.stopEditing(false);
+				}
 			} else if (event.key === 'Escape') {
 				event.stopPropagation();
 				this.params.stopEditing(true);
@@ -80,6 +84,7 @@ export function createDateCellEditor() {
 			this.textInput = createTextInput(doc, this.initialValue);
 			this.triggerButton = createTriggerButton(doc);
 			this.hiddenPicker = createHiddenPicker(doc);
+			this.applyColorScheme();
 
 			this.wrapper.appendChild(this.textInput);
 			this.wrapper.appendChild(this.triggerButton);
@@ -112,6 +117,10 @@ export function createDateCellEditor() {
 			this.textInput.removeEventListener('keydown', this.keydownHandler);
 			this.triggerButton.removeEventListener('click', this.triggerClickHandler);
 			this.hiddenPicker.removeEventListener('change', this.pickerChangeHandler);
+			if (this.invalidNotice) {
+				this.invalidNotice.hide();
+				this.invalidNotice = null;
+			}
 		}
 
 		isPopup(): boolean {
@@ -148,20 +157,134 @@ export function createDateCellEditor() {
 			if (valid && normalized !== this.textInput.value) {
 				this.textInput.value = normalized;
 			}
+
+			if (!valid && this.textInput.value.trim().length > 0) {
+				this.handleInvalidInput();
+			}
+
 			return valid ? normalized : null;
 		}
 
 		private prepareNormalizedValue(value: string): { normalized: string; valid: boolean } {
 			const trimmed = (value ?? '').trim();
 			if (!trimmed) {
-				return { normalized: '', valid: false };
+				return { normalized: '', valid: true };
 			}
-			const normalized = normalizeDateInput(trimmed);
-			const valid = this.isoPattern.test(normalized);
+
+			const interpreted = this.interpretInput(trimmed);
+			const valid = typeof interpreted === 'string' && interpreted.length > 0 && this.isoPattern.test(interpreted);
+
 			return {
-				normalized: valid ? normalized : trimmed,
+				normalized: valid ? (interpreted as string) : trimmed,
 				valid
 			};
+		}
+
+		private interpretInput(input: string): string | null {
+			const normalized = normalizeDateInput(input);
+			if (normalized && this.isoPattern.test(normalized)) {
+				return normalized;
+			}
+
+			const digits = input.replace(/\D/g, '');
+			if (!digits) {
+				return null;
+			}
+
+			const reference = this.referenceDate;
+			const currentYear = reference.getFullYear();
+			const currentMonth = reference.getMonth() + 1;
+			const currentDay = reference.getDate();
+
+			let year = currentYear;
+			let month = currentMonth;
+			let day = currentDay;
+
+			switch (digits.length) {
+				case 1:
+				case 2: {
+					day = parseInt(digits, 10);
+					break;
+				}
+				case 3: {
+					month = parseInt(digits.substring(0, 1), 10);
+					day = parseInt(digits.substring(1), 10);
+					break;
+				}
+				case 4: {
+					month = parseInt(digits.substring(0, 2), 10);
+					day = parseInt(digits.substring(2), 10);
+					break;
+				}
+				case 6: {
+					const twoDigitYear = parseInt(digits.substring(0, 2), 10);
+					year = this.expandTwoDigitYear(twoDigitYear, currentYear);
+					month = parseInt(digits.substring(2, 4), 10);
+					day = parseInt(digits.substring(4, 6), 10);
+					break;
+				}
+				case 8: {
+					year = parseInt(digits.substring(0, 4), 10);
+					month = parseInt(digits.substring(4, 6), 10);
+					day = parseInt(digits.substring(6, 8), 10);
+					break;
+				}
+				default:
+					return null;
+			}
+
+			if (!this.isValidDate(year, month, day)) {
+				return null;
+			}
+
+			return this.composeIsoDate(year, month, day);
+		}
+
+		private composeIsoDate(year: number, month: number, day: number): string {
+			return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+		}
+
+		private expandTwoDigitYear(year: number, referenceYear: number): number {
+			const referenceCentury = Math.floor(referenceYear / 100) * 100;
+			let candidate = referenceCentury + year;
+
+			if (candidate < referenceYear - 50) {
+				candidate += 100;
+			} else if (candidate > referenceYear + 50) {
+				candidate -= 100;
+			}
+
+			return candidate;
+		}
+
+		private isValidDate(year: number, month: number, day: number): boolean {
+			if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+				return false;
+			}
+			if (month < 1 || month > 12 || day < 1 || day > 31) {
+				return false;
+			}
+
+			const date = new Date(year, month - 1, day);
+			return (
+				date.getFullYear() === year &&
+				date.getMonth() === month - 1 &&
+				date.getDate() === day
+			);
+		}
+
+		private handleInvalidInput(): void {
+			if (this.invalidNotice) {
+				this.invalidNotice.hide();
+			}
+			this.invalidNotice = new Notice(t('dateCellEditor.invalidInput'), 2500);
+			this.openPicker();
+		}
+
+		private applyColorScheme(): void {
+			const ownerDoc = this.wrapper?.ownerDocument || document;
+			const isDark = ownerDoc?.body?.classList.contains('theme-dark') ?? false;
+			this.hiddenPicker.style.colorScheme = isDark ? 'dark' : 'light';
 		}
 	};
 }

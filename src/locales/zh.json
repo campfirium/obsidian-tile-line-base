@@ -216,7 +216,8 @@
     "caretResetFailed": "[CompositionProxy] �޷����ù��λ��"
   },
   "dateCellEditor": {
-    "openPickerLabel": "������ѡ����"
+    "openPickerLabel": "������ѡ����",
+    "invalidInput": "��������Ч���ڣ����õ�����ѡ����ѡ��ֵ��"
   },
   "tagGroups": {
     "menuShowAll": "��ʾȫ����ͼ",

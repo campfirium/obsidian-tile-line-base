@@ -216,7 +216,8 @@
     "caretResetFailed": "[CompositionProxy] Unable to reset caret position"
   },
   "dateCellEditor": {
-    "openPickerLabel": "Open date picker"
+    "openPickerLabel": "Open date picker",
+    "invalidInput": "Please enter a valid date or pick one from the calendar."
   },
   "tagGroups": {
     "menuShowAll": "Show all views",

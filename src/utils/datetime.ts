@@ -156,11 +156,65 @@ export function normalizeDateInput(value: string): string {
 		return '';
 	}
 
+	const interpreted = interpretFlexibleDate(trimmed);
+	if (interpreted) {
+		return interpreted;
+	}
+
 	const parts = parseDateParts(trimmed);
 	if (!parts) {
 		return trimmed;
 	}
 	return formatIsoFromParts(parts);
+}
+
+function interpretFlexibleDate(raw: string): string | null {
+	const digits = raw.replace(/\D/g, '');
+	if (!digits) {
+		return null;
+	}
+
+	const reference = new Date();
+	const currentYear = reference.getFullYear();
+	const currentMonth = reference.getMonth() + 1;
+	const currentDay = reference.getDate();
+
+	let year = currentYear;
+	let month = currentMonth;
+	let day = currentDay;
+
+	switch (digits.length) {
+		case 1:
+		case 2:
+			day = parseInt(digits, 10);
+			break;
+		case 3:
+			month = parseInt(digits.substring(0, 1), 10);
+			day = parseInt(digits.substring(1), 10);
+			break;
+		case 4:
+			month = parseInt(digits.substring(0, 2), 10);
+			day = parseInt(digits.substring(2), 10);
+			break;
+		case 6:
+			year = expandTwoDigitYear(parseInt(digits.substring(0, 2), 10), currentYear);
+			month = parseInt(digits.substring(2, 4), 10);
+			day = parseInt(digits.substring(4, 6), 10);
+			break;
+		case 8:
+			year = parseInt(digits.substring(0, 4), 10);
+			month = parseInt(digits.substring(4, 6), 10);
+			day = parseInt(digits.substring(6, 8), 10);
+			break;
+		default:
+			return null;
+	}
+
+	if (!isValidDateParts(year, month, day)) {
+		return null;
+	}
+
+	return formatIsoFromParts({ year, month, day });
 }
 
 const DATE_FORMAT_DEFINITIONS: Record<DateFormatPreset, DateFormatDefinition> = {
@@ -265,4 +319,17 @@ export function getDateFormatOptions(): Array<{ value: DateFormatPreset; label: 
 		value: preset,
 		label: getDateFormatLabel(preset)
 	}));
+}
+
+function expandTwoDigitYear(year: number, referenceYear: number): number {
+	const referenceCentury = Math.floor(referenceYear / 100) * 100;
+	let candidate = referenceCentury + year;
+
+	if (candidate < referenceYear - 50) {
+		candidate += 100;
+	} else if (candidate > referenceYear + 50) {
+		candidate -= 100;
+	}
+
+	return candidate;
 }

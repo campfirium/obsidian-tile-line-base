@@ -45,23 +45,26 @@ export function createDateCellEditor() {
 		private triggerButton!: HTMLButtonElement;
 		private hiddenPicker!: HTMLInputElement;
 		private params!: ICellEditorParams;
-		private readonly referenceDate = new Date();
 		private initialValue = '';
 		private readonly isoPattern = /^\d{4}-\d{2}-\d{2}$/;
 		private invalidNotice: Notice | null = null;
+
 		private blurHandler = () => {
 			this.applyNormalizedInput();
 		};
+
 		private pickerChangeHandler = (event: Event) => {
 			const target = event.target as HTMLInputElement | null;
 			const value = target?.value ?? '';
 			this.handlePickerSelection(value);
 		};
+
 		private triggerClickHandler = (event: MouseEvent) => {
 			event.preventDefault();
 			event.stopPropagation();
 			this.openPicker();
 		};
+
 		private keydownHandler = (event: KeyboardEvent) => {
 			if (event.key === 'Enter' || event.key === 'Tab') {
 				event.stopPropagation();
@@ -129,7 +132,7 @@ export function createDateCellEditor() {
 
 		private openPicker(): void {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
-			this.hiddenPicker.value = valid ? normalized : '';
+			this.hiddenPicker.value = valid && normalized ? normalized : '';
 			try {
 				if (typeof (this.hiddenPicker as any).showPicker === 'function') {
 					(this.hiddenPicker as any).showPicker();
@@ -144,9 +147,10 @@ export function createDateCellEditor() {
 
 		private handlePickerSelection(rawValue: string): void {
 			const { normalized, valid } = this.prepareNormalizedValue(rawValue);
-			if (valid) {
+			if (valid && normalized !== null) {
 				this.textInput.value = normalized;
 				this.params.stopEditing(false);
+				this.dismissNotice();
 			} else {
 				this.textInput.focus({ preventScroll: true });
 			}
@@ -154,137 +158,54 @@ export function createDateCellEditor() {
 
 		private applyNormalizedInput(): string | null {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
-			if (valid && normalized !== this.textInput.value) {
+			if (valid && normalized !== null && normalized !== this.textInput.value) {
 				this.textInput.value = normalized;
 			}
 
 			if (!valid && this.textInput.value.trim().length > 0) {
 				this.handleInvalidInput();
+			} else {
+				this.dismissNotice();
 			}
 
 			return valid ? normalized : null;
 		}
 
-		private prepareNormalizedValue(value: string): { normalized: string; valid: boolean } {
+		private prepareNormalizedValue(value: string): { normalized: string | null; valid: boolean } {
 			const trimmed = (value ?? '').trim();
 			if (!trimmed) {
 				return { normalized: '', valid: true };
 			}
-
-			const interpreted = this.interpretInput(trimmed);
-			const valid = typeof interpreted === 'string' && interpreted.length > 0 && this.isoPattern.test(interpreted);
-
+			const normalized = normalizeDateInput(trimmed);
+			const valid = this.isoPattern.test(normalized);
 			return {
-				normalized: valid ? (interpreted as string) : trimmed,
+				normalized: valid ? normalized : null,
 				valid
 			};
 		}
 
-		private interpretInput(input: string): string | null {
-			const normalized = normalizeDateInput(input);
-			if (normalized && this.isoPattern.test(normalized)) {
-				return normalized;
-			}
-
-			const digits = input.replace(/\D/g, '');
-			if (!digits) {
-				return null;
-			}
-
-			const reference = this.referenceDate;
-			const currentYear = reference.getFullYear();
-			const currentMonth = reference.getMonth() + 1;
-			const currentDay = reference.getDate();
-
-			let year = currentYear;
-			let month = currentMonth;
-			let day = currentDay;
-
-			switch (digits.length) {
-				case 1:
-				case 2: {
-					day = parseInt(digits, 10);
-					break;
-				}
-				case 3: {
-					month = parseInt(digits.substring(0, 1), 10);
-					day = parseInt(digits.substring(1), 10);
-					break;
-				}
-				case 4: {
-					month = parseInt(digits.substring(0, 2), 10);
-					day = parseInt(digits.substring(2), 10);
-					break;
-				}
-				case 6: {
-					const twoDigitYear = parseInt(digits.substring(0, 2), 10);
-					year = this.expandTwoDigitYear(twoDigitYear, currentYear);
-					month = parseInt(digits.substring(2, 4), 10);
-					day = parseInt(digits.substring(4, 6), 10);
-					break;
-				}
-				case 8: {
-					year = parseInt(digits.substring(0, 4), 10);
-					month = parseInt(digits.substring(4, 6), 10);
-					day = parseInt(digits.substring(6, 8), 10);
-					break;
-				}
-				default:
-					return null;
-			}
-
-			if (!this.isValidDate(year, month, day)) {
-				return null;
-			}
-
-			return this.composeIsoDate(year, month, day);
-		}
-
-		private composeIsoDate(year: number, month: number, day: number): string {
-			return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-		}
-
-		private expandTwoDigitYear(year: number, referenceYear: number): number {
-			const referenceCentury = Math.floor(referenceYear / 100) * 100;
-			let candidate = referenceCentury + year;
-
-			if (candidate < referenceYear - 50) {
-				candidate += 100;
-			} else if (candidate > referenceYear + 50) {
-				candidate -= 100;
-			}
-
-			return candidate;
-		}
-
-		private isValidDate(year: number, month: number, day: number): boolean {
-			if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-				return false;
-			}
-			if (month < 1 || month > 12 || day < 1 || day > 31) {
-				return false;
-			}
-
-			const date = new Date(year, month - 1, day);
-			return (
-				date.getFullYear() === year &&
-				date.getMonth() === month - 1 &&
-				date.getDate() === day
-			);
-		}
-
 		private handleInvalidInput(): void {
+			if (!this.invalidNotice) {
+				this.invalidNotice = new Notice(t('dateCellEditor.invalidInput'), 2500);
+			}
+			this.openPicker();
+		}
+
+		private dismissNotice(): void {
 			if (this.invalidNotice) {
 				this.invalidNotice.hide();
+				this.invalidNotice = null;
 			}
-			this.invalidNotice = new Notice(t('dateCellEditor.invalidInput'), 2500);
-			this.openPicker();
 		}
 
 		private applyColorScheme(): void {
 			const ownerDoc = this.wrapper?.ownerDocument || document;
 			const isDark = ownerDoc?.body?.classList.contains('theme-dark') ?? false;
-			this.hiddenPicker.style.colorScheme = isDark ? 'dark' : 'light';
+			try {
+				this.hiddenPicker.style.setProperty('color-scheme', isDark ? 'dark' : 'light');
+			} catch {
+				// Some browsers might not support `color-scheme`; ignore errors.
+			}
 		}
 	};
 }

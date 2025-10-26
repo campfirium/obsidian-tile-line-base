@@ -1,10 +1,13 @@
-import { App, Menu, Notice, setIcon } from 'obsidian';
+import { App, Menu, Notice } from 'obsidian';
 import type { FilterViewDefinition, FileFilterViewState } from '../../../types/filterView';
 import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
 import { openFilterViewNameModal } from '../FilterViewModals';
 import type { TagGroupStore } from './TagGroupStore';
 import { openTagGroupCreateModal, type TagGroupCreateMode } from './TagGroupCreateModal';
+import { STATUS_BASELINE_VALUES } from '../statusDefaults';
+import { ensureStatusBaseline } from './statusBaselineManager';
+import { renderTagGroupMenuItem } from './TagGroupMenuRenderer';
 
 interface TagGroupControllerOptions {
 	app: App;
@@ -16,6 +19,8 @@ interface TagGroupControllerOptions {
 	activateFilterView: (viewId: string | null) => void;
 	renderBar: () => void;
 	persist: () => Promise<void> | void;
+	isStatusBaselineSeeded: () => boolean;
+	markStatusBaselineSeeded: () => void;
 }
 
 const MAX_FIELD_GROUP_ITEMS = 20;
@@ -30,6 +35,8 @@ export class TagGroupController {
 	private readonly activateFilterView: (viewId: string | null) => void;
 	private readonly renderBar: () => void;
 	private readonly persist: () => Promise<void> | void;
+	private readonly isStatusBaselineSeeded: () => boolean;
+	private readonly markStatusBaselineSeeded: () => void;
 	private readonly defaultGroupId: string;
 
 	constructor(options: TagGroupControllerOptions) {
@@ -42,143 +49,101 @@ export class TagGroupController {
 		this.activateFilterView = options.activateFilterView;
 		this.renderBar = options.renderBar;
 		this.persist = options.persist;
+		this.isStatusBaselineSeeded = options.isStatusBaselineSeeded;
+		this.markStatusBaselineSeeded = options.markStatusBaselineSeeded;
 		this.defaultGroupId = this.store.getDefaultGroupId();
 	}
 
 	syncWithAvailableViews(): void {
-		this.store.syncWithFilterViews(this.getFilterViewState(), t('tagGroups.defaultGroupName'));
-	}
-
-openTagGroupMenu(anchorEl: HTMLElement): void {
-	this.syncWithAvailableViews();
-	const filterState = this.getFilterViewState();
-	const state = this.store.getState();
-	const menu = new Menu();
-	const doc = anchorEl.ownerDocument ?? document;
-
-	for (const group of state.groups) {
-		menu.addItem((menuItem) => {
-			const isActive = group.id === state.activeGroupId || (!state.activeGroupId && group.id === this.defaultGroupId);
-			const { content, renameButton, deleteButton } = this.buildGroupMenuContent(group, filterState);
-			menuItem.setChecked(isActive);
-			menuItem.setIcon('layers-2');
-			menuItem.setTitle(content);
-			menuItem.onClick(() => {
-				this.activateGroup(group);
-			});
-
-			const rowEl = (menuItem as unknown as { dom?: HTMLElement }).dom;
-			if (rowEl) {
-				rowEl.classList.add('tlb-tag-group-menu-row');
-				rowEl.classList.toggle('is-active', isActive);
-			}
-
-			renameButton?.addEventListener('click', (event) => {
-				event.preventDefault();
-				event.stopPropagation();
-				menu.hide();
-				void this.promptRenameGroup(group);
-			});
-
-			deleteButton?.addEventListener('click', (event) => {
-				event.preventDefault();
-				event.stopPropagation();
-				menu.hide();
-				this.deleteGroup(group);
-			});
+		let filterState = this.getFilterViewState();
+		filterState = ensureStatusBaseline({
+			filterState,
+			getAvailableColumns: this.getAvailableColumns,
+			ensureFilterViewsForFieldValues: this.ensureFilterViewsForFieldValues,
+			getFilterViewState: this.getFilterViewState,
+			isStatusBaselineSeeded: this.isStatusBaselineSeeded,
+			markStatusBaselineSeeded: this.markStatusBaselineSeeded
 		});
+		this.store.syncWithFilterViews(filterState, t('tagGroups.defaultGroupName'));
 	}
 
-	menu.addSeparator();
-	menu.addItem((item) => {
-		item
-			.setTitle(t('tagGroups.menuCreateEmpty'))
-			.setIcon('plus-circle')
-			.onClick(() => {
-				void this.handleCreateGroup({ activate: false, showNotice: true, mode: 'manual' });
+	openTagGroupMenu(anchorEl: HTMLElement): void {
+		this.syncWithAvailableViews();
+		const filterState = this.getFilterViewState();
+		const state = this.store.getState();
+		const menu = new Menu();
+		const doc = anchorEl.ownerDocument ?? document;
+
+		const activeViewId = filterState.activeViewId ?? null;
+
+		for (const group of state.groups) {
+			menu.addItem((menuItem) => {
+				const isActive =
+					group.id === state.activeGroupId || (!state.activeGroupId && group.id === this.defaultGroupId);
+				const { content, renameButton, deleteButton } = renderTagGroupMenuItem({
+					doc,
+					group,
+					defaultGroupId: this.defaultGroupId,
+					filterState,
+					isActiveGroup: isActive,
+					activeViewId,
+					displayName: this.getGroupDisplayName(group)
+				});
+
+				menuItem.setIcon('layers-2');
+				menuItem.setTitle(content);
+				menuItem.onClick(() => {
+					this.activateGroup(group);
+				});
+
+				const rowEl = (menuItem as unknown as { dom?: HTMLElement }).dom;
+				if (rowEl) {
+					rowEl.classList.add('tlb-tag-group-menu-row');
+					rowEl.classList.toggle('is-active', isActive);
+				}
+
+				renameButton?.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					menu.hide();
+					void this.promptRenameGroup(group);
+				});
+
+				deleteButton?.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					menu.hide();
+					this.deleteGroup(group);
+				});
 			});
-	});
-	menu.addItem((item) => {
-		item
-			.setTitle(t('tagGroups.menuCreateFromField'))
-			.setIcon('list-plus')
-			.onClick(() => {
-				void this.handleCreateGroup({ activate: false, showNotice: true, mode: 'field' });
-			});
-	});
-
-	const rect = anchorEl.getBoundingClientRect();
-	menu.showAtPosition(
-		{
-			x: rect.left,
-			y: rect.bottom
-		},
-		doc
-	);
-}
-
-	private buildGroupMenuContent(group: TagGroupDefinition, filterState: FileFilterViewState): { content: DocumentFragment; renameButton: HTMLButtonElement | null; deleteButton: HTMLButtonElement | null } {
-		const fragment = document.createDocumentFragment();
-		const container = document.createElement('div');
-		container.className = 'tlb-tag-group-menu-item';
-
-		const headerEl = document.createElement('div');
-		headerEl.className = 'tlb-tag-group-menu-item__header';
-		container.appendChild(headerEl);
-
-		const titleEl = document.createElement('div');
-		titleEl.className = 'tlb-tag-group-menu-item__name';
-		titleEl.textContent = this.getGroupDisplayName(group);
-		headerEl.appendChild(titleEl);
-
-		const actionsEl = document.createElement('div');
-		actionsEl.className = 'tlb-tag-group-menu-item__actions';
-		headerEl.appendChild(actionsEl);
-
-		const renameButton = document.createElement('button');
-		renameButton.type = 'button';
-		renameButton.className = 'tlb-tag-group-menu-item__action tlb-tag-group-menu-item__action--rename';
-		renameButton.setAttribute('aria-label', t('tagGroups.menuRename'));
-		setIcon(renameButton, 'pencil');
-		actionsEl.appendChild(renameButton);
-
-		let deleteButton: HTMLButtonElement | null = null;
-		if (group.id !== this.defaultGroupId) {
-			deleteButton = document.createElement('button');
-			deleteButton.type = 'button';
-			deleteButton.className = 'tlb-tag-group-menu-item__action tlb-tag-group-menu-item__action--delete';
-			deleteButton.setAttribute('aria-label', t('tagGroups.menuDelete'));
-			setIcon(deleteButton, 'trash');
-			actionsEl.appendChild(deleteButton);
 		}
 
-		const tagsEl = document.createElement('div');
-		tagsEl.className = 'tlb-tag-group-menu-item__tags';
-		container.appendChild(tagsEl);
+		menu.addSeparator();
+		menu.addItem((item) => {
+			item
+				.setTitle(t('tagGroups.menuCreateEmpty'))
+				.setIcon('plus-circle')
+				.onClick(() => {
+					void this.handleCreateGroup({ activate: true, showNotice: true, mode: 'manual' });
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('tagGroups.menuCreateFromField'))
+				.setIcon('list-plus')
+				.onClick(() => {
+					void this.handleCreateGroup({ activate: true, showNotice: true, mode: 'field' });
+				});
+		});
 
-		this.appendTag(tagsEl, t('filterViewBar.allTabLabel'));
-
-		const viewNames = this.getGroupViewNames(group, filterState);
-		if (viewNames.length === 0) {
-			const emptyEl = document.createElement('span');
-			emptyEl.className = 'tlb-tag-group-menu-item__empty';
-			emptyEl.textContent = t('tagGroups.emptyGroupLabel');
-			tagsEl.appendChild(emptyEl);
-		} else {
-			for (const name of viewNames) {
-				this.appendTag(tagsEl, name);
-			}
-		}
-
-		fragment.appendChild(container);
-		return { content: fragment, renameButton, deleteButton };
-	}
-
-	private appendTag(container: HTMLElement, label: string): void {
-		const tagEl = document.createElement('span');
-		tagEl.className = 'tlb-tag-group-menu-item__tag';
-		tagEl.textContent = label;
-		container.appendChild(tagEl);
+		const rect = anchorEl.getBoundingClientRect();
+		menu.showAtPosition(
+			{
+				x: rect.left,
+				y: rect.bottom
+			},
+			doc
+		);
 	}
 
 	private getGroupDisplayName(group: TagGroupDefinition): string {
@@ -187,58 +152,6 @@ openTagGroupMenu(anchorEl: HTMLElement): void {
 			return name && name.length > 0 ? name : t('tagGroups.defaultGroupName');
 		}
 		return this.getGroupFallbackName(group);
-	}
-
-	private getGroupViewNames(group: TagGroupDefinition, filterState: FileFilterViewState): string[] {
-		const result: string[] = [];
-		const matchedIds = new Set<string>();
-
-		if (group.id === this.defaultGroupId) {
-			for (const view of filterState.views) {
-				const label = this.getFilterViewLabel(view);
-				if (label) {
-					result.push(label);
-				}
-			}
-			return result;
-		}
-
-		const desiredOrder = Array.isArray(group.viewIds) ? group.viewIds : [];
-		const lookup = new Map<string, string>();
-		for (const view of filterState.views) {
-			if (!view || typeof view.id !== 'string') {
-				continue;
-			}
-			const id = view.id.trim();
-			if (!id) {
-				continue;
-			}
-			const label = this.getFilterViewLabel(view);
-			if (label) {
-				lookup.set(id, label);
-			}
-		}
-
-		for (const id of desiredOrder) {
-			const trimmed = typeof id === 'string' ? id.trim() : '';
-			if (!trimmed || matchedIds.has(trimmed)) {
-				continue;
-			}
-			const label = lookup.get(trimmed) ?? trimmed;
-			result.push(label);
-			matchedIds.add(trimmed);
-		}
-
-		return result;
-	}
-
-	private getFilterViewLabel(view: FilterViewDefinition): string | null {
-		const name = typeof view.name === 'string' ? view.name.trim() : '';
-		if (name.length > 0) {
-			return name;
-		}
-		const id = typeof view.id === 'string' ? view.id.trim() : '';
-		return id.length > 0 ? id : null;
 	}
 
 	openAddToGroupMenu(view: FilterViewDefinition, event: MouseEvent): void {
@@ -352,13 +265,41 @@ openTagGroupMenu(anchorEl: HTMLElement): void {
 		}
 
 		const uniqueValues = this.getUniqueFieldValues(result.field, MAX_FIELD_GROUP_ITEMS + 1);
-		if (uniqueValues.length === 0) {
+		const baselineValues = this.getBaselineValuesForField(result.field);
+		if (uniqueValues.length === 0 && (!baselineValues || baselineValues.length === 0)) {
 			new Notice(t('tagGroups.createFieldNoValues'));
 			return null;
 		}
-		let values = uniqueValues;
-		if (uniqueValues.length > MAX_FIELD_GROUP_ITEMS) {
-			values = uniqueValues.slice(0, MAX_FIELD_GROUP_ITEMS);
+		const mergedValues: string[] = [];
+		const seen = new Set<string>();
+		const pushValue = (value: string) => {
+			const trimmed = value.trim();
+			if (!trimmed) {
+				return;
+			}
+			const key = trimmed.toLowerCase();
+			if (seen.has(key)) {
+				return;
+			}
+			seen.add(key);
+			mergedValues.push(trimmed);
+		};
+
+		if (baselineValues) {
+			for (const value of baselineValues) {
+				pushValue(value);
+			}
+		}
+		for (const value of uniqueValues) {
+			pushValue(value);
+		}
+		if (mergedValues.length === 0) {
+			new Notice(t('tagGroups.createFieldNoValues'));
+			return null;
+		}
+		let values = mergedValues;
+		if (values.length > MAX_FIELD_GROUP_ITEMS) {
+			values = values.slice(0, MAX_FIELD_GROUP_ITEMS);
 			new Notice(t('tagGroups.createFieldLimitExceeded', { limit: String(MAX_FIELD_GROUP_ITEMS) }));
 		}
 		const filterViews = this.ensureFilterViewsForFieldValues(result.field, values);
@@ -465,6 +406,14 @@ openTagGroupMenu(anchorEl: HTMLElement): void {
 		const displayName = updatedGroup.name || this.getGroupFallbackName(updatedGroup);
 		new Notice(t('tagGroups.addViewSuccess', { view: view.name, group: displayName }));
 		void this.persistAndRender();
+	}
+
+	private getBaselineValuesForField(field: string): string[] | null {
+		const normalized = field.trim().toLowerCase();
+		if (normalized === 'status') {
+			return Array.from(STATUS_BASELINE_VALUES);
+		}
+		return null;
 	}
 
 	private ensureVisibleFilterSelection(): void {

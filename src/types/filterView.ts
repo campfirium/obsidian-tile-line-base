@@ -40,7 +40,12 @@ export interface FilterViewDefinition {
 	quickFilter?: string | null;
 }
 
+export interface FilterViewMetadata {
+	statusBaselineSeeded?: boolean;
+}
+
 export interface FileFilterViewState {
 	views: FilterViewDefinition[];
 	activeViewId: string | null;
+	metadata?: FilterViewMetadata | null;
 }

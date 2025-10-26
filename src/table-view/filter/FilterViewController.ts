@@ -3,6 +3,7 @@ import type { FilterViewDefinition, FilterRule, SortRule } from '../../types/fil
 import { FilterViewEditorModal, openFilterViewNameModal } from './FilterViewModals';
 import { FilterStateStore } from './FilterStateStore';
 import { t } from '../../i18n';
+import { getStatusDisplayLabel } from './statusDefaults';
 
 interface FilterViewControllerOptions {
 	app: App;
@@ -337,12 +338,34 @@ export class FilterViewController {
 		}
 
 		const createdIds: string[] = [];
-		let anyCreated = false;
+		let stateChanged = false;
 		this.stateStore.updateState((state) => {
-			const usedNames = new Set(state.views.map((view) => view.name));
+			const usedNames = new Set(
+				state.views
+					.map((view) => (typeof view.name === 'string' ? view.name.trim() : ''))
+					.filter((name) => name.length > 0)
+			);
 			for (const value of uniqueValues) {
 				const existing = state.views.find((view) => this.matchesFieldEqualsFilter(view, trimmedField, value));
 				if (existing) {
+					const expectedName = this.computeExpectedAutoName(trimmedField, value);
+					if (expectedName) {
+						const currentName = typeof existing.name === 'string' ? existing.name.trim() : '';
+						if (
+							currentName !== expectedName &&
+							(!currentName || currentName.toLowerCase() === expectedName.toLowerCase()) &&
+							!state.views.some(
+								(other) => other.id !== existing.id && (other.name ?? '').trim() === expectedName
+							)
+						) {
+							if (currentName) {
+								usedNames.delete(currentName);
+							}
+							existing.name = expectedName;
+							usedNames.add(expectedName.trim());
+							stateChanged = true;
+						}
+					}
 					createdIds.push(existing.id);
 					continue;
 				}
@@ -366,12 +389,12 @@ export class FilterViewController {
 				};
 				state.views.push(definition);
 				createdIds.push(definition.id);
-				usedNames.add(definition.name);
-				anyCreated = true;
+				usedNames.add(definition.name.trim());
+				stateChanged = true;
 			}
 		});
 
-		this.runStateEffects({ persist: anyCreated, apply: false });
+		this.runStateEffects({ persist: stateChanged, apply: false });
 
 		const currentState = this.stateStore.getState();
 		const resolved: FilterViewDefinition[] = [];
@@ -393,11 +416,25 @@ export class FilterViewController {
 			return false;
 		}
 		const condition = conditions[0];
-		return condition.column === field && condition.operator === 'equals' && (condition.value ?? '') === value;
+		const column = typeof condition.column === 'string' ? condition.column.trim().toLowerCase() : '';
+		if (column !== field.trim().toLowerCase()) {
+			return false;
+		}
+		if (condition.operator !== 'equals') {
+			return false;
+		}
+		const ruleValue =
+			typeof condition.value === 'string'
+				? condition.value.trim()
+				: String(condition.value ?? '').trim();
+		if (!ruleValue) {
+			return false;
+		}
+		return ruleValue.toLowerCase() === value.trim().toLowerCase();
 	}
 
 	private composeAutoViewName(field: string, value: string, usedNames: Set<string>): string {
-		let baseName = value.trim();
+		let baseName = this.formatFieldValueForLabel(field, value).trim();
 		if (!baseName) {
 			baseName = t('tagGroups.emptyValueName', { field });
 		}
@@ -406,11 +443,28 @@ export class FilterViewController {
 		}
 		let candidate = baseName;
 		let index = 2;
-		while (usedNames.has(candidate)) {
+		while (usedNames.has(candidate.trim())) {
 			candidate = `${baseName} (${index})`;
 			index += 1;
 		}
 		return candidate;
+	}
+
+	private formatFieldValueForLabel(field: string, value: string): string {
+		const normalizedField = field.trim().toLowerCase();
+		if (normalizedField === 'status') {
+			return getStatusDisplayLabel(value);
+		}
+		return value;
+	}
+
+	private computeExpectedAutoName(field: string, value: string): string | null {
+		const normalizedField = field.trim().toLowerCase();
+		if (normalizedField === 'status') {
+			const label = getStatusDisplayLabel(value).trim();
+			return label.length > 0 ? label : null;
+		}
+		return null;
 	}
 
 	private generateFilterViewId(): string {

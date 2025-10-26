@@ -1,5 +1,5 @@
 import type { Plugin } from 'obsidian';
-import type { FileFilterViewState, FilterViewDefinition, SortRule } from '../types/filterView';
+import type { FileFilterViewState, FilterViewDefinition, FilterViewMetadata, SortRule } from '../types/filterView';
 import type { FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
@@ -125,18 +125,20 @@ export class SettingsService {
 	getFilterViewsForFile(filePath: string): FileFilterViewState {
 		const stored = this.settings.filterViews[filePath];
 		if (!stored) {
-			return { views: [], activeViewId: null };
+			return { views: [], activeViewId: null, metadata: {} };
 		}
 		return {
 			activeViewId: stored.activeViewId ?? null,
-			views: stored.views.map((view) => this.cloneFilterViewDefinition(view))
+			views: stored.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneFilterViewMetadata(stored.metadata)
 		};
 	}
 
 	async saveFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<FileFilterViewState> {
 		const sanitized: FileFilterViewState = {
 			activeViewId: state.activeViewId ?? null,
-			views: state.views.map((view) => this.cloneFilterViewDefinition(view))
+			views: state.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneFilterViewMetadata(state.metadata)
 		};
 		this.settings.filterViews[filePath] = sanitized;
 		await this.persist();
@@ -197,6 +199,13 @@ export class SettingsService {
 			logger.warn('deepClone fallback failed, returning original reference', error);
 			return value;
 		}
+	}
+
+	private cloneFilterViewMetadata(metadata: FilterViewMetadata | null | undefined): FilterViewMetadata {
+		if (!metadata) {
+			return {};
+		}
+		return { ...metadata };
 	}
 
 	getLoggingConfig(): LoggingConfig {

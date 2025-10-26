@@ -1,3 +1,4 @@
+import { setIcon } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
 import { t } from '../../i18n';
 
@@ -19,6 +20,8 @@ export class FilterViewBar {
 	private readonly rootEl: HTMLElement;
 	private readonly tabsEl: HTMLElement;
 	private readonly tagGroupButtonEl: HTMLButtonElement;
+	private readonly tagGroupIconEl: HTMLElement;
+	private readonly tagGroupLabelEl: HTMLSpanElement;
 	private readonly tagGroupClickHandler: (event: MouseEvent) => void;
 	private readonly actionsEl: HTMLElement;
 	private readonly addButtonEl: HTMLButtonElement;
@@ -36,8 +39,11 @@ export class FilterViewBar {
 		this.tabsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-tabs' });
 		this.tagGroupButtonEl = this.tabsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--tag-groups',
-			text: t('filterViewBar.tagGroupButtonLabel')
 		});
+		this.tagGroupIconEl = this.tagGroupButtonEl.createSpan({ cls: 'tlb-filter-view-button__icon' });
+		setIcon(this.tagGroupIconEl, 'layers-2');
+		this.tagGroupLabelEl = this.tagGroupButtonEl.createSpan({ cls: 'tlb-filter-view-button__label' });
+		this.tagGroupLabelEl.textContent = t('filterViewBar.tagGroupButtonLabel');
 		this.tagGroupClickHandler = (event: MouseEvent) => {
 			event.preventDefault();
 			this.options.callbacks.onOpenTagGroupMenu(this.tagGroupButtonEl);
@@ -155,10 +161,8 @@ export class FilterViewBar {
 		const activeName = this.tagGroupState.activeGroupName?.trim() ?? '';
 		const buttonLabel = activeName.length > 0 ? activeName : fallbackLabel;
 		const tooltip = t('tagGroups.menuTooltip');
-		const isDefaultGroup = !this.tagGroupState.visibleViewIds;
 
-		this.tagGroupButtonEl.textContent = buttonLabel;
-		this.tagGroupButtonEl.classList.toggle('is-active', !isDefaultGroup);
+		this.tagGroupLabelEl.textContent = buttonLabel;
 		this.tagGroupButtonEl.setAttribute('title', tooltip);
 		this.tagGroupButtonEl.setAttribute('aria-label', t('tagGroups.buttonAriaLabel', { name: buttonLabel }));
 	}

@@ -1,9 +1,9 @@
 import { getPluginContext } from '../../pluginContext';
 import type { ColumnState } from 'ag-grid-community';
-import type { FileFilterViewState, FilterViewDefinition, SortRule } from '../../types/filterView';
+import type { FileFilterViewState, FilterViewDefinition, SortRule, FilterViewMetadata } from '../../types/filterView';
 
 export class FilterStateStore {
-	private state: FileFilterViewState = { views: [], activeViewId: null };
+	private state: FileFilterViewState = { views: [], activeViewId: null, metadata: {} };
 	private filePath: string | null;
 
 	constructor(filePath: string | null) {
@@ -15,7 +15,7 @@ export class FilterStateStore {
 	}
 
 	resetState(): void {
-		this.state = { views: [], activeViewId: null };
+		this.state = { views: [], activeViewId: null, metadata: {} };
 	}
 
 	getState(): FileFilterViewState {
@@ -29,7 +29,8 @@ export class FilterStateStore {
 		}
 		this.state = {
 			activeViewId: next.activeViewId ?? null,
-			views: (next.views ?? []).map((view) => this.cloneFilterViewDefinition(view))
+			views: (next.views ?? []).map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneMetadata(next.metadata)
 		};
 	}
 
@@ -44,10 +45,11 @@ export class FilterStateStore {
 		const activeId = stored.activeViewId && availableIds.has(stored.activeViewId)
 			? stored.activeViewId
 			: null;
-		this.state = {
-			activeViewId: activeId,
-			views: stored.views.map((view) => this.cloneFilterViewDefinition(view))
-		};
+	this.state = {
+		activeViewId: activeId,
+		views: stored.views.map((view) => this.cloneFilterViewDefinition(view)),
+		metadata: this.cloneMetadata(stored.metadata)
+	};
 		return this.state;
 	}
 
@@ -106,6 +108,31 @@ export class FilterStateStore {
 	findActiveView(): FilterViewDefinition | null {
 		const activeId = this.state.activeViewId;
 		return activeId ? this.state.views.find((view) => view.id === activeId) ?? null : null;
+	}
+
+	isStatusBaselineSeeded(): boolean {
+		return !!this.state.metadata?.statusBaselineSeeded;
+	}
+
+	markStatusBaselineSeeded(): void {
+		this.updateState((state) => {
+			const metadata = this.ensureMetadata(state);
+			metadata.statusBaselineSeeded = true;
+		});
+	}
+
+	private ensureMetadata(state: FileFilterViewState): FilterViewMetadata {
+		if (!state.metadata) {
+			state.metadata = {};
+		}
+		return state.metadata;
+	}
+
+	private cloneMetadata(metadata: FilterViewMetadata | null | undefined): FilterViewMetadata {
+		if (!metadata) {
+			return {};
+		}
+		return { ...metadata };
 	}
 
 	private deepClone<T>(value: T): T {

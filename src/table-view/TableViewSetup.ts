@@ -140,7 +140,9 @@ export function initializeTableView(view: TableView): void {
 				view.filterViewBar.render(view.filterViewState);
 			}
 		},
-		persist: () => persistTagGroups(view)
+		persist: () => persistTagGroups(view),
+		isStatusBaselineSeeded: () => view.filterStateStore.isStatusBaselineSeeded(),
+		markStatusBaselineSeeded: () => view.filterStateStore.markStatusBaselineSeeded()
 	});
 
 	logger.info(t('tableViewSetup.constructorComplete'));

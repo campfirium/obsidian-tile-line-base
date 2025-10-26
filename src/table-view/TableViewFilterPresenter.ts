@@ -1,5 +1,5 @@
 import type { TableView } from '../TableView';
-import { FilterViewBar } from './filter/FilterViewBar';
+import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterViewBar';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
 
 export function renderFilterViewControls(view: TableView, container: Element): void {
@@ -20,9 +20,13 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			},
 			onReorder: (draggedId, targetId) => {
 				view.filterViewController.reorderFilterViews(draggedId, targetId);
+			},
+			onOpenTagGroupMenu: (button) => {
+				view.tagGroupController?.openTagGroupMenu(button);
 			}
 		}
 	});
+	updateFilterViewBarTagGroupState(view);
 	view.filterViewBar.render(view.filterViewState);
 }
 
@@ -82,4 +86,38 @@ export function persistFilterViews(view: TableView): Promise<void> | void {
 	}
 	view.persistenceService.scheduleSave();
 	return view.filterStateStore.persist();
+}
+
+export function persistTagGroups(view: TableView): Promise<void> | void {
+	if (!view.file) {
+		return;
+	}
+	view.tagGroupController?.syncWithAvailableViews();
+	view.persistenceService.scheduleSave();
+	syncTagGroupState(view);
+	return view.tagGroupStore.persist();
+}
+
+export function syncTagGroupState(view: TableView): void {
+	view.tagGroupState = view.tagGroupStore.getState();
+}
+
+export function updateFilterViewBarTagGroupState(view: TableView): void {
+	if (!view.filterViewBar) {
+		return;
+	}
+	view.tagGroupController?.syncWithAvailableViews();
+	syncTagGroupState(view);
+	view.filterViewBar.setTagGroupState(buildTagGroupRenderState(view));
+}
+
+function buildTagGroupRenderState(view: TableView): FilterViewBarTagGroupState {
+	const state = view.tagGroupStore.getState();
+	const activeGroup = view.tagGroupStore.getActiveGroup();
+	return {
+		activeGroupId: state.activeGroupId,
+		activeGroupName: activeGroup ? activeGroup.name : null,
+		visibleViewIds: view.tagGroupStore.getVisibleViewIds(),
+		hasGroups: state.groups.length > 0
+	};
 }

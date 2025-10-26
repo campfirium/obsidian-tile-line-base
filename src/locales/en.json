@@ -152,7 +152,8 @@
     "formulaLimitNotice": "Formula calculation paused; exceeded limit of {{limit}} rows"
   },
   "filterViewBar": {
-    "allTabLabel": "All"
+    "allTabLabel": "All",
+    "tagGroupButtonLabel": "Groups"
   },
   "filterViewController": {
     "noColumns": "Unable to fetch column information, please try again later",
@@ -194,8 +195,8 @@
     "addSortButton": "+ Add sort",
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
-    "sortDirectionAsc": "Ascending (A ¡ú Z)",
-    "sortDirectionDesc": "Descending (Z ¡ú A)"
+    "sortDirectionAsc": "Ascending (A ï¿½ï¿½ Z)",
+    "sortDirectionDesc": "Descending (Z ï¿½ï¿½ A)"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
@@ -203,6 +204,45 @@
   },
   "dateCellEditor": {
     "openPickerLabel": "Open date picker"
+  },
+  "tagGroups": {
+    "menuShowAll": "Show all views",
+    "menuEmpty": "No saved groups",
+    "menuRenameGroup": "Rename \"{{name}}\"",
+    "menuCreate": "New tag group",
+    "menuCreateAndAdd": "New group and add",
+    "menuCreateEmpty": "Create Empty Group",
+    "menuCreateFromField": "Create Group From Field",
+    "menuAddFilterView": "Add to tag group",
+    "defaultName": "Group {{index}}",
+    "renamePlaceholder": "Enter tag group name",
+    "renameModalTitle": "Rename tag group",
+    "createSuccess": "Created group: {{name}}",
+    "addViewSuccess": "Added \"{{view}}\" to {{group}}",
+    "activeGroupAriaLabel": "Active tag group: {{name}}",
+    "menuTooltip": "Open tag groups",
+    "unnamedGroup": "Unnamed group",
+    "defaultGroupName": "Default",
+    "emptyGroupLabel": "No saved filter views",
+    "buttonAriaLabel": "Tag groups: {{name}}",
+    "menuRename": "Rename group",
+    "menuDelete": "Delete group",
+    "deleteNotice": "Deleted tag group: {{name}}",
+    "deleteDefaultBlocked": "Default tag group cannot be deleted",
+    "createModalTitle": "Create tag group",
+    "createModeLabel": "Group contents",
+    "createModeManual": "Empty group",
+    "createModeField": "Generate from field",
+    "createFieldLabel": "Field",
+    "createFieldPlaceholder": "Select a field",
+    "createFieldLimitNotice": "Up to {{limit}} values will be generated automatically.",
+    "createFieldValidation": "Please select a field",
+    "confirmButton": "Create",
+    "cancelButton": "Cancel",
+    "createFieldNoValues": "No values found for the selected field.",
+    "createFieldLimitExceeded": "Only the first {{limit}} values will be used.",
+    "createFieldNoViews": "Failed to generate filter views for the selected field.",
+    "createFieldNoColumns": "No columns available for field grouping.",
+    "emptyValueName": "(Empty) {{field}}"
   }
 }
-

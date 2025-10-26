@@ -10,6 +10,7 @@ import {
 } from './utils/logger';
 import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
+import type { FileTagGroupState } from './types/tagGroup';
 import { FileCacheManager } from './cache/FileCacheManager';
 import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './services/SettingsService';
 import { WindowContextManager } from './plugin/WindowContextManager';
@@ -233,6 +234,19 @@ export default class TileLineBasePlugin extends Plugin {
 			filePath,
 			viewCount: sanitized.views.length,
 			activeView: sanitized.activeViewId
+		});
+	}
+
+	getTagGroupsForFile(filePath: string): FileTagGroupState {
+		return this.settingsService.getTagGroupsForFile(filePath);
+	}
+
+	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<void> {
+		const sanitized = await this.settingsService.saveTagGroupsForFile(filePath, state);
+		logger.debug('saveTagGroupsForFile', {
+			filePath,
+			groupCount: sanitized.groups.length,
+			activeGroup: sanitized.activeGroupId
 		});
 	}
 

@@ -6,6 +6,7 @@ export interface FilterViewBarCallbacks {
 	onActivate(viewId: string | null): void;
 	onContextMenu(view: FilterViewDefinition, event: MouseEvent): void;
 	onReorder(draggedId: string, targetId: string): void;
+	onOpenTagGroupMenu(button: HTMLElement): void;
 }
 
 interface FilterViewBarOptions {
@@ -17,14 +18,32 @@ interface FilterViewBarOptions {
 export class FilterViewBar {
 	private readonly rootEl: HTMLElement;
 	private readonly tabsEl: HTMLElement;
+	private readonly tagGroupButtonEl: HTMLButtonElement;
+	private readonly tagGroupClickHandler: (event: MouseEvent) => void;
 	private readonly actionsEl: HTMLElement;
 	private readonly addButtonEl: HTMLButtonElement;
 	private readonly searchEl: HTMLElement;
 	private readonly addClickHandler: () => void;
+	private tagGroupState: FilterViewBarTagGroupState = {
+		activeGroupId: null,
+		activeGroupName: null,
+		visibleViewIds: null,
+		hasGroups: false
+	};
 
 	constructor(private readonly options: FilterViewBarOptions) {
 		this.rootEl = options.container.createDiv({ cls: 'tlb-filter-view-bar' });
 		this.tabsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-tabs' });
+		this.tagGroupButtonEl = this.tabsEl.createEl('button', {
+			cls: 'tlb-filter-view-button tlb-filter-view-button--tag-groups',
+			text: t('filterViewBar.tagGroupButtonLabel')
+		});
+		this.tagGroupClickHandler = (event: MouseEvent) => {
+			event.preventDefault();
+			this.options.callbacks.onOpenTagGroupMenu(this.tagGroupButtonEl);
+		};
+		this.tagGroupButtonEl.addEventListener('click', this.tagGroupClickHandler);
+
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
 		this.addButtonEl = this.actionsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--add',
@@ -41,6 +60,8 @@ export class FilterViewBar {
 
 	render(state: FileFilterViewState): void {
 		this.clearElement(this.tabsEl);
+		this.tabsEl.append(this.tagGroupButtonEl);
+		this.updateTagGroupButton();
 
 		const defaultButton = this.tabsEl.createEl('button', {
 			cls: 'tlb-filter-view-button',
@@ -55,6 +76,9 @@ export class FilterViewBar {
 
 		for (let index = 0; index < state.views.length; index++) {
 			const view = state.views[index];
+			if (this.tagGroupState.visibleViewIds && !this.tagGroupState.visibleViewIds.has(view.id)) {
+				continue;
+			}
 			const button = this.tabsEl.createEl('button', {
 				cls: 'tlb-filter-view-button',
 				text: view.name
@@ -105,8 +129,19 @@ export class FilterViewBar {
 	}
 
 	destroy(): void {
+		this.tagGroupButtonEl.removeEventListener('click', this.tagGroupClickHandler);
 		this.addButtonEl.removeEventListener('click', this.addClickHandler);
 		this.rootEl.remove();
+	}
+
+	setTagGroupState(state: FilterViewBarTagGroupState): void {
+		this.tagGroupState = {
+			activeGroupId: state.activeGroupId,
+			activeGroupName: state.activeGroupName,
+			visibleViewIds: state.visibleViewIds ? new Set(state.visibleViewIds) : null,
+			hasGroups: state.hasGroups
+		};
+		this.updateTagGroupButton();
 	}
 
 	private clearElement(element: HTMLElement): void {
@@ -114,4 +149,24 @@ export class FilterViewBar {
 			element.removeChild(element.firstChild);
 		}
 	}
+
+	private updateTagGroupButton(): void {
+		const fallbackLabel = t('filterViewBar.tagGroupButtonLabel');
+		const activeName = this.tagGroupState.activeGroupName?.trim() ?? '';
+		const buttonLabel = activeName.length > 0 ? activeName : fallbackLabel;
+		const tooltip = t('tagGroups.menuTooltip');
+		const isDefaultGroup = !this.tagGroupState.visibleViewIds;
+
+		this.tagGroupButtonEl.textContent = buttonLabel;
+		this.tagGroupButtonEl.classList.toggle('is-active', !isDefaultGroup);
+		this.tagGroupButtonEl.setAttribute('title', tooltip);
+		this.tagGroupButtonEl.setAttribute('aria-label', t('tagGroups.buttonAriaLabel', { name: buttonLabel }));
+	}
+}
+
+export interface FilterViewBarTagGroupState {
+	activeGroupId: string | null;
+	activeGroupName: string | null;
+	visibleViewIds: Set<string> | null;
+	hasGroups: boolean;
 }

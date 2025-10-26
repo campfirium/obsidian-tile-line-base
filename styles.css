@@ -112,6 +112,87 @@
   font-weight: 600;
 }
 
+.tlb-filter-view-button--tag-groups {
+  min-width: auto;
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.tlb-tag-group-menu-row .tlb-tag-group-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.tlb-tag-group-menu-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.tlb-tag-group-menu-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tlb-tag-group-menu-item__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tlb-tag-group-menu-item__action:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.tlb-tag-group-menu-item__action--delete {
+  color: var(--text-error);
+}
+
+.tlb-tag-group-menu-item__action--delete:hover {
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent, #fff);
+}
+
+.tlb-tag-group-menu-item__name {
+  font-weight: 600;
+}
+
+.tlb-tag-group-menu-row.is-active .tlb-tag-group-menu-item__name {
+  color: var(--interactive-accent);
+}
+
+.tlb-tag-group-menu-item__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tlb-tag-group-menu-item__tag {
+  background-color: var(--background-modifier-hover);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.85em;
+}
+
+.tlb-tag-group-menu-item__empty {
+  color: var(--text-faint);
+  font-size: 0.85em;
+}
+
 /* 拖拽状态样式 */
 .tlb-filter-view-button.is-dragging {
   opacity: 0.4;

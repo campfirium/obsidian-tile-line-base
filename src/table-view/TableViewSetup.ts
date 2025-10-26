@@ -9,6 +9,7 @@ import { GridInteractionController } from './GridInteractionController';
 import { GridLayoutController } from './GridLayoutController';
 import { FocusManager } from './FocusManager';
 import { FilterViewController } from './filter/FilterViewController';
+import { TagGroupController } from './filter/tag-group/TagGroupController';
 import { TablePersistenceService } from './TablePersistenceService';
 import { t } from '../i18n';
 import { CopyTemplateController } from './CopyTemplateController';
@@ -18,7 +19,7 @@ import {
 	renameColumnInFilterViews,
 	removeColumnFromFilterViews
 } from './TableViewInteractions';
-import { getAvailableColumns, persistFilterViews, syncFilterViewState } from './TableViewFilterPresenter';
+import { getAvailableColumns, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
 
 const logger = getLogger('table-view:setup');
@@ -36,6 +37,7 @@ export function initializeTableView(view: TableView): void {
 		filterStateStore: view.filterStateStore,
 		getFile: () => view.file,
 		getFilterViewState: () => view.filterViewState,
+		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null
 	});
 	view.columnInteractionController = new ColumnInteractionController({
@@ -108,10 +110,60 @@ export function initializeTableView(view: TableView): void {
 		syncState: () => syncFilterViewState(view),
 		renderBar: () => {
 			if (view.filterViewBar) {
+				updateFilterViewBarTagGroupState(view);
 				view.filterViewBar.render(view.filterViewState);
+			}
+		},
+		tagGroupSupport: {
+			onFilterViewRemoved: (viewId) => {
+				view.tagGroupController?.handleFilterViewRemoval(viewId);
+			},
+			onShowAddToGroupMenu: (filterView, evt) => {
+				view.tagGroupController?.openAddToGroupMenu(filterView, evt);
+			},
+			onFilterViewsUpdated: () => {
+				view.tagGroupController?.syncWithAvailableViews();
 			}
 		}
 	});
+	view.tagGroupController = new TagGroupController({
+		app: view.app,
+		store: view.tagGroupStore,
+		getFilterViewState: () => view.filterViewState,
+		getAvailableColumns: () => getAvailableColumns(view),
+		getUniqueFieldValues: (field, limit) => collectUniqueFieldValues(view, field, limit),
+		ensureFilterViewsForFieldValues: (field, values) => view.filterViewController.ensureFilterViewsForFieldValues(field, values),
+		activateFilterView: (viewId) => view.filterViewController.activateFilterView(viewId),
+		renderBar: () => {
+			if (view.filterViewBar) {
+				updateFilterViewBarTagGroupState(view);
+				view.filterViewBar.render(view.filterViewState);
+			}
+		},
+		persist: () => persistTagGroups(view)
+	});
 
 	logger.info(t('tableViewSetup.constructorComplete'));
+}
+function collectUniqueFieldValues(view: TableView, field: string, limit: number): string[] {
+	const rows = view.dataStore.extractRowData();
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const row of rows) {
+		const raw = row[field];
+		if (raw == null) {
+			continue;
+		}
+		const value = typeof raw === 'string' ? raw : String(raw);
+		const trimmed = value.trim();
+		if (!trimmed || seen.has(trimmed)) {
+			continue;
+		}
+		seen.add(trimmed);
+		result.push(trimmed);
+		if (Number.isFinite(limit) && limit > 0 && result.length >= limit) {
+			break;
+		}
+	}
+	return result;
 }

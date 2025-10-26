@@ -1,6 +1,7 @@
 import type { App, TFile } from 'obsidian';
 import { Notice } from 'obsidian';
 import type { FileFilterViewState } from '../types/filterView';
+import type { FileTagGroupState } from '../types/tagGroup';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
 import type { TableConfigManager } from './TableConfigManager';
@@ -18,6 +19,7 @@ interface TablePersistenceDeps {
 	filterStateStore: FilterStateStore;
 	getFile: () => TFile | null;
 	getFilterViewState: () => FileFilterViewState;
+	getTagGroupState: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
 }
 
@@ -85,6 +87,7 @@ export class TablePersistenceService {
 		const widthPrefs = this.deps.columnLayoutStore.exportPreferences();
 		await this.deps.configManager.save(file, {
 			filterViews: this.deps.getFilterViewState(),
+			tagGroups: this.deps.getTagGroupState(),
 			columnWidths: widthPrefs,
 			columnConfigs,
 			viewPreference: 'table',

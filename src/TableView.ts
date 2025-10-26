@@ -9,7 +9,10 @@ import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 import type { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import type { FilterViewController } from "./table-view/filter/FilterViewController";
+import { TagGroupStore } from "./table-view/filter/tag-group/TagGroupStore";
+import { TagGroupController } from "./table-view/filter/tag-group/TagGroupController";
 import type { FileFilterViewState } from "./types/filterView";
+import type { FileTagGroupState } from "./types/tagGroup";
 import { TableDataStore } from "./table-view/TableDataStore";
 import type { TableConfigManager } from "./table-view/TableConfigManager";
 import type { ColumnInteractionController } from "./table-view/ColumnInteractionController";
@@ -62,6 +65,9 @@ export class TableView extends ItemView {
 	public filterViewController!: FilterViewController;
 	public filterStateStore = new FilterStateStore(null);
 	public filterViewState: FileFilterViewState = this.filterStateStore.getState();
+	public tagGroupStore = new TagGroupStore(null);
+	public tagGroupController!: TagGroupController;
+	public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
 	public initialColumnState: ColumnState[] | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {

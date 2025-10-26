@@ -46,6 +46,10 @@ export class TableDataStore {
 
 	constructor(private readonly formulaOptions: FormulaOptions) {}
 
+	private refreshFormulaState(): void {
+		prepareFormulaColumns(this.formulaState, this.schema, this.schema?.columnConfigs ?? null);
+	}
+
 	initialise(result: SchemaBuildResult, columnConfigs: ColumnConfig[] | null): void {
 		this.blocks = result.blocks;
 		this.schema = result.schema;
@@ -69,9 +73,7 @@ export class TableDataStore {
 
 	getColumnConfig(name: string): ColumnConfig | null {
 		const configs = this.schema?.columnConfigs;
-		if (!configs) {
-			return null;
-		}
+		if (!configs) return null;
 		return configs.find((config) => config.name === name) ?? null;
 	}
 
@@ -95,10 +97,9 @@ export class TableDataStore {
 	}
 
 	setColumnConfigs(configs: ColumnConfig[] | undefined): void {
-		if (!this.schema) {
-			return;
-		}
+		if (!this.schema) return;
 		this.schema.columnConfigs = configs;
+		this.refreshFormulaState();
 	}
 
 	getBlocks(): H2Block[] {
@@ -156,12 +157,8 @@ export class TableDataStore {
 	}
 
 	updateCell(rowIndex: number, field: string, newValue: string): boolean {
-		if (!this.schema) {
-			return false;
-		}
-		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
-			return false;
-		}
+		if (!this.schema) return false;
+		if (rowIndex < 0 || rowIndex >= this.blocks.length) return false;
 		const block = this.blocks[rowIndex];
 		block.data[field] = newValue;
 		return true;
@@ -212,7 +209,9 @@ export class TableDataStore {
 			templateField: field,
 			copyData: true
 		});
-		return created ? newName : null;
+		if (!created) return null;
+		this.refreshFormulaState();
+		return newName;
 	}
 
 	insertColumnAfter(field: string, baseName?: string): string | null {
@@ -227,21 +226,33 @@ export class TableDataStore {
 			newName,
 			afterField: field
 		});
-		return created ? newName : null;
+		if (!created) return null;
+		this.refreshFormulaState();
+		return newName;
 	}
 
 	removeColumn(field: string): boolean {
-		return removeColumnInternal(
+		if (!removeColumnInternal(
 			this.schema,
 			this.blocks,
 			this.hiddenSortableFields,
 			this.formulaState,
 			field
-		);
+		)) return false;
+		this.refreshFormulaState();
+		return true;
 	}
 
 	renameColumn(oldName: string, newName: string): boolean {
-		return renameColumnInternal(this.schema, this.blocks, this.hiddenSortableFields, oldName, newName);
+		if (!renameColumnInternal(
+			this.schema,
+			this.blocks,
+			this.hiddenSortableFields,
+			oldName,
+			newName
+		)) return false;
+		this.refreshFormulaState();
+		return true;
 	}
 
 	getBlockIndexFromRow(rowData: RowData | undefined): number | null {

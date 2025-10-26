@@ -17,6 +17,7 @@ const logger = getLogger('renderer:status-cell');
 
 // ״̬���Ͷ���
 export type TaskStatus = 'todo' | 'done' | 'inprogress' | 'onhold' | 'someday' | 'canceled';
+export const ALL_TASK_STATUSES: readonly TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'] as const;
 
 /**
  * ״̬�淶���������ֱ���ͳһΪ��׼״ֵ̬
@@ -247,11 +248,9 @@ export class StatusCellRenderer implements ICellRendererComp {
 		menu.style.minWidth = '120px';
 
 		// �����˵���
-		const statuses: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'];
-
 		this.contextMenuItems = [];
 		this.focusedMenuIndex = -1;
-		for (const status of statuses) {
+		for (const status of ALL_TASK_STATUSES) {
 			const label = getStatusLabel(status);
 			const item = ownerDoc.createElement('div');
 			item.className = 'tlb-status-menu-item';

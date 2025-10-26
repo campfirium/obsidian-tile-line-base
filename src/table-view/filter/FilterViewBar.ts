@@ -1,5 +1,7 @@
+import { setIcon } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
 import { t } from '../../i18n';
+import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../renderers/StatusCellRenderer';
 
 export interface FilterViewBarCallbacks {
 	onCreate(): void;
@@ -80,9 +82,9 @@ export class FilterViewBar {
 				continue;
 			}
 			const button = this.tabsEl.createEl('button', {
-				cls: 'tlb-filter-view-button',
-				text: view.name
+				cls: 'tlb-filter-view-button'
 			});
+			this.setFilterButtonContent(button, view);
 			if (view.id === state.activeViewId) {
 				button.classList.add('is-active');
 			}
@@ -150,15 +152,52 @@ export class FilterViewBar {
 		}
 	}
 
+	private setFilterButtonContent(button: HTMLButtonElement, view: FilterViewDefinition): void {
+		const name = typeof view.name === 'string' ? view.name : '';
+		const status = this.getStatusFromFilterView(view);
+		button.textContent = '';
+		button.title = name;
+		button.setAttribute('aria-label', name);
+		button.classList.toggle('tlb-filter-view-button--status', !!status);
+		if (!status) {
+			button.classList.remove('tlb-filter-view-button--status');
+			button.textContent = name;
+			return;
+		}
+
+		const iconEl = button.createSpan({ cls: 'tlb-filter-view-button__icon' });
+		setIcon(iconEl, getStatusIcon(status));
+
+		const labelEl = button.createSpan({ cls: 'tlb-filter-view-button__label' });
+		labelEl.textContent = name;
+	}
+
+	private getStatusFromFilterView(view: FilterViewDefinition): TaskStatus | null {
+		if (!view?.filterRule || view.filterRule.combineMode !== 'AND') {
+			return null;
+		}
+		const conditions = Array.isArray(view.filterRule.conditions) ? view.filterRule.conditions : [];
+		if (conditions.length !== 1) {
+			return null;
+		}
+		const condition = conditions[0];
+		if (!condition || condition.column !== 'status' || condition.operator !== 'equals') {
+			return null;
+		}
+		const rawValue = condition.value;
+		if (typeof rawValue !== 'string' || rawValue.trim().length === 0) {
+			return null;
+		}
+		return normalizeStatus(rawValue);
+	}
+
 	private updateTagGroupButton(): void {
 		const fallbackLabel = t('filterViewBar.tagGroupButtonLabel');
 		const activeName = this.tagGroupState.activeGroupName?.trim() ?? '';
 		const buttonLabel = activeName.length > 0 ? activeName : fallbackLabel;
 		const tooltip = t('tagGroups.menuTooltip');
-		const isDefaultGroup = !this.tagGroupState.visibleViewIds;
 
 		this.tagGroupButtonEl.textContent = buttonLabel;
-		this.tagGroupButtonEl.classList.toggle('is-active', !isDefaultGroup);
 		this.tagGroupButtonEl.setAttribute('title', tooltip);
 		this.tagGroupButtonEl.setAttribute('aria-label', t('tagGroups.buttonAriaLabel', { name: buttonLabel }));
 	}

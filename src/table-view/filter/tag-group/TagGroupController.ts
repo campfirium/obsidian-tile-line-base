@@ -1,10 +1,13 @@
-import { App, Menu, Notice, setIcon } from 'obsidian';
+import { App, Menu, Notice } from 'obsidian';
 import type { FilterViewDefinition, FileFilterViewState } from '../../../types/filterView';
 import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
 import { openFilterViewNameModal } from '../FilterViewModals';
-import type { TagGroupStore } from './TagGroupStore';
+import { STATUS_TAG_GROUP_ID, type TagGroupStore } from './TagGroupStore';
 import { openTagGroupCreateModal, type TagGroupCreateMode } from './TagGroupCreateModal';
+import { ALL_TASK_STATUSES } from '../../../renderers/StatusCellRenderer';
+import { renderTagGroupMenuItem } from './TagGroupMenuRenderer';
+import { collectStatusGroupViewIds } from './StatusGroupUtils';
 
 interface TagGroupControllerOptions {
 	app: App;
@@ -31,6 +34,7 @@ export class TagGroupController {
 	private readonly renderBar: () => void;
 	private readonly persist: () => Promise<void> | void;
 	private readonly defaultGroupId: string;
+	private ensuringStatusViews = false;
 
 	constructor(options: TagGroupControllerOptions) {
 		this.app = options.app;
@@ -46,7 +50,26 @@ export class TagGroupController {
 	}
 
 	syncWithAvailableViews(): void {
-		this.store.syncWithFilterViews(this.getFilterViewState(), t('tagGroups.defaultGroupName'));
+		const defaultLabel = t('tagGroups.defaultGroupName');
+		const statusLabel = t('tagGroups.statusGroupName');
+		this.store.setStatusGroupLabel(statusLabel);
+		this.ensureStatusViews();
+		const filterState = this.getFilterViewState();
+		this.store.syncWithFilterViews(filterState, defaultLabel);
+	const statusViewIds = collectStatusGroupViewIds(filterState);
+	this.store.applyStatusGroup(statusViewIds, statusLabel);
+}
+
+	private ensureStatusViews(): void {
+		if (this.ensuringStatusViews) {
+			return;
+		}
+		this.ensuringStatusViews = true;
+		try {
+			this.ensureFilterViewsForFieldValues('status', Array.from(ALL_TASK_STATUSES));
+		} finally {
+			this.ensuringStatusViews = false;
+		}
 	}
 
 openTagGroupMenu(anchorEl: HTMLElement): void {
@@ -59,8 +82,14 @@ openTagGroupMenu(anchorEl: HTMLElement): void {
 	for (const group of state.groups) {
 		menu.addItem((menuItem) => {
 			const isActive = group.id === state.activeGroupId || (!state.activeGroupId && group.id === this.defaultGroupId);
-			const { content, renameButton, deleteButton } = this.buildGroupMenuContent(group, filterState);
-			menuItem.setChecked(isActive);
+			const displayName = this.getGroupDisplayName(group);
+			const tags = this.getGroupViewNames(group, filterState);
+			const { content, renameButton, deleteButton } = renderTagGroupMenuItem({
+				doc,
+				displayName,
+				tagLabels: tags,
+				allowDelete: group.id !== this.defaultGroupId && group.id !== STATUS_TAG_GROUP_ID
+			});
 			menuItem.setIcon('layers-2');
 			menuItem.setTitle(content);
 			menuItem.onClick(() => {
@@ -116,70 +145,6 @@ openTagGroupMenu(anchorEl: HTMLElement): void {
 		doc
 	);
 }
-
-	private buildGroupMenuContent(group: TagGroupDefinition, filterState: FileFilterViewState): { content: DocumentFragment; renameButton: HTMLButtonElement | null; deleteButton: HTMLButtonElement | null } {
-		const fragment = document.createDocumentFragment();
-		const container = document.createElement('div');
-		container.className = 'tlb-tag-group-menu-item';
-
-		const headerEl = document.createElement('div');
-		headerEl.className = 'tlb-tag-group-menu-item__header';
-		container.appendChild(headerEl);
-
-		const titleEl = document.createElement('div');
-		titleEl.className = 'tlb-tag-group-menu-item__name';
-		titleEl.textContent = this.getGroupDisplayName(group);
-		headerEl.appendChild(titleEl);
-
-		const actionsEl = document.createElement('div');
-		actionsEl.className = 'tlb-tag-group-menu-item__actions';
-		headerEl.appendChild(actionsEl);
-
-		const renameButton = document.createElement('button');
-		renameButton.type = 'button';
-		renameButton.className = 'tlb-tag-group-menu-item__action tlb-tag-group-menu-item__action--rename';
-		renameButton.setAttribute('aria-label', t('tagGroups.menuRename'));
-		setIcon(renameButton, 'pencil');
-		actionsEl.appendChild(renameButton);
-
-		let deleteButton: HTMLButtonElement | null = null;
-		if (group.id !== this.defaultGroupId) {
-			deleteButton = document.createElement('button');
-			deleteButton.type = 'button';
-			deleteButton.className = 'tlb-tag-group-menu-item__action tlb-tag-group-menu-item__action--delete';
-			deleteButton.setAttribute('aria-label', t('tagGroups.menuDelete'));
-			setIcon(deleteButton, 'trash');
-			actionsEl.appendChild(deleteButton);
-		}
-
-		const tagsEl = document.createElement('div');
-		tagsEl.className = 'tlb-tag-group-menu-item__tags';
-		container.appendChild(tagsEl);
-
-		this.appendTag(tagsEl, t('filterViewBar.allTabLabel'));
-
-		const viewNames = this.getGroupViewNames(group, filterState);
-		if (viewNames.length === 0) {
-			const emptyEl = document.createElement('span');
-			emptyEl.className = 'tlb-tag-group-menu-item__empty';
-			emptyEl.textContent = t('tagGroups.emptyGroupLabel');
-			tagsEl.appendChild(emptyEl);
-		} else {
-			for (const name of viewNames) {
-				this.appendTag(tagsEl, name);
-			}
-		}
-
-		fragment.appendChild(container);
-		return { content: fragment, renameButton, deleteButton };
-	}
-
-	private appendTag(container: HTMLElement, label: string): void {
-		const tagEl = document.createElement('span');
-		tagEl.className = 'tlb-tag-group-menu-item__tag';
-		tagEl.textContent = label;
-		container.appendChild(tagEl);
-	}
 
 	private getGroupDisplayName(group: TagGroupDefinition): string {
 		if (group.id === this.defaultGroupId) {

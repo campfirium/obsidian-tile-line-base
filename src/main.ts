@@ -1,5 +1,6 @@
 import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
+import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
 import {
 	applyLoggingConfig,
 	getLogger,
@@ -47,6 +48,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private settingsService!: SettingsService;
 	private suppressAutoSwitchUntil = new Map<string, number>();
 	private viewCoordinator!: ViewSwitchCoordinator;
+	private editorConfigController: EditorConfigBlockController | null = null;
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
@@ -56,6 +58,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settingsService = new SettingsService(this);
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
+		this.editorConfigController = new EditorConfigBlockController(this.app);
 		await this.loadSettings();
 
 		applyLoggingConfig(this.settings.logging);
@@ -194,6 +197,9 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 
 		this.addSettingTab(new TileLineBaseSettingTab(this.app, this));
+		if (this.editorConfigController) {
+			this.editorConfigController.start(this);
+		}
 		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
 	}
 
@@ -202,6 +208,11 @@ export default class TileLineBasePlugin extends Plugin {
 		logger.info('Plugin unload: detaching all table views');
 		this.restoreRightSidebarIfNeeded();
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
+
+		if (this.editorConfigController) {
+			this.editorConfigController.dispose();
+			this.editorConfigController = null;
+		}
 
 		if (this.unsubscribeLogging) {
 			this.unsubscribeLogging();

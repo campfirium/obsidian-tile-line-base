@@ -3,6 +3,11 @@ import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
 import { normalizeDateFormatPreset, type DateFormatPreset } from '../utils/datetime';
 import { FormulaFieldSuggester } from './FormulaFieldSuggester';
+import {
+	getFormulaFormatPresetOptions,
+	normalizeFormulaFormatPreset,
+	type FormulaFormatPreset
+} from './formulaFormatPresets';
 
 export type ColumnFieldType = 'text' | 'date' | 'formula';
 
@@ -11,6 +16,7 @@ export interface ColumnEditorResult {
 	type: ColumnFieldType;
 	formula: string;
 	dateFormat?: DateFormatPreset;
+	formulaFormatPreset?: FormulaFormatPreset;
 }
 
 export interface ColumnEditorModalOptions {
@@ -18,6 +24,7 @@ export interface ColumnEditorModalOptions {
 	initialType: ColumnFieldType;
 	initialFormula: string;
 	initialDateFormat?: DateFormatPreset;
+	initialFormulaFormat?: FormulaFormatPreset;
 	validateName?: (name: string) => string | null;
 	triggerElement?: HTMLElement | null;
 	availableFields?: string[];
@@ -37,6 +44,8 @@ export class ColumnEditorModal extends Modal {
 	private returnFocusTarget: HTMLElement | null = null;
 	private keydownHandler?: (event: KeyboardEvent) => void;
 	private formulaSuggester?: FormulaFieldSuggester;
+	private formulaFormatSetting!: Setting;
+	private formulaFormatPreset: FormulaFormatPreset;
 	private dateFormat: DateFormatPreset;
 	private dateFormatSetting!: Setting;
 
@@ -46,6 +55,7 @@ export class ColumnEditorModal extends Modal {
 		this.type = options.initialType;
 		this.nameValue = options.columnName;
 		this.dateFormat = normalizeDateFormatPreset(options.initialDateFormat ?? 'iso');
+		this.formulaFormatPreset = normalizeFormulaFormatPreset(options.initialFormulaFormat) ?? 'auto';
 	}
 
 	onOpen(): void {
@@ -124,6 +134,23 @@ export class ColumnEditorModal extends Modal {
 		textareaWrapper.appendChild(textarea);
 		this.formulaSetting.controlEl.appendChild(textareaWrapper);
 		this.formulaInput = textarea;
+
+		this.formulaFormatSetting = new Setting(contentEl);
+		this.formulaFormatSetting.setName(t('columnEditorModal.formulaFormatLabel'));
+		this.formulaFormatSetting.setDesc(t('columnEditorModal.formulaFormatDescription'));
+		this.formulaFormatSetting.addDropdown((dropdown) => {
+			for (const option of getFormulaFormatPresetOptions()) {
+				dropdown.addOption(option.value, t(option.labelKey));
+			}
+			dropdown.setValue(this.formulaFormatPreset);
+			dropdown.onChange((value) => {
+				const preset = normalizeFormulaFormatPreset(value);
+				this.formulaFormatPreset = preset ?? 'auto';
+				if (!preset) {
+					dropdown.setValue('auto');
+				}
+			});
+		});
 
 		const fields = this.options.availableFields ?? [];
 		if (fields.length > 0) {
@@ -214,6 +241,10 @@ export class ColumnEditorModal extends Modal {
 		if (this.formulaSuggester) {
 			this.formulaSuggester.setEnabled(!formulaHidden);
 		}
+		if (this.formulaFormatSetting) {
+			const formatEl = this.formulaFormatSetting.settingEl as HTMLElement;
+			formatEl.style.display = formulaHidden ? 'none' : '';
+		}
 		if (this.dateFormatSetting) {
 			const dateEl = this.dateFormatSetting.settingEl as HTMLElement;
 			dateEl.style.display = this.type === 'date' ? '' : 'none';
@@ -264,7 +295,12 @@ export class ColumnEditorModal extends Modal {
 				this.formulaInput.focus();
 				return;
 			}
-			this.options.onSubmit({ name: trimmedName, type: 'formula', formula });
+			this.options.onSubmit({
+				name: trimmedName,
+				type: 'formula',
+				formula,
+				formulaFormatPreset: this.formulaFormatPreset === 'auto' ? undefined : this.formulaFormatPreset
+			});
 			this.submitted = true;
 			this.close();
 			return;

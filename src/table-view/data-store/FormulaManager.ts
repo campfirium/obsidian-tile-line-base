@@ -4,12 +4,17 @@ import { t } from '../../i18n';
 import type { ColumnConfig } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
 import type { FormulaOptions } from './types';
+import {
+	formatFormulaNumber,
+	type FormulaFormatPreset
+} from '../formulaFormatPresets';
 
 export interface FormulaState {
 	columns: Map<string, CompiledFormula>;
 	compileErrors: Map<string, string>;
 	columnOrder: string[];
 	limitNoticeIssued: boolean;
+	formats: Map<string, FormulaFormatPreset>;
 }
 
 export function createFormulaState(): FormulaState {
@@ -17,7 +22,8 @@ export function createFormulaState(): FormulaState {
 		columns: new Map<string, CompiledFormula>(),
 		compileErrors: new Map<string, string>(),
 		columnOrder: [],
-		limitNoticeIssued: false
+		limitNoticeIssued: false,
+		formats: new Map<string, FormulaFormatPreset>()
 	};
 }
 
@@ -30,6 +36,7 @@ export function prepareFormulaColumns(
 	state.compileErrors.clear();
 	state.columnOrder = [];
 	state.limitNoticeIssued = false;
+	state.formats.clear();
 
 	if (!columnConfigs) {
 		if (schema) {
@@ -43,6 +50,10 @@ export function prepareFormulaColumns(
 	}
 
 	for (const config of columnConfigs) {
+		if (config.formulaFormat && config.formulaFormat !== 'auto') {
+			state.formats.set(config.name, config.formulaFormat);
+		}
+
 		const rawFormula = config.formula?.trim();
 		if (!rawFormula) {
 			continue;
@@ -90,12 +101,18 @@ export function applyFormulaResults(
 		if (!compiled) {
 			continue;
 		}
-		const { value, error } = evaluateFormula(compiled, row);
+		const { value, error, kind, numericValue } = evaluateFormula(compiled, row);
 		if (error) {
 			row[columnName] = options.errorValue;
 			row[tooltipField] = t('tableDataStore.formulaError', { error });
 		} else {
-			row[columnName] = value;
+			const preset = state.formats.get(columnName);
+			if (kind === 'number' && preset && numericValue !== undefined && Number.isFinite(numericValue)) {
+				const formatted = formatFormulaNumber(numericValue, preset);
+				row[columnName] = formatted ?? value;
+			} else {
+				row[columnName] = value;
+			}
 			row[tooltipField] = '';
 		}
 	}

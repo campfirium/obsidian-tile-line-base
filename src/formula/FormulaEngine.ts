@@ -43,6 +43,8 @@ export interface CompiledFormula {
 export interface FormulaEvaluationResult {
 	value: string;
 	error: string | null;
+	kind: 'number' | 'string';
+	numericValue?: number;
 }
 
 const OPERATOR_PRECEDENCE: Record<Operator, number> = {
@@ -101,15 +103,20 @@ export function evaluateFormula(compiled: CompiledFormula, context: Record<strin
 		if (soleToken.type === 'field') {
 			const raw = context[soleToken.value];
 			if (raw === null || raw === undefined) {
-				return { value: '', error: null };
+				return { value: '', error: null, kind: 'string' };
 			}
-			return { value: String(raw), error: null };
+			return { value: String(raw), error: null, kind: 'string' };
 		}
 		if (soleToken.type === 'number') {
-			return { value: formatResult(soleToken.value), error: null };
+			return {
+				value: formatResult(soleToken.value),
+				error: null,
+				kind: 'number',
+				numericValue: soleToken.value
+			};
 		}
 		if (soleToken.type === 'string') {
-			return { value: soleToken.value, error: null };
+			return { value: soleToken.value, error: null, kind: 'string' };
 		}
 	}
 
@@ -117,14 +124,23 @@ export function evaluateFormula(compiled: CompiledFormula, context: Record<strin
 		const result = evaluateRpn(compiled.rpn, context);
 		if (result.kind === 'number') {
 			if (!Number.isFinite(result.value)) {
-				return { value: '#ERR', error: t(ERROR_KEYS.nonFiniteResult) };
+				return {
+					value: '#ERR',
+					error: t(ERROR_KEYS.nonFiniteResult),
+					kind: 'string'
+				};
 			}
-			return { value: formatResult(result.value), error: null };
+			return {
+				value: formatResult(result.value),
+				error: null,
+				kind: 'number',
+				numericValue: result.value
+			};
 		}
-		return { value: result.value, error: null };
+		return { value: result.value, error: null, kind: 'string' };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		return { value: '#ERR', error: message };
+		return { value: '#ERR', error: message, kind: 'string' };
 	}
 }
 

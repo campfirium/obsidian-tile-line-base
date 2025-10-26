@@ -150,7 +150,12 @@ export function insertColumn(params: InsertColumnParams): boolean {
 		} else {
 			const compiled = formulaState.columns.get(templateField);
 			if (compiled) {
-				clonedConfigs.push({ name: trimmedName, formula: compiled.original });
+				const formatPreset = formulaState.formats.get(templateField);
+				const newConfig: ColumnConfig = { name: trimmedName, formula: compiled.original };
+				if (formatPreset) {
+					newConfig.formulaFormat = formatPreset;
+				}
+				clonedConfigs.push(newConfig);
 			}
 		}
 	}
@@ -200,6 +205,7 @@ export function removeColumn(
 	hiddenSortableFields.delete(target);
 	formulaState.columns.delete(target);
 	formulaState.compileErrors.delete(target);
+	formulaState.formats.delete(target);
 	const orderIndex = formulaState.columnOrder.indexOf(target);
 	if (orderIndex !== -1) {
 		formulaState.columnOrder.splice(orderIndex, 1);

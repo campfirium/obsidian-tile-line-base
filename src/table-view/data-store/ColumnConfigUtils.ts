@@ -1,5 +1,6 @@
 import type { ColumnConfig } from '../MarkdownBlockParser';
 import { normalizeDateFormatPreset } from '../../utils/datetime';
+import { getFormulaFormatPattern } from '../formulaFormatPresets';
 
 export function hasColumnConfigContent(config: ColumnConfig): boolean {
 	const preset = config.dateFormat ? normalizeDateFormatPreset(config.dateFormat) : null;
@@ -8,6 +9,7 @@ export function hasColumnConfigContent(config: ColumnConfig): boolean {
 		(config.unit && config.unit.trim().length > 0) ||
 		config.hide ||
 		(config.formula && config.formula.trim().length > 0) ||
+		(config.formulaFormat && config.formulaFormat !== 'auto') ||
 		config.type === 'date' ||
 		(preset && preset !== 'iso')
 	);
@@ -23,6 +25,10 @@ export function serializeColumnConfig(config: ColumnConfig): string {
 	}
 	if (config.formula && config.formula.trim().length > 0) {
 		segments.push(`formula: ${config.formula.trim()}`);
+	}
+	const formatPattern = getFormulaFormatPattern(config.formulaFormat);
+	if (formatPattern) {
+		segments.push(`format: ${formatPattern}`);
 	}
 	if (config.type === 'date') {
 		segments.push('type: date');

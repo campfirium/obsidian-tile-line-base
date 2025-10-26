@@ -166,6 +166,7 @@ export class ColumnInteractionController {
 				? 'date'
 				: 'text';
 		const initialFormula = existing?.formula ?? '';
+		const initialFormulaFormat = existing?.formulaFormat;
 		const initialDateFormat = existing?.type === 'date' ? existing.dateFormat ?? 'iso' : undefined;
 		const availableFields = schema.columnNames.filter((name) => name && !isReservedColumnId(name));
 		const validateName = (name: string): string | null => {
@@ -188,6 +189,7 @@ export class ColumnInteractionController {
 			columnName: field,
 			initialType,
 			initialFormula,
+			initialFormulaFormat,
 			initialDateFormat,
 			validateName,
 			availableFields,
@@ -231,10 +233,16 @@ export class ColumnInteractionController {
 
 		if (result.type === 'formula') {
 			config.formula = result.formula;
+			if (result.formulaFormatPreset !== undefined) {
+				config.formulaFormat = result.formulaFormatPreset;
+			} else {
+				delete config.formulaFormat;
+			}
 			delete config.type;
 			delete config.dateFormat;
 		} else if (result.type === 'date') {
 			delete config.formula;
+			delete config.formulaFormat;
 			config.type = 'date';
 			const preset = result.dateFormat ?? 'iso';
 			if (preset === 'iso') {
@@ -244,6 +252,7 @@ export class ColumnInteractionController {
 			}
 		} else {
 			delete config.formula;
+			delete config.formulaFormat;
 			delete config.type;
 			delete config.dateFormat;
 		}

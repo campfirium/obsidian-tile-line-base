@@ -23,12 +23,13 @@
 - 任务驱动：1) 在 `docs/tasks/T000X_英文描述` 建立任务记录；2) 从 `dev` 切出对应分支开发；3) 完成阶段性工作后合并回 `dev` 并保留 feature 分支；4) 定期由 `dev` 合并进入 `main`。
 - 提交流程：每次提交前必须通过 `npm run build`，确保 `git status -sb` 仅含本次任务改动；不要添加 AI 协作者信息。
 - PR 规范：提供摘要、构建和操作系统信息、关联任务编号；若涉及 UI，附截图或 GIF，并标注主要入口和受影响文件。
+- 工作区（git worktree）：统一放置在仓库根目录的 `trees/` 目录下，例如执行 `git worktree add .\\trees\\feat-T000X-topic feat/T000X-topic` 创建，完成后使用 `git worktree remove .\\trees\\feat-T000X-topic` 清理；`trees/` 已加入 `.gitignore`，请勿提交其中的内容。
 
 ## 构建与验证
 - `npm install`：安装依赖，更新 `package.json` 后必须重新执行。
 - `npm run dev`：监听模式运行 `esbuild.config.mjs`，适合迭代开发，保持终端开启以获取增量构建。
 - `npm run build`：先执行 `tsc` 再输出最新 `main.js`，作为发布前的必备质量闸。
-- `npm run deploy`：在构建后将插件同步到绑定的 Obsidian Vault，并触发 Obsidian 重载以便手动验证。
+- `npm run deploy`：在构建后将 `dist` 内容复制到固定目录（`D:\X\Dropbox\obt\.obsidian\plugins\tile-line-base`）。
 - `npm run version`：同步更新 `manifest.json` 与 `versions.json` 的版本信息，执行后需在提交中包含相关变更并推送标签。
 - 构建问题排查：先尝试 `npm cache clean --force` 与删除 `node_modules` 后重装；必要时检查 `npm ls ag-grid-community` 以确认依赖版本。
 - 手工回归：验证 TileLineBase 视图的切换、H2 块解析、列配置加载、窗口尺寸响应；重点检查基础交互（最后一行 `Enter` 自动增行、`Delete/Backspace` 清除单元格、单选/多选逻辑）。

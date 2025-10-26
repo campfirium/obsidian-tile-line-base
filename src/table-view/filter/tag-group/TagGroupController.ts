@@ -3,7 +3,7 @@ import type { FilterViewDefinition, FileFilterViewState } from '../../../types/f
 import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
 import { openFilterViewNameModal } from '../FilterViewModals';
-import type { TagGroupStore } from './TagGroupStore';
+import { STATUS_TAG_GROUP_ID, type TagGroupStore } from './TagGroupStore';
 import { openTagGroupCreateModal, type TagGroupCreateMode } from './TagGroupCreateModal';
 import { STATUS_BASELINE_VALUES } from '../statusDefaults';
 import { ensureStatusBaseline } from './statusBaselineManager';
@@ -38,6 +38,7 @@ export class TagGroupController {
 	private readonly isStatusBaselineSeeded: () => boolean;
 	private readonly markStatusBaselineSeeded: () => void;
 	private readonly defaultGroupId: string;
+	private ensuringStatusViews = false;
 
 	constructor(options: TagGroupControllerOptions) {
 		this.app = options.app;

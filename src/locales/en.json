@@ -247,6 +247,7 @@
     "menuRenameGroup": "Rename \"{{name}}\"",
     "menuCreate": "New tag group",
     "menuCreateAndAdd": "New group and add",
+    "statusGroupName": "Status",
     "menuCreateEmpty": "Create Empty Group",
     "menuCreateFromField": "Create Group From Field",
     "menuAddFilterView": "Add to tag group",

@@ -17,6 +17,7 @@ const logger = getLogger('renderer:status-cell');
 
 // ״̬���Ͷ���
 export type TaskStatus = 'todo' | 'done' | 'inprogress' | 'onhold' | 'someday' | 'canceled';
+export const ALL_TASK_STATUSES: readonly TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'] as const;
 
 /**
  * ״̬�淶���������ֱ���ͳһΪ��׼״ֵ̬

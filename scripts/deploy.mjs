@@ -102,3 +102,4 @@ console.log("📄 同步根目录文件...");
 copyRootFiles(PLUGIN_DIR);
 
 console.log("\n✅ 部署完成！请在 Obsidian 中重载插件以应用最新构建。");
+console.log(`🕒 结束时间: ${new Date().toLocaleString()}`);

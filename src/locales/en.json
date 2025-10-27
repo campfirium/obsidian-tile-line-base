@@ -85,7 +85,7 @@
     "menuEdit": "Edit column",
     "menuDuplicate": "Duplicate column",
     "menuInsert": "Insert column",
-    "menuHide": "Collapse column",
+    "menuHide": "Hide column",
     "menuDelete": "Delete column",
     "nameEmptyError": "Column name cannot be empty",
     "nameReservedError": "Column name is reserved by the system",
@@ -98,10 +98,14 @@
     "deleteSuccess": "Deleted column: {{name}}"
   },
   "columnVisibility": {
-    "menuTitle": "Restore collapsed columns",
+    "menuTitle": "Show hidden columns",
     "empty": "No hidden columns",
-    "hideNotice": "Collapsed column: {{name}}",
-    "showNotice": "Restored column: {{name}}"
+    "hideNotice": "Hidden column: {{name}}",
+    "showNotice": "Shown column: {{name}}"
+  },
+  "columnSettings": {
+    "menuTitle": "Column settings",
+    "menuEmpty": "No configurable columns"
   },
   "statusCell": {
     "labels": {
@@ -189,7 +193,9 @@
   "filterViewBar": {
     "allTabLabel": "All",
     "tagGroupButtonLabel": "Groups",
-    "addButtonAriaLabel": "Create a new filter view"
+    "addButtonAriaLabel": "Create a new filter view",
+    "settingsMenuAriaLabel": "Open table actions",
+    "settingsMenuColumnLabel": "Column settings"
   },
   "filterViewController": {
     "noColumns": "Unable to fetch column information, please try again later",

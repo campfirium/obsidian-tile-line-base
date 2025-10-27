@@ -33,6 +33,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			},
 			onOpenTagGroupMenu: (button) => {
 				view.tagGroupController?.openTagGroupMenu(button);
+			},
+			onOpenColumnSettings: (button) => {
+				view.columnInteractionController.openColumnSettingsMenu(button);
 			}
 		}
 	});

@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { Menu, setIcon } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
 import { t } from '../../i18n';
 import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../renderers/StatusCellRenderer';
@@ -9,6 +9,7 @@ export interface FilterViewBarCallbacks {
 	onContextMenu(view: FilterViewDefinition, event: MouseEvent): void;
 	onReorder(draggedId: string, targetId: string): void;
 	onOpenTagGroupMenu(button: HTMLElement): void;
+	onOpenColumnSettings(button: HTMLElement): void;
 }
 
 interface FilterViewBarOptions {
@@ -26,8 +27,10 @@ export class FilterViewBar {
 	private readonly tagGroupClickHandler: (event: MouseEvent) => void;
 	private readonly actionsEl: HTMLElement;
 	private readonly addButtonEl: HTMLButtonElement;
+	private readonly settingsButtonEl: HTMLButtonElement;
 	private readonly searchEl: HTMLElement;
 	private readonly addClickHandler: () => void;
+	private readonly settingsMenuClickHandler: (event: MouseEvent) => void;
 	private tagGroupState: FilterViewBarTagGroupState = {
 		activeGroupId: null,
 		activeGroupName: null,
@@ -51,9 +54,13 @@ export class FilterViewBar {
 		};
 		this.tagGroupButtonEl.addEventListener('click', this.tagGroupClickHandler);
 
+		this.searchEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-search' });
+		this.options.renderQuickFilter(this.searchEl);
+
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
+		this.actionsEl.style.flex = '0 0 auto';
 		const addButtonLabel = t('filterViewBar.addButtonAriaLabel');
-		this.addButtonEl = this.actionsEl.createEl('button', {
+		this.addButtonEl = this.tabsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--add',
 			text: '+'
 		});
@@ -64,8 +71,20 @@ export class FilterViewBar {
 		};
 		this.addButtonEl.addEventListener('click', this.addClickHandler);
 
-		this.searchEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-search' });
-		this.options.renderQuickFilter(this.searchEl);
+		const settingsButtonLabel = t('filterViewBar.settingsMenuAriaLabel');
+		this.settingsButtonEl = this.actionsEl.createEl('button', {
+			cls: 'tlb-filter-view-button tlb-filter-view-button--settings'
+		});
+		this.settingsButtonEl.setAttribute('aria-label', settingsButtonLabel);
+		this.settingsButtonEl.setAttribute('title', settingsButtonLabel);
+		setIcon(this.settingsButtonEl, 'settings');
+		this.settingsMenuClickHandler = (event: MouseEvent) => {
+			event.preventDefault();
+			this.openSettingsMenu();
+		};
+		this.settingsButtonEl.addEventListener('click', this.settingsMenuClickHandler);
+		this.settingsButtonEl.style.width = 'auto';
+		this.settingsButtonEl.style.minWidth = 'auto';
 	}
 
 	render(state: FileFilterViewState): void {
@@ -139,11 +158,14 @@ export class FilterViewBar {
 				this.options.callbacks.onContextMenu(view, event);
 			});
 		}
+
+		this.tabsEl.append(this.addButtonEl);
 	}
 
 	destroy(): void {
 		this.tagGroupButtonEl.removeEventListener('click', this.tagGroupClickHandler);
 		this.addButtonEl.removeEventListener('click', this.addClickHandler);
+		this.settingsButtonEl.removeEventListener('click', this.settingsMenuClickHandler);
 		this.rootEl.remove();
 	}
 
@@ -181,6 +203,26 @@ export class FilterViewBar {
 
 		const labelEl = button.createSpan({ cls: 'tlb-filter-view-button__label' });
 		labelEl.textContent = name;
+	}
+
+	private openSettingsMenu(): void {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuColumnLabel'))
+				.setIcon('layout-grid')
+				.onClick(() => {
+					this.options.callbacks.onOpenColumnSettings(this.settingsButtonEl);
+				});
+		});
+
+		const rect = this.settingsButtonEl.getBoundingClientRect();
+		const ownerDoc = this.settingsButtonEl.ownerDocument;
+		const win = ownerDoc?.defaultView ?? window;
+		menu.showAtPosition({
+			x: rect.left + win.scrollX,
+			y: rect.bottom + win.scrollY
+		});
 	}
 
 	private getStatusFromFilterView(view: FilterViewDefinition): TaskStatus | null {

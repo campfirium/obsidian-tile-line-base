@@ -153,6 +153,82 @@ export class ColumnInteractionController {
 		menu.showAtPosition(anchor);
 	}
 
+	openColumnSettingsMenu(anchor: HTMLElement): void {
+		const schema = this.getSchema();
+		if (!schema) {
+			return;
+		}
+
+		const hiddenSet = new Set(
+			(schema.columnConfigs ?? []).filter((config) => config.hide).map((config) => config.name)
+		);
+		const columnOrder: string[] = [];
+		const collected = new Set<string>();
+		const primaryField = schema.columnNames[0] ?? null;
+
+		for (const name of schema.columnNames) {
+			if (!name) {
+				continue;
+			}
+			if (isReservedColumnId(name) && name !== 'status') {
+				continue;
+			}
+			if (!collected.has(name)) {
+				collected.add(name);
+				columnOrder.push(name);
+			}
+		}
+
+		for (const config of schema.columnConfigs ?? []) {
+			const name = config?.name;
+			if (!name) {
+				continue;
+			}
+			if (collected.has(name)) {
+				continue;
+			}
+			if (isReservedColumnId(name) && name !== 'status') {
+				continue;
+			}
+			collected.add(name);
+			columnOrder.push(name);
+		}
+
+		const menu = new Menu();
+		if (columnOrder.length === 0) {
+			menu.addItem((item) => {
+				item.setTitle(t('columnSettings.menuEmpty')).setDisabled(true);
+			});
+		} else {
+			menu.addItem((item) => {
+				item.setTitle(t('columnSettings.menuTitle')).setDisabled(true);
+			});
+			menu.addSeparator();
+			for (const name of columnOrder) {
+				const hidden = hiddenSet.has(name);
+				const isPrimaryField = primaryField !== null && name === primaryField;
+				menu.addItem((item) => {
+					item.setTitle(name);
+					if (isPrimaryField) {
+						item.setIcon('lock').setDisabled(true);
+						return;
+					}
+					item.setIcon(hidden ? 'eye-off' : 'eye').onClick(() => {
+						this.setColumnHidden(name, !hidden);
+					});
+				});
+			}
+		}
+
+		const rect = anchor.getBoundingClientRect();
+		const ownerDocument = anchor.ownerDocument;
+		const win = ownerDocument?.defaultView ?? window;
+		menu.showAtPosition({
+			x: rect.left + win.scrollX,
+			y: rect.bottom + win.scrollY
+		});
+	}
+
 	private openColumnEditModal(field: string): void {
 		const schema = this.getSchema();
 		if (!schema) {
@@ -319,13 +395,14 @@ export class ColumnInteractionController {
 		this.persistColumnStructureChange({ notice: t('columnInteraction.deleteSuccess', { name: target }) });
 	}
 
-	private setColumnHidden(field: string, hidden: boolean): void {
+	setColumnHidden(field: string, hidden: boolean): void {
 		const schema = this.getSchema();
 		if (!schema) {
 			return;
 		}
 		const target = field.trim();
-		if (!target || isReservedColumnId(target)) {
+		const isStatusColumn = target === 'status';
+		if (!target || (isReservedColumnId(target) && !isStatusColumn)) {
 			return;
 		}
 

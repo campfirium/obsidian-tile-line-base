@@ -187,8 +187,9 @@
     "formulaLimitNotice": "��ʽ������ͣ���������� {{limit}} ��"
   },
   "filterViewBar": {
-    "allTabLabel": "ȫ��",
-    "tagGroupButtonLabel": "��ǩ��"
+    "allTabLabel": "全部",
+    "tagGroupButtonLabel": "分组",
+    "addButtonAriaLabel": "新建过滤视图"
   },
   "filterViewController": {
     "noColumns": "�޷���ȡ����Ϣ�����Ժ�����",

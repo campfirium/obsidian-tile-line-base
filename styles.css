@@ -57,8 +57,8 @@
 .tlb-filter-view-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: calc(var(--ag-grid-size, 8px));
+  margin-bottom: calc(var(--ag-grid-size, 8px) * 0.75);
   flex-wrap: wrap;
   flex: 0 0 auto;
 }
@@ -66,59 +66,86 @@
 .tlb-filter-view-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: calc(var(--ag-grid-size, 8px) * 0.75);
 }
 
 .tlb-filter-view-actions {
   display: flex;
-  gap: 6px;
+  gap: calc(var(--ag-grid-size, 8px) * 0.75);
 }
 
 .tlb-filter-view-search {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(var(--ag-grid-size, 8px) * 0.75);
   margin-left: auto;
 }
 
 .tlb-filter-view-button {
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-primary);
-  color: var(--text-muted);
-  border-radius: 14px;
-  padding: 2px 12px;
-  font-size: 12px;
-  line-height: 1.6;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(var(--ag-grid-size, 8px) * 0.5);
+  border-radius: var(--ag-border-radius, 6px);
+  border: 1px solid var(--ag-border-color, var(--background-modifier-border));
+  background: color-mix(in srgb, var(--ag-background-color, var(--background-primary)) 95%, transparent);
+  color: var(--ag-foreground-color, var(--text-muted));
+  padding: calc(var(--ag-grid-size, 8px) * 0.5) calc(var(--ag-grid-size, 8px) * 1.25);
+ font-size: var(--ag-font-size, 12px);
+ line-height: 1.4;
+ min-height: calc(var(--ag-grid-size, 8px) * 2.5);
+  min-width: calc(var(--ag-font-size, 12px) * 6);
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+  font-weight: 500;
+  position: relative;
 }
 
 .tlb-filter-view-button:hover {
-  color: var(--text-normal);
-  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--ag-header-background-color, var(--background-modifier-hover)) 85%, transparent);
+  color: var(--ag-foreground-color, var(--text-normal));
+  border-color: var(--ag-border-color, var(--interactive-accent));
+}
+
+.tlb-filter-view-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ag-focus-border-color, var(--interactive-accent)) 80%, transparent);
+  outline-offset: 2px;
 }
 
 .tlb-filter-view-button.is-active {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent, #fff);
-  border-color: var(--interactive-accent);
+  background: color-mix(
+    in srgb,
+    var(--ag-alpine-active-color, var(--interactive-accent)) 22%,
+    var(--ag-background-color, var(--background-primary))
+  );
+  color: var(--ag-foreground-color, var(--text-normal));
+  border-color: color-mix(
+    in srgb,
+    var(--ag-alpine-active-color, var(--interactive-accent)) 40%,
+    var(--ag-border-color, var(--background-modifier-border))
+  );
+  box-shadow: inset 0 0 0 1px color-mix(
+    in srgb,
+    var(--ag-alpine-active-color, var(--interactive-accent)) 20%,
+    transparent
+  );
 }
 
-.theme-dark .tlb-filter-view-button.is-active {
-  color: var(--text-on-accent, #fff);
+.tlb-filter-view-button.is-active .tlb-filter-view-button__icon {
+  color: var(--ag-alpine-active-color, var(--interactive-accent));
 }
 
 .tlb-filter-view-button--add {
-  font-weight: 600;
+  min-width: auto;
 }
 
 .tlb-filter-view-button--tag-groups {
   min-width: auto;
-  padding-right: 12px;
-  padding-left: 12px;
+  padding-right: calc(var(--ag-grid-size, 8px) * 1.25);
+  padding-left: calc(var(--ag-grid-size, 8px) * 1.25);
+}
+
+.tlb-filter-view-button--status .tlb-filter-view-button__icon {
+  color: var(--ag-foreground-color, var(--text-muted));
 }
 
 .tlb-tag-group-menu-row {
@@ -228,8 +255,9 @@
 
 /* 拖拽状态样式 */
 .tlb-filter-view-button.is-dragging {
-  opacity: 0.4;
+  opacity: 0.72;
   cursor: grabbing;
+  transform: scale(0.98);
 }
 
 .tlb-filter-view-button__icon {
@@ -238,12 +266,12 @@
   justify-content: center;
   width: 14px;
   height: 14px;
-  margin-right: 6px;
+  font-size: 14px;
+  color: inherit;
 }
 
 .tlb-filter-view-button__label {
-  display: inline-flex;
-  align-items: center;
+  white-space: nowrap;
 }
 
 .tlb-filter-view-button[draggable="true"] {

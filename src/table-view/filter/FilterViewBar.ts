@@ -52,10 +52,13 @@ export class FilterViewBar {
 		this.tagGroupButtonEl.addEventListener('click', this.tagGroupClickHandler);
 
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
+		const addButtonLabel = t('filterViewBar.addButtonAriaLabel');
 		this.addButtonEl = this.actionsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--add',
 			text: '+'
 		});
+		this.addButtonEl.setAttribute('aria-label', addButtonLabel);
+		this.addButtonEl.setAttribute('title', addButtonLabel);
 		this.addClickHandler = () => {
 			this.options.callbacks.onCreate();
 		};
@@ -70,10 +73,13 @@ export class FilterViewBar {
 		this.tabsEl.append(this.tagGroupButtonEl);
 		this.updateTagGroupButton();
 
+		const defaultLabel = t('filterViewBar.allTabLabel');
 		const defaultButton = this.tabsEl.createEl('button', {
 			cls: 'tlb-filter-view-button',
-			text: t('filterViewBar.allTabLabel')
+			text: defaultLabel
 		});
+		defaultButton.setAttribute('title', defaultLabel);
+		defaultButton.setAttribute('aria-label', defaultLabel);
 		defaultButton.addEventListener('click', () => {
 			this.options.callbacks.onActivate(null);
 		});

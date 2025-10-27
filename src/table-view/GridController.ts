@@ -3,7 +3,6 @@ import type { GridAdapter, ColumnDef, RowData, CellEditEvent, HeaderEditEvent } 
 import type { CellLinkClickContext } from '../types/cellLinks';
 import type { TaskStatus } from '../renderers/StatusCellRenderer';
 
-<<<<<<< HEAD
 export interface GridControllerHandlers {
 	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;
 	onColumnResize: (field: string, width: number) => void;
@@ -15,21 +14,8 @@ export interface GridControllerHandlers {
 	onHeaderEdit?: (event: HeaderEditEvent) => void;
 	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow?: (field: string | null) => void;
-}
-=======
-export interface GridControllerHandlers {
-	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;
-	onColumnResize: (field: string, width: number) => void;
-	onCopyH2Section: (rowIndex: number) => void;
-	onColumnOrderChange: (fields: string[]) => void;
-	onModelUpdated?: () => void;
-	onCellEdit: (event: CellEditEvent) => void;
-	onHeaderEdit?: (event: HeaderEditEvent) => void;
-	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
-	onEnterAtLastRow?: (field: string | null) => void;
 	onOpenCellLink?: (context: CellLinkClickContext) => void;
 }
->>>>>>> feat/T0094-text-cell-link-recognition
 
 export interface GridMountResult {
 	gridAdapter: GridAdapter;

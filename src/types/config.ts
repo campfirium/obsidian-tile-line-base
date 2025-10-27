@@ -5,6 +5,8 @@ export interface TlbConfigBlock {
 	filterViews?: FileFilterViewState;
 	tagGroups?: FileTagGroupState;
 	columnWidths?: Record<string, number>;
+	columnConfigs?: string[];
+	copyTemplate?: string | null;
 	viewPreference?: 'markdown' | 'table';
 	[key: string]: unknown;
 }

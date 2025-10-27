@@ -4,6 +4,7 @@ import { getLogger } from '../utils/logger';
 import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
 import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
 import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
+import { handleCellLinkOpen } from './LinkNavigation';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
@@ -174,7 +175,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 				onEnterAtLastRow: (field) => {
 					const oldRowCount = view.blocks.length;
 					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });
-				}
+				},
+				onOpenCellLink: (context) => handleCellLinkOpen(view, context)
 			}
 		});
 

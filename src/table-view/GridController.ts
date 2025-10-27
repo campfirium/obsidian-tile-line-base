@@ -1,7 +1,9 @@
 import { AgGridAdapter } from '../grid/AgGridAdapter';
 import type { GridAdapter, ColumnDef, RowData, CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
+import type { CellLinkClickContext } from '../types/cellLinks';
 import type { TaskStatus } from '../renderers/StatusCellRenderer';
 
+<<<<<<< HEAD
 export interface GridControllerHandlers {
 	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;
 	onColumnResize: (field: string, width: number) => void;
@@ -14,6 +16,20 @@ export interface GridControllerHandlers {
 	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow?: (field: string | null) => void;
 }
+=======
+export interface GridControllerHandlers {
+	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;
+	onColumnResize: (field: string, width: number) => void;
+	onCopyH2Section: (rowIndex: number) => void;
+	onColumnOrderChange: (fields: string[]) => void;
+	onModelUpdated?: () => void;
+	onCellEdit: (event: CellEditEvent) => void;
+	onHeaderEdit?: (event: HeaderEditEvent) => void;
+	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
+	onEnterAtLastRow?: (field: string | null) => void;
+	onOpenCellLink?: (context: CellLinkClickContext) => void;
+}
+>>>>>>> feat/T0094-text-cell-link-recognition
 
 export interface GridMountResult {
 	gridAdapter: GridAdapter;
@@ -50,6 +66,7 @@ export class GridController {
 			onCopyH2Section: handlers.onCopyH2Section,
 			onCopySelectionAsTemplate: handlers.onCopySelectionAsTemplate,
 			onColumnOrderChange: handlers.onColumnOrderChange,
+			openCellLink: handlers.onOpenCellLink,
 			sideBarVisible,
 			getContainerEl: () => container
 		});

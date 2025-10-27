@@ -5,6 +5,7 @@ import { createDateCellEditor } from '../editors/DateCellEditor';
 import { COLUMN_MAX_WIDTH, COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
 import { IconHeaderComponent } from '../headers/IconHeaderComponent';
 import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
+import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
 import { formatDateForDisplay } from '../../utils/datetime';
 
 const INDEX_FIELD = '#';
@@ -102,6 +103,10 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 	};
 
 	const mergedColDef = { ...baseColDef, ...(column as unknown as ColDef) };
+
+	if (!mergedColDef.cellRenderer) {
+		mergedColDef.cellRenderer = createTextLinkCellRenderer();
+	}
 
 	if ((column as any).editorType === 'date') {
 		const format = (column as any).dateFormat ?? 'iso';

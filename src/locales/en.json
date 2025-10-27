@@ -231,8 +231,8 @@
     "addSortButton": "+ Add sort",
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
-    "sortDirectionAsc": "Ascending (A �� Z)",
-    "sortDirectionDesc": "Descending (Z �� A)"
+    "sortDirectionAsc": "Ascending (A 锟斤拷 Z)",
+    "sortDirectionDesc": "Descending (Z 锟斤拷 A)"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
@@ -282,5 +282,9 @@
     "createFieldNoViews": "Failed to generate filter views for the selected field.",
     "createFieldNoColumns": "No columns available for field grouping.",
     "emptyValueName": "(Empty) {{field}}"
+  },
+  "textLinkCell": {
+    "openInternal": "Open note in new tab: {{target}}",
+    "openExternal": "Open link: {{target}}"
   }
 }

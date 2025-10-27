@@ -21,23 +21,40 @@ export class GlobalQuickFilterController {
 		container.addClass('tlb-filter-view-search');
 		container.setAttribute('role', 'search');
 
-		const clearButton = container.createSpan({ cls: 'clickable-icon' });
-		clearButton.setAttribute('role', 'button');
-		clearButton.setAttribute('tabindex', '0');
-		clearButton.setAttribute('aria-label', t('quickFilter.clearAriaLabel'));
-		setIcon(clearButton, 'x');
+		const field = container.createDiv({ cls: 'tlb-filter-view-search__field' });
 
-		const input = container.createEl('input', {
-			type: 'search',
-			placeholder: t('quickFilter.placeholder')
-		});
-		input.setAttribute('aria-label', t('quickFilter.inputAriaLabel'));
-		input.setAttribute('size', '16');
+		const searchIconSize = 16;
+		const clearIconSize = 20;
+		const searchHitArea = searchIconSize + 12;
+		const clearHitArea = clearIconSize + 12;
 
-		const iconEl = container.createSpan({ cls: 'clickable-icon' });
+		field.style.setProperty('--tlb-quick-filter-hit-area', `${searchHitArea}px`);
+		field.style.setProperty('--tlb-quick-filter-icon-size', `${searchIconSize}px`);
+		field.style.setProperty('--tlb-quick-filter-clear-size', `${clearIconSize}px`);
+
+		const iconEl = field.createSpan({ cls: 'tlb-filter-view-search__icon clickable-icon' });
 		iconEl.setAttribute('aria-label', t('quickFilter.focusAriaLabel'));
 		iconEl.setAttribute('tabindex', '0');
 		setIcon(iconEl, 'search');
+		this.configureIconSize(iconEl, searchIconSize, searchHitArea);
+
+		const input = field.createEl('input', {
+			type: 'search',
+			placeholder: t('quickFilter.placeholder')
+		});
+		input.addClass('tlb-filter-view-search__input');
+		input.setAttribute('aria-label', t('quickFilter.inputAriaLabel'));
+		input.setAttribute('size', '16');
+		input.style.paddingLeft = `${searchHitArea + 8}px`;
+		input.style.paddingRight = `${clearHitArea + 8}px`;
+
+		const clearButton = field.createSpan({ cls: 'tlb-filter-view-search__clear clickable-icon' });
+		clearButton.setAttribute('role', 'button');
+		clearButton.setAttribute('tabindex', '0');
+		clearButton.setAttribute('aria-label', t('quickFilter.clearAriaLabel'));
+		clearButton.setAttribute('hidden', 'true');
+		setIcon(clearButton, 'x');
+		this.configureIconSize(clearButton, clearIconSize, clearHitArea);
 
                 const currentValue = globalQuickFilterManager.getValue();
                 input.value = currentValue;
@@ -159,16 +176,44 @@ export class GlobalQuickFilterController {
                 this.updateIndicators(value);
         }
 
-        private updateIndicators(value: string): void {
-                if (!this.clearEl) {
-                        return;
-                }
-                if (value && value.length > 0) {
-                        this.clearEl.removeAttribute('hidden');
-                        (this.clearEl as HTMLElement).style.display = '';
-                } else {
-                        this.clearEl.setAttribute('hidden', 'true');
-                        (this.clearEl as HTMLElement).style.display = 'none';
-                }
-        }
+	private updateIndicators(value: string): void {
+		if (!this.clearEl) {
+			return;
+		}
+		if (value && value.length > 0) {
+			this.clearEl.removeAttribute('hidden');
+		} else {
+			this.clearEl.setAttribute('hidden', 'true');
+		}
+	}
+
+	private configureIconSize(target: HTMLElement, size: number, hitArea: number, attempt = 0): void {
+		const area = Math.max(hitArea, size);
+		target.style.width = `${area}px`;
+		target.style.height = `${area}px`;
+		target.style.minWidth = `${area}px`;
+		target.style.minHeight = `${area}px`;
+
+		const svg = target.querySelector('svg');
+		if (!svg) {
+			if (attempt > 3) {
+				return;
+			}
+			if (typeof requestAnimationFrame === 'function') {
+				requestAnimationFrame(() => this.configureIconSize(target, size, area, attempt + 1));
+			} else {
+				window.setTimeout(() => this.configureIconSize(target, size, area, attempt + 1), 0);
+			}
+			return;
+		}
+		svg.setAttribute('width', `${size}`);
+		svg.setAttribute('height', `${size}`);
+		svg.style.width = `${size}px`;
+		svg.style.height = `${size}px`;
+		svg.style.minWidth = `${size}px`;
+		svg.style.minHeight = `${size}px`;
+		svg.style.maxWidth = `${size}px`;
+		svg.style.maxHeight = `${size}px`;
+		svg.style.strokeWidth = '1.75';
+	}
 }

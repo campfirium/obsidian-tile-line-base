@@ -1,6 +1,16 @@
 import type { TableView } from '../TableView';
 import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterViewBar';
-import { ROW_ID_FIELD } from '../grid/GridAdapter';
+import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
+import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
+
+export type FilterColumnKind = 'status' | 'date' | 'text';
+
+export interface FilterColumnOption {
+	name: string;
+	kind: FilterColumnKind;
+	allowNumericOperators?: boolean;
+	statusValues?: string[];
+}
 
 export function renderFilterViewControls(view: TableView, container: Element): void {
 	view.globalQuickFilterController.cleanup();
@@ -80,6 +90,15 @@ export function getAvailableColumns(view: TableView): string[] {
 	return result;
 }
 
+export function getFilterColumnOptions(view: TableView): FilterColumnOption[] {
+	const columnNames = getAvailableColumns(view);
+	if (columnNames.length === 0) {
+		return [];
+	}
+	const rows = view.filterOrchestrator?.getAllRows?.() ?? view.dataStore.extractRowData();
+	return columnNames.map((name) => createColumnOption(view, name, rows));
+}
+
 export function persistFilterViews(view: TableView): Promise<void> | void {
 	if (!view.file) {
 		return;
@@ -109,6 +128,65 @@ export function updateFilterViewBarTagGroupState(view: TableView): void {
 	view.tagGroupController?.syncWithAvailableViews();
 	syncTagGroupState(view);
 	view.filterViewBar.setTagGroupState(buildTagGroupRenderState(view));
+}
+
+function createColumnOption(view: TableView, column: string, rows: RowData[]): FilterColumnOption {
+	const normalized = column.trim().toLowerCase();
+	if (normalized === 'status') {
+		return {
+			name: column,
+			kind: 'status',
+			allowNumericOperators: false,
+			statusValues: collectStatusValues(rows)
+		};
+	}
+
+	const displayType = view.dataStore.getColumnDisplayType(column);
+	if (displayType === 'date') {
+		return {
+			name: column,
+			kind: 'date',
+			allowNumericOperators: true
+		};
+	}
+
+	return {
+		name: column,
+		kind: 'text',
+		allowNumericOperators: true
+	};
+}
+
+function collectStatusValues(rows: RowData[]): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+
+	for (const baseline of STATUS_BASELINE_VALUES) {
+		const key = baseline.trim().toLowerCase();
+		if (!seen.has(key)) {
+			seen.add(key);
+			result.push(baseline);
+		}
+	}
+
+	for (const row of rows) {
+		const raw = row['status'];
+		if (typeof raw !== 'string') {
+			continue;
+		}
+		const trimmed = raw.trim();
+		if (trimmed.length === 0) {
+			continue;
+		}
+		const key = trimmed.toLowerCase();
+		if (seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+		result.push(trimmed);
+	}
+
+	return result;
 }
 
 function buildTagGroupRenderState(view: TableView): FilterViewBarTagGroupState {

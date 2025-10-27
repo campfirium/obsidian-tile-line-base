@@ -4,11 +4,13 @@ import { FilterViewEditorModal, openFilterViewNameModal } from './FilterViewModa
 import { FilterStateStore } from './FilterStateStore';
 import { t } from '../../i18n';
 import { getStatusDisplayLabel } from './statusDefaults';
+import type { FilterColumnOption } from '../TableViewFilterPresenter';
 
 interface FilterViewControllerOptions {
 	app: App;
 	stateStore: FilterStateStore;
 	getAvailableColumns: () => string[];
+	getFilterColumnOptions?: () => FilterColumnOption[];
 	persist: () => Promise<void> | void;
 	applyActiveFilterView: () => void;
 	syncState: () => void;
@@ -30,6 +32,7 @@ export class FilterViewController {
 	private readonly app: App;
 	private readonly stateStore: FilterStateStore;
 	private readonly getAvailableColumns: () => string[];
+	private readonly getFilterColumnOptions?: () => FilterColumnOption[];
 	private readonly persist: () => Promise<void> | void;
 	private readonly applyActiveFilterView: () => void;
 	private readonly syncState: () => void;
@@ -44,6 +47,7 @@ export class FilterViewController {
 		this.app = options.app;
 		this.stateStore = options.stateStore;
 		this.getAvailableColumns = options.getAvailableColumns;
+		this.getFilterColumnOptions = options.getFilterColumnOptions;
 		this.persist = options.persist;
 		this.applyActiveFilterView = options.applyActiveFilterView;
 		this.syncState = options.syncState;
@@ -51,9 +55,37 @@ export class FilterViewController {
 		this.tagGroupSupport = options.tagGroupSupport;
 	}
 
+	private resolveColumnOptions(): FilterColumnOption[] {
+		if (this.getFilterColumnOptions) {
+			try {
+				const options = this.getFilterColumnOptions();
+				if (Array.isArray(options) && options.length > 0) {
+					return options;
+				}
+			} catch {
+				// ignore and fall back to legacy columns
+			}
+		}
+		return this.getAvailableColumns().map((name) => {
+			const normalized = name.trim().toLowerCase();
+			if (normalized === 'status') {
+				return {
+					name,
+					kind: 'status' as const,
+					allowNumericOperators: false
+				};
+			}
+			return {
+				name,
+				kind: 'text' as const,
+				allowNumericOperators: true
+			};
+		});
+	}
+
 	async promptCreateFilterView(): Promise<void> {
-		const columns = this.getAvailableColumns();
-		if (columns.length === 0) {
+		const columnOptions = this.resolveColumnOptions();
+		if (columnOptions.length === 0) {
 			new Notice(t('filterViewController.noColumns'));
 			return;
 		}
@@ -61,7 +93,7 @@ export class FilterViewController {
 		await new Promise<void>((resolve) => {
 			const modal = new FilterViewEditorModal(this.app, {
 				title: t('filterViewController.createModalTitle'),
-				columns,
+				columns: columnOptions,
 				onSubmit: (name, rule, sortRules) => {
 					this.saveFilterView(name, rule, sortRules);
 					resolve();
@@ -142,15 +174,15 @@ export class FilterViewController {
 			return;
 		}
 
-		const columns = this.getAvailableColumns();
-		if (columns.length === 0) {
+		const columnOptions = this.resolveColumnOptions();
+		if (columnOptions.length === 0) {
 			return;
 		}
 
 		await new Promise<void>((resolve) => {
 			const modal = new FilterViewEditorModal(this.app, {
 				title: t('filterViewController.editModalTitle', { name: current.name }),
-				columns,
+				columns: columnOptions,
 				initialName: current.name,
 				initialRule: current.filterRule,
 				initialSortRules: current.sortRules,
@@ -202,8 +234,8 @@ export class FilterViewController {
 			return;
 		}
 
-		const columns = this.getAvailableColumns();
-		if (columns.length === 0) {
+		const columnOptions = this.resolveColumnOptions();
+		if (columnOptions.length === 0) {
 			new Notice(t('filterViewController.noColumns'));
 			return;
 		}
@@ -224,7 +256,7 @@ export class FilterViewController {
 		await new Promise<void>((resolve) => {
 			const modal = new FilterViewEditorModal(this.app, {
 				title: t('filterViewController.duplicateModalTitle', { name: sourceView.name }),
-				columns,
+				columns: columnOptions,
 				initialName: duplicatedName,
 				initialRule,
 				initialSortRules,

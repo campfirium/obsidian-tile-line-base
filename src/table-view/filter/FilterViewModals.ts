@@ -1,21 +1,13 @@
 import { App, Modal, Setting } from 'obsidian';
 import type { FilterCondition, FilterOperator, FilterRule, SortRule } from '../../types/filterView';
-import { t, type TranslationKey } from '../../i18n';
-
-const FILTER_OPERATOR_LABEL_KEYS: Array<{ value: FilterOperator; key: TranslationKey }> = [
-	{ value: 'equals', key: 'filterViewModals.operators.equals' },
-	{ value: 'notEquals', key: 'filterViewModals.operators.notEquals' },
-	{ value: 'contains', key: 'filterViewModals.operators.contains' },
-	{ value: 'notContains', key: 'filterViewModals.operators.notContains' },
-	{ value: 'startsWith', key: 'filterViewModals.operators.startsWith' },
-	{ value: 'endsWith', key: 'filterViewModals.operators.endsWith' },
-	{ value: 'isEmpty', key: 'filterViewModals.operators.isEmpty' },
-	{ value: 'isNotEmpty', key: 'filterViewModals.operators.isNotEmpty' }
-];
+import { t } from '../../i18n';
+import type { FilterColumnOption } from '../TableViewFilterPresenter';
+import { getStatusDisplayLabel } from './statusDefaults';
+import { getOperatorLabelKey, getOperatorsForOption, VALUELESS_OPERATORS } from './FilterOperatorUtils';
 
 export interface FilterViewEditorModalOptions {
 	title: string;
-	columns: string[];
+	columns: FilterColumnOption[];
 	initialName?: string;
 	initialRule?: FilterRule | null;
 	initialSortRules?: SortRule[] | null;
@@ -116,44 +108,71 @@ export class FilterViewEditorModal extends Modal {
 			const row = this.conditionsContainer.createDiv({ cls: 'tlb-filter-condition-row' });
 
 			const columnSelect = row.createEl('select', { cls: 'tlb-filter-select' });
-			this.options.columns.forEach((col) => {
-				const option = columnSelect.createEl('option', { text: col, value: col });
-				if (col === condition.column) {
-					option.selected = true;
+			const availableColumns = this.options.columns;
+			availableColumns.forEach((option) => {
+				const element = columnSelect.createEl('option', { text: option.name, value: option.name });
+				if (option.name === condition.column) {
+					element.selected = true;
 				}
 			});
+			if (availableColumns.length > 0 && !availableColumns.some((option) => option.name === condition.column)) {
+				const fallback = availableColumns[0].name;
+				columnSelect.value = fallback;
+				condition.column = fallback;
+			}
 			columnSelect.addEventListener('change', () => {
 				condition.column = columnSelect.value;
+				const nextOption = this.getColumnOption(condition.column);
+				const operators = getOperatorsForOption(nextOption);
+				if (!operators.includes(condition.operator)) {
+					condition.operator = operators[0] ?? 'equals';
+				}
+				if (!this.operatorRequiresValue(condition.operator)) {
+					delete condition.value;
+				} else {
+					const defaultValue = this.getDefaultValueForColumn(condition.column, condition.operator);
+					if (defaultValue !== undefined) {
+						condition.value = defaultValue;
+					}
+				}
+				this.renderConditions();
 			});
 
-			const operators: { value: FilterOperator; label: string }[] = FILTER_OPERATOR_LABEL_KEYS.map((item) => ({
-				value: item.value,
-				label: t(item.key)
-			}));
-
 			const operatorSelect = row.createEl('select', { cls: 'tlb-filter-select' });
-			operators.forEach((op) => {
-				const option = operatorSelect.createEl('option', { text: op.label, value: op.value });
-				if (op.value === condition.operator) {
+			const columnOption = this.getColumnOption(condition.column);
+			const operators = getOperatorsForOption(columnOption);
+			const effectiveOperators = operators.length > 0 ? operators : (['equals'] as FilterOperator[]);
+			if (!effectiveOperators.includes(condition.operator)) {
+				condition.operator = effectiveOperators[0] ?? 'equals';
+			}
+			effectiveOperators.forEach((operator) => {
+				const labelKey = getOperatorLabelKey(columnOption, operator);
+				const label = labelKey ? t(labelKey) : operator;
+				const option = operatorSelect.createEl('option', { text: label, value: operator });
+				if (operator === condition.operator) {
 					option.selected = true;
 				}
 			});
 			operatorSelect.addEventListener('change', () => {
-				condition.operator = operatorSelect.value as FilterOperator;
+				const nextOperator = operatorSelect.value as FilterOperator;
+				condition.operator = nextOperator;
+				if (!this.operatorRequiresValue(nextOperator)) {
+					delete condition.value;
+				} else if (condition.value == null) {
+					const defaultValue = this.getDefaultValueForColumn(condition.column, nextOperator);
+					if (defaultValue !== undefined) {
+						condition.value = defaultValue;
+					}
+				}
 				this.renderConditions();
 			});
 
-			const requiresValue = !['isEmpty', 'isNotEmpty'].includes(condition.operator);
-			if (requiresValue) {
-				const valueInput = row.createEl('input', {
-					type: 'text',
-					cls: 'tlb-filter-input',
-					placeholder: t('filterViewModals.valuePlaceholder')
-				});
-				valueInput.value = condition.value ?? '';
-				valueInput.addEventListener('input', () => {
-					condition.value = valueInput.value;
-				});
+			if (this.operatorRequiresValue(condition.operator)) {
+				if (columnOption.kind === 'status') {
+					this.renderStatusValueInput(row, condition, columnOption);
+				} else {
+					this.renderValueInput(row, condition, columnOption);
+				}
 			}
 
 			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning' });
@@ -164,15 +183,122 @@ export class FilterViewEditorModal extends Modal {
 		});
 	}
 
+	private getColumnOption(column: string): FilterColumnOption {
+		const match = this.options.columns.find((option) => option.name === column);
+		if (match) {
+			return match;
+		}
+		return { name: column, kind: 'text', allowNumericOperators: true };
+	}
+
+	private operatorRequiresValue(operator: FilterOperator): boolean {
+		return !VALUELESS_OPERATORS.has(operator);
+	}
+
+	private getDefaultValueForColumn(column: string, operator: FilterOperator): string | undefined {
+		if (!this.operatorRequiresValue(operator)) {
+			return undefined;
+		}
+		const option = this.getColumnOption(column);
+		if (option.kind === 'status') {
+			const statuses = this.getStatusOptions(option);
+			return statuses.length > 0 ? statuses[0] : '';
+		}
+		return '';
+	}
+
+	private getStatusOptions(option: FilterColumnOption): string[] {
+		if (Array.isArray(option.statusValues) && option.statusValues.length > 0) {
+			return [...option.statusValues];
+		}
+		return [];
+	}
+
+	private renderStatusValueInput(row: HTMLElement, condition: FilterCondition, option: FilterColumnOption): void {
+		const select = row.createEl('select', { cls: 'tlb-filter-select' });
+		const values = this.getStatusOptions(option);
+		const seen = new Set<string>();
+		const currentValue = typeof condition.value === 'string' ? condition.value.trim() : '';
+
+		values.forEach((value) => {
+			const trimmed = value.trim();
+			if (!trimmed) {
+				return;
+			}
+			const key = trimmed.toLowerCase();
+			if (seen.has(key)) {
+				return;
+			}
+			seen.add(key);
+			const label = getStatusDisplayLabel(trimmed);
+			const opt = select.createEl('option', { text: label, value: trimmed });
+			if (currentValue && key === currentValue.toLowerCase()) {
+				opt.selected = true;
+			}
+		});
+
+		if (currentValue && !seen.has(currentValue.toLowerCase())) {
+			const opt = select.createEl('option', {
+				text: getStatusDisplayLabel(currentValue),
+				value: currentValue
+			});
+			opt.selected = true;
+		}
+
+		if (!currentValue) {
+			if (values.length > 0) {
+				select.value = values[0];
+				condition.value = values[0];
+			} else {
+				condition.value = '';
+			}
+		}
+
+		select.addEventListener('change', () => {
+			condition.value = select.value;
+		});
+	}
+
+	private renderValueInput(row: HTMLElement, condition: FilterCondition, option: FilterColumnOption): void {
+		const inputType = option.kind === 'date' ? 'date' : 'text';
+		const input = row.createEl('input', {
+			type: inputType,
+			cls: 'tlb-filter-input',
+			placeholder: t('filterViewModals.valuePlaceholder')
+		});
+		const currentValue = typeof condition.value === 'string' ? condition.value : '';
+		input.value = currentValue;
+		condition.value = currentValue;
+		if (option.allowNumericOperators && option.kind !== 'status' && option.kind !== 'date') {
+			input.setAttribute('inputmode', 'decimal');
+		}
+		input.addEventListener('input', () => {
+			condition.value = input.value;
+		});
+	}
+
 	private addCondition(): void {
-		const firstColumn = this.options.columns[0] ?? 'status';
-		this.conditions.push({ column: firstColumn, operator: 'equals', value: '' });
+		const firstOption = this.options.columns[0];
+		if (!firstOption) {
+			return;
+		}
+		const operators = getOperatorsForOption(firstOption);
+		const operator = operators[0] ?? 'equals';
+		const condition: FilterCondition = {
+			column: firstOption.name,
+			operator
+		};
+		const defaultValue = this.getDefaultValueForColumn(firstOption.name, operator);
+		if (defaultValue !== undefined) {
+			condition.value = defaultValue;
+		}
+		this.conditions.push(condition);
 		this.renderConditions();
 	}
 
 	private renderSortRules(): void {
 		this.sortContainer.empty();
-		const availableColumns = this.options.columns;
+		const availableColumns = this.options.columns.map((option) => option.name);
 		if (availableColumns.length === 0) {
 			this.sortContainer.createEl('p', {
 				text: t('filterViewModals.sortsNoColumnsHint'),
@@ -233,7 +359,7 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	private addSortRule(): void {
-		const firstColumn = this.options.columns[0];
+		const firstColumn = this.options.columns[0]?.name;
 		if (!firstColumn) {
 			return;
 		}

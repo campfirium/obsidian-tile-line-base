@@ -9,6 +9,7 @@ export interface GridInteractionContext {
 	onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 	onColumnResize?: (field: string, width: number) => void;
 	onCopyH2Section?: (rowIndex: number) => void;
+	onCopySelectionAsTemplate?: (rowIndex: number) => void;
 	onColumnOrderChange?: (fields: string[]) => void;
 	sideBarVisible?: boolean;
 	getContainerEl?: () => HTMLElement | null;

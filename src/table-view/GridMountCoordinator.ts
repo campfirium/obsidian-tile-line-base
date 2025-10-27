@@ -111,6 +111,7 @@ interface GridMountHandlers {
 	onStatusChange: (rowId: string, newStatus: any) => void;
 	onColumnResize: (field: string, width: number) => void;
 	onCopyH2Section: (rowIndex: number) => void;
+	onCopySelectionAsTemplate?: (rowIndex: number) => void;
 	onColumnOrderChange: (fields: string[]) => void;
 	onModelUpdated: () => void;
 	onCellEdit: (event: any) => void;
@@ -135,6 +136,7 @@ export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; 
 		onStatusChange: handlers.onStatusChange,
 		onColumnResize: handlers.onColumnResize,
 		onCopyH2Section: handlers.onCopyH2Section,
+		onCopySelectionAsTemplate: handlers.onCopySelectionAsTemplate,
 		onColumnOrderChange: handlers.onColumnOrderChange,
 		onModelUpdated: handlers.onModelUpdated,
 		onCellEdit: handlers.onCellEdit,

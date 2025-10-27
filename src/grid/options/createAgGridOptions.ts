@@ -87,6 +87,10 @@ export function createAgGridOptions({
 				return;
 			}
 			const context = getGridContext();
+			if (context?.onCopySelectionAsTemplate) {
+				context.onCopySelectionAsTemplate(blockIndex);
+				return;
+			}
 			context?.onCopyH2Section?.(blockIndex);
 		},
 		onColumnHeaderContextMenu: (params: any) => {

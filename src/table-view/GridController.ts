@@ -6,6 +6,7 @@ export interface GridControllerHandlers {
 	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;
 	onColumnResize: (field: string, width: number) => void;
 	onCopyH2Section: (rowIndex: number) => void;
+	onCopySelectionAsTemplate?: (rowIndex: number) => void;
 	onColumnOrderChange: (fields: string[]) => void;
 	onModelUpdated?: () => void;
 	onCellEdit: (event: CellEditEvent) => void;
@@ -47,6 +48,7 @@ export class GridController {
 			onStatusChange: handlers.onStatusChange,
 			onColumnResize: handlers.onColumnResize,
 			onCopyH2Section: handlers.onCopyH2Section,
+			onCopySelectionAsTemplate: handlers.onCopySelectionAsTemplate,
 			onColumnOrderChange: handlers.onColumnOrderChange,
 			sideBarVisible,
 			getContainerEl: () => container

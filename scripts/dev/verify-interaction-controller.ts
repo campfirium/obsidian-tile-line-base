@@ -178,49 +178,49 @@ const tests: TestCase[] = [
 			assert(keyEvent.preventDefaultCalled === true, 'preventDefault should be invoked');
 		}
 	},
-	{
-		name: 'handleGridCellKeyDown routes copy shortcut on # column',
-		run: () => {
-			const { controller, api, context } = createControllerHarness();
-			api.rowCount = 1;
-			api.setFocusedCell(0, '#');
-			const copiedBlocks: number[] = [];
-			context.onCopyH2Section = (blockIndex) => copiedBlocks.push(blockIndex);
+		{
+			name: 'handleGridCellKeyDown routes copy shortcut on # column to template',
+			run: () => {
+				const { controller, api, context } = createControllerHarness();
+				api.rowCount = 1;
+				api.setFocusedCell(0, '#');
+				const copiedTemplateBlocks: number[] = [];
+				context.onCopySelectionAsTemplate = (blockIndex) => copiedTemplateBlocks.push(blockIndex);
 
-			const keyEvent = {
-				key: 'c',
-				ctrlKey: true,
-				metaKey: false,
-				altKey: false,
-				shiftKey: false,
-				preventDefaultCalled: false,
-				preventDefault() {
-					this.preventDefaultCalled = true;
-				},
-				stopPropagationCalled: false,
-				stopPropagation() {
-					this.stopPropagationCalled = true;
-				}
-			};
-
-			const cellEvent = {
-				api: api as unknown as GridApi,
-				column: new FakeColumn('#'),
-				node: {
-					data: {
-						[ROW_ID_FIELD]: '5'
+				const keyEvent = {
+					key: 'c',
+					ctrlKey: true,
+					metaKey: false,
+					altKey: false,
+					shiftKey: false,
+					preventDefaultCalled: false,
+					preventDefault() {
+						this.preventDefaultCalled = true;
+					},
+					stopPropagationCalled: false,
+					stopPropagation() {
+						this.stopPropagationCalled = true;
 					}
-				},
-				event: keyEvent
-			} as unknown as CellKeyDownEvent;
+				};
 
-			controller.handleGridCellKeyDown(cellEvent);
-			assert(copiedBlocks.length === 1, 'onCopyH2Section should be invoked');
-			assert(copiedBlocks[0] === 5, 'block index should be parsed from row data');
-			assert(keyEvent.preventDefaultCalled === true, 'preventDefault should be called');
-			assert(api.stopEditingCalls === 0, 'stopEditing should not be called for copy');
+				const cellEvent = {
+					api: api as unknown as GridApi,
+					column: new FakeColumn('#'),
+					node: {
+						data: {
+							[ROW_ID_FIELD]: '5'
+						}
+					},
+					event: keyEvent
+				} as unknown as CellKeyDownEvent;
+
+				controller.handleGridCellKeyDown(cellEvent);
+				assert(copiedTemplateBlocks.length === 1, 'onCopySelectionAsTemplate should be invoked');
+				assert(copiedTemplateBlocks[0] === 5, 'block index should be parsed from row data');
+				assert(keyEvent.preventDefaultCalled === true, 'preventDefault should be called');
+				assert(api.stopEditingCalls === 0, 'stopEditing should not be called for copy');
+			}
 		}
-	}
 ];
 
 async function runAll(): Promise<void> {

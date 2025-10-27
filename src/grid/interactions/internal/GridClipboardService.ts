@@ -42,6 +42,13 @@ export class GridClipboardService {
 					const blockIndex = parseInt(String(rowData[ROW_ID_FIELD]), 10);
 					if (!Number.isNaN(blockIndex)) {
 						const context = this.getGridContext();
+						if (context?.onCopySelectionAsTemplate) {
+							event.preventDefault?.();
+							event.stopPropagation?.();
+							this.stopCellEditing();
+							context.onCopySelectionAsTemplate(blockIndex);
+							return;
+						}
 						if (context?.onCopyH2Section) {
 							event.preventDefault?.();
 							event.stopPropagation?.();

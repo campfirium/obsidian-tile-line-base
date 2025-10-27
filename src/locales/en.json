@@ -85,7 +85,7 @@
     "menuEdit": "Edit column",
     "menuDuplicate": "Duplicate column",
     "menuInsert": "Insert column",
-    "menuHide": "Hide column",
+    "menuHide": "Collapse column",
     "menuDelete": "Delete column",
     "nameEmptyError": "Column name cannot be empty",
     "nameReservedError": "Column name is reserved by the system",
@@ -98,10 +98,10 @@
     "deleteSuccess": "Deleted column: {{name}}"
   },
   "columnVisibility": {
-    "menuTitle": "Show hidden columns",
+    "menuTitle": "Restore collapsed columns",
     "empty": "No hidden columns",
-    "hideNotice": "Hidden column: {{name}}",
-    "showNotice": "Shown column: {{name}}"
+    "hideNotice": "Collapsed column: {{name}}",
+    "showNotice": "Restored column: {{name}}"
   },
   "statusCell": {
     "labels": {

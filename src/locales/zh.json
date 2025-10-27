@@ -85,7 +85,7 @@
     "menuEdit": "�༭��",
     "menuDuplicate": "������",
     "menuInsert": "������",
-    "menuHide": "������",
+    "menuHide": "???",
     "menuDelete": "ɾ����",
     "nameEmptyError": "�����Ʋ���Ϊ��",
     "nameReservedError": "�����ѱ�ϵͳ����",
@@ -98,10 +98,10 @@
     "deleteSuccess": "��ɾ���У�{{name}}"
   },
   "columnVisibility": {
-    "menuTitle": "��ʾ������",
+    "menuTitle": "?????",
     "empty": "��ǰû�������ص���",
-    "hideNotice": "�������У�{{name}}",
-    "showNotice": "����ʾ�У�{{name}}"
+    "hideNotice": "????: {{name}}",
+    "showNotice": "????: {{name}}"
   },
   "statusCell": {
     "labels": {

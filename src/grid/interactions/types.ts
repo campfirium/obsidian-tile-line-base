@@ -4,12 +4,14 @@ import {
 } from 'ag-grid-community';
 import { CellEditEvent } from '../GridAdapter';
 import { TaskStatus } from '../../renderers/StatusCellRenderer';
+import type { CellLinkClickContext } from '../../types/cellLinks';
 
 export interface GridInteractionContext {
 	onStatusChange?: (rowId: string, newStatus: TaskStatus) => void;
 	onColumnResize?: (field: string, width: number) => void;
 	onCopyH2Section?: (rowIndex: number) => void;
 	onColumnOrderChange?: (fields: string[]) => void;
+	openCellLink?: (context: CellLinkClickContext) => void;
 	sideBarVisible?: boolean;
 	getContainerEl?: () => HTMLElement | null;
 }

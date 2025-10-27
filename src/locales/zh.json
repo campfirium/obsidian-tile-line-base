@@ -281,5 +281,9 @@
     "menuCreateEmpty": "�½��ձ�ǩ��",
     "menuCreateFromField": "���ֶ����ɱ�ǩ��",
     "createFieldNoColumns": "��ǰû�п����ڷ�����ֶΡ�"
+  },
+  "textLinkCell": {
+    "openInternal": "在新标签页打开笔记：{{target}}",
+    "openExternal": "打开链接：{{target}}"
   }
 }

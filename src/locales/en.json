@@ -281,5 +281,9 @@
     "createFieldNoViews": "Failed to generate filter views for the selected field.",
     "createFieldNoColumns": "No columns available for field grouping.",
     "emptyValueName": "(Empty) {{field}}"
+  },
+  "textLinkCell": {
+    "openInternal": "Open note in new tab: {{target}}",
+    "openExternal": "Open link: {{target}}"
   }
 }

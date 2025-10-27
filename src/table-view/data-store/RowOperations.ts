@@ -19,7 +19,8 @@ export function addRow(params: AddRowParams): number {
 	const entryNumber = blocks.length + 1;
 	const newBlock: H2Block = {
 		title: '',
-		data: {}
+		data: {},
+		collapsedFields: []
 	};
 
 	for (let i = 0; i < schema.columnNames.length; i++) {
@@ -92,7 +93,10 @@ export function duplicateRow(schema: Schema | null, blocks: H2Block[], rowIndex:
 	const source = blocks[rowIndex];
 	const duplicated: H2Block = {
 		title: source.title,
-		data: { ...source.data }
+		data: { ...source.data },
+		collapsedFields: source.collapsedFields
+			? source.collapsedFields.map((entry) => ({ ...entry }))
+			: []
 	};
 	blocks.splice(rowIndex + 1, 0, duplicated);
 	return rowIndex + 1;
@@ -111,7 +115,10 @@ export function duplicateRows(schema: Schema | null, blocks: H2Block[], rowIndex
 		const sourceBlock = blocks[index];
 		const duplicated: H2Block = {
 			title: sourceBlock.title,
-			data: { ...sourceBlock.data }
+			data: { ...sourceBlock.data },
+			collapsedFields: sourceBlock.collapsedFields
+				? sourceBlock.collapsedFields.map((entry) => ({ ...entry }))
+				: []
 		};
 		blocks.splice(index + 1, 0, duplicated);
 	}

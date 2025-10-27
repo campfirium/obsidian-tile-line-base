@@ -149,11 +149,11 @@ export class TableDataStore {
 	}
 
 	blockToMarkdown(block: H2Block): string {
-		return blockToMarkdownInternal(this.schema, block);
+		return blockToMarkdownInternal(this.schema, block, this.hiddenSortableFields);
 	}
 
 	blocksToMarkdown(): string {
-		return blocksToMarkdownInternal(this.schema, this.blocks);
+		return blocksToMarkdownInternal(this.schema, this.blocks, this.hiddenSortableFields);
 	}
 
 	updateCell(rowIndex: number, field: string, newValue: string): boolean {

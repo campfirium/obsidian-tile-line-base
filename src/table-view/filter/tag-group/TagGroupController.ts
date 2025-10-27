@@ -3,7 +3,7 @@ import type { FilterViewDefinition, FileFilterViewState } from '../../../types/f
 import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
 import { openFilterViewNameModal } from '../FilterViewModals';
-import { STATUS_TAG_GROUP_ID, type TagGroupStore } from './TagGroupStore';
+import { type TagGroupStore } from './TagGroupStore';
 import { openTagGroupCreateModal, type TagGroupCreateMode } from './TagGroupCreateModal';
 import { STATUS_BASELINE_VALUES } from '../statusDefaults';
 import { ensureStatusBaseline } from './statusBaselineManager';

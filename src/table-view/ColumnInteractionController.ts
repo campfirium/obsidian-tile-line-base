@@ -165,8 +165,8 @@ export class ColumnInteractionController {
 			: existing?.type === 'date'
 				? 'date'
 				: 'text';
-	const initialFormula = existing?.formula ?? '';
-	const initialFormulaFormat = existing?.formulaFormat;
+		const initialFormula = existing?.formula ?? '';
+		const initialFormulaFormat = existing?.formulaFormat;
 		const initialDateFormat = existing?.type === 'date' ? existing.dateFormat ?? 'iso' : undefined;
 		const availableFields = schema.columnNames.filter((name) => name && !isReservedColumnId(name));
 		const validateName = (name: string): string | null => {
@@ -185,12 +185,12 @@ export class ColumnInteractionController {
 			}
 			return null;
 		};
-	const modal = new ColumnEditorModal(this.app, {
-		columnName: field,
-		initialType,
-		initialFormula,
-		initialFormulaFormat,
-		initialDateFormat,
+		const modal = new ColumnEditorModal(this.app, {
+			columnName: field,
+			initialType,
+			initialFormula,
+			initialFormulaFormat,
+			initialDateFormat,
 			validateName,
 			availableFields,
 			onSubmit: (result) => {
@@ -234,22 +234,16 @@ export class ColumnInteractionController {
 
 		if (result.type === 'formula') {
 			config.formula = result.formula;
-<<<<<<< HEAD
-=======
 			if (result.formulaFormatPreset !== undefined) {
 				config.formulaFormat = result.formulaFormatPreset;
 			} else {
 				delete config.formulaFormat;
 			}
->>>>>>> 10285cbae2f59f6a1e4176e5f005dc72798401c4
 			delete config.type;
 			delete config.dateFormat;
 		} else if (result.type === 'date') {
 			delete config.formula;
-<<<<<<< HEAD
-=======
 			delete config.formulaFormat;
->>>>>>> 10285cbae2f59f6a1e4176e5f005dc72798401c4
 			config.type = 'date';
 			const preset = result.dateFormat ?? 'iso';
 			if (preset === 'iso') {
@@ -259,18 +253,13 @@ export class ColumnInteractionController {
 			}
 		} else {
 			delete config.formula;
-<<<<<<< HEAD
+			delete config.formulaFormat;
 			delete config.dateFormat;
 			if (previousConfig?.type === 'date' || previousConfig?.type === 'text') {
 				config.type = 'text';
 			} else {
 				delete config.type;
 			}
-=======
-			delete config.formulaFormat;
-			delete config.type;
-			delete config.dateFormat;
->>>>>>> 10285cbae2f59f6a1e4176e5f005dc72798401c4
 		}
 
 		if (!this.dataStore.hasColumnConfigContent(config)) {

@@ -188,7 +188,8 @@
   },
   "filterViewBar": {
     "allTabLabel": "All",
-    "tagGroupButtonLabel": "Groups"
+    "tagGroupButtonLabel": "Groups",
+    "addButtonAriaLabel": "Create a new filter view"
   },
   "filterViewController": {
     "noColumns": "Unable to fetch column information, please try again later",

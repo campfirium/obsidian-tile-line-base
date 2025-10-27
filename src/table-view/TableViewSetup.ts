@@ -19,7 +19,7 @@ import {
 	renameColumnInFilterViews,
 	removeColumnFromFilterViews
 } from './TableViewInteractions';
-import { getAvailableColumns, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
+import { getAvailableColumns, getFilterColumnOptions, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
 
 const logger = getLogger('table-view:setup');
@@ -105,6 +105,7 @@ export function initializeTableView(view: TableView): void {
 		app: view.app,
 		stateStore: view.filterStateStore,
 		getAvailableColumns: () => getAvailableColumns(view),
+		getFilterColumnOptions: () => getFilterColumnOptions(view),
 		persist: () => persistFilterViews(view),
 		applyActiveFilterView: () => view.filterOrchestrator.applyActiveView(),
 		syncState: () => syncFilterViewState(view),

@@ -1,5 +1,6 @@
 import type { FilterCondition, FilterOperator, FilterRule, SortRule } from '../../types/filterView';
 import type { RowData } from '../../grid/GridAdapter';
+import { tryParseDate, tryParseNumber } from './FilterValueParsers';
 
 type NormalizedSortValue = {
 	type: 'empty' | 'number' | 'date' | 'string';
@@ -35,39 +36,113 @@ export class FilterDataProcessor {
 	}
 
 	private static evaluateCondition(row: RowData, condition: FilterCondition): boolean {
-		const cellValue = row[condition.column];
-		const cellStr = cellValue == null ? '' : String(cellValue).toLowerCase();
-		const compareStr = (condition.value ?? '').toLowerCase();
+		const cellRaw = row[condition.column];
+		const cellText = cellRaw == null ? '' : String(cellRaw);
+		const compareText = condition.value == null ? '' : String(condition.value);
 		const operator = condition.operator as FilterOperator;
 
 		switch (operator) {
 			case 'equals':
-				return cellStr === compareStr;
+				return this.evaluateEquality(cellText, compareText);
 			case 'notEquals':
-				return cellStr !== compareStr;
-			case 'contains':
-				return cellStr.includes(compareStr);
-			case 'notContains':
-				return !cellStr.includes(compareStr);
-			case 'startsWith':
-				return cellStr.startsWith(compareStr);
-			case 'endsWith':
-				return cellStr.endsWith(compareStr);
+				return !this.evaluateEquality(cellText, compareText);
+			case 'contains': {
+				const cellNormalized = this.normalizeText(cellText);
+				const compareNormalized = this.normalizeText(compareText);
+				if (compareNormalized.length === 0) {
+					return true;
+				}
+				return cellNormalized.includes(compareNormalized);
+			}
+			case 'notContains': {
+				const cellNormalized = this.normalizeText(cellText);
+				const compareNormalized = this.normalizeText(compareText);
+				if (compareNormalized.length === 0) {
+					return false;
+				}
+				return !cellNormalized.includes(compareNormalized);
+			}
+			case 'startsWith': {
+				const cellNormalized = this.normalizeText(cellText);
+				const compareNormalized = this.normalizeText(compareText);
+				return cellNormalized.startsWith(compareNormalized);
+			}
+			case 'endsWith': {
+				const cellNormalized = this.normalizeText(cellText);
+				const compareNormalized = this.normalizeText(compareText);
+				return cellNormalized.endsWith(compareNormalized);
+			}
 			case 'isEmpty':
-				return cellStr === '';
+				return cellText.trim().length === 0;
 			case 'isNotEmpty':
-				return cellStr !== '';
+				return cellText.trim().length > 0;
 			case 'greaterThan':
-				return parseFloat(cellStr) > parseFloat(compareStr);
+				return this.evaluateComparison(cellText, compareText, (comparison) => comparison > 0);
 			case 'lessThan':
-				return parseFloat(cellStr) < parseFloat(compareStr);
+				return this.evaluateComparison(cellText, compareText, (comparison) => comparison < 0);
 			case 'greaterOrEqual':
-				return parseFloat(cellStr) >= parseFloat(compareStr);
+				return this.evaluateComparison(cellText, compareText, (comparison) => comparison >= 0);
 			case 'lessOrEqual':
-				return parseFloat(cellStr) <= parseFloat(compareStr);
+				return this.evaluateComparison(cellText, compareText, (comparison) => comparison <= 0);
 			default:
 				return false;
 		}
+	}
+
+	private static evaluateEquality(cell: string, target: string): boolean {
+		const numericComparison = this.compareNumbers(cell, target);
+		if (numericComparison !== null) {
+			return numericComparison === 0;
+		}
+		const dateComparison = this.compareDates(cell, target);
+		if (dateComparison !== null) {
+			return dateComparison === 0;
+		}
+		return this.normalizeText(cell) === this.normalizeText(target);
+	}
+
+	private static evaluateComparison(
+		cell: string,
+		target: string,
+		predicate: (comparisonResult: number) => boolean
+	): boolean {
+		const numericComparison = this.compareNumbers(cell, target);
+		if (numericComparison !== null) {
+			return predicate(numericComparison);
+		}
+		const dateComparison = this.compareDates(cell, target);
+		if (dateComparison !== null) {
+			return predicate(dateComparison);
+		}
+		return false;
+	}
+
+	private static compareNumbers(left: string, right: string): number | null {
+		const leftNumber = tryParseNumber(left);
+		const rightNumber = tryParseNumber(right);
+		if (leftNumber === null || rightNumber === null) {
+			return null;
+		}
+		if (leftNumber === rightNumber) {
+			return 0;
+		}
+		return leftNumber > rightNumber ? 1 : -1;
+	}
+
+	private static compareDates(left: string, right: string): number | null {
+		const leftDate = tryParseDate(left);
+		const rightDate = tryParseDate(right);
+		if (leftDate === null || rightDate === null) {
+			return null;
+		}
+		if (leftDate === rightDate) {
+			return 0;
+		}
+		return leftDate > rightDate ? 1 : -1;
+	}
+
+	private static normalizeText(value: string): string {
+		return value.trim().toLowerCase();
 	}
 
 	private static compareRowsForSort(a: RowData, b: RowData, sortRules: SortRule[]): number {
@@ -108,10 +183,15 @@ export class FilterDataProcessor {
 			}
 			return { type: 'number', value, rank: 2 };
 		}
-		const parsed = parseFloat(String(value));
-		if (!Number.isNaN(parsed) && String(parsed) === String(value).trim()) {
+		const text = String(value);
+		const parsed = parseFloat(text);
+		if (!Number.isNaN(parsed) && String(parsed) === text.trim()) {
 			return { type: 'number', value: parsed, rank: 2 };
 		}
-		return { type: 'string', value: String(value), rank: 1 };
+		const asDate = tryParseDate(text);
+		if (asDate !== null) {
+			return { type: 'date', value: asDate, rank: 3 };
+		}
+		return { type: 'string', value: text, rank: 1 };
 	}
 }

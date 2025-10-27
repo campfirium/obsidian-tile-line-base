@@ -222,7 +222,21 @@
       "startsWith": "Starts with",
       "endsWith": "Ends with",
       "isEmpty": "Is empty",
-      "isNotEmpty": "Is not empty"
+      "isNotEmpty": "Is not empty",
+      "greaterThan": "Greater than",
+      "lessThan": "Less than",
+      "greaterOrEqual": "Greater or equal",
+      "lessOrEqual": "Less or equal"
+    },
+    "dateOperators": {
+      "equals": "On the same day",
+      "notEquals": "On a different day",
+      "greaterThan": "Later than",
+      "greaterOrEqual": "On or after",
+      "lessThan": "Earlier than",
+      "lessOrEqual": "On or before",
+      "isEmpty": "Missing date",
+      "isNotEmpty": "Has date"
     },
     "valuePlaceholder": "Enter value",
     "removeButton": "Remove",

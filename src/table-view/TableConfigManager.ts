@@ -117,6 +117,7 @@ export class TableConfigManager {
 				filterViews: data.filterViews ?? undefined,
 				tagGroups: data.tagGroups ?? undefined,
 				columnWidths: data.columnWidths ?? {},
+				copyTemplate: data.copyTemplate ?? undefined,
 				columnConfigs: data.columnConfigs ?? [],
 				viewPreference: data.viewPreference ?? 'table'
 			});

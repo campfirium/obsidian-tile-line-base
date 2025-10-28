@@ -915,121 +915,92 @@
 
 /* Editing view config block handling */
 .markdown-source-view.mod-cm6.tlb-has-config-block {
-	--tlb-config-card-background-default: var(--code-background, var(--background-secondary-alt));
-	--tlb-config-card-background: var(--tlb-config-card-background-resolved, var(--tlb-config-card-background-default));
-	--tlb-config-toggle-expand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
-	--tlb-config-toggle-collapse: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
+	--tlb-config-heading-indent: 2ch;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line {
-	position: relative;
+	margin: 24px 0;
+	padding: 0;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line {
-	margin: 16px 0;
-	padding: 36px 24px 24px;
-	border-radius: 8px;
-	border: none;
-	background-color: transparent;
-	box-shadow: none;
-	font-family: var(--font-monospace);
-	line-height: 1.45;
-	user-select: none;
-	cursor: pointer;
-	display: block;
-	min-height: 6.2em;
-	transition: background-color 140ms ease;
-	color: transparent;
-	text-shadow: none;
-	position: relative;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line:is(:hover, :focus-visible) {
-	background-color: transparent;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: 8px;
-	background: var(--tlb-config-card-background) !important;
-	z-index: 0;
-	pointer-events: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line::before {
-	content: 'TLB CONFIG BLOCK';
-	display: block;
-	font-family: var(--font-interface);
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.18em;
-	text-transform: uppercase;
-	color: var(--text-faint);
-	margin-bottom: 14px;
-	position: relative;
-	z-index: 1;
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line .cm-lineContent {
+	display: flex;
+	align-items: center;
+	gap: 0.75ch;
+	padding: 0;
+	width: 100%;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	min-width: 0;
+	gap: 1ch;
 	width: 100%;
+	padding-left: var(--tlb-config-heading-indent);
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content::before {
+	content: '';
+	display: none;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent {
+	color: transparent !important;
+	text-shadow: none !important;
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-line:not(.tlb-config-heading-line) {
 	display: none;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent {
-	position: relative;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	justify-content: space-between;
-	z-index: 1;
-	background: transparent !important;
-	width: 100%;
-}
-
 .markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent > :not(.tlb-config-heading-toggle) {
 	display: none !important;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line .cm-lineContent {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	width: 100%;
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content {
+	position: relative;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content::before {
+	content: attr(data-tlb-heading);
+	display: block;
+	font-family: var(--font-interface);
+	font-size: 0.7em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--text-faint);
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle {
+	margin-left: auto;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	width: 20px;
 	height: 20px;
-	background-color: var(--text-muted);
-	mask: var(--tlb-config-toggle-collapse) no-repeat center / 100% 100%;
-	cursor: pointer;
-	transition: background-color 120ms ease;
-	flex: 0 0 auto;
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
 	border-radius: 4px;
-	margin-left: auto;
-	position: relative;
-	z-index: 2;
+	background: transparent;
+	color: var(--text-faint);
+	cursor: pointer;
+	transition: border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle[data-state='collapsed'] {
-	mask-image: var(--tlb-config-toggle-expand);
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle::before {
+	content: '-';
+	font-size: 0.85em;
+	line-height: 1;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle[data-state='collapsed']::before {
+	content: '+';
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover,
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
-	background-color: var(--text-normal);
+	color: var(--text-normal);
+	border-color: var(--text-muted);
 }
 
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
@@ -1037,126 +1008,95 @@
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content::before {
-	content: '';
+.callout[data-callout='tlb-config'] {
+	margin: 28px 0;
+	padding: 24px;
+	padding-left: calc(24px + 2ch);
+	text-align: left;
+	display: block;
+}
+
+.callout[data-callout='tlb-config'] .callout-icon {
 	display: none;
+}
+
+.callout[data-callout='tlb-config'] .callout-title {
+	display: block;
+	padding: 0;
+	margin: 0 0 12px;
+}
+
+.callout[data-callout='tlb-config'] .callout-title-inner {
 	font-family: var(--font-interface);
-	font-size: 0.75rem;
+	font-size: 0.8em;
 	font-weight: 600;
 	text-transform: uppercase;
-	letter-spacing: 0.18em;
+	letter-spacing: 0.14em;
 	color: var(--text-faint);
+	padding-left: 0;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content::before {
-	content: 'TLB CONFIG BLOCK';
-	display: block;
-	margin-right: auto;
+.callout[data-callout='tlb-config'] .callout-content {
+	padding: 0;
+	margin: 0;
+	padding-left: 2ch;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content > :not(.tlb-config-heading-toggle) {
-	display: none !important;
+/* Collapsed field callout styling */
+.callout[data-callout='tlb-collapsed'] {
+	margin: 12px 0;
+	padding: 0;
+	border: none;
+	background: none;
+	box-shadow: none;
+	color: var(--text-faint);
+	font-size: calc(var(--font-text-size, 1rem) * 0.8);
 }
 
-
-.markdown-preview-view .tlb-collapsed-line {
-	position: relative;
-	color: transparent;
-	text-shadow: none;
+.callout[data-callout='tlb-collapsed'] .callout-icon {
+	display: none;
 }
 
-.markdown-preview-view .tlb-collapsed-line::after {
-	content: attr(data-tlb-collapsed-summary);
-	display: block;
-	color: var(--text-muted);
-	font-size: 0.92em;
-	white-space: pre-wrap;
-}
-
-
-/* Editing view hidden fields handling */
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line {
-	position: relative;
-	cursor: pointer;
-	user-select: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] {
-	background-color: var(--background-secondary);
-	border-radius: 4px;
-	padding: 6px 8px;
-	margin: 2px 0;
-	transition: background-color 120ms ease;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed']:hover {
-	background-color: var(--background-modifier-hover);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent {
-	color: transparent !important;
-	text-shadow: none !important;
-	display: flex !important;
+.callout[data-callout='tlb-collapsed'] .callout-title {
+	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	position: relative;
+	gap: 0.5em;
+	font-size: inherit;
+	font-weight: 500;
+	color: inherit;
+	padding: 0;
+	margin: 0;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent::before {
-	content: attr(data-tlb-hidden-summary);
-	display: block;
-	color: var(--text-muted);
-	font-size: 0.92em;
-	position: relative;
-	z-index: 1;
-	flex: 1;
-	min-width: 0;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	overflow: hidden;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent > * {
-	display: none !important;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent .tlb-hidden-field-toggle {
-	display: inline-flex !important;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line .cm-lineContent {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle {
+.callout[data-callout='tlb-collapsed'] .callout-title::before {
+	content: '';
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 16px;
-	height: 16px;
-	background-color: var(--text-muted);
-	mask: var(--tlb-config-toggle-collapse) no-repeat center / 100% 100%;
-	cursor: pointer;
-	transition: background-color 120ms ease, box-shadow 120ms ease;
-	flex: 0 0 auto;
-	border-radius: 3px;
-	margin-left: auto;
-	position: relative;
-	z-index: 2;
+	width: 1.1em;
+	height: 1.1em;
+	margin-right: 0.1em;
+	background-color: currentColor;
+	mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyJyBzdHJva2UtbGluZWNhcD0ncm91bmQnIHN0cm9rZS1saW5lam9pbj0ncm91bmQnPjxwYXRoIGQ9J00xMCA1aDExJy8+PHBhdGggZD0nTTEwIDEyaDExJy8+PHBhdGggZD0nTTEwIDE5aDExJy8+PHBhdGggZD0nbTMgMTAgMy0zLTMtMycvPjxwYXRoIGQ9J20zIDIwIDMtMy0zLTMnLz48L3N2Zz4=");
+	-webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyJyBzdHJva2UtbGluZWNhcD0ncm91bmQnIHN0cm9rZS1saW5lam9pbj0ncm91bmQnPjxwYXRoIGQ9J00xMCA1aDExJy8+PHBhdGggZD0nTTEwIDEyaDExJy8+PHBhdGggZD0nTTEwIDE5aDExJy8+PHBhdGggZD0nbTMgMTAgMy0zLTMtMycvPjxwYXRoIGQ9J20zIDIwIDMtMy0zLTMnLz48L3N2Zz4=");
+	mask-repeat: no-repeat;
+	-webkit-mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-position: center;
+	mask-size: contain;
+	-webkit-mask-size: contain;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle[data-state='collapsed'] {
-	mask-image: var(--tlb-config-toggle-expand);
+.callout[data-callout='tlb-collapsed'] .callout-title-inner {
+	padding: 0;
+	font-size: inherit;
+	font-weight: inherit;
+	color: inherit;
 }
 
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle:hover,
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle:focus-visible {
-	background-color: var(--text-normal);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+.callout[data-callout='tlb-collapsed'] .callout-content {
+	padding: 0;
+	margin: 4px 0 0 1.6em;
+	color: inherit;
+	font-size: inherit;
 }

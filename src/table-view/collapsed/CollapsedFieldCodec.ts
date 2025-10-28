@@ -1,6 +1,4 @@
-import type { H2Block } from '../MarkdownBlockParser';
-
-export interface CollapsedFieldEntry {
+﻿export interface CollapsedFieldEntry {
 	name: string;
 	value: string;
 	isSystem?: boolean;
@@ -13,20 +11,18 @@ export interface CollapsedFieldPayload {
 
 export const COLLAPSED_SUMMARY_LABEL = 'Collapsed fields';
 export const COLLAPSED_LINE_KEY = 'collapsed';
+export const COLLAPSED_CALLOUT_TYPE = '[!tlb-collapsed]';
+export const COLLAPSED_COMMENT_KEY = 'tlb.folded';
 
-const COLLAPSED_LINE_PATTERN = /^collapsed\s*[:：]\s*(.*)$/i;
-const ENTRY_PATTERN = /(\S+?)::/g;
-const LEGACY_BLOCK_START = /^```(?:tlb-collapsed|tilelinebase-collapsed)\s*$/i;
-const LEGACY_LABEL_PATTERN = /^(?:\u6298\u53E0\u5B57\u6BB5|collapsed\s+fields?)\s*[:：]?\s*(.+)?$/i;
-const COLLAPSED_COMMENT_PATTERN = /%%\s*tlb-collapsed\s+({.*?})\s*%%/i;
-const COLLAPSED_HTML_COMMENT_PATTERN = /^<!--\s*tlb\.collapsed[:\uFF1A]\s*(\{[\s\S]*})\s*-->$/i;
-const COLLAPSED_CALLOUT_HEADER_PATTERN = /^>\s*\[!(?:tlb[-\s]?collapsed|tilelinebase-collapsed)\b[^\]]*\](?:[+-])?.*$/i;
-const CALLOUT_LINE_PREFIX = /^>\s?/;
-const CALLOUT_BULLET_PREFIX = /^(?:[-*+]\s+|\d+\.\s+)/;
+const COLLAPSED_LINE_PATTERN = /^collapsed\s*[:\uFF1A]\s*(.*)$/i;
+const ENTRY_PATTERN = /([^\s:]+)[:\uFF1A]{2}/g;
+const CALLOUT_HEADER_PATTERN = /^\s*>\s*\[!tlb-collapsed]/i;
+const COMMENT_PATTERN = new RegExp(
+	`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}\\s*[:\\uFF1A]\\s*(\\{[\\s\\S]*?})\\s*-->$`,
+	'i'
+);
 
 export const SYSTEM_COLLAPSED_FIELD_SET = new Set(['statusChanged']);
-
-export type CollapsedFieldSource = 'callout' | 'dataLine' | 'legacy';
 
 export function isCollapsedDataLine(line: string): boolean {
 	return COLLAPSED_LINE_PATTERN.test(line.trim());
@@ -38,92 +34,37 @@ export function parseCollapsedDataLine(line: string): CollapsedFieldEntry[] {
 	if (!match) {
 		return [];
 	}
-	const body = match[1] ?? '';
-	return parseCollapsedBody(body);
+	return parseCollapsedBody(match[1] ?? '');
 }
 
-export function parseLegacySummaryLine(line: string): CollapsedFieldEntry[] {
-	const trimmed = line.trim();
-	const { payload } = splitLegacySummaryLine(trimmed);
-	return payload?.fields ?? [];
+export function parseCollapsedCommentSource(source: string): CollapsedFieldEntry[] {
+	const match = source.trim().match(COMMENT_PATTERN);
+	if (!match) {
+		return [];
+	}
+	return parseCollapsedPayload(match[1]);
 }
 
 export function isCollapsedCalloutStart(line: string): boolean {
-	return COLLAPSED_CALLOUT_HEADER_PATTERN.test(line.trim());
+	return CALLOUT_HEADER_PATTERN.test(line.trim());
 }
 
 export function parseCollapsedCallout(
 	lines: string[],
 	startIndex: number
 ): { entries: CollapsedFieldEntry[]; endIndex: number } | null {
-	const entries: CollapsedFieldEntry[] = [];
-	let endIndex = startIndex;
-	for (let i = startIndex + 1; i < lines.length; i++) {
-		const raw = lines[i];
-		const trimmed = raw.trim();
-		if (trimmed.length === 0) {
-			endIndex = i;
-			break;
-		}
-		if (!trimmed.startsWith('>')) {
-			break;
-		}
-		if (isCollapsedCalloutStart(trimmed)) {
-			break;
-		}
-		endIndex = i;
-		const content = normalizeCalloutContent(raw);
-		if (!content) {
-			continue;
-		}
-		if (isCollapsedDataLine(content)) {
-			entries.push(...parseCollapsedDataLine(content));
-			continue;
-		}
-		const legacyEntries = parseLegacySummaryLine(content);
-		if (legacyEntries.length > 0) {
-			entries.push(...legacyEntries);
-			continue;
-		}
-		const single = parseCalloutEntry(content);
-		if (single) {
-			entries.push(single);
-		}
+	if (!lines[startIndex] || !isCollapsedCalloutStart(lines[startIndex])) {
+		return null;
 	}
+	const next = lines[startIndex + 1]?.trim() ?? '';
+	const entries = parseCollapsedCommentSource(next);
 	if (entries.length === 0) {
 		return null;
 	}
-	return { entries, endIndex };
+	return { entries, endIndex: startIndex + 1 };
 }
 
-function parseCollapsedBody(body: string): CollapsedFieldEntry[] {
-	const entries: CollapsedFieldEntry[] = [];
-	const matches: Array<{ name: string; index: number; valueStart: number }> = [];
-	let match: RegExpExecArray | null;
-	while ((match = ENTRY_PATTERN.exec(body)) !== null) {
-		const name = match[1];
-		const valueStart = match.index + match[0].length;
-		matches.push({ name, index: match.index, valueStart });
-	}
-	for (let i = 0; i < matches.length; i++) {
-		const current = matches[i];
-		const nextIndex = i + 1 < matches.length ? matches[i + 1].index : body.length;
-		const raw = body.slice(current.valueStart, nextIndex).trim();
-		const value = decodeCollapsedValue(raw);
-		entries.push({
-			name: current.name,
-			value,
-			isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(current.name)
-		});
-	}
-	return entries;
-}
-
-export function mergeCollapsedEntries(
-	target: H2Block & { collapsedFieldSource?: CollapsedFieldSource },
-	entries: CollapsedFieldEntry[],
-	source?: CollapsedFieldSource
-): void {
+export function mergeCollapsedEntries(target: { data: Record<string, string>; collapsedFields?: CollapsedFieldEntry[] }, entries: CollapsedFieldEntry[]): void {
 	if (!entries || entries.length === 0) {
 		return;
 	}
@@ -138,11 +79,6 @@ export function mergeCollapsedEntries(
 		target.data[normalized.name] = normalized.value;
 	}
 	target.collapsedFields = Array.from(unique.values());
-	if (source === 'callout') {
-		target.collapsedFieldSource = 'callout';
-	} else if (!target.collapsedFieldSource && source) {
-		target.collapsedFieldSource = source;
-	}
 }
 
 export function buildCollapsedDataLine(entries: CollapsedFieldEntry[]): string | null {
@@ -157,157 +93,153 @@ export function buildCollapsedDataLine(entries: CollapsedFieldEntry[]): string |
 	return `${COLLAPSED_LINE_KEY}: ${parts.join(' ')}`;
 }
 
+export function buildCollapsedCallout(entries: CollapsedFieldEntry[]): string[] {
+	if (!entries || entries.length === 0) {
+		return [];
+	}
+	const payloadObj: Record<string, unknown> = {};
+	for (const entry of entries) {
+		const value = entry.value;
+		payloadObj[entry.name] = value;
+	}
+	const payload = JSON.stringify(payloadObj);
+	return [
+		`> ${COLLAPSED_CALLOUT_TYPE}- ${COLLAPSED_SUMMARY_LABEL}`,
+		`<!-- ${COLLAPSED_COMMENT_KEY}: ${payload} -->`
+	];
+}
+
 export function buildCollapsedSummary(entries: CollapsedFieldEntry[]): string {
-	const userEntries = entries.filter((entry) => !entry.isSystem);
-	if (userEntries.length === 0) {
+	if (!entries || entries.length === 0) {
 		return COLLAPSED_SUMMARY_LABEL;
 	}
-	const first = userEntries[0];
+	const userEntries = entries.filter((entry) => !entry.isSystem);
+	const summarySource = userEntries.length > 0 ? userEntries : entries;
+	const first = summarySource[0];
 	const preview = formatPreviewValue(first.value);
 	let summary = `${COLLAPSED_SUMMARY_LABEL}: {${first.name}::${preview}}`;
-	if (userEntries.length > 1) {
+	if (summarySource.length > 1) {
 		summary += ', ...';
 	}
 	return summary;
 }
 
-export function parseLegacyBlock(lines: string[], startIndex: number): { entries: CollapsedFieldEntry[]; endIndex: number } | null {
-	const entries: CollapsedFieldEntry[] = [];
-	for (let i = startIndex + 1; i < lines.length; i++) {
-		const current = lines[i];
-		if (/^```/.test(current)) {
-			return { entries, endIndex: i };
-		}
-		const parts = current.split('::');
-		if (parts.length >= 2) {
-			const name = parts.shift()?.trim() ?? '';
-			const value = parts.join('::').trim();
-			if (name) {
-				entries.push({
-					name,
-					value: decodeCollapsedValue(value),
-					isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(name)
-				});
-			}
-		}
-	}
+export function parseLegacySummaryLine(_line: string): CollapsedFieldEntry[] {
+	return [];
+}
+
+export function parseLegacyBlock(_lines: string[], _startIndex: number): { entries: CollapsedFieldEntry[]; endIndex: number } | null {
 	return null;
 }
 
-export function isLegacyBlockStart(line: string): boolean {
-	return LEGACY_BLOCK_START.test(line.trim());
+export function isLegacyBlockStart(_line: string): boolean {
+	return false;
 }
 
-export function parseLegacyLabel(line: string): string | null {
-	const match = line.match(LEGACY_LABEL_PATTERN);
-	if (!match) {
-		return null;
-	}
-	const captured = match[1];
-	return typeof captured === 'string' ? captured.trim() : '';
+export function parseLegacyLabel(_line: string): string | null {
+	return null;
 }
 
 export function splitLegacySummaryLine(line: string): { visible: string; payload: CollapsedFieldPayload | null } {
-	const trimmed = line.trimEnd();
-	const match = trimmed.match(COLLAPSED_COMMENT_PATTERN);
+	const match = line.match(COMMENT_PATTERN);
 	if (!match) {
-		return { visible: trimmed, payload: null };
+		return { visible: line.trim(), payload: null };
 	}
-	const comment = match[1];
-	const payload = comment ? extractCollapsedPayload(comment) : null;
-	const visible = trimmed.replace(COLLAPSED_COMMENT_PATTERN, '').trimEnd();
-	return { visible, payload };
+	const payload = parseCollapsedPayload(match[1]);
+	const visible = line.replace(COMMENT_PATTERN, '').trim();
+	return { visible, payload: payload.length > 0 ? { version: Date.now(), fields: payload } : null };
 }
 
 export function extractCollapsedPayload(commentSource: string): CollapsedFieldPayload | null {
-	try {
-		const parsed = JSON.parse(commentSource) as CollapsedFieldPayload;
-		if (!parsed || typeof parsed !== 'object') {
-			return null;
-		}
-		if (typeof parsed.version !== 'number' || !Array.isArray(parsed.fields)) {
-			return null;
-		}
-		const fields: CollapsedFieldEntry[] = [];
-		for (const field of parsed.fields) {
-			if (!field || typeof field !== 'object') {
-				continue;
-			}
-			const name = typeof field.name === 'string' ? field.name : '';
-			if (!name) {
-				continue;
-			}
-			const value = typeof field.value === 'string' ? field.value : '';
-			const isSystem = field.isSystem === true || SYSTEM_COLLAPSED_FIELD_SET.has(name);
-			fields.push({ name, value, isSystem });
-		}
-		return {
-			version: parsed.version,
-			fields
-		};
-	} catch {
-		return null;
-	}
-}
-
-export function parseCollapsedCommentSource(line: string): CollapsedFieldEntry[] {
-	const match = line.trim().match(COLLAPSED_HTML_COMMENT_PATTERN);
-	if (!match) {
-		return [];
-	}
-	try {
-		const parsed = JSON.parse(match[1] ?? '') as Record<string, unknown>;
-		if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-			return [];
-		}
-		const entries: CollapsedFieldEntry[] = [];
-		for (const [key, rawValue] of Object.entries(parsed)) {
-			const name = key.trim();
-			if (!name) {
-				continue;
-			}
-			if (rawValue === undefined || rawValue === null) {
-				continue;
-			}
-			const value =
-				typeof rawValue === 'string'
-					? rawValue
-					: typeof rawValue === 'number' || typeof rawValue === 'boolean'
-					? String(rawValue)
-					: '';
-			if (!value) {
-				continue;
-			}
-			entries.push({
-				name,
-				value,
-				isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(name)
-			});
-		}
-		return entries;
-	} catch {
-		return [];
-	}
+	const fields = parseCollapsedPayload(commentSource);
+	return fields.length > 0 ? { version: Date.now(), fields } : null;
 }
 
 export function encodeCollapsedValue(value: string): string {
-	return value.replace(/\\/g, '\\\\').replace(/\r\n/g, '\\n').replace(/\n/g, '\\n').replace(/\t/g, '\\t');
+	return value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
 }
 
 export function decodeCollapsedValue(value: string): string {
 	return value.replace(/\\t/g, '\t').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
 }
 
-export function buildCollapsedCallout(entries: CollapsedFieldEntry[]): string[] {
-	if (!entries || entries.length === 0) {
+function parseCollapsedBody(body: string): CollapsedFieldEntry[] {
+	const entries: CollapsedFieldEntry[] = [];
+	const matches: Array<{ name: string; index: number; valueStart: number }> = [];
+	let match: RegExpExecArray | null;
+	while ((match = ENTRY_PATTERN.exec(body)) !== null) {
+		matches.push({ name: match[1], index: match.index, valueStart: match.index + match[0].length });
+	}
+	for (let i = 0; i < matches.length; i++) {
+		const current = matches[i];
+		const end = i + 1 < matches.length ? matches[i + 1].index : body.length;
+		const raw = body.slice(current.valueStart, end).trim();
+		entries.push({
+			name: current.name,
+			value: decodeCollapsedValue(raw),
+			isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(current.name)
+		});
+	}
+	return entries;
+}
+
+function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
+	try {
+		const parsed = JSON.parse(raw);
+		if (!parsed || typeof parsed !== 'object') {
+			return [];
+		}
+
+		// Legacy array format: { version, fields: [{ name, value, isSystem }] }
+		if ((parsed as any).fields && Array.isArray((parsed as any).fields)) {
+			const legacyFields = (parsed as any).fields as Array<Record<string, unknown>>;
+			const results: CollapsedFieldEntry[] = [];
+			for (const field of legacyFields) {
+				const name = typeof field.name === 'string' ? field.name : '';
+				if (!name) {
+					continue;
+				}
+				const value = normalizeValue(field.value);
+				const isSystem =
+					field.isSystem === true || SYSTEM_COLLAPSED_FIELD_SET.has(name);
+				results.push({
+					name,
+					value,
+					isSystem
+				});
+			}
+			return results;
+		}
+
+		const fields: CollapsedFieldEntry[] = [];
+		for (const [name, value] of Object.entries(parsed as Record<string, unknown>)) {
+			if (!name || name === 'version') {
+				continue;
+			}
+			fields.push({
+				name,
+				value: normalizeValue(value),
+				isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(name)
+			});
+		}
+		return fields;
+	} catch {
 		return [];
 	}
-	const summary = buildCollapsedSummary(entries);
-	const lines = [`> [!tlb-collapsed] ${summary}`];
-	for (const entry of entries) {
-		lines.push(`> ${entry.name}::${entry.value}`);
+}
+
+function normalizeValue(value: unknown): string {
+	if (value === null || value === undefined) {
+		return '';
 	}
-	return lines;
+	if (typeof value === 'string') {
+		return value;
+	}
+	try {
+		return JSON.stringify(value);
+	} catch {
+		return String(value);
+	}
 }
 
 function formatPreviewValue(value: string): string {
@@ -318,28 +250,3 @@ function formatPreviewValue(value: string): string {
 	return `${normalized.slice(0, 37)}...`;
 }
 
-function normalizeCalloutContent(line: string): string {
-	let content = line.replace(CALLOUT_LINE_PREFIX, '').trim();
-	while (content.startsWith('>')) {
-		content = content.slice(1).trim();
-	}
-	content = content.replace(CALLOUT_BULLET_PREFIX, '').trim();
-	return content;
-}
-
-function parseCalloutEntry(content: string): CollapsedFieldEntry | null {
-	const separatorIndex = content.indexOf('::');
-	if (separatorIndex <= 0) {
-		return null;
-	}
-	const name = content.slice(0, separatorIndex).trim();
-	if (!name) {
-		return null;
-	}
-	const value = content.slice(separatorIndex + 2).trim();
-	return {
-		name,
-		value,
-		isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(name)
-	};
-}

@@ -77,6 +77,12 @@ export class SchemaBuilder {
 			normalizeStatusFieldOnBlock(block);
 		}
 		normalizeStatusFieldOnConfigs(columnConfigs);
+		const hiddenConfigFields = new Set<string>(
+			(columnConfigs ?? []).filter((config) => config.hide).map((config) => config.name)
+		);
+		for (const hiddenField of hiddenConfigFields) {
+			hiddenSortableFields.add(hiddenField);
+		}
 		const columnNames: string[] = [];
 		const seenKeys = new Set<string>();
 
@@ -84,6 +90,9 @@ export class SchemaBuilder {
 			if (HIDDEN_SYSTEM_FIELDS.has(key)) {
 				hiddenSortableFields.add(key);
 				return;
+			}
+			if (hiddenConfigFields.has(key)) {
+				hiddenSortableFields.add(key);
 			}
 			if (seenKeys.has(key)) {
 				return;
@@ -127,6 +136,9 @@ export class SchemaBuilder {
 						sparseCleanupRequired = true;
 					}
 					continue;
+				}
+				if (hiddenConfigFields.has(key)) {
+					hiddenSortableFields.add(key);
 				}
 
 				const normalized = typeof value === 'string' ? value.trim() : value;

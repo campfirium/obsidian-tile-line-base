@@ -1,7 +1,6 @@
 import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
-import { EditorHiddenFieldsController } from './editor/EditorHiddenFieldsController';
 import {
 	applyLoggingConfig,
 	getLogger,
@@ -20,7 +19,6 @@ import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
-import { registerCollapsedFieldPresenter } from './plugin/CollapsedFieldPresenter';
 
 const logger = getLogger('plugin:main');
 const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
@@ -51,7 +49,6 @@ export default class TileLineBasePlugin extends Plugin {
 	private suppressAutoSwitchUntil = new Map<string, number>();
 	private viewCoordinator!: ViewSwitchCoordinator;
 	private editorConfigController: EditorConfigBlockController | null = null;
-	private editorHiddenFieldsController: EditorHiddenFieldsController | null = null;
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
@@ -62,7 +59,6 @@ export default class TileLineBasePlugin extends Plugin {
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		this.editorConfigController = new EditorConfigBlockController(this.app);
-		this.editorHiddenFieldsController = new EditorHiddenFieldsController(this.app);
 		await this.loadSettings();
 
 		applyLoggingConfig(this.settings.logging);
@@ -82,8 +78,6 @@ export default class TileLineBasePlugin extends Plugin {
 		// Initialise cache manager
 		this.cacheManager = new FileCacheManager(this);
 		await this.cacheManager.load();
-
-		registerCollapsedFieldPresenter(this);
 
 		logger.info('Plugin onload start');
 		logger.debug('Registering TableView view', { viewType: TABLE_VIEW_TYPE });
@@ -206,9 +200,7 @@ export default class TileLineBasePlugin extends Plugin {
 		if (this.editorConfigController) {
 			this.editorConfigController.start(this);
 		}
-		if (this.editorHiddenFieldsController) {
-			this.editorHiddenFieldsController.start(this);
-		}
+
 		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
 	}
 
@@ -223,10 +215,6 @@ export default class TileLineBasePlugin extends Plugin {
 			this.editorConfigController = null;
 		}
 
-		if (this.editorHiddenFieldsController) {
-			this.editorHiddenFieldsController.dispose();
-			this.editorHiddenFieldsController = null;
-		}
 
 		if (this.unsubscribeLogging) {
 			this.unsubscribeLogging();

@@ -305,9 +305,7 @@ export class EditorHiddenFieldsController {
 			lineEl.removeAttribute('title');
 			lineEl.removeAttribute('role');
 			const contentEl = lineEl.querySelector<HTMLElement>('.cm-lineContent');
-			contentEl?.classList.remove('tlb-hidden-field-callout-content');
 			contentEl?.querySelectorAll('.tlb-hidden-field-toggle').forEach((toggle) => toggle.remove());
-			contentEl?.querySelectorAll('.tlb-hidden-field-summary').forEach((node) => node.remove());
 		}
 	}
 
@@ -330,7 +328,6 @@ export class EditorHiddenFieldsController {
 			lineEl.removeAttribute('title');
 		}
 
-		this.ensureSummary(contentEl, lineInfo.summary, lineInfo.collapsed);
 		this.ensureToggle(contentEl, lineInfo.collapsed);
 	}
 
@@ -347,26 +344,6 @@ export class EditorHiddenFieldsController {
 		toggle.setAttribute('data-state', collapsed ? 'collapsed' : 'expanded');
 		toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
 		toggle.setAttribute('title', collapsed ? 'Expand hidden fields' : 'Collapse hidden fields');
-	}
-
-	private ensureSummary(contentEl: HTMLElement, summary: string, collapsed: boolean): void {
-		let summaryEl = contentEl.querySelector<HTMLElement>('.tlb-hidden-field-summary');
-		if (!collapsed) {
-			summaryEl?.remove();
-			contentEl.classList.remove('tlb-hidden-field-callout-content');
-			return;
-		}
-
-		contentEl.classList.add('tlb-hidden-field-callout-content');
-
-		if (!summaryEl) {
-			summaryEl = document.createElement('span');
-			summaryEl.className = 'tlb-hidden-field-summary';
-			summaryEl.setAttribute('aria-hidden', 'true');
-			contentEl.insertBefore(summaryEl, contentEl.firstChild);
-		}
-
-		summaryEl.textContent = summary;
 	}
 
 	private getSourceRoot(view: MarkdownView): HTMLElement | null {

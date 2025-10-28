@@ -40,6 +40,8 @@ export function createAgGridOptions({
 	return {
 		popupParent: popupParent ?? ownerDocument?.body ?? document.body,
 		rowHeight: DEFAULT_ROW_HEIGHT,
+		undoRedoCellEditing: false,
+		undoRedoCellEditingLimit: 0,
 		onFirstDataRendered: () => {
 			resizeColumns();
 		},

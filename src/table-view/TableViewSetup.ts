@@ -60,7 +60,8 @@ export function initializeTableView(view: TableView): void {
 		scheduleSave: () => {
 			view.persistenceService.scheduleSave();
 		},
-		getActiveFilterPrefills: () => getActiveFilterPrefills(view)
+		getActiveFilterPrefills: () => getActiveFilterPrefills(view),
+		history: view.historyManager
 	});
 	view.copyTemplateController = new CopyTemplateController({
 		app: view.app,
@@ -92,7 +93,8 @@ export function initializeTableView(view: TableView): void {
 		rowInteraction: view.rowInteractionController,
 		dataStore: view.dataStore,
 		getGridAdapter: () => view.gridAdapter,
-		copyTemplate: view.copyTemplateController
+		copyTemplate: view.copyTemplateController,
+		history: view.historyManager
 	});
 	view.gridLayoutController = new GridLayoutController(view.app, view.gridController);
 	view.focusManager = new FocusManager({

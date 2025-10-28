@@ -1,44 +1,11 @@
 import { Notice } from 'obsidian';
 import { getLogger } from '../utils/logger';
-import { getCurrentLocalDateTime } from '../utils/datetime';
-import type { TaskStatus } from '../renderers/StatusCellRenderer';
-import type { CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
+import type { HeaderEditEvent } from '../grid/GridAdapter';
 import type { TableView } from '../TableView';
 import { t } from '../i18n';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 
 const logger = getLogger('table-view:interactions');
-
-export function handleStatusChange(view: TableView, rowId: string, newStatus: TaskStatus): void {
-	if (!view.schema || !view.gridAdapter) {
-		logger.error('Schema or GridAdapter not initialized');
-		return;
-	}
-
-	const blockIndex = parseInt(rowId, 10);
-	if (isNaN(blockIndex) || blockIndex < 0 || blockIndex >= view.blocks.length) {
-		logger.error('Invalid blockIndex:', blockIndex);
-		return;
-	}
-
-	const block = view.blocks[blockIndex];
-	const timestamp = getCurrentLocalDateTime();
-	block.data['status'] = newStatus;
-	block.data['statusChanged'] = timestamp;
-
-	const gridApi = (view.gridAdapter as any).gridApi;
-	if (gridApi) {
-		const rowNode = gridApi.getRowNode(rowId);
-		if (rowNode) {
-			rowNode.setDataValue('status', newStatus);
-			rowNode.setDataValue('statusChanged', timestamp);
-			gridApi.redrawRows({ rowNodes: [rowNode] });
-		}
-	}
-
-	view.filterOrchestrator.refresh();
-	view.persistenceService.scheduleSave();
-}
 
 export function getActiveFilterPrefills(view: TableView): Record<string, string> {
 	const prefills: Record<string, string> = {};
@@ -67,35 +34,6 @@ export function getActiveFilterPrefills(view: TableView): Record<string, string>
 	}
 
 	return prefills;
-}
-
-export function handleCellEdit(view: TableView, event: CellEditEvent): void {
-	const { rowData, field, newValue } = event;
-
-	if (isReservedColumnId(field)) {
-		return;
-	}
-
-	if (!view.schema) {
-		logger.error('Schema not initialized');
-		return;
-	}
-
-	const blockIndex = view.dataStore.getBlockIndexFromRow(rowData);
-	if (blockIndex === null) {
-		logger.error(t('tableViewInteractions.blockIndexMissing'), { rowData });
-		return;
-	}
-
-	if (blockIndex < 0 || blockIndex >= view.blocks.length) {
-		logger.error('Invalid block index:', blockIndex);
-		return;
-	}
-
-	const block = view.blocks[blockIndex];
-	block.data[field] = newValue;
-	view.filterOrchestrator.refresh();
-	view.persistenceService.scheduleSave();
 }
 
 export function handleHeaderEditEvent(view: TableView, event: HeaderEditEvent): void {

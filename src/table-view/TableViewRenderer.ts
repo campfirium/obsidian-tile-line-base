@@ -3,7 +3,8 @@ import { clampColumnWidth } from '../grid/columnSizing';
 import { getLogger } from '../utils/logger';
 import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
 import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
-import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
+import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } from './TableViewInteractions';
+import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
@@ -35,6 +36,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 		container.createDiv({ text: t('tableViewRenderer.noFile') });
 		return;
 	}
+
+	view.historyManager.reset();
 
 	view.columnLayoutStore.reset(view.file.path);
 	view.configManager.reset();

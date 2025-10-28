@@ -1,18 +1,14 @@
-import { Notice } from 'obsidian';
 import type { App, Menu } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
 import type { RowInteractionController } from './RowInteractionController';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnInteractionController } from './ColumnInteractionController';
-import { t } from '../i18n';
-import { buildGridContextMenu } from './GridContextMenuBuilder';
 import { CopyTemplateController } from './CopyTemplateController';
-import { getLogger } from '../utils/logger';
-import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInteractionMenuHelpers';
-import { isReservedColumnId } from '../grid/systemColumnUtils';
 import { GridCellClipboardController } from './GridCellClipboardController';
-
-const logger = getLogger('table-view:grid-interaction');
+import type { TableHistoryManager } from './TableHistoryManager';
+import { GridClipboardHelper } from './GridClipboardHelper';
+import { createGridContextMenu } from './GridContextMenuPresenter';
+import { getLogger } from '../utils/logger';
 
 interface GridInteractionDeps {
 	app: App;
@@ -21,6 +17,7 @@ interface GridInteractionDeps {
 	dataStore: TableDataStore;
 	getGridAdapter: () => GridAdapter | null;
 	copyTemplate: CopyTemplateController;
+	history: TableHistoryManager;
 }
 
 export class GridInteractionController {
@@ -29,14 +26,25 @@ export class GridInteractionController {
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
 	private documentClickHandler: (() => void) | null = null;
 	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
+	private documentKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 	private readonly cellClipboard: GridCellClipboardController;
+	private readonly history: TableHistoryManager;
+	private readonly clipboardHelper: GridClipboardHelper;
+	private readonly logger = getLogger('table-view:grid-interaction');
 
 	constructor(private readonly deps: GridInteractionDeps) {
+		this.history = deps.history;
+		this.clipboardHelper = new GridClipboardHelper({
+			dataStore: deps.dataStore,
+			copyTemplate: deps.copyTemplate,
+			getGridAdapter: deps.getGridAdapter
+		});
 		this.cellClipboard = new GridCellClipboardController({
 			dataStore: deps.dataStore,
 			rowInteraction: deps.rowInteraction,
 			getOwnerDocument: () => this.container?.ownerDocument ?? document,
-			writeClipboard: (payload, successKey, options) => this.writeClipboard(payload, successKey, options)
+			writeClipboard: (payload, successKey, options) =>
+				this.clipboardHelper.writeClipboard(payload, successKey, options)
 		});
 	}
 
@@ -58,26 +66,28 @@ export class GridInteractionController {
 		};
 		ownerDoc.addEventListener('click', this.documentClickHandler);
 
-		this.keydownHandler = (event: KeyboardEvent) => {
+		this.documentKeydownHandler = (event: KeyboardEvent) => {
 			this.handleKeydown(event);
 		};
-		container.addEventListener('keydown', this.keydownHandler);
+
+		ownerDoc.addEventListener('keydown', this.documentKeydownHandler, true);
 	}
 
 	detach(): void {
 		if (this.container && this.contextMenuHandler) {
 			this.container.removeEventListener('contextmenu', this.contextMenuHandler);
 		}
-		if (this.container && this.keydownHandler) {
-			this.container.removeEventListener('keydown', this.keydownHandler);
-		}
 		if (this.container && this.documentClickHandler) {
 			this.container.ownerDocument.removeEventListener('click', this.documentClickHandler);
+		}
+		if (this.container && this.documentKeydownHandler) {
+			this.container.ownerDocument.removeEventListener('keydown', this.documentKeydownHandler, true);
 		}
 
 		this.contextMenuHandler = null;
 		this.documentClickHandler = null;
 		this.keydownHandler = null;
+		this.documentKeydownHandler = null;
 		this.container = null;
 		this.hideContextMenu();
 	}
@@ -142,10 +152,54 @@ export class GridInteractionController {
 			return;
 		}
 		const ownerDoc = container.ownerDocument;
-		const activeElement = ownerDoc.activeElement;
-		if (activeElement?.classList.contains('ag-cell-edit-input')) {
+		const target = event.target as HTMLElement | null;
+		const activeElement = ownerDoc.activeElement as HTMLElement | null;
+		const targetInside = target ? this.isElementWithinGrid(target, container) : false;
+		const activeInside = activeElement ? this.isElementWithinGrid(activeElement, container) : false;
+		if (!targetInside && !activeInside) {
+			this.logger.warn('undo-skip-outside', { key: event.key });
 			return;
 		}
+		if (activeElement?.classList.contains('ag-cell-edit-input')) {
+			this.logger.warn('undo-skip-editor', { key: event.key });
+			return;
+		}
+
+		const ctrlLike = event.metaKey || event.ctrlKey;
+		if (ctrlLike && !event.altKey) {
+			if (event.key === 'z' || event.key === 'Z') {
+				event.preventDefault();
+				event.stopPropagation();
+				if (event.shiftKey) {
+					const applied = this.history.redo();
+					if (!applied) {
+						this.logger.warn('redo:empty');
+					} else {
+						this.logger.warn('redo:applied', { reason: 'shift+ctrl+z' });
+					}
+				} else {
+					const applied = this.history.undo();
+					if (!applied) {
+						this.logger.warn('undo:empty');
+					} else {
+						this.logger.warn('undo:applied', { reason: 'ctrl+z' });
+					}
+				}
+				return;
+			}
+			if (event.key === 'y' || event.key === 'Y') {
+				event.preventDefault();
+				event.stopPropagation();
+				const applied = this.history.redo();
+				if (!applied) {
+					this.logger.warn('redo:empty');
+				} else {
+					this.logger.warn('redo:applied', { reason: 'ctrl+y' });
+				}
+				return;
+			}
+		}
+
 		const gridAdapter = this.deps.getGridAdapter();
 		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
 		if ((event.metaKey || event.ctrlKey) && event.key === 'd' && selectedRows.length > 0) {
@@ -158,105 +212,45 @@ export class GridInteractionController {
 		}
 	}
 
-	async copySection(blockIndex: number): Promise<void> {
-		const blockIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
-		if (blockIndexes.length === 0) {
-			return;
+	private isElementWithinGrid(element: HTMLElement, container: HTMLElement): boolean {
+		if (container.contains(element)) {
+			return true;
 		}
-		const clipboardPayload = this.deps.copyTemplate.generateMarkdownPayload(blockIndexes);
-		await this.writeClipboard(clipboardPayload, 'gridInteraction.copySelectionSuccess');
-	}
-
-	async copySectionAsTemplate(blockIndex: number): Promise<void> {
-		const blockIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
-		if (blockIndexes.length === 0) {
-			return;
+		if (element.classList.contains('tlb-ime-capture')) {
+			return true;
 		}
-		const payload = this.deps.copyTemplate.generateClipboardPayload(blockIndexes);
-		await this.writeClipboard(payload, 'copyTemplate.copySuccess');
-	}
-
-	private async writeClipboard(
-		payload: string | null | undefined,
-		successKey: Parameters<typeof t>[0],
-		options?: { allowEmpty?: boolean }
-	): Promise<void> {
-		const normalized = typeof payload === 'string' ? payload : payload == null ? '' : String(payload);
-		if (!options?.allowEmpty && normalized.trim().length === 0) {
-			return;
+		if (element.closest('.tlb-ime-capture')) {
+			return true;
 		}
-		try {
-			await navigator.clipboard.writeText(normalized);
-			new Notice(t(successKey));
-		} catch (error) {
-			logger.error(t('copyTemplate.copyFailedLog'), error);
-			new Notice(t('copyTemplate.copyFailedNotice'));
-		}
+		return Boolean(element.closest('.tlb-table-container'));
 	}
 
 	private showContextMenu(event: MouseEvent, blockIndex: number, colId?: string): void {
 		this.hideContextMenu();
 
-		const ownerDoc = this.container?.ownerDocument ?? document;
-		const gridAdapter = this.deps.getGridAdapter();
-		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
-		const isMultiSelect = selectedRows.length > 1;
-		const isIndexColumn = colId === '#';
-		const isSystemColumn = colId ? isReservedColumnId(colId) : true;
-		const targetIndexes = resolveBlockIndexesForCopy(this.deps.getGridAdapter, this.deps.dataStore, blockIndex);
-		let fillSelection: ReturnType<typeof createFillSelectionAction> = {};
-		if (isMultiSelect && !isSystemColumn) {
-			fillSelection = createFillSelectionAction(
-				{
-					app: this.deps.app,
-					dataStore: this.deps.dataStore,
-					rowInteraction: this.deps.rowInteraction
-				},
-				{ blockIndex, selectedRows, columnField: colId ?? null }
-			);
-		}
-
-		const columnField = typeof colId === 'string' ? colId : null;
-		const canCopyCell = columnField !== null && this.cellClipboard.canCopy(columnField);
-		const canPasteCell = columnField !== null && this.cellClipboard.canPaste(columnField);
-		let cellMenu: { copy?: () => void; paste?: () => void; disablePaste?: boolean } | undefined;
-		if (columnField && (canCopyCell || canPasteCell)) {
-			const fieldForMenu = columnField;
-			cellMenu = {
-				copy: canCopyCell
-					? () => {
-							void this.cellClipboard.copyCellValue(blockIndex, fieldForMenu);
-						}
-					: undefined,
-				paste: canPasteCell
-					? () => {
-							void this.cellClipboard.pasteCellValue(blockIndex, fieldForMenu);
-						}
-					: undefined,
-				disablePaste: canCopyCell && !canPasteCell
-			};
-		}
-
-		const menu = buildGridContextMenu({
-			isIndexColumn,
-			isMultiSelect,
-			selectedRowCount: selectedRows.length,
-			fillSelectionLabelParams: fillSelection.params,
-			cellMenu,
-			actions: {
-				copySelection: () => this.copySection(blockIndex),
-				copySelectionAsTemplate: () => this.copySectionAsTemplate(blockIndex),
-				editCopyTemplate: () => this.deps.copyTemplate.openEditor(this.container, targetIndexes),
-				insertAbove: () => this.deps.rowInteraction.addRow(blockIndex),
-				insertBelow: () => this.deps.rowInteraction.addRow(blockIndex + 1),
-				fillSelectionWithValue: fillSelection.action,
-				duplicateSelection: () => this.deps.rowInteraction.duplicateRows(selectedRows),
-				deleteSelection: () => this.deps.rowInteraction.deleteRows(selectedRows),
-				duplicateRow: () => this.deps.rowInteraction.duplicateRow(blockIndex),
-				deleteRow: () => this.deps.rowInteraction.deleteRow(blockIndex),
-				close: () => this.hideContextMenu()
-			}
+		const menu = createGridContextMenu({
+			app: this.deps.app,
+			container: this.container,
+			blockIndex,
+			colId: colId ?? null,
+			dataStore: this.deps.dataStore,
+			rowInteraction: this.deps.rowInteraction,
+			columnInteraction: this.deps.columnInteraction,
+			copyTemplate: this.deps.copyTemplate,
+			getGridAdapter: this.deps.getGridAdapter,
+			cellClipboard: this.cellClipboard,
+			onCopySelection: (index) => {
+				void this.clipboardHelper.copySection(index);
+			},
+			onCopySelectionAsTemplate: (index) => {
+				void this.clipboardHelper.copySectionAsTemplate(index);
+			},
+			onRequestClose: () => this.hideContextMenu()
 		});
+
+		if (!menu) {
+			return;
+		}
 
 		menu.onHide(() => {
 			if (this.contextMenu === menu) {
@@ -265,6 +259,18 @@ export class GridInteractionController {
 		});
 
 		this.contextMenu = menu;
+		const ownerDoc = this.container?.ownerDocument ?? document;
 		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDoc);
 	}
+	async copySection(blockIndex: number): Promise<void> {
+		await this.clipboardHelper.copySection(blockIndex);
+	}
+
+	async copySectionAsTemplate(blockIndex: number): Promise<void> {
+		await this.clipboardHelper.copySectionAsTemplate(blockIndex);
+	}
 }
+
+
+
+

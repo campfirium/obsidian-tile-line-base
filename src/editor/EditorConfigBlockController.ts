@@ -39,6 +39,10 @@ export class EditorConfigBlockController {
 				this.app.workspace.on('editor-change', (_editor, info) => {
 					const view = info instanceof MarkdownView ? info : this.findViewFromInfo(info);
 					if (view) {
+						const state = this.viewStates.get(view);
+						if (state && !state.collapsed) {
+							state.collapsed = true;
+						}
 						this.scheduleProcess(view);
 					}
 				})
@@ -66,7 +70,7 @@ export class EditorConfigBlockController {
 		const handle = window.setTimeout(() => {
 			this.pendingProcess.delete(view);
 			this.processMarkdownView(view);
-		}, 120);
+		}, 200);
 		this.pendingProcess.set(view, handle);
 	}
 

@@ -1073,3 +1073,87 @@
 	white-space: pre-wrap;
 }
 
+
+/* Editing view hidden fields handling */
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line {
+	position: relative;
+	cursor: pointer;
+	user-select: none;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] {
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	padding: 6px 8px;
+	margin: 2px 0;
+	transition: background-color 120ms ease;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed']:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent {
+	color: transparent !important;
+	text-shadow: none !important;
+	display: flex !important;
+	align-items: center;
+	gap: 8px;
+	position: relative;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent::before {
+	content: attr(data-tlb-hidden-summary);
+	display: block;
+	color: var(--text-muted);
+	font-size: 0.92em;
+	position: relative;
+	z-index: 1;
+	flex: 1;
+	min-width: 0;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent > * {
+	display: none !important;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line[data-tlb-hidden-state='collapsed'] .cm-lineContent .tlb-hidden-field-toggle {
+	display: inline-flex !important;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-line .cm-lineContent {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	background-color: var(--text-muted);
+	mask: var(--tlb-config-toggle-collapse) no-repeat center / 100% 100%;
+	cursor: pointer;
+	transition: background-color 120ms ease;
+	flex: 0 0 auto;
+	border-radius: 3px;
+	margin-left: auto;
+	position: relative;
+	z-index: 2;
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle[data-state='collapsed'] {
+	mask-image: var(--tlb-config-toggle-expand);
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle:hover,
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle:focus-visible {
+	background-color: var(--text-normal);
+}
+
+.markdown-source-view.mod-cm6.tlb-has-hidden-fields .tlb-hidden-field-toggle:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}

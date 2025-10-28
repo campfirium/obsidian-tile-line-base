@@ -19,6 +19,7 @@ import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
+import { registerCollapsedFieldPresenter } from './plugin/CollapsedFieldPresenter';
 
 const logger = getLogger('plugin:main');
 const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
@@ -78,6 +79,8 @@ export default class TileLineBasePlugin extends Plugin {
 		// Initialise cache manager
 		this.cacheManager = new FileCacheManager(this);
 		await this.cacheManager.load();
+
+		registerCollapsedFieldPresenter(this);
 
 		logger.info('Plugin onload start');
 		logger.debug('Registering TableView view', { viewType: TABLE_VIEW_TYPE });

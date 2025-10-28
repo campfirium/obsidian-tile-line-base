@@ -1,16 +1,6 @@
 import type { DateFormatPreset } from '../utils/datetime';
 import { parseColumnDefinition as parseColumnDefinitionLine } from './MarkdownColumnConfigParser';
 import type { FormulaFormatPreset } from './formulaFormatPresets';
-import {
-	isCollapsedDataLine,
-	isLegacyBlockStart,
-	mergeCollapsedEntries,
-	parseCollapsedDataLine,
-	parseLegacyBlock,
-	parseLegacyLabel,
-	parseLegacySummaryLine,
-	type CollapsedFieldEntry
-} from './collapsed/CollapsedFieldCodec';
 
 export type ColumnFieldDisplayType = 'text' | 'date';
 
@@ -28,10 +18,7 @@ export interface ColumnConfig {
 export interface H2Block {
 	title: string;
 	data: Record<string, string>;
-	collapsedFields?: CollapsedFieldEntry[];
 }
-
-const FULL_WIDTH_COLON = '\uFF1A';
 
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
@@ -77,33 +64,8 @@ export class MarkdownBlockParser {
 		let currentBlock: H2Block | null = null;
 		let inCodeBlock = false;
 
-		for (let index = 0; index < lines.length; index++) {
-			const line = lines[index];
+		for (const line of lines) {
 			const trimmed = line.trim();
-
-			if (!inCodeBlock && currentBlock) {
-				if (isCollapsedDataLine(trimmed)) {
-					const entries = parseCollapsedDataLine(trimmed);
-					mergeCollapsedEntries(currentBlock, entries);
-					continue;
-				}
-				const legacySummaryEntries = parseLegacySummaryLine(trimmed);
-				if (legacySummaryEntries.length > 0) {
-					mergeCollapsedEntries(currentBlock, legacySummaryEntries);
-					continue;
-				}
-				if (parseLegacyLabel(trimmed) !== null) {
-					continue;
-				}
-				if (isLegacyBlockStart(trimmed)) {
-					const legacyResult = parseLegacyBlock(lines, index);
-					if (legacyResult) {
-						mergeCollapsedEntries(currentBlock, legacyResult.entries);
-						index = legacyResult.endIndex;
-						continue;
-					}
-				}
-			}
 
 			if (trimmed.startsWith('```')) {
 				inCodeBlock = !inCodeBlock;
@@ -111,10 +73,6 @@ export class MarkdownBlockParser {
 			}
 
 			if (inCodeBlock) {
-				continue;
-			}
-
-			if (trimmed.length === 0) {
 				continue;
 			}
 
@@ -127,24 +85,21 @@ export class MarkdownBlockParser {
 					title: titleText,
 					data: {}
 				};
-				const colonIndex = resolveColonIndex(titleText);
+				const colonIndex = titleText.indexOf('：') >= 0 ? titleText.indexOf('：') : titleText.indexOf(':');
 				if (colonIndex > 0) {
 					const key = titleText.substring(0, colonIndex).trim();
 					const value = titleText.substring(colonIndex + 1).trim();
 					currentBlock.data[key] = value;
 				}
-				continue;
-			}
-
-			if (!currentBlock) {
-				continue;
-			}
-
-			const colonIndex = resolveColonIndex(trimmed);
-			if (colonIndex > 0) {
-				const key = trimmed.substring(0, colonIndex).trim();
-				const value = trimmed.substring(colonIndex + 1).trim();
-				currentBlock.data[key] = value;
+			} else if (currentBlock) {
+				if (trimmed.length > 0) {
+					const colonIndex = trimmed.indexOf('：') >= 0 ? trimmed.indexOf('：') : trimmed.indexOf(':');
+					if (colonIndex > 0) {
+						const key = trimmed.substring(0, colonIndex).trim();
+						const value = trimmed.substring(colonIndex + 1).trim();
+						currentBlock.data[key] = value;
+					}
+				}
 			}
 		}
 
@@ -192,9 +147,7 @@ export class MarkdownBlockParser {
 		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
 		return runtimeKeyPattern.test(firstContentLine);
 	}
-}
 
-function resolveColonIndex(text: string): number {
-	const fullWidthIndex = text.indexOf(FULL_WIDTH_COLON);
-	return fullWidthIndex >= 0 ? fullWidthIndex : text.indexOf(':');
+
+
 }

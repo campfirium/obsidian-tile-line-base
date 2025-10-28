@@ -2,6 +2,7 @@
 import type { Schema } from '../SchemaBuilder';
 import {
 	buildCollapsedDataLine,
+	buildCollapsedCallout,
 	SYSTEM_COLLAPSED_FIELD_SET,
 	type CollapsedFieldEntry
 } from '../collapsed/CollapsedFieldCodec';
@@ -87,6 +88,12 @@ function serializeBlock(schema: Schema, block: H2Block, hiddenFields: Set<string
 	block.collapsedFields = collapsedEntries.map((entry) => ({ ...entry }));
 
 	const collapsedLine = buildCollapsedDataLine(collapsedEntries);
+	if (block.collapsedFieldSource === 'callout') {
+		const calloutLines = buildCollapsedCallout(collapsedEntries);
+		if (calloutLines.length > 0) {
+			lines.push(...calloutLines);
+		}
+	}
 	if (collapsedLine) {
 		lines.push(collapsedLine);
 	}

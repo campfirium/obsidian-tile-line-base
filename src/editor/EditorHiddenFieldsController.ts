@@ -1,6 +1,11 @@
 import { App, MarkdownView, Plugin } from 'obsidian';
 import type { Editor, MarkdownFileInfo } from 'obsidian';
-import { isCollapsedDataLine, parseCollapsedDataLine, buildCollapsedSummary } from '../table-view/collapsed/CollapsedFieldCodec';
+import {
+	isCollapsedDataLine,
+	parseCollapsedDataLine,
+	parseCollapsedCommentSource,
+	buildCollapsedSummary
+} from '../table-view/collapsed/CollapsedFieldCodec';
 
 interface HiddenFieldLineInfo {
 	lineNumber: number;
@@ -295,8 +300,14 @@ export class EditorHiddenFieldsController {
 			lineEl.classList.remove('tlb-hidden-field-line');
 			delete lineEl.dataset.tlbHiddenSummary;
 			delete lineEl.dataset.tlbHiddenState;
+			lineEl.removeAttribute('aria-expanded');
+			lineEl.removeAttribute('aria-label');
+			lineEl.removeAttribute('title');
+			lineEl.removeAttribute('role');
 			const contentEl = lineEl.querySelector<HTMLElement>('.cm-lineContent');
+			contentEl?.classList.remove('tlb-hidden-field-callout-content');
 			contentEl?.querySelectorAll('.tlb-hidden-field-toggle').forEach((toggle) => toggle.remove());
+			contentEl?.querySelectorAll('.tlb-hidden-field-summary').forEach((node) => node.remove());
 		}
 	}
 
@@ -309,7 +320,17 @@ export class EditorHiddenFieldsController {
 		lineEl.classList.add('tlb-hidden-field-line');
 		lineEl.dataset.tlbHiddenSummary = lineInfo.summary;
 		lineEl.dataset.tlbHiddenState = lineInfo.collapsed ? 'collapsed' : 'expanded';
+		lineEl.setAttribute('aria-expanded', lineInfo.collapsed ? 'false' : 'true');
+		lineEl.setAttribute('role', 'group');
+		if (lineInfo.collapsed) {
+			lineEl.setAttribute('aria-label', lineInfo.summary);
+			lineEl.setAttribute('title', lineInfo.summary);
+		} else {
+			lineEl.removeAttribute('aria-label');
+			lineEl.removeAttribute('title');
+		}
 
+		this.ensureSummary(contentEl, lineInfo.summary, lineInfo.collapsed);
 		this.ensureToggle(contentEl, lineInfo.collapsed);
 	}
 
@@ -325,6 +346,27 @@ export class EditorHiddenFieldsController {
 		}
 		toggle.setAttribute('data-state', collapsed ? 'collapsed' : 'expanded');
 		toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+		toggle.setAttribute('title', collapsed ? 'Expand hidden fields' : 'Collapse hidden fields');
+	}
+
+	private ensureSummary(contentEl: HTMLElement, summary: string, collapsed: boolean): void {
+		let summaryEl = contentEl.querySelector<HTMLElement>('.tlb-hidden-field-summary');
+		if (!collapsed) {
+			summaryEl?.remove();
+			contentEl.classList.remove('tlb-hidden-field-callout-content');
+			return;
+		}
+
+		contentEl.classList.add('tlb-hidden-field-callout-content');
+
+		if (!summaryEl) {
+			summaryEl = document.createElement('span');
+			summaryEl.className = 'tlb-hidden-field-summary';
+			summaryEl.setAttribute('aria-hidden', 'true');
+			contentEl.insertBefore(summaryEl, contentEl.firstChild);
+		}
+
+		summaryEl.textContent = summary;
 	}
 
 	private getSourceRoot(view: MarkdownView): HTMLElement | null {
@@ -354,6 +396,16 @@ export class EditorHiddenFieldsController {
 
 		for (let index = 0; index < lines.length; index++) {
 			const line = lines[index];
+			const commentEntries = parseCollapsedCommentSource(line);
+			if (commentEntries.length > 0) {
+				const summary = buildCollapsedSummary(commentEntries);
+				hiddenLines.set(index, {
+					lineNumber: index,
+					summary,
+					collapsed: true
+				});
+				continue;
+			}
 			if (isCollapsedDataLine(line)) {
 				const entries = parseCollapsedDataLine(line);
 				const summary = buildCollapsedSummary(entries);

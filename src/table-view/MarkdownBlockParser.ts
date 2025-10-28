@@ -8,10 +8,12 @@ import {
 	mergeCollapsedEntries,
 	parseCollapsedDataLine,
 	parseCollapsedCallout,
+	parseCollapsedCommentSource,
 	parseLegacyBlock,
 	parseLegacyLabel,
 	parseLegacySummaryLine,
-	type CollapsedFieldEntry
+	type CollapsedFieldEntry,
+	type CollapsedFieldSource
 } from './collapsed/CollapsedFieldCodec';
 
 export type ColumnFieldDisplayType = 'text' | 'date';
@@ -31,10 +33,12 @@ export interface H2Block {
 	title: string;
 	data: Record<string, string>;
 	collapsedFields?: CollapsedFieldEntry[];
+	collapsedFieldSource?: CollapsedFieldSource;
 }
 
 const FULL_WIDTH_COLON = '\uFF1A';
 const CONFIG_COMMENT_PREFIX = /^<!--\s*tlb\.config/i;
+const COLLAPSED_COMMENT_PREFIX = /^<!--\s*tlb\.collapsed/i;
 
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
@@ -88,19 +92,19 @@ export class MarkdownBlockParser {
 				if (isCollapsedCalloutStart(trimmed)) {
 					const result = parseCollapsedCallout(lines, index);
 					if (result) {
-						mergeCollapsedEntries(currentBlock, result.entries);
+						mergeCollapsedEntries(currentBlock, result.entries, 'callout');
 						index = result.endIndex;
 						continue;
 					}
 				}
 				if (isCollapsedDataLine(trimmed)) {
 					const entries = parseCollapsedDataLine(trimmed);
-					mergeCollapsedEntries(currentBlock, entries);
+					mergeCollapsedEntries(currentBlock, entries, 'dataLine');
 					continue;
 				}
 				const legacySummaryEntries = parseLegacySummaryLine(trimmed);
 				if (legacySummaryEntries.length > 0) {
-					mergeCollapsedEntries(currentBlock, legacySummaryEntries);
+					mergeCollapsedEntries(currentBlock, legacySummaryEntries, 'legacy');
 					continue;
 				}
 				if (parseLegacyLabel(trimmed) !== null) {
@@ -109,7 +113,7 @@ export class MarkdownBlockParser {
 				if (isLegacyBlockStart(trimmed)) {
 					const legacyResult = parseLegacyBlock(lines, index);
 					if (legacyResult) {
-						mergeCollapsedEntries(currentBlock, legacyResult.entries);
+						mergeCollapsedEntries(currentBlock, legacyResult.entries, 'legacy');
 						index = legacyResult.endIndex;
 						continue;
 					}
@@ -151,6 +155,13 @@ export class MarkdownBlockParser {
 				continue;
 			}
 
+			if (COLLAPSED_COMMENT_PREFIX.test(trimmed)) {
+				const commentEntries = parseCollapsedCommentSource(trimmed);
+				if (commentEntries.length > 0) {
+					mergeCollapsedEntries(currentBlock, commentEntries, 'callout');
+				}
+				continue;
+			}
 			if (CONFIG_COMMENT_PREFIX.test(trimmed)) {
 				continue;
 			}

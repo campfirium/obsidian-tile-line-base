@@ -4,8 +4,10 @@ import type { FormulaFormatPreset } from './formulaFormatPresets';
 import {
 	isCollapsedDataLine,
 	isLegacyBlockStart,
+	isCollapsedCalloutStart,
 	mergeCollapsedEntries,
 	parseCollapsedDataLine,
+	parseCollapsedCallout,
 	parseLegacyBlock,
 	parseLegacyLabel,
 	parseLegacySummaryLine,
@@ -32,6 +34,7 @@ export interface H2Block {
 }
 
 const FULL_WIDTH_COLON = '\uFF1A';
+const CONFIG_COMMENT_PREFIX = /^<!--\s*tlb\.config/i;
 
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
@@ -82,6 +85,14 @@ export class MarkdownBlockParser {
 			const trimmed = line.trim();
 
 			if (!inCodeBlock && currentBlock) {
+				if (isCollapsedCalloutStart(trimmed)) {
+					const result = parseCollapsedCallout(lines, index);
+					if (result) {
+						mergeCollapsedEntries(currentBlock, result.entries);
+						index = result.endIndex;
+						continue;
+					}
+				}
 				if (isCollapsedDataLine(trimmed)) {
 					const entries = parseCollapsedDataLine(trimmed);
 					mergeCollapsedEntries(currentBlock, entries);
@@ -137,6 +148,10 @@ export class MarkdownBlockParser {
 			}
 
 			if (!currentBlock) {
+				continue;
+			}
+
+			if (CONFIG_COMMENT_PREFIX.test(trimmed)) {
 				continue;
 			}
 

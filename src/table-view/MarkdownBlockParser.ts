@@ -3,17 +3,13 @@ import { parseColumnDefinition as parseColumnDefinitionLine } from './MarkdownCo
 import type { FormulaFormatPreset } from './formulaFormatPresets';
 import {
 	isCollapsedDataLine,
-	isLegacyBlockStart,
 	isCollapsedCalloutStart,
 	mergeCollapsedEntries,
 	parseCollapsedDataLine,
 	parseCollapsedCallout,
 	parseCollapsedCommentSource,
-	parseLegacyBlock,
-	parseLegacyLabel,
-	parseLegacySummaryLine,
 	type CollapsedFieldEntry,
-	type CollapsedFieldSource
+	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
 
 export type ColumnFieldDisplayType = 'text' | 'date';
@@ -33,12 +29,15 @@ export interface H2Block {
 	title: string;
 	data: Record<string, string>;
 	collapsedFields?: CollapsedFieldEntry[];
-	collapsedFieldSource?: CollapsedFieldSource;
 }
 
 const FULL_WIDTH_COLON = '\uFF1A';
+const CONFIG_CALLOUT_PREFIX = /^>\s*\[!tlb-config]/i;
 const CONFIG_COMMENT_PREFIX = /^<!--\s*tlb\.config/i;
-const COLLAPSED_COMMENT_PREFIX = /^<!--\s*tlb\.collapsed/i;
+const COLLAPSED_COMMENT_PREFIX = new RegExp(
+	`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}`,
+	'i'
+);
 
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
@@ -77,9 +76,7 @@ export class MarkdownBlockParser {
 	}
 
 	parseH2Blocks(content: string): H2Block[] {
-		const configBlockRegex = /^## tlb \w+ \d+[\s\S]*$/m;
-		const contentWithoutConfig = content.replace(configBlockRegex, '');
-		const lines = contentWithoutConfig.split('\n');
+		const lines = content.split('\n');
 		const blocks: H2Block[] = [];
 		let currentBlock: H2Block | null = null;
 		let inCodeBlock = false;
@@ -88,48 +85,16 @@ export class MarkdownBlockParser {
 			const line = lines[index];
 			const trimmed = line.trim();
 
-			if (!inCodeBlock && currentBlock) {
-				if (isCollapsedCalloutStart(trimmed)) {
-					const result = parseCollapsedCallout(lines, index);
-					if (result) {
-						mergeCollapsedEntries(currentBlock, result.entries, 'callout');
-						index = result.endIndex;
-						continue;
-					}
-				}
-				if (isCollapsedDataLine(trimmed)) {
-					const entries = parseCollapsedDataLine(trimmed);
-					mergeCollapsedEntries(currentBlock, entries, 'dataLine');
-					continue;
-				}
-				const legacySummaryEntries = parseLegacySummaryLine(trimmed);
-				if (legacySummaryEntries.length > 0) {
-					mergeCollapsedEntries(currentBlock, legacySummaryEntries, 'legacy');
-					continue;
-				}
-				if (parseLegacyLabel(trimmed) !== null) {
-					continue;
-				}
-				if (isLegacyBlockStart(trimmed)) {
-					const legacyResult = parseLegacyBlock(lines, index);
-					if (legacyResult) {
-						mergeCollapsedEntries(currentBlock, legacyResult.entries, 'legacy');
-						index = legacyResult.endIndex;
-						continue;
-					}
-				}
-			}
-
 			if (trimmed.startsWith('```')) {
 				inCodeBlock = !inCodeBlock;
 				continue;
 			}
 
-			if (inCodeBlock) {
-				continue;
+			if (!inCodeBlock && CONFIG_CALLOUT_PREFIX.test(trimmed)) {
+				break;
 			}
 
-			if (trimmed.length === 0) {
+			if (inCodeBlock || trimmed.length === 0) {
 				continue;
 			}
 
@@ -155,10 +120,24 @@ export class MarkdownBlockParser {
 				continue;
 			}
 
+			if (isCollapsedCalloutStart(trimmed)) {
+				const result = parseCollapsedCallout(lines, index);
+				if (result) {
+					mergeCollapsedEntries(currentBlock, result.entries);
+					index = result.endIndex;
+					continue;
+				}
+			}
+			if (isCollapsedDataLine(trimmed)) {
+				const entries = parseCollapsedDataLine(trimmed);
+				mergeCollapsedEntries(currentBlock, entries);
+				continue;
+			}
+
 			if (COLLAPSED_COMMENT_PREFIX.test(trimmed)) {
 				const commentEntries = parseCollapsedCommentSource(trimmed);
 				if (commentEntries.length > 0) {
-					mergeCollapsedEntries(currentBlock, commentEntries, 'callout');
+					mergeCollapsedEntries(currentBlock, commentEntries);
 				}
 				continue;
 			}

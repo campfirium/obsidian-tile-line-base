@@ -305,9 +305,9 @@ export class EditorHiddenFieldsController {
 			lineEl.removeAttribute('title');
 			lineEl.removeAttribute('role');
 			const contentEl = lineEl.querySelector<HTMLElement>('.cm-lineContent');
-			contentEl?.classList.remove('tlb-hidden-field-callout-content');
 			contentEl?.querySelectorAll('.tlb-hidden-field-toggle').forEach((toggle) => toggle.remove());
 			contentEl?.querySelectorAll('.tlb-hidden-field-summary').forEach((node) => node.remove());
+			contentEl?.classList.remove('tlb-hidden-field-callout-content');
 		}
 	}
 
@@ -358,14 +358,12 @@ export class EditorHiddenFieldsController {
 		}
 
 		contentEl.classList.add('tlb-hidden-field-callout-content');
-
 		if (!summaryEl) {
 			summaryEl = document.createElement('span');
 			summaryEl.className = 'tlb-hidden-field-summary';
 			summaryEl.setAttribute('aria-hidden', 'true');
 			contentEl.insertBefore(summaryEl, contentEl.firstChild);
 		}
-
 		summaryEl.textContent = summary;
 	}
 

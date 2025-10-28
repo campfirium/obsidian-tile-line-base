@@ -1,7 +1,6 @@
-﻿import type { H2Block } from '../MarkdownBlockParser';
+import type { H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
 import {
-	buildCollapsedDataLine,
 	buildCollapsedCallout,
 	SYSTEM_COLLAPSED_FIELD_SET,
 	type CollapsedFieldEntry
@@ -52,6 +51,21 @@ function collectCollapsedEntries(schema: Schema, block: H2Block, hiddenFields: S
 		pushEntry(name, value ?? '', isSystem);
 	}
 
+	if (!seen.has('statusChanged')) {
+		let statusValue =
+			typeof block.data['statusChanged'] === 'string' ? block.data['statusChanged'] : '';
+		if (!statusValue && Array.isArray(block.collapsedFields)) {
+			const legacyStatus = block.collapsedFields.find((entry) => entry.name === 'statusChanged');
+			if (legacyStatus?.value) {
+				statusValue = legacyStatus.value;
+			}
+		}
+		if (statusValue) {
+			block.data['statusChanged'] = statusValue;
+			pushEntry('statusChanged', statusValue, true);
+		}
+	}
+
 	return entries;
 }
 
@@ -87,15 +101,9 @@ function serializeBlock(schema: Schema, block: H2Block, hiddenFields: Set<string
 	const collapsedEntries = collectCollapsedEntries(schema, block, hiddenFields);
 	block.collapsedFields = collapsedEntries.map((entry) => ({ ...entry }));
 
-	const collapsedLine = buildCollapsedDataLine(collapsedEntries);
-	if (block.collapsedFieldSource === 'callout') {
-		const calloutLines = buildCollapsedCallout(collapsedEntries);
-		if (calloutLines.length > 0) {
-			lines.push(...calloutLines);
-		}
-	}
-	if (collapsedLine) {
-		lines.push(collapsedLine);
+	const calloutLines = buildCollapsedCallout(collapsedEntries);
+	if (calloutLines.length > 0) {
+		lines.push(...calloutLines);
 	}
 
 	return lines;

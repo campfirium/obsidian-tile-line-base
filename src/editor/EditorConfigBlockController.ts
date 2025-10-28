@@ -1,18 +1,23 @@
 import { App, MarkdownView, Plugin } from 'obsidian';
 import type { Editor, MarkdownFileInfo } from 'obsidian';
-interface ConfigBlockInfo {
-	headingLine: number;
+
+const CALLOUT_LINE_PATTERN = /^\s*>\s*\[!tlb-config]/i;
+const INLINE_COMMENT_PATTERN = /<!--\s*tlb\.config\s*[:\uFF1A]/i;
+const COMMENT_LINE_PATTERN = /^\s*<!--\s*tlb\.config\s*[:\uFF1A]/i;
+const HEADING_LABEL_PATTERN = /^\s*>\s*\[!tlb-config]\s*-\s*([^<\r\n]*?)(?:(?:\s*<!--)|$)/i;
+
+interface ConfigCalloutInfo {
+	calloutLine: number;
+	commentLine: number | null;
 	headingLabel: string;
-	codeStartLine: number;
-	codeEndLine: number;
 }
+
 interface ViewState {
-	info: ConfigBlockInfo;
+	info: ConfigCalloutInfo;
 	collapsed: boolean;
 	observer: MutationObserver | null;
 	rootClickHandler: ((event: MouseEvent) => void) | null;
 	rootKeyHandler: ((event: KeyboardEvent) => void) | null;
-	collapseSyncHandle: number | null;
 }
 
 export class EditorConfigBlockController {
@@ -21,34 +26,37 @@ export class EditorConfigBlockController {
 
 	constructor(private readonly app: App) {}
 
-		start(plugin: Plugin): void {
-			const syncActive = () => {
-				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!view) return;
+	start(plugin: Plugin): void {
+		const syncActive = () => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view) {
+				return;
+			}
+			const state = this.viewStates.get(view);
+			if (state) {
+				state.collapsed = true;
+			}
+			this.processMarkdownView(view);
+		};
+
+		plugin.registerEvent(this.app.workspace.on('active-leaf-change', syncActive));
+		plugin.registerEvent(this.app.workspace.on('file-open', syncActive));
+		plugin.registerEvent(this.app.workspace.on('layout-change', syncActive));
+		plugin.registerEvent(
+			this.app.workspace.on('editor-change', (_editor, info) => {
+				const view = info instanceof MarkdownView ? info : this.findViewFromInfo(info);
+				if (!view) {
+					return;
+				}
 				const state = this.viewStates.get(view);
-				if (state) {
+				if (state && !state.collapsed) {
 					state.collapsed = true;
 				}
-				this.processMarkdownView(view);
-			};
+				this.scheduleProcess(view);
+			})
+		);
 
-			plugin.registerEvent(this.app.workspace.on('active-leaf-change', syncActive));
-			plugin.registerEvent(this.app.workspace.on('file-open', syncActive));
-			plugin.registerEvent(this.app.workspace.on('layout-change', syncActive));
-			plugin.registerEvent(
-				this.app.workspace.on('editor-change', (_editor, info) => {
-					const view = info instanceof MarkdownView ? info : this.findViewFromInfo(info);
-					if (view) {
-						const state = this.viewStates.get(view);
-						if (state && !state.collapsed) {
-							state.collapsed = true;
-						}
-						this.scheduleProcess(view);
-					}
-				})
-			);
-
-			syncActive();
+		syncActive();
 	}
 
 	dispose(): void {
@@ -87,18 +95,44 @@ export class EditorConfigBlockController {
 			return;
 		}
 
-		const block = this.findConfigBlock(editor.getValue());
-		if (!block) {
+		const info = this.findConfigCallout(editor.getValue());
+		if (!info) {
 			this.detachView(view);
 			return;
 		}
 
-		const state = this.ensureState(view, block);
+		const state = this.ensureState(view, info);
 		this.decorateRoot(view, state);
 		this.ensureObserver(view, state);
 		this.tagExistingLines(view, state);
 		this.ensureInteractions(view, state);
 		this.applyCollapsedState(view, state);
+	}
+
+	private ensureState(view: MarkdownView, info: ConfigCalloutInfo): ViewState {
+		let state = this.viewStates.get(view);
+		if (!state) {
+			state = {
+				info,
+				collapsed: true,
+				observer: null,
+				rootClickHandler: null,
+				rootKeyHandler: null
+			};
+			this.viewStates.set(view, state);
+			return state;
+		}
+
+		const infoChanged =
+			state.info.calloutLine !== info.calloutLine ||
+			state.info.commentLine !== info.commentLine ||
+			state.info.headingLabel !== info.headingLabel;
+		if (infoChanged) {
+			state.info = info;
+			state.collapsed = true;
+		}
+
+		return state;
 	}
 
 	private decorateRoot(view: MarkdownView, state: ViewState): void {
@@ -110,94 +144,14 @@ export class EditorConfigBlockController {
 		root.dataset.tlbConfigHeading = state.info.headingLabel;
 	}
 
-	private ensureState(view: MarkdownView, info: ConfigBlockInfo): ViewState {
-		let state = this.viewStates.get(view);
-		if (!state) {
-			state = {
-				info,
-				collapsed: true,
-				observer: null,
-				rootClickHandler: null,
-				rootKeyHandler: null,
-				collapseSyncHandle: null
-			};
-			this.viewStates.set(view, state);
-			return state;
-		}
-
-		const infoChanged =
-			state.info.headingLine !== info.headingLine ||
-			state.info.codeStartLine !== info.codeStartLine ||
-			state.info.codeEndLine !== info.codeEndLine ||
-			state.info.headingLabel !== info.headingLabel;
-
-		state.info = info;
-		if (infoChanged) {
-			this.tagExistingLines(view, state);
-		}
-		return state;
-	}
-
-	private detachView(view: MarkdownView): void {
-		const state = this.viewStates.get(view);
-		if (!state) {
-			return;
-		}
-
-		const root = this.getSourceRoot(view);
-		if (state.observer) {
-			state.observer.disconnect();
-			state.observer = null;
-		}
-		this.cancelCollapsedSync(state);
-
-		if (root) {
-			this.clearResolvedBackground(view);
-			if (state.rootClickHandler) {
-				root.removeEventListener('click', state.rootClickHandler, true);
-				state.rootClickHandler = null;
-			}
-			if (state.rootKeyHandler) {
-				root.removeEventListener('keydown', state.rootKeyHandler, true);
-				state.rootKeyHandler = null;
-			}
-			root.classList.remove('tlb-has-config-block');
-			delete root.dataset.tlbConfigHeading;
-			delete root.dataset.tlbConfigState;
-			root.querySelectorAll<HTMLElement>('.tlb-config-heading-line').forEach((line) => {
-				line.classList.remove('tlb-config-heading-line', 'tlb-config-line');
-				line.removeAttribute('data-tlb-heading');
-				const content = line.querySelector<HTMLElement>('.tlb-config-heading-content');
-				content?.classList.remove('tlb-config-heading-content');
-				content?.querySelectorAll('.tlb-config-heading-toggle').forEach((toggle) => toggle.remove());
-			});
-			root.querySelectorAll<HTMLElement>('.tlb-config-code-line').forEach((line) => {
-				line.classList.remove('tlb-config-code-line', 'tlb-config-line');
-			});
-		}
-
-		this.viewStates.delete(view);
-	}
-
 	private ensureObserver(view: MarkdownView, state: ViewState): void {
-		if (state.observer) {
-			return;
-		}
 		const root = this.getSourceRoot(view);
-		if (!root) {
+		if (!root || state.observer) {
 			return;
 		}
-
-		const observer = new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				if (mutation.type === 'childList') {
-					this.tagExistingLines(view, state);
-					if (state.collapsed) {
-						this.scheduleCollapsedSync(view, state);
-					}
-					break;
-				}
-			}
+		const observer = new MutationObserver(() => {
+			this.tagExistingLines(view, state);
+			this.applyCollapsedState(view, state);
 		});
 		observer.observe(root, { childList: true, subtree: true });
 		state.observer = observer;
@@ -209,51 +163,58 @@ export class EditorConfigBlockController {
 			return;
 		}
 		if (!state.rootClickHandler) {
-			const handler = (event: MouseEvent) => {
-			const target = event.target as HTMLElement | null;
-			if (!target) {
-				return;
-			}
-			const toggle = target.closest('.tlb-config-heading-toggle');
-			if (toggle) {
-				event.preventDefault();
-				this.toggleCollapsedState(view, state);
-				return;
-			}
-			if (target.closest('.tlb-config-heading-line')) {
-				event.preventDefault();
-				this.toggleCollapsedState(view, state);
-			}
-		};
-		root.addEventListener('click', handler, true);
-			state.rootClickHandler = handler;
+			state.rootClickHandler = (event) => this.handleRootClick(event, view, state);
+			root.addEventListener('click', state.rootClickHandler, true);
 		}
-
 		if (!state.rootKeyHandler) {
-			const handler = (event: KeyboardEvent) => {
-				const target = event.target as HTMLElement | null;
-				if (!target) {
-					return;
-				}
-				if (!target.closest('.tlb-config-heading-toggle')) {
-					return;
-				}
-				if (event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault();
-					this.toggleCollapsedState(view, state);
-				}
-			};
-			root.addEventListener('keydown', handler, true);
-			state.rootKeyHandler = handler;
+			state.rootKeyHandler = (event) => this.handleRootKey(event, view, state);
+			root.addEventListener('keydown', state.rootKeyHandler, true);
 		}
 	}
 
-	private toggleCollapsedState(view: MarkdownView, state: ViewState): void {
-		state.collapsed = !state.collapsed;
-		this.applyCollapsedState(view, state);
-		if (!state.collapsed) {
-			this.scrollToHeading(view);
+	private handleRootClick(event: MouseEvent, view: MarkdownView, state: ViewState): void {
+		const target = event.target instanceof HTMLElement ? event.target : null;
+		if (!target) {
+			return;
 		}
+		const toggle = target.closest<HTMLElement>('.tlb-config-heading-toggle');
+		if (toggle) {
+			event.preventDefault();
+			event.stopPropagation();
+			this.toggleCollapsed(view, state);
+			return;
+		}
+		const headingLine = target.closest<HTMLElement>('.tlb-config-heading-line');
+		if (headingLine) {
+			event.preventDefault();
+			this.toggleCollapsed(view, state);
+		}
+	}
+
+	private handleRootKey(event: KeyboardEvent, view: MarkdownView, state: ViewState): void {
+		const target = event.target instanceof HTMLElement ? event.target : null;
+		if (!target) {
+			return;
+		}
+		if (event.key !== 'Enter' && event.key !== ' ') {
+			return;
+		}
+		if (
+			target.closest('.tlb-config-heading-toggle') ||
+			target.closest('.tlb-config-heading-line')
+		) {
+			event.preventDefault();
+			this.toggleCollapsed(view, state);
+		}
+	}
+
+	private toggleCollapsed(view: MarkdownView, state: ViewState, forced?: boolean): void {
+		const nextCollapsed = typeof forced === 'boolean' ? forced : !state.collapsed;
+		if (state.collapsed === nextCollapsed) {
+			return;
+		}
+		state.collapsed = nextCollapsed;
+		this.applyCollapsedState(view, state);
 	}
 
 	private applyCollapsedState(view: MarkdownView, state: ViewState): void {
@@ -261,16 +222,8 @@ export class EditorConfigBlockController {
 		if (!root) {
 			return;
 		}
-		root.dataset.tlbConfigHeading = state.info.headingLabel;
 		root.dataset.tlbConfigState = state.collapsed ? 'collapsed' : 'expanded';
 		this.updateHeadingToggleState(root, state.collapsed);
-		this.tagExistingLines(view, state);
-		if (state.collapsed) {
-			this.scheduleCollapsedSync(view, state);
-		} else {
-			this.cancelCollapsedSync(state);
-			this.clearResolvedBackground(view);
-		}
 	}
 
 	private updateHeadingToggleState(root: HTMLElement, collapsed: boolean): void {
@@ -285,17 +238,19 @@ export class EditorConfigBlockController {
 		if (!root) {
 			return;
 		}
-		root.querySelectorAll<HTMLElement>('.cm-line').forEach((line) => {
-			this.applyLineDecorations(view, state, line);
+		root.querySelectorAll<HTMLElement>('.cm-line').forEach((lineEl) => {
+			this.applyLineDecorations(view, state, lineEl);
 		});
 	}
 
 	private applyLineDecorations(view: MarkdownView, state: ViewState, lineEl: HTMLElement): void {
+		const lineNumber = this.getLineNumber(view, lineEl);
+		if (lineNumber === null) {
+			return;
+		}
 		const contentEl = lineEl.querySelector<HTMLElement>('.cm-lineContent');
-		const isHeadingLine = this.getLineNumber(view, lineEl) === state.info.headingLine;
-		const isCodeLine = this.isCodeLine(view, lineEl, state.info);
-		const wasHeadingLine = lineEl.classList.contains('tlb-config-heading-line');
-		const wasCodeLine = lineEl.classList.contains('tlb-config-code-line');
+		const isHeadingLine = lineNumber === state.info.calloutLine;
+		const isCommentLine = !isHeadingLine && state.info.commentLine === lineNumber;
 
 		if (isHeadingLine) {
 			lineEl.classList.add('tlb-config-heading-line', 'tlb-config-line');
@@ -303,89 +258,26 @@ export class EditorConfigBlockController {
 			if (contentEl) {
 				contentEl.classList.add('tlb-config-heading-content');
 				contentEl.dataset.tlbHeading = state.info.headingLabel;
-					this.ensureHeadingToggle(contentEl);
-				}
-			} else if (wasHeadingLine) {
-				lineEl.classList.remove('tlb-config-heading-line', 'tlb-config-line');
-				lineEl.removeAttribute('data-tlb-heading');
-				contentEl?.classList.remove('tlb-config-heading-content');
-			if (contentEl) {
-				delete contentEl.dataset.tlbHeading;
+				this.ensureHeadingToggle(contentEl);
 			}
-				contentEl?.querySelectorAll('.tlb-config-heading-toggle').forEach((toggle) => toggle.remove());
-			}
-
-		if (isCodeLine) {
-			lineEl.classList.add('tlb-config-code-line', 'tlb-config-line');
-		} else if (wasCodeLine) {
-			lineEl.classList.remove('tlb-config-code-line', 'tlb-config-line');
-		}
-	}
-
-	private scheduleCollapsedSync(view: MarkdownView, state: ViewState): void {
-		if (state.collapseSyncHandle !== null) {
-			return;
-		}
-		state.collapseSyncHandle = window.setTimeout(() => {
-			state.collapseSyncHandle = null;
-			if (!state.collapsed) {
-				return;
-			}
-			window.requestAnimationFrame(() => {
-				if (!state.collapsed) {
-					return;
-				}
-				this.runCollapsedSync(view, state);
-			});
-		}, 16);
-	}
-
-	private cancelCollapsedSync(state: ViewState): void {
-		if (state.collapseSyncHandle === null) {
-			return;
-		}
-		window.clearTimeout(state.collapseSyncHandle);
-		state.collapseSyncHandle = null;
-	}
-
-	private runCollapsedSync(view: MarkdownView, state: ViewState): void {
-		const root = this.getSourceRoot(view);
-		if (!root || !state.collapsed) {
-			return;
-		}
-		this.tagExistingLines(view, state);
-		this.updateHeadingToggleState(root, true);
-		this.resolveConfigBackground(view);
-	}
-
-	private resolveConfigBackground(view: MarkdownView): void {
-		const root = this.getSourceRoot(view);
-		if (!root) {
-			return;
-		}
-		const candidates = Array.from(
-			root.querySelectorAll<HTMLElement>('.tlb-config-code-line, .tlb-config-code-line .cm-lineContent')
-		);
-		let background: string | null = null;
-		for (const candidate of candidates) {
-			const target = candidate.matches('.cm-lineContent') ? candidate : candidate.querySelector<HTMLElement>('.cm-lineContent') ?? candidate;
-			const computed = window.getComputedStyle(target);
-			const value = computed.backgroundColor;
-			if (value && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') {
-				background = value;
-				break;
-			}
-		}
-		if (background) {
-			root.style.setProperty('--tlb-config-card-background-resolved', background);
 		} else {
-			this.clearResolvedBackground(view);
+			if (lineEl.classList.contains('tlb-config-heading-line')) {
+				lineEl.classList.remove('tlb-config-heading-line');
+				delete lineEl.dataset.tlbHeading;
+			}
+			lineEl.classList.remove('tlb-config-line');
+			if (contentEl) {
+				if (contentEl.classList.contains('tlb-config-heading-content')) {
+					contentEl.classList.remove('tlb-config-heading-content');
+					delete contentEl.dataset.tlbHeading;
+					contentEl.querySelectorAll('.tlb-config-heading-toggle').forEach((toggle) => toggle.remove());
+				}
+			}
 		}
-	}
 
-	private clearResolvedBackground(view: MarkdownView): void {
-		const root = this.getSourceRoot(view);
-		root?.style.removeProperty('--tlb-config-card-background-resolved');
+		if (isCommentLine) {
+			lineEl.classList.add('tlb-config-line');
+		}
 	}
 
 	private ensureHeadingToggle(contentEl: HTMLElement): void {
@@ -404,15 +296,72 @@ export class EditorConfigBlockController {
 		toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
 	}
 
-	private scrollToHeading(view: MarkdownView): void {
-		const root = this.getSourceRoot(view);
-		if (!root) {
+	private detachView(view: MarkdownView): void {
+		const state = this.viewStates.get(view);
+		if (!state) {
 			return;
 		}
-		const heading = root.querySelector<HTMLElement>('.tlb-config-heading-line');
-		if (heading) {
-			heading.scrollIntoView({ block: 'nearest' });
+		const root = this.getSourceRoot(view);
+
+		if (state.observer) {
+			state.observer.disconnect();
+			state.observer = null;
 		}
+
+		if (root) {
+			if (state.rootClickHandler) {
+				root.removeEventListener('click', state.rootClickHandler, true);
+				state.rootClickHandler = null;
+			}
+			if (state.rootKeyHandler) {
+				root.removeEventListener('keydown', state.rootKeyHandler, true);
+				state.rootKeyHandler = null;
+			}
+			root.classList.remove('tlb-has-config-block');
+			delete root.dataset.tlbConfigHeading;
+			delete root.dataset.tlbConfigState;
+			root.querySelectorAll<HTMLElement>('.tlb-config-heading-line, .tlb-config-line').forEach((line) => {
+				line.classList.remove('tlb-config-heading-line', 'tlb-config-line');
+				delete line.dataset.tlbHeading;
+				const content = line.querySelector<HTMLElement>('.cm-lineContent');
+				if (content) {
+					content.classList.remove('tlb-config-heading-content');
+					delete content.dataset.tlbHeading;
+					content.querySelectorAll('.tlb-config-heading-toggle').forEach((toggle) => toggle.remove());
+				}
+			});
+		}
+
+		this.viewStates.delete(view);
+	}
+
+	private findConfigCallout(content: string): ConfigCalloutInfo | null {
+		const lines = content.split(/\r?\n/);
+		for (let index = lines.length - 1; index >= 0; index--) {
+			const line = lines[index];
+			if (!CALLOUT_LINE_PATTERN.test(line)) {
+				continue;
+			}
+			const headingLabel = this.extractHeadingLabel(line);
+			let commentLine: number | null = null;
+			if (INLINE_COMMENT_PATTERN.test(line)) {
+				commentLine = index;
+			} else if (index + 1 < lines.length && COMMENT_LINE_PATTERN.test(lines[index + 1])) {
+				commentLine = index + 1;
+			}
+			return {
+				calloutLine: index,
+				commentLine,
+				headingLabel
+			};
+		}
+		return null;
+	}
+
+	private extractHeadingLabel(line: string): string {
+		const match = line.match(HEADING_LABEL_PATTERN);
+		const raw = match?.[1]?.trim() ?? '';
+		return raw.length > 0 ? raw : 'TLB config block';
 	}
 
 	private getSourceRoot(view: MarkdownView): HTMLElement | null {
@@ -434,75 +383,6 @@ export class EditorConfigBlockController {
 		} catch {
 			return null;
 		}
-	}
-
-	private isCodeLine(view: MarkdownView, lineEl: HTMLElement, info: ConfigBlockInfo): boolean {
-		const lineNumber = this.getLineNumber(view, lineEl);
-		if (lineNumber === null) {
-			return false;
-		}
-		return info.codeStartLine !== -1 && info.codeEndLine !== -1 && lineNumber >= info.codeStartLine && lineNumber <= info.codeEndLine;
-	}
-
-	private findConfigBlock(content: string): ConfigBlockInfo | null {
-		const lines = content.split(/\r?\n/);
-		const headingPattern = /^##\s+tlb\s+\S+\s+\d+\s*$/i;
-		const fenceStartPattern = /^```(?:tlb|tilelinebase)\b/i;
-
-		for (let index = lines.length - 1; index >= 0; index--) {
-			const line = lines[index].trim();
-			if (!headingPattern.test(line)) {
-				continue;
-			}
-
-			const codeStart = this.findCodeStart(lines, index + 1, fenceStartPattern);
-			if (codeStart === -1) {
-				continue;
-			}
-
-			const codeEnd = this.findCodeEnd(lines, codeStart + 1);
-			if (codeEnd === -1) {
-				continue;
-			}
-
-			return {
-				headingLine: index,
-				headingLabel: this.normalizeHeading(line),
-				codeStartLine: codeStart,
-				codeEndLine: codeEnd
-			};
-		}
-
-		return null;
-	}
-
-	private findCodeStart(lines: string[], startIndex: number, pattern: RegExp): number {
-		for (let i = startIndex; i < lines.length; i++) {
-			const trimmed = lines[i].trim();
-			if (!trimmed) {
-				continue;
-			}
-			if (pattern.test(trimmed)) {
-				return i;
-			}
-			if (trimmed.startsWith('## ')) {
-				return -1;
-			}
-		}
-		return -1;
-	}
-
-	private findCodeEnd(lines: string[], startIndex: number): number {
-		for (let i = startIndex; i < lines.length; i++) {
-			if (lines[i].trim().startsWith('```')) {
-				return i;
-			}
-		}
-		return -1;
-	}
-
-	private normalizeHeading(raw: string): string {
-		return raw.replace(/^##\s*/, '').trim();
 	}
 
 	private findViewFromInfo(info: MarkdownFileInfo | undefined): MarkdownView | null {

@@ -6,6 +6,12 @@ interface MenuBuilderOptions {
 	isMultiSelect: boolean;
 	selectedRowCount: number;
 	fillSelectionLabelParams?: Record<string, string>;
+	undoRedo?: {
+		canUndo: boolean;
+		canRedo: boolean;
+		onUndo: () => void;
+		onRedo: () => void;
+	};
 	cellMenu?: {
 		copy?: () => void;
 		paste?: () => void;
@@ -85,6 +91,22 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 				{ disabled: disablePaste || !options.cellMenu.paste }
 			);
 		}
+		addSeparator();
+	}
+
+	if (options.undoRedo) {
+		addItem(
+			'gridInteraction.menuUndo',
+			'rotate-ccw',
+			options.undoRedo.canUndo ? options.undoRedo.onUndo : undefined,
+			{ disabled: !options.undoRedo.canUndo }
+		);
+		addItem(
+			'gridInteraction.menuRedo',
+			'rotate-cw',
+			options.undoRedo.canRedo ? options.undoRedo.onRedo : undefined,
+			{ disabled: !options.undoRedo.canRedo }
+		);
 		addSeparator();
 	}
 

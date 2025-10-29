@@ -258,74 +258,79 @@ export class RowInteractionController {
 		}
 
 		const blocks = this.dataStore.getBlocks();
-		const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
-
-		let updated = false;
-		const changes: Array<{
-			ref: typeof blocks[number];
-			index: number;
-			field: string;
-			oldValue: string;
-			newValue: string;
-		}> = [];
-
+		const uniqueRowIndexes: number[] = [];
+		const seenRows = new Set<number>();
 		for (const rowIndex of rowIndexes) {
+			if (!Number.isInteger(rowIndex)) {
+				continue;
+			}
 			if (rowIndex < 0 || rowIndex >= blocks.length) {
 				continue;
 			}
-			const currentValue = blocks[rowIndex]?.data?.[field] ?? '';
-			if (currentValue === normalizedValue) {
+			if (seenRows.has(rowIndex)) {
 				continue;
 			}
-			if (this.dataStore.updateCell(rowIndex, field, normalizedValue)) {
-				updated = true;
-				const blockRef = blocks[rowIndex];
-				if (blockRef) {
-					changes.push({
-						ref: blockRef,
-						index: rowIndex,
-						field,
-						oldValue: currentValue,
-						newValue: normalizedValue
-					});
-				}
-			}
+			seenRows.add(rowIndex);
+			uniqueRowIndexes.push(rowIndex);
 		}
 
-		if (!updated) {
+		if (uniqueRowIndexes.length === 0) {
+			return;
+		}
+
+		const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
+
+		const changedRows: number[] = [];
+		const resolvedFocusField = this.resolveFocusField(options) ?? field;
+
+		const recorded = this.history.captureCellChanges(
+			uniqueRowIndexes.map((rowIndex) => ({ index: rowIndex, fields: [field] })),
+			() => {
+				for (const rowIndex of uniqueRowIndexes) {
+					const block = blocks[rowIndex];
+					if (!block) {
+						continue;
+					}
+					const currentValue = block.data?.[field] ?? '';
+					if (currentValue === normalizedValue) {
+						continue;
+					}
+					if (this.dataStore.updateCell(rowIndex, field, normalizedValue)) {
+						changedRows.push(rowIndex);
+					}
+				}
+			},
+			(changes) => {
+				const explicitFocus = options?.focusRowIndex;
+				const fallbackRowIndex =
+					typeof explicitFocus === 'number'
+						? explicitFocus
+						: changes[0]?.index ?? uniqueRowIndexes[0] ?? null;
+				if (fallbackRowIndex == null && resolvedFocusField == null) {
+					return undefined;
+				}
+				return {
+					undo: { rowIndex: fallbackRowIndex, field: resolvedFocusField },
+					redo: { rowIndex: fallbackRowIndex, field: resolvedFocusField }
+				};
+			}
+		);
+
+		if (!recorded) {
 			return;
 		}
 
 		this.refreshGridData();
 
-		const focusField = this.resolveFocusField(options) ?? field;
-		const focusRowIndex = options?.focusRowIndex ?? rowIndexes[0];
-		if (focusRowIndex !== null && focusRowIndex !== undefined) {
-			this.focusRow(focusRowIndex, focusField);
+		const focusRowIndex =
+			typeof options?.focusRowIndex === 'number'
+				? options.focusRowIndex
+				: changedRows[0] ?? uniqueRowIndexes[0];
+		if (typeof focusRowIndex === 'number') {
+			this.focusRow(focusRowIndex, resolvedFocusField);
 		}
 
 		this.scheduleSave();
-
-		if (changes.length > 0) {
-			const firstChangeIndex = changes[0]?.index ?? null;
-			const targetRowIndex =
-				typeof focusRowIndex === 'number'
-					? focusRowIndex
-					: firstChangeIndex ?? rowIndexes[0];
-			this.history.recordCellChanges(
-				changes.map((change) => ({
-					ref: change.ref,
-					index: change.index,
-					field: change.field,
-					oldValue: change.oldValue,
-					newValue: change.newValue
-				})),
-				{
-					undo: { rowIndex: targetRowIndex, field: focusField },
-					redo: { rowIndex: targetRowIndex, field: focusField }
-				}
-			);
-		}
 	}
 
 	private ensureSchema(): Schema | null {

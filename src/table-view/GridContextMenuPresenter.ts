@@ -1,6 +1,7 @@
 import type { App, Menu } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
 import type { TableDataStore } from './TableDataStore';
+import type { TableHistoryManager } from './TableHistoryManager';
 import type { RowInteractionController } from './RowInteractionController';
 import type { ColumnInteractionController } from './ColumnInteractionController';
 import type { CopyTemplateController } from './CopyTemplateController';
@@ -23,6 +24,7 @@ interface GridContextMenuParams {
 	onCopySelection: (blockIndex: number) => void;
 	onCopySelectionAsTemplate: (blockIndex: number) => void;
 	onRequestClose: () => void;
+	history: TableHistoryManager;
 }
 
 export function createGridContextMenu(params: GridContextMenuParams): Menu | null {
@@ -75,6 +77,16 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 		isMultiSelect,
 		selectedRowCount: selectedRows.length,
 		fillSelectionLabelParams: fillSelection.params,
+		undoRedo: {
+			canUndo: params.history.canUndo(),
+			canRedo: params.history.canRedo(),
+			onUndo: () => {
+				params.history.undo();
+			},
+			onRedo: () => {
+				params.history.redo();
+			}
+		},
 		cellMenu,
 		actions: {
 			copySelection: () => {

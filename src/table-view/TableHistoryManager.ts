@@ -169,6 +169,101 @@ export class TableHistoryManager {
 		});
 	}
 
+	captureCellChanges(
+		targets: Array<{ index: number; fields: string[] }>,
+		mutator: () => void,
+		focus?: HistoryFocusOptions | ((changes: CellChangeEntry[]) => HistoryFocusOptions | undefined)
+	): boolean {
+		if (!targets || targets.length === 0) {
+			mutator();
+			return false;
+		}
+
+		const normalizedTargets = new Map<number, Set<string>>();
+		for (const target of targets) {
+			if (!target) {
+				continue;
+			}
+			const rowIndex = Number.isInteger(target.index) ? target.index : NaN;
+			if (!Number.isInteger(rowIndex)) {
+				continue;
+			}
+			const fieldSet = normalizedTargets.get(rowIndex) ?? new Set<string>();
+			for (const field of target.fields ?? []) {
+				if (typeof field === 'string' && field.length > 0) {
+					fieldSet.add(field);
+				}
+			}
+			if (fieldSet.size > 0) {
+				normalizedTargets.set(rowIndex, fieldSet);
+			}
+		}
+
+		if (normalizedTargets.size === 0) {
+			mutator();
+			return false;
+		}
+
+		const blocksBefore = this.getBlocks();
+		const snapshots = new Map<string, { index: number; field: string; ref: H2Block; oldValue: string }>();
+
+		for (const [rowIndex, fields] of normalizedTargets.entries()) {
+			if (rowIndex < 0 || rowIndex >= blocksBefore.length) {
+				continue;
+			}
+			const block = blocksBefore[rowIndex];
+			if (!block) {
+				continue;
+			}
+			for (const field of fields) {
+				const raw = block.data?.[field];
+				const oldValue = typeof raw === 'string' ? raw : raw == null ? '' : String(raw);
+				snapshots.set(`${rowIndex}:${field}`, { index: rowIndex, field, ref: block, oldValue });
+			}
+		}
+
+		if (snapshots.size === 0) {
+			mutator();
+			return false;
+		}
+
+		mutator();
+
+		const blocksAfter = this.getBlocks();
+		const changes: CellChangeEntry[] = [];
+
+		for (const snapshot of snapshots.values()) {
+			const block = blocksAfter[snapshot.index];
+			if (!block) {
+				continue;
+			}
+			const raw = block.data?.[snapshot.field];
+			const newValue = typeof raw === 'string' ? raw : raw == null ? '' : String(raw);
+			if (newValue === snapshot.oldValue) {
+				continue;
+			}
+			changes.push({
+				ref: block,
+				index: snapshot.index,
+				field: snapshot.field,
+				oldValue: snapshot.oldValue,
+				newValue
+			});
+		}
+
+		if (changes.length === 0) {
+			return false;
+		}
+
+		const resolvedFocus =
+			typeof focus === 'function'
+				? focus(changes)
+				: focus;
+
+		this.recordCellChanges(changes, resolvedFocus);
+		return true;
+	}
+
 	recordRowInsertions(rows: Array<{ index: number; ref: H2Block }>, focus?: HistoryFocusOptions): void {
 		if (rows.length === 0) {
 			return;

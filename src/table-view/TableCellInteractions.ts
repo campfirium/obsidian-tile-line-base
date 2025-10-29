@@ -21,11 +21,22 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 	}
 
 	const block = view.blocks[blockIndex];
-	const previousStatus = block.data['status'] ?? '';
-	const previousStatusChanged = block.data['statusChanged'] ?? '';
 	const timestamp = getCurrentLocalDateTime();
-	block.data['status'] = newStatus;
-	block.data['statusChanged'] = timestamp;
+
+	const recorded = view.historyManager.captureCellChanges(
+		[{ index: blockIndex, fields: ['status', 'statusChanged'] }],
+		() => {
+			block.data['status'] = newStatus;
+			block.data['statusChanged'] = timestamp;
+		},
+		{
+			undo: { rowIndex: blockIndex, field: 'status' },
+			redo: { rowIndex: blockIndex, field: 'status' }
+		}
+	);
+	if (!recorded) {
+		return;
+	}
 
 	const gridApi = (view.gridAdapter as any).gridApi;
 	if (gridApi) {
@@ -36,29 +47,6 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 			gridApi.redrawRows({ rowNodes: [rowNode] });
 		}
 	}
-
-	view.historyManager.recordCellChanges(
-		[
-			{
-				ref: block,
-				index: blockIndex,
-				field: 'status',
-				oldValue: previousStatus,
-				newValue: newStatus
-			},
-			{
-				ref: block,
-				index: blockIndex,
-				field: 'statusChanged',
-				oldValue: previousStatusChanged,
-				newValue: timestamp
-			}
-		],
-		{
-			undo: { rowIndex: blockIndex, field: 'status' },
-			redo: { rowIndex: blockIndex, field: 'status' }
-		}
-	);
 
 	view.filterOrchestrator.refresh();
 	view.persistenceService.scheduleSave();
@@ -94,22 +82,19 @@ export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 		return;
 	}
 
-	block.data[field] = normalizedValue;
-	view.historyManager.recordCellChanges(
-		[
-			{
-				ref: block,
-				index: blockIndex,
-				field,
-				oldValue: previousValue,
-				newValue: normalizedValue
-			}
-		],
+	const recorded = view.historyManager.captureCellChanges(
+		[{ index: blockIndex, fields: [field] }],
+		() => {
+			block.data[field] = normalizedValue;
+		},
 		{
 			undo: { rowIndex: blockIndex, field },
 			redo: { rowIndex: blockIndex, field }
 		}
 	);
+	if (!recorded) {
+		return;
+	}
 	view.filterOrchestrator.refresh();
 	view.persistenceService.scheduleSave();
 }

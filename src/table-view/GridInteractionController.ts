@@ -245,7 +245,8 @@ export class GridInteractionController {
 			onCopySelectionAsTemplate: (index) => {
 				void this.clipboardHelper.copySectionAsTemplate(index);
 			},
-			onRequestClose: () => this.hideContextMenu()
+			onRequestClose: () => this.hideContextMenu(),
+			history: this.history
 		});
 
 		if (!menu) {

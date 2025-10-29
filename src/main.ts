@@ -19,6 +19,7 @@ import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
+import { t } from './i18n';
 
 const logger = getLogger('plugin:main');
 const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
@@ -176,6 +177,38 @@ export default class TileLineBasePlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'tile-line-base-table-undo',
+			name: t('commands.undoTableHistory'),
+			checkCallback: (checking: boolean) => {
+				const view = this.getActiveTableView();
+				const canUndo = Boolean(view?.historyManager.canUndo());
+				if (checking) {
+					return canUndo;
+				}
+				if (canUndo && view) {
+					view.historyManager.undo();
+				}
+				return canUndo;
+			}
+		});
+
+		this.addCommand({
+			id: 'tile-line-base-table-redo',
+			name: t('commands.redoTableHistory'),
+			checkCallback: (checking: boolean) => {
+				const view = this.getActiveTableView();
+				const canRedo = Boolean(view?.historyManager.canRedo());
+				if (checking) {
+					return canRedo;
+				}
+				if (canRedo && view) {
+					view.historyManager.redo();
+				}
+				return canRedo;
+			}
+		});
+
 		this.registerEvent(
 			this.app.workspace.on('window-open', (workspaceWindow: WorkspaceWindow, win: Window) => {
 				logger.debug('window-open', { window: this.windowContextManager.describeWindow(win) });
@@ -272,6 +305,11 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 		this.settings = this.settingsService.getSettings();
 		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
+	}
+
+	private getActiveTableView(): TableView | null {
+		const view = this.app.workspace.getActiveViewOfType(TableView);
+		return view ?? null;
 	}
 
 	private async loadSettings(): Promise<void> {

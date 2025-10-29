@@ -2,6 +2,10 @@
   "tableView": {
     "displayName": "TileLineBase ����"
   },
+  "commands": {
+    "undoTableHistory": "撤销上次表格操作",
+    "redoTableHistory": "重做表格操作"
+  },
   "settings": {
     "generalHeading": "����",
     "hideRightSidebarLabel": "�л�����ʱ�����Ҳ����",
@@ -135,7 +139,9 @@
     "copySelectionSuccess": "已复制选中内容",
     "pasteCellFailed": "粘贴单元格失败",
     "pasteCellFailedLog": "粘贴单元格失败：",
-    "pasteCellFormulaDisabled": "无法覆盖公式列"
+    "pasteCellFormulaDisabled": "无法覆盖公式列",
+    "menuUndo": "撤销",
+    "menuRedo": "重做"
   },
   "gridFillModal": {
     "title": "������д�У�{{column}}",

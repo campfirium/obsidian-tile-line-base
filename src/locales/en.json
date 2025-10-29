@@ -1,6 +1,11 @@
 {
   "tableView": {
-    "displayName": "TileLineBase Table"
+    "displayName": "TileLineBase Table",
+    "titleWithFile": "{{name}} (Table View)"
+  },
+  "viewControls": {
+    "openTableView": "Switch to TileLineBase table view",
+    "openMarkdownView": "Switch back to Markdown editor"
   },
   "commands": {
     "undoTableHistory": "Undo last table change",

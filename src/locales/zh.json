@@ -1,6 +1,11 @@
 {
   "tableView": {
-    "displayName": "TileLineBase ����"
+    "displayName": "TileLineBase ����",
+    "titleWithFile": "{{name}}（表格视图）"
+  },
+  "viewControls": {
+    "openTableView": "切换到 TileLineBase 表格视图",
+    "openMarkdownView": "切换回 Markdown 编辑视图"
   },
   "commands": {
     "undoTableHistory": "撤销上次表格操作",

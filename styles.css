@@ -891,7 +891,7 @@
 }
 
 /* Tooltip restyle: limit width and align with AG Grid theme */
-.tlb-table-container .ag-tooltip {
+.tlb-grid-popup-root .ag-tooltip {
   max-width: 480px;
   min-width: 300px;
   padding: 24px 32px;
@@ -907,7 +907,7 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
-.theme-dark .tlb-table-container .ag-tooltip {
+.theme-dark .tlb-grid-popup-root .ag-tooltip {
   background: color-mix(in srgb, var(--background-secondary, #151515) 86%, var(--background-primary) 14%);
   border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);

@@ -117,10 +117,13 @@ export class AgGridAdapter implements GridAdapter {
 		});
 		this.columnService.setContainer(container);
 
+		const ownerDocument = container.ownerDocument ?? document;
+		const popupParent = this.ensurePopupParent(ownerDocument);
+
 		const colDefs = this.columnService.buildColumnDefs(columns);
 		const gridOptions = createAgGridOptions({
-			ownerDocument: container.ownerDocument,
-			popupParent: container,
+			ownerDocument,
+			popupParent,
 			columnService: this.columnService,
 			interaction: this.interaction,
 			getGridContext: () => this.gridContext,
@@ -263,5 +266,17 @@ export class AgGridAdapter implements GridAdapter {
 				});
 			}
 		}
+	}
+
+	private ensurePopupParent(doc: Document): HTMLElement {
+		const className = 'tlb-grid-popup-root';
+		const existing = doc.body.querySelector<HTMLElement>(`.${className}`);
+		if (existing) {
+			return existing;
+		}
+		const root = doc.createElement('div');
+		root.classList.add(className);
+		doc.body.appendChild(root);
+		return root;
 	}
 }

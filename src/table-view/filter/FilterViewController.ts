@@ -19,6 +19,7 @@ interface FilterViewControllerOptions {
 		onFilterViewRemoved: (viewId: string) => void;
 		onShowAddToGroupMenu: (view: FilterViewDefinition, event: MouseEvent) => void;
 		onFilterViewsUpdated?: () => void;
+		onFilterViewCreated?: (view: FilterViewDefinition) => void;
 	};
 }
 
@@ -41,6 +42,7 @@ export class FilterViewController {
 		onFilterViewRemoved: (viewId: string) => void;
 		onShowAddToGroupMenu: (view: FilterViewDefinition, event: MouseEvent) => void;
 		onFilterViewsUpdated?: () => void;
+		onFilterViewCreated?: (view: FilterViewDefinition) => void;
 	};
 
 	constructor(options: FilterViewControllerOptions) {
@@ -321,18 +323,20 @@ export class FilterViewController {
 	}
 
 	private saveFilterView(name: string, rule: FilterRule, sortRules: SortRule[]): void {
+		const sanitizedSortRules = this.stateStore.sanitizeSortRules(sortRules);
+		const newView: FilterViewDefinition = {
+			id: this.generateFilterViewId(),
+			name,
+			filterRule: rule,
+			sortRules: sanitizedSortRules,
+			columnState: null,
+			quickFilter: null
+		};
 		this.stateStore.updateState((state) => {
-			const newView: FilterViewDefinition = {
-				id: this.generateFilterViewId(),
-				name,
-				filterRule: rule,
-				sortRules: this.stateStore.sanitizeSortRules(sortRules),
-				columnState: null,
-				quickFilter: null
-			};
 			state.views.push(newView);
 			state.activeViewId = newView.id;
 		});
+		this.tagGroupSupport?.onFilterViewCreated?.(newView);
 		this.runStateEffects({ persist: true, apply: true });
 	}
 

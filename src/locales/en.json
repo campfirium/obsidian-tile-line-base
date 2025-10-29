@@ -2,6 +2,10 @@
   "tableView": {
     "displayName": "TileLineBase Table"
   },
+  "commands": {
+    "undoTableHistory": "Undo last table change",
+    "redoTableHistory": "Redo table change"
+  },
   "settings": {
     "generalHeading": "General",
     "hideRightSidebarLabel": "Hide right sidebar in table view",
@@ -134,6 +138,8 @@
     "deleteRow": "Delete row",
     "menuCopyCell": "Copy cell",
     "menuPasteCell": "Paste cell",
+    "menuUndo": "Undo",
+    "menuRedo": "Redo",
     "menuCopySelection": "Copy Selection",
     "copyCellSuccess": "Copied cell value",
     "copySelectionSuccess": "Copied selection",

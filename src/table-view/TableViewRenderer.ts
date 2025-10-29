@@ -3,8 +3,8 @@ import { clampColumnWidth } from '../grid/columnSizing';
 import { getLogger } from '../utils/logger';
 import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
 import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
-import { handleStatusChange, handleColumnResize, handleColumnOrderChange, handleCellEdit, handleHeaderEditEvent } from './TableViewInteractions';
-import { handleCellLinkOpen } from './LinkNavigation';
+import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } from './TableViewInteractions';
+import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
@@ -36,6 +36,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 		container.createDiv({ text: t('tableViewRenderer.noFile') });
 		return;
 	}
+
+	view.historyManager.reset();
 
 	view.columnLayoutStore.reset(view.file.path);
 	view.configManager.reset();
@@ -162,9 +164,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 				onStatusChange: (rowId, newStatus) => handleStatusChange(view, rowId, newStatus),
 				onColumnResize: (field, width) => handleColumnResize(view, field, width),
 				onCopyH2Section: (rowIndex) => {
-					void view.gridInteractionController.copySection(rowIndex);
-				},
-				onCopySelectionAsTemplate: (rowIndex) => {
 					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
 				},
 				onColumnOrderChange: (fields) => handleColumnOrderChange(view, fields),
@@ -175,8 +174,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 				onEnterAtLastRow: (field) => {
 					const oldRowCount = view.blocks.length;
 					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });
-				},
-				onOpenCellLink: (context) => handleCellLinkOpen(view, context)
+				}
 			}
 		});
 

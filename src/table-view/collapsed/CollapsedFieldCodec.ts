@@ -12,15 +12,12 @@ export interface CollapsedFieldPayload {
 export const COLLAPSED_SUMMARY_LABEL = 'Collapsed fields';
 export const COLLAPSED_LINE_KEY = 'collapsed';
 export const COLLAPSED_CALLOUT_TYPE = '[!tlb-collapsed]';
-export const COLLAPSED_COMMENT_KEY = 'tlb.folded';
+export const COLLAPSED_COMMENT_KEY = 'tlb.collapsed';
 
 const COLLAPSED_LINE_PATTERN = /^collapsed\s*[:\uFF1A]\s*(.*)$/i;
 const ENTRY_PATTERN = /([^\s:]+)[:\uFF1A]{2}/g;
 const CALLOUT_HEADER_PATTERN = /^\s*>\s*\[!tlb-collapsed]/i;
-const COMMENT_PATTERN = new RegExp(
-	`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}\\s*[:\\uFF1A]\\s*(\\{[\\s\\S]*?})\\s*-->$`,
-	'i'
-);
+const COMMENT_PATTERN = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}\\s*[:\\uFF1A]\\s*(\\{[\\s\\S]*?})\\s*-->$`, 'i');
 
 export const SYSTEM_COLLAPSED_FIELD_SET = new Set(['statusChanged']);
 
@@ -53,8 +50,17 @@ export function parseCollapsedCallout(
 	lines: string[],
 	startIndex: number
 ): { entries: CollapsedFieldEntry[]; endIndex: number } | null {
-	if (!lines[startIndex] || !isCollapsedCalloutStart(lines[startIndex])) {
+	const currentLine = lines[startIndex];
+	if (!currentLine || !isCollapsedCalloutStart(currentLine)) {
 		return null;
+	}
+	const inlineCommentIndex = currentLine.indexOf('<!--');
+	if (inlineCommentIndex >= 0) {
+		const inlineSource = currentLine.slice(inlineCommentIndex).trim();
+		const inlineEntries = parseCollapsedCommentSource(inlineSource);
+		if (inlineEntries.length > 0) {
+			return { entries: inlineEntries, endIndex: startIndex };
+		}
 	}
 	const next = lines[startIndex + 1]?.trim() ?? '';
 	const entries = parseCollapsedCommentSource(next);

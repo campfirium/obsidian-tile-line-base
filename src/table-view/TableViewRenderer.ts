@@ -5,6 +5,7 @@ import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
 import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
 import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } from './TableViewInteractions';
 import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
+import { handleCellLinkOpen } from './LinkNavigation';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
@@ -171,6 +172,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 				onCellEdit: (event) => handleCellEdit(view, event),
 				onHeaderEdit: (event) => handleHeaderEditEvent(view, event),
 				onColumnHeaderContextMenu: (field, event) => view.columnInteractionController.handleColumnHeaderContextMenu(field, event),
+				onOpenCellLink: (context) => handleCellLinkOpen(view, context),
 				onEnterAtLastRow: (field) => {
 					const oldRowCount = view.blocks.length;
 					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });

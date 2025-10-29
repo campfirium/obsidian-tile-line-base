@@ -214,6 +214,32 @@ export class TagGroupController {
 		void this.persistAndRender();
 	}
 
+	handleFilterViewCreated(view: FilterViewDefinition): void {
+		const state = this.store.getState();
+		const activeGroupId = state.activeGroupId ?? this.defaultGroupId;
+		if (!activeGroupId || activeGroupId === this.defaultGroupId) {
+			return;
+		}
+
+		let added = false;
+		this.store.updateState((draft) => {
+			const target = draft.groups.find((entry) => entry.id === activeGroupId);
+			if (!target) {
+				return;
+			}
+			if (!target.viewIds.includes(view.id)) {
+				target.viewIds.push(view.id);
+				added = true;
+			}
+		});
+
+		if (!added) {
+			return;
+		}
+
+		void this.persistAndRender();
+	}
+
 	private activateGroup(group: TagGroupDefinition): void {
 		this.store.setActiveGroup(group.id);
 		this.ensureVisibleFilterSelection();

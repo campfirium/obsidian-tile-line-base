@@ -157,7 +157,7 @@ export class TagGroupStore {
 
 	getVisibleViewIds(): Set<string> | null {
 		const active = this.getActiveGroup();
-		if (!active || active.id === DEFAULT_TAG_GROUP_ID) {
+		if (!active) {
 			return null;
 		}
 		return new Set<string>(active.viewIds);
@@ -171,24 +171,30 @@ export class TagGroupStore {
 
 		this.updateState((state) => {
 			const defaultGroup = this.ensureDefaultGroup(state, defaultGroupName);
-			defaultGroup.viewIds = [...orderedIds];
 			defaultGroup.name = this.resolveGroupName(defaultGroup.name, defaultGroupName);
 
-			const filteredGroups: TagGroupDefinition[] = [];
+			this.ensureStatusGroup(state, this.fallbackStatusName);
+
+			const assignedIds = new Set<string>();
+			const normalizedGroups: TagGroupDefinition[] = [];
 			for (const group of state.groups) {
 				if (group.id === DEFAULT_TAG_GROUP_ID) {
-					filteredGroups.push(defaultGroup);
 					continue;
 				}
 				const nextIds = group.viewIds.filter((id) => idSet.has(id));
-				filteredGroups.push({
+				for (const viewId of nextIds) {
+					assignedIds.add(viewId);
+				}
+				normalizedGroups.push({
 					id: group.id,
 					name: this.resolveGroupName(group.name, group.id),
 					viewIds: nextIds
 				});
 			}
 
-			state.groups = this.normalizeGroupOrder(filteredGroups);
+			defaultGroup.viewIds = orderedIds.filter((id) => !assignedIds.has(id));
+
+			state.groups = this.normalizeGroupOrder([defaultGroup, ...normalizedGroups]);
 
 			if (!state.activeGroupId || !state.groups.some((group) => group.id === state.activeGroupId)) {
 				state.activeGroupId = DEFAULT_TAG_GROUP_ID;

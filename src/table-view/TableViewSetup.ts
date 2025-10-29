@@ -119,6 +119,9 @@ export function initializeTableView(view: TableView): void {
 			onFilterViewRemoved: (viewId) => {
 				view.tagGroupController?.handleFilterViewRemoval(viewId);
 			},
+			onFilterViewCreated: (filterView) => {
+				view.tagGroupController?.handleFilterViewCreated(filterView);
+			},
 			onShowAddToGroupMenu: (filterView, evt) => {
 				view.tagGroupController?.openAddToGroupMenu(filterView, evt);
 			},

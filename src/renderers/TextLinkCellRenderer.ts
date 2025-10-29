@@ -124,6 +124,13 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		}
 	}
 
+	public shouldDisplayTooltip(): boolean {
+		if (!this.textEl) {
+			return false;
+		}
+		return this.textEl.scrollWidth > this.textEl.clientWidth + 1;
+	}
+
 	private triggerLinkOpen(): void {
 		const context = this.params.context as { openCellLink?: (ctx: CellLinkClickContext) => void } | undefined;
 		if (!context?.openCellLink || !this.currentLink) {

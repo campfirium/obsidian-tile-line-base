@@ -1,4 +1,4 @@
-import { ColDef } from 'ag-grid-community';
+import { ColDef, type Column, type ITooltipParams } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
@@ -11,6 +11,7 @@ import { formatDateForDisplay } from '../../utils/datetime';
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
 const PINNED_FIELDS = new Set(['任务', '任务名称', 'task', 'taskName', 'title', '标题']);
+const TEXT_CELL_TOOLTIP_GETTER = createTextCellTooltipValueGetter();
 
 export function buildAgGridColumnDefs(columns: SchemaColumnDef[]): ColDef[] {
 	const colDefs = columns.map((schemaColumn) => {
@@ -118,6 +119,11 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-date-cell');
 	}
 
+	if (!mergedColDef.tooltipField && !mergedColDef.tooltipValueGetter) {
+		(mergedColDef as any).tooltipShowMode = 'always';
+		(mergedColDef as any).tooltipValueGetter = TEXT_CELL_TOOLTIP_GETTER;
+	}
+
 	delete (mergedColDef as any).editorType;
 	delete (mergedColDef as any).dateFormat;
 
@@ -145,6 +151,40 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 	}
 
 	return mergedColDef;
+}
+
+function createTextCellTooltipValueGetter(): (params: ITooltipParams) => string | null {
+	return (params: ITooltipParams): string | null => {
+		const rawValue = params.value;
+		if (rawValue == null || rawValue === '') {
+			return null;
+		}
+
+		const api = params.api;
+		const column = params.column;
+		const isColumn = column && typeof (column as Column).getColId === 'function';
+		const rowNode = params.node ?? null;
+
+		if (api && isColumn && rowNode) {
+			const instances = api.getCellRendererInstances({
+				rowNodes: [rowNode as any],
+				columns: [column as Column]
+			});
+			if (Array.isArray(instances)) {
+				for (const instance of instances) {
+					const candidate = instance as unknown as { shouldDisplayTooltip?: () => boolean };
+					if (candidate && typeof candidate.shouldDisplayTooltip === 'function') {
+						if (!candidate.shouldDisplayTooltip()) {
+							return null;
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		return String(rawValue);
+	};
 }
 
 function appendCellClass(existing: ColDef['cellClass'], className: string): ColDef['cellClass'] {

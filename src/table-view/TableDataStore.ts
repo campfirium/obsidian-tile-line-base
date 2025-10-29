@@ -1,4 +1,4 @@
-import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
+﻿import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { getCurrentLocalDateTime, normalizeDateFormatPreset, type DateFormatPreset } from '../utils/datetime';
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
 import type { Schema, SchemaBuildResult } from './SchemaBuilder';

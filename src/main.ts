@@ -20,6 +20,7 @@ import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
 import { t } from './i18n';
+import { ViewActionManager } from './plugin/ViewActionManager';
 
 const logger = getLogger('plugin:main');
 const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
@@ -53,12 +54,14 @@ export default class TileLineBasePlugin extends Plugin {
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
+	private viewActionManager!: ViewActionManager;
 
 	async onload() {
 		setPluginContext(this);
 		this.settingsService = new SettingsService(this);
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
+		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.editorConfigController = new EditorConfigBlockController(this.app);
 		await this.loadSettings();
 
@@ -101,6 +104,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
+		this.viewActionManager.refreshAll();
 
 		this.registerEvent(
 			this.app.workspace.on('file-open', (openedFile) => {
@@ -115,6 +119,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (leaf) => {
+				this.viewActionManager.ensureActionsForLeaf(leaf ?? null);
 				this.applyRightSidebarForLeaf(leaf ?? null);
 
 				const markdownView = leaf?.view instanceof MarkdownView ? leaf.view : null;
@@ -140,6 +145,11 @@ export default class TileLineBasePlugin extends Plugin {
 					};
 					void this.viewCoordinator.openTableView(file, openContext);
 				}, 0);
+			})
+		);
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => {
+				this.viewActionManager.refreshAll();
 			})
 		);
 		// Register file-menu handler once (avoid duplicate registration per window)
@@ -169,9 +179,7 @@ export default class TileLineBasePlugin extends Plugin {
 				}
 
 				if (!checking) {
-					const leafWindow = this.windowContextManager.getLeafWindow(activeLeaf);
-					const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
-					void this.viewCoordinator.toggleTableView(activeLeaf, context ?? null);
+					void this.toggleLeafView(activeLeaf);
 				}
 				return true;
 			}
@@ -239,6 +247,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async onunload() {
 		setPluginContext(null);
+		this.viewActionManager.clearInjectedActions();
 		logger.info('Plugin unload: detaching all table views');
 		this.restoreRightSidebarIfNeeded();
 		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
@@ -307,6 +316,12 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 		this.settings = this.settingsService.getSettings();
 		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
+	}
+
+	async toggleLeafView(leaf: WorkspaceLeaf): Promise<void> {
+		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
+		const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
+		await this.viewCoordinator.toggleTableView(leaf, context ?? null);
 	}
 
 	private getActiveTableView(): TableView | null {

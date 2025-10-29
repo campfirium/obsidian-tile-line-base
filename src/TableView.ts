@@ -29,6 +29,7 @@ import { handleOnClose } from "./table-view/TableViewInteractions";
 import { t } from "./i18n";
 import { CopyTemplateController } from "./table-view/CopyTemplateController";
 import { TableHistoryManager } from "./table-view/TableHistoryManager";
+import { getPluginContext } from "./pluginContext";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -71,6 +72,7 @@ export class TableView extends ItemView {
 	public tagGroupController!: TagGroupController;
 	public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
 	public initialColumnState: ColumnState[] | null = null;
+	private markdownToggleButton: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -92,6 +94,7 @@ export class TableView extends ItemView {
 			if (file instanceof TFile) {
 				this.file = file;
 				await this.render();
+				this.updateViewHeaderTitle();
 			}
 		} catch (error) {
 			logger.error("setState failed", error);
@@ -105,10 +108,64 @@ export class TableView extends ItemView {
 
 	async render(): Promise<void> {
 		await renderTableView(this);
+		this.updateViewHeaderTitle();
+	}
+
+	async onOpen(): Promise<void> {
+		this.updateViewHeaderTitle();
+		this.ensureMarkdownToggle();
 	}
 
 	async onClose(): Promise<void> {
+		if (this.markdownToggleButton) {
+			this.markdownToggleButton.remove();
+			this.markdownToggleButton = null;
+		}
 		await handleOnClose(this);
 	}
-}
 
+	private ensureMarkdownToggle(): void {
+		if (this.markdownToggleButton) {
+			return;
+		}
+
+		const label = t("viewControls.openMarkdownView");
+		const button = this.addAction("pencil", label, async (evt) => {
+			const plugin = getPluginContext();
+			if (!plugin) {
+				logger.warn("No plugin context when toggling to markdown view");
+				return;
+			}
+			try {
+				await plugin.toggleLeafView(this.leaf);
+			} catch (error) {
+				logger.error("Failed to toggle back to markdown view", error);
+			}
+			evt?.preventDefault();
+			evt?.stopPropagation();
+		});
+		button.setAttribute("data-tlb-action", "open-markdown-view");
+		button.setAttribute("aria-label", label);
+		button.setAttribute("title", label);
+		this.markdownToggleButton = button;
+	}
+
+	private updateViewHeaderTitle(): void {
+		const leafElement = this.containerEl.closest(".workspace-leaf");
+		if (!leafElement) {
+			return;
+		}
+		const titleEl = leafElement.querySelector<HTMLElement>(".view-header-title");
+		if (!titleEl) {
+			return;
+		}
+		const label = this.file?.basename
+			? t("tableView.titleWithFile", { name: this.file.basename })
+			: t("tableView.displayName");
+		if (titleEl.textContent !== label) {
+			titleEl.textContent = label;
+		}
+		titleEl.setAttribute("aria-label", label);
+		titleEl.setAttribute("title", label);
+	}
+}

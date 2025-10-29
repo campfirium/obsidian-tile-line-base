@@ -111,8 +111,13 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 	}
 
 	if (options.isIndexColumn) {
-		if (options.isMultiSelect && options.actions.copySelection) {
-			addItem('gridInteraction.menuCopySelection', 'copy', options.actions.copySelection);
+		if (options.actions.copySelection) {
+			addItem(
+				'gridInteraction.menuCopySelection',
+				'copy',
+				options.actions.copySelection,
+				{ disabled: options.selectedRowCount === 0 }
+			);
 		}
 		addItem('copyTemplate.menuCopy', 'clipboard', options.actions.copySelectionAsTemplate);
 		addItem('copyTemplate.menuEdit', 'pencil', options.actions.editCopyTemplate);

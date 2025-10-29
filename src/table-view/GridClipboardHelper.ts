@@ -8,6 +8,35 @@ import { getLogger } from '../utils/logger';
 
 const logger = getLogger('table-view:grid-clipboard-helper');
 
+function sanitizeMarkdownPayload(payload: string | null | undefined): string {
+	if (!payload) {
+		return '';
+	}
+	const lines = String(payload).split(/\r?\n/);
+	const filtered: string[] = [];
+	let skipCollapsedComment = false;
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (trimmed.startsWith('> [!tlb-collapsed')) {
+			skipCollapsedComment = true;
+			continue;
+		}
+		if (trimmed.startsWith('<!--') && trimmed.includes('tlb.collapsed')) {
+			skipCollapsedComment = false;
+			continue;
+		}
+		if (skipCollapsedComment) {
+			skipCollapsedComment = false;
+			continue;
+		}
+		filtered.push(line);
+	}
+	while (filtered.length > 0 && filtered[filtered.length - 1].trim().length === 0) {
+		filtered.pop();
+	}
+	return filtered.join('\n');
+}
+
 interface GridClipboardHelperDeps {
 	dataStore: TableDataStore;
 	copyTemplate: CopyTemplateController;
@@ -30,7 +59,7 @@ export class GridClipboardHelper {
 		if (blockIndexes.length === 0) {
 			return;
 		}
-		const payload = this.copyTemplate.generateMarkdownPayload(blockIndexes);
+		const payload = sanitizeMarkdownPayload(this.copyTemplate.generateMarkdownPayload(blockIndexes));
 		await this.writeClipboard(payload, 'gridInteraction.copySelectionSuccess');
 	}
 
@@ -39,7 +68,7 @@ export class GridClipboardHelper {
 		if (blockIndexes.length === 0) {
 			return;
 		}
-		const payload = this.copyTemplate.generateClipboardPayload(blockIndexes);
+		const payload = sanitizeMarkdownPayload(this.copyTemplate.generateClipboardPayload(blockIndexes));
 		await this.writeClipboard(payload, 'copyTemplate.copySuccess');
 	}
 

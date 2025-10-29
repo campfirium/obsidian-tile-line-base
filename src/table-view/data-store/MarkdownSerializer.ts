@@ -1,4 +1,4 @@
-import type { H2Block } from '../MarkdownBlockParser';
+﻿import type { H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
 import {
 	buildCollapsedCallout,

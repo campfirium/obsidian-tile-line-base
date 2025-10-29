@@ -56,9 +56,13 @@ export function createAgGridOptions({
 		stopEditingWhenCellsLoseFocus: true,
 		enterNavigatesVertically: true,
 		enterNavigatesVerticallyAfterEdit: true,
-		rowSelection: 'multiple',
-		rowMultiSelectWithClick: false,
-		suppressRowClickSelection: false,
+		rowSelection: {
+			mode: 'multiRow',
+			checkboxes: false,
+			headerCheckbox: false,
+			enableSelectionWithoutKeys: false,
+			enableClickSelection: true
+		},
 		onCellEditingStopped: onCellEditingStopped,
 		onCellEditingStarted: () => {
 			interaction.handleCellEditingStarted();

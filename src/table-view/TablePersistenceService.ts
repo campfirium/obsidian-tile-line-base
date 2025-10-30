@@ -6,6 +6,7 @@ import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
 import type { TableConfigManager } from './TableConfigManager';
 import type { FilterStateStore } from './filter/FilterStateStore';
+import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
 
@@ -21,6 +22,7 @@ interface TablePersistenceDeps {
 	getFilterViewState: () => FileFilterViewState;
 	getTagGroupState: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
+	getBackupManager: () => BackupManager | null;
 }
 
 /**
@@ -63,6 +65,14 @@ export class TablePersistenceService {
 
 		try {
 			const markdown = this.deps.dataStore.blocksToMarkdown().trimEnd();
+			const backupManager = this.deps.getBackupManager();
+			if (backupManager) {
+				try {
+					await backupManager.ensureBackup(file, `${markdown}\n`);
+				} catch (error) {
+					logger.warn('Backup snapshot failed before save', error);
+				}
+			}
 			await this.deps.app.vault.modify(file, `${markdown}\n`);
 			await this.saveConfig();
 		} catch (error) {

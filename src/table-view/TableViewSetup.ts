@@ -21,6 +21,7 @@ import {
 } from './TableViewInteractions';
 import { getAvailableColumns, getFilterColumnOptions, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
+import { getPluginContext } from '../pluginContext';
 
 const logger = getLogger('table-view:setup');
 
@@ -38,7 +39,8 @@ export function initializeTableView(view: TableView): void {
 		getFile: () => view.file,
 		getFilterViewState: () => view.filterViewState,
 		getTagGroupState: () => view.tagGroupState,
-		getCopyTemplate: () => view.copyTemplate ?? null
+		getCopyTemplate: () => view.copyTemplate ?? null,
+		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null
 	});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,

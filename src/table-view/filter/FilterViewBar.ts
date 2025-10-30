@@ -10,6 +10,7 @@ export interface FilterViewBarCallbacks {
 	onReorder(draggedId: string, targetId: string): void;
 	onOpenTagGroupMenu(button: HTMLElement): void;
 	onOpenColumnSettings(button: HTMLElement): void;
+	onOpenBackupRestore(button: HTMLElement): void;
 }
 
 interface FilterViewBarOptions {
@@ -213,6 +214,14 @@ export class FilterViewBar {
 				.setIcon('layout-grid')
 				.onClick(() => {
 					this.options.callbacks.onOpenColumnSettings(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('backup.menuLabel'))
+				.setIcon('history')
+				.onClick(() => {
+					this.options.callbacks.onOpenBackupRestore(this.settingsButtonEl);
 				});
 		});
 

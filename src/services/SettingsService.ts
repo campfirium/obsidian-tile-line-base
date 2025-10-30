@@ -7,6 +7,11 @@ import { getLogger } from '../utils/logger';
 
 const logger = getLogger('service:settings');
 
+export interface BackupSettings {
+	enabled: boolean;
+	maxSizeMB: number;
+}
+
 export interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 	columnLayouts: Record<string, Record<string, number>>;
@@ -15,6 +20,7 @@ export interface TileLineBaseSettings {
 	configCache: Record<string, ConfigCacheEntry>;
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
+	backups: BackupSettings;
 }
 
 export const DEFAULT_SETTINGS: TileLineBaseSettings = {
@@ -27,6 +33,10 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	logging: {
 		globalLevel: 'warn',
 		scopeLevels: {}
+	},
+	backups: {
+		enabled: true,
+		maxSizeMB: 200
 	}
 };
 
@@ -50,6 +60,7 @@ export class SettingsService {
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
+		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
@@ -261,6 +272,32 @@ export class SettingsService {
 		};
 	}
 
+	getBackupSettings(): BackupSettings {
+		return {
+			enabled: this.settings.backups.enabled,
+			maxSizeMB: this.settings.backups.maxSizeMB
+		};
+	}
+
+	async setBackupEnabled(enabled: boolean): Promise<boolean> {
+		if (this.settings.backups.enabled === enabled) {
+			return false;
+		}
+		this.settings.backups.enabled = enabled;
+		await this.persist();
+		return true;
+	}
+
+	async setBackupMaxSizeMB(value: number): Promise<boolean> {
+		const sanitized = this.sanitizeBackupSettings({ enabled: this.settings.backups.enabled, maxSizeMB: value });
+		if (sanitized.maxSizeMB === this.settings.backups.maxSizeMB) {
+			return false;
+		}
+		this.settings.backups.maxSizeMB = sanitized.maxSizeMB;
+		await this.persist();
+		return true;
+	}
+
 	private cloneTagGroupState(source: FileTagGroupState | null): FileTagGroupState {
 		if (!source) {
 			return { activeGroupId: null, groups: [] };
@@ -304,6 +341,21 @@ export class SettingsService {
 		return {
 			activeGroupId,
 			groups
+		};
+	}
+
+	private sanitizeBackupSettings(raw: Partial<BackupSettings> | undefined): BackupSettings {
+		const base = DEFAULT_SETTINGS.backups;
+		const enabled = typeof raw?.enabled === 'boolean' ? raw.enabled : base.enabled;
+		const value = raw?.maxSizeMB;
+		let maxSize = typeof value === 'number' ? value : base.maxSizeMB;
+		if (!Number.isFinite(maxSize) || maxSize <= 0) {
+			maxSize = base.maxSizeMB;
+		}
+		maxSize = Math.min(10_240, Math.max(1, Math.floor(maxSize)));
+		return {
+			enabled,
+			maxSizeMB: maxSize
 		};
 	}
 }

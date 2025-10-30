@@ -3,7 +3,7 @@ import { ColDef, Column, ColumnMovedEvent, ColumnResizedEvent, ColumnState, Grid
 import { ColumnDef as SchemaColumnDef, ROW_ID_FIELD, SortModelEntry } from '../GridAdapter';
 import { clampColumnWidth } from '../columnSizing';
 import { buildAgGridColumnDefs } from './ColumnDefinitionBuilder';
-import { ColumnLayoutManager } from './ColumnLayoutManager';
+import { ColumnAutoSizeResult, ColumnLayoutManager } from './ColumnLayoutManager';
 import { applyQuickFilter as applyQuickFilterToGrid } from './QuickFilterManager';
 import { buildSortState, cloneColumnState } from './ColumnStateManager';
 import { isDisplayedSystemColumn } from '../systemColumnUtils';
@@ -105,17 +105,21 @@ export class AgGridColumnService {
 
 		const columns = gridApi.getAllDisplayedColumns() || [];
 		if (!this.columnLayoutInitialized) {
-			const initialized = this.columnLayoutManager.initialize(gridApi, columns);
-			if (initialized) {
+			const initResult = this.columnLayoutManager.initialize(gridApi, columns);
+			if (initResult.applied) {
 				this.columnLayoutInitialized = true;
+			}
+			if (initResult.autoSized.length > 0) {
+				this.handleAutoSizedColumns(initResult.autoSized);
 			}
 			return;
 		}
 
-		this.columnLayoutManager.applyWidthClamping(gridApi, columns);
-		this.columnLayoutManager.distributeSparseSpace(gridApi, columns);
-		gridApi.refreshHeader();
-		gridApi.refreshCells({ force: true });
+		const adjusted = this.columnLayoutManager.applyWidthClamping(gridApi, columns);
+		if (adjusted) {
+			gridApi.refreshHeader();
+			gridApi.refreshCells({ force: true });
+		}
 	}
 
 	handleColumnResized(event: ColumnResizedEvent): void {
@@ -240,6 +244,18 @@ export class AgGridColumnService {
 
 	applyQuickFilter(): void {
 		applyQuickFilterToGrid(this.gridApi, this.quickFilterText);
+	}
+
+	private handleAutoSizedColumns(columns: ColumnAutoSizeResult[]): void {
+		if (!this.callbacks.onColumnResize) {
+			return;
+		}
+		for (const column of columns) {
+			if (!column.key || isDisplayedSystemColumn(column.key)) {
+				continue;
+			}
+			this.callbacks.onColumnResize(column.key, column.width);
+		}
 	}
 
 }

@@ -1,102 +1,134 @@
 import { Column, GridApi } from 'ag-grid-community';
 
-import { COLUMN_MAX_WIDTH, COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
+import { clampColumnWidth } from '../columnSizing';
 import { isDisplayedSystemColumn } from '../systemColumnUtils';
 
 interface ColumnLayoutDependencies {
 	getContainer: () => HTMLElement | null;
 }
+export interface ColumnAutoSizeResult {
+	key: string;
+	width: number;
+}
+export interface ColumnLayoutInitResult {
+	applied: boolean;
+	autoSized: ColumnAutoSizeResult[];
+}
 
 export class ColumnLayoutManager {
 	constructor(private readonly deps: ColumnLayoutDependencies) {}
 
-	initialize(gridApi: GridApi, columns: Column[]): boolean {
+	initialize(gridApi: GridApi, columns: Column[]): ColumnLayoutInitResult {
 		const container = this.deps.getContainer();
 		if (!container) {
-			return false;
+			return { applied: false, autoSized: [] };
 		}
 
 		const containerWidth = container.clientWidth ?? 0;
 		const containerHeight = container.clientHeight ?? 0;
 		if (containerWidth <= 0 || containerHeight <= 0) {
-			return false;
+			return { applied: false, autoSized: [] };
 		}
 
 		if (columns.length === 0) {
-			return true;
+			return { applied: true, autoSized: [] };
 		}
 
-		const storedWidths = new Map<string, number>();
-		const explicitWidths = new Map<string, number>();
-		let requiresAutoSize = false;
+		const assignments: Array<{ key: string; newWidth: number }> = [];
+		const autoSizeCandidates: Column[] = [];
 
 		for (const column of columns) {
 			const colId = column.getColId();
-			if (isDisplayedSystemColumn(colId)) {
+			if (!colId) {
 				continue;
 			}
 
-			const colDef = column.getColDef() as any;
-			const stored = colDef?.context?.tlbStoredWidth;
+			const colDef = (column.getColDef() ?? {}) as any;
+			const context = (colDef.context ?? {}) as Record<string, unknown>;
+			const stored = context.tlbStoredWidth;
 			const explicit = colDef.width;
+			const hasFlex = typeof colDef.flex === 'number' && colDef.flex > 0;
 
 			if (typeof stored === 'number') {
-				storedWidths.set(colId, clampColumnWidth(stored));
-			} else if (typeof explicit === 'number') {
-				explicitWidths.set(colId, clampColumnWidth(explicit));
-			} else {
-				requiresAutoSize = true;
-			}
-		}
-
-		if (requiresAutoSize && typeof gridApi.sizeColumnsToFit === 'function') {
-			gridApi.sizeColumnsToFit({
-				defaultMinWidth: COLUMN_MIN_WIDTH,
-				defaultMaxWidth: COLUMN_MAX_WIDTH,
-				columnLimits: columns
-					.filter((column) => {
-						const id = column.getColId();
-						return id && id !== '#' && id !== 'status';
-					})
-					.map((column) => ({
-						key: column.getColId(),
-						minWidth: COLUMN_MIN_WIDTH,
-						maxWidth: COLUMN_MAX_WIDTH
-					}))
-			});
-		}
-
-		for (const column of columns) {
-			const colId = column.getColId();
-			if (isDisplayedSystemColumn(colId)) {
+				assignments.push({ key: colId, newWidth: clampColumnWidth(stored) });
 				continue;
 			}
 
-			if (storedWidths.has(colId)) {
-				const storedWidth = storedWidths.get(colId);
-				if (storedWidth !== undefined) {
-					gridApi.setColumnWidths([{ key: colId, newWidth: storedWidth }]);
-				}
+			if (typeof explicit === 'number' && !hasFlex) {
+				assignments.push({ key: colId, newWidth: clampColumnWidth(explicit) });
 				continue;
 			}
 
-			if (explicitWidths.has(colId)) {
-				const explicitWidth = explicitWidths.get(colId);
-				if (explicitWidth !== undefined) {
-					gridApi.setColumnWidths([{ key: colId, newWidth: explicitWidth }]);
-				}
+			if (isDisplayedSystemColumn(colId) || hasFlex) {
+				continue;
 			}
+
+			autoSizeCandidates.push(column);
 		}
 
-		this.applyWidthClamping(gridApi, columns);
-		this.distributeSparseSpace(gridApi, columns);
-		gridApi.refreshHeader();
-		gridApi.refreshCells({ force: true });
+		if (assignments.length > 0) {
+			gridApi.setColumnWidths(assignments);
+		}
 
-		return true;
+		let autoSized: ColumnAutoSizeResult[] = [];
+		if (autoSizeCandidates.length > 0) {
+			autoSized = this.autoSizeColumns(gridApi, autoSizeCandidates);
+		}
+
+		const adjusted = this.applyWidthClamping(gridApi, columns);
+		if (adjusted) {
+			gridApi.refreshHeader();
+			gridApi.refreshCells({ force: true });
+		}
+
+		return { applied: true, autoSized };
 	}
 
-	applyWidthClamping(gridApi: GridApi, columns: Column[]): void {
+	private autoSizeColumns(gridApi: GridApi, columns: Column[]): ColumnAutoSizeResult[] {
+		const keys = columns
+			.map((column) => column.getColId())
+			.filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+		if (keys.length === 0) {
+			return [];
+		}
+
+		const autoSizeColumns = (gridApi as any).autoSizeColumns;
+		if (typeof autoSizeColumns === 'function') {
+			autoSizeColumns.call(gridApi, keys, false);
+		}
+
+		const updates: Array<{ key: string; newWidth: number }> = [];
+		const results: ColumnAutoSizeResult[] = [];
+		for (const column of columns) {
+			const colId = column.getColId();
+			if (!colId) {
+				continue;
+			}
+			const measured = column.getActualWidth();
+			const clamped = clampColumnWidth(measured);
+			if (Math.abs(clamped - measured) > 0.5) {
+				updates.push({ key: colId, newWidth: clamped });
+			}
+			this.storeMeasuredWidth(column, clamped);
+			results.push({ key: colId, width: clamped });
+		}
+
+		if (updates.length > 0) {
+			gridApi.setColumnWidths(updates);
+		}
+		return results;
+	}
+
+	private storeMeasuredWidth(column: Column, width: number): void {
+		const colDef = (column.getColDef() ?? {}) as any;
+		const context = (colDef.context ?? {}) as Record<string, unknown>;
+		context.tlbStoredWidth = width;
+		colDef.context = context;
+	}
+
+	applyWidthClamping(gridApi: GridApi, columns: Column[]): boolean {
+		let adjusted = false;
 		for (const column of columns) {
 			const colId = column.getColId();
 			if (isDisplayedSystemColumn(colId)) {
@@ -107,69 +139,9 @@ export class ColumnLayoutManager {
 			const clamped = clampColumnWidth(current);
 			if (Math.abs(clamped - current) > 0.5) {
 				gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
+				adjusted = true;
 			}
 		}
-	}
-
-	distributeSparseSpace(gridApi: GridApi, columns: Column[]): void {
-		const container = this.deps.getContainer();
-		if (!container) {
-			return;
-		}
-
-		const viewportWidth = container.clientWidth ?? 0;
-		if (viewportWidth <= 0) {
-			return;
-		}
-
-		const totalWidth = columns.reduce((sum, column) => sum + column.getActualWidth(), 0);
-		let deficit = viewportWidth - totalWidth;
-		if (deficit <= 1) {
-			return;
-		}
-
-		const tolerance = 0.5;
-		let adjustable = columns.filter((column) => {
-			const id = column.getColId();
-			return id && id !== '#' && id !== 'status' && column.isResizable();
-		});
-
-		if (adjustable.length === 0) {
-			return;
-		}
-
-		while (deficit > tolerance && adjustable.length > 0) {
-			const share = deficit / adjustable.length;
-			let consumed = 0;
-			const nextRound: Column[] = [];
-
-			for (const column of adjustable) {
-				const current = column.getActualWidth();
-				const target = clampColumnWidth(current + share);
-				const delta = target - current;
-
-				if (delta > tolerance) {
-					const colId = column.getColId();
-					if (colId) {
-						gridApi.setColumnWidths([{ key: colId, newWidth: target }]);
-					}
-					consumed += delta;
-				}
-
-				if (target < COLUMN_MAX_WIDTH - tolerance) {
-					nextRound.push(column);
-				}
-			}
-
-			if (consumed <= tolerance) {
-				break;
-			}
-
-			deficit -= consumed;
-			adjustable =
-				nextRound.length > 0
-					? nextRound
-					: adjustable.filter((column) => column.getActualWidth() < COLUMN_MAX_WIDTH - tolerance);
-		}
+		return adjusted;
 	}
 }

@@ -10,6 +10,7 @@ import { formatDateForDisplay } from '../../utils/datetime';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
+type ColumnRole = 'index' | 'status' | 'primary' | 'data';
 const PINNED_FIELDS = new Set(['任务', '任务名称', 'task', 'taskName', 'title', '标题']);
 const TEXT_CELL_TOOLTIP_GETTER = createTextCellTooltipValueGetter();
 
@@ -32,6 +33,7 @@ export function buildAgGridColumnDefs(columns: SchemaColumnDef[]): ColDef[] {
 }
 
 function createIndexColumnDef(column: SchemaColumnDef): ColDef {
+	const baseContext = (column as any).context ?? {};
 	return {
 		field: column.field,
 		headerName: column.headerName,
@@ -49,6 +51,10 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 		suppressSizeToFit: true,
 		cellStyle: { textAlign: 'center' },
 		headerComponent: IconHeaderComponent,
+		context: {
+			...baseContext,
+			tlbColumnRole: 'index' as ColumnRole
+		},
 		headerComponentParams: {
 			icon: 'hashtag',
 			fallbacks: ['hash'],
@@ -59,6 +65,7 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 
 function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 	const headerName = column.headerName ?? 'Status';
+	const baseContext = (column as any).context ?? {};
 
 	return {
 		field: column.field,
@@ -83,6 +90,10 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 			cursor: 'pointer',
 			padding: '10px var(--ag-cell-horizontal-padding)'
 		},
+		context: {
+			...baseContext,
+			tlbColumnRole: 'status' as ColumnRole
+		},
 		headerComponent: IconHeaderComponent,
 		headerComponentParams: {
 			icon: 'list-checks',
@@ -104,6 +115,9 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 	};
 
 	const mergedColDef = { ...baseColDef, ...(column as unknown as ColDef) };
+	const context: Record<string, unknown> = {
+		...(mergedColDef as any).context
+	};
 
 	if (!mergedColDef.cellRenderer) {
 		mergedColDef.cellRenderer = createTextLinkCellRenderer();
@@ -141,6 +155,7 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 	if (typeof column.field === 'string' && PINNED_FIELDS.has(column.field)) {
 		mergedColDef.pinned = 'left';
 		mergedColDef.lockPinned = true;
+		context.tlbColumnRole = 'primary' as ColumnRole;
 	}
 
 	const explicitWidth = (mergedColDef as any).width;
@@ -149,6 +164,11 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		(mergedColDef as any).width = clamped;
 		(mergedColDef as any).suppressSizeToFit = true;
 	}
+
+	if (!context.tlbColumnRole) {
+		context.tlbColumnRole = 'data' as ColumnRole;
+	}
+	(mergedColDef as any).context = context;
 
 	return mergedColDef;
 }

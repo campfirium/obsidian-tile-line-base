@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+=======
+import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+>>>>>>> feat/T0104-simple-backup-system
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
 import {
@@ -14,6 +18,7 @@ import type { FileFilterViewState } from './types/filterView';
 import type { FileTagGroupState } from './types/tagGroup';
 import { FileCacheManager } from './cache/FileCacheManager';
 import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './services/SettingsService';
+import { BackupManager } from './services/BackupManager';
 import { WindowContextManager } from './plugin/WindowContextManager';
 import type { WindowContext } from './plugin/WindowContextManager';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
@@ -46,6 +51,7 @@ function snapshotLeaf(manager: WindowContextManager, leaf: WorkspaceLeaf | null 
 export default class TileLineBasePlugin extends Plugin {
 	private windowContextManager!: WindowContextManager;
 	private mainContext: WindowContext | null = null;
+<<<<<<< HEAD
 	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
 	private settingsService!: SettingsService;
 	private suppressAutoSwitchUntil = new Map<string, number>();
@@ -66,6 +72,38 @@ export default class TileLineBasePlugin extends Plugin {
 		await this.loadSettings();
 
 		applyLoggingConfig(this.settings.logging);
+=======
+	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
+	private settingsService!: SettingsService;
+	private suppressAutoSwitchUntil = new Map<string, number>();
+	private viewCoordinator!: ViewSwitchCoordinator;
+	private editorConfigController: EditorConfigBlockController | null = null;
+	private backupManager: BackupManager | null = null;
+	public cacheManager: FileCacheManager | null = null;
+	private unsubscribeLogging: (() => void) | null = null;
+	private rightSidebarState = { applied: false, wasCollapsed: false };
+
+	async onload() {
+		setPluginContext(this);
+		this.settingsService = new SettingsService(this);
+		this.windowContextManager = new WindowContextManager(this.app);
+		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
+		this.editorConfigController = new EditorConfigBlockController(this.app);
+		await this.loadSettings();
+
+		this.backupManager = new BackupManager({
+			plugin: this,
+			getSettings: () => this.settingsService.getBackupSettings()
+		});
+		try {
+			await this.backupManager.initialize();
+		} catch (error) {
+			logger.error('Failed to initialize backup manager', error);
+			this.backupManager = null;
+		}
+
+		applyLoggingConfig(this.settings.logging);
+>>>>>>> feat/T0104-simple-backup-system
 		this.unsubscribeLogging = subscribeLoggingConfig((config) => {
 			this.settingsService.saveLoggingConfig(config).catch((error) => {
 				logger.error('Failed to persist logging configuration', error);
@@ -318,10 +356,46 @@ export default class TileLineBasePlugin extends Plugin {
 		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
 	}
 
+<<<<<<< HEAD
 	async toggleLeafView(leaf: WorkspaceLeaf): Promise<void> {
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 		const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
 		await this.viewCoordinator.toggleTableView(leaf, context ?? null);
+=======
+	getBackupManager(): BackupManager | null {
+		return this.backupManager;
+	}
+
+	isBackupEnabled(): boolean {
+		return this.settingsService.getBackupSettings().enabled;
+	}
+
+	async setBackupEnabled(value: boolean): Promise<void> {
+		const changed = await this.settingsService.setBackupEnabled(value);
+		if (!changed) {
+			return;
+		}
+		this.settings = this.settingsService.getSettings();
+	}
+
+	getBackupCapacityLimit(): number {
+		return this.settingsService.getBackupSettings().maxSizeMB;
+	}
+
+	async setBackupCapacityLimit(value: number): Promise<void> {
+		const changed = await this.settingsService.setBackupMaxSizeMB(value);
+		if (!changed) {
+			return;
+		}
+		this.settings = this.settingsService.getSettings();
+		if (this.backupManager) {
+			try {
+				await this.backupManager.enforceCapacity();
+			} catch (error) {
+				logger.warn('Failed to enforce backup capacity after update', error);
+			}
+		}
+>>>>>>> feat/T0104-simple-backup-system
 	}
 
 	private getActiveTableView(): TableView | null {

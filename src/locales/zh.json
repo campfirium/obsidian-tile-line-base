@@ -14,7 +14,12 @@
   "settings": {
     "generalHeading": "����",
     "hideRightSidebarLabel": "�л�����ʱ�����Ҳ����",
-    "hideRightSidebarDesc": "���ú��ڽ��� TileLineBase ������ͼʱ�Զ��۵� Obsidian �Ҳ�������뿪������ͼʱ�ָ�ԭ״̬��"
+    "hideRightSidebarDesc": "���ú��ڽ��� TileLineBase ������ͼʱ�Զ��۵� Obsidian �Ҳ�������뿪������ͼʱ�ָ�ԭ״̬��",
+    "backupHeading": "备份",
+    "backupEnableLabel": "启用自动备份",
+    "backupEnableDesc": "在写入 Markdown 之前保存一份快照，便于撤回误操作。",
+    "backupCapacityLabel": "备份容量上限（MB）",
+    "backupCapacityDesc": "超过上限时会删除最旧的快照，默认 200 MB。"
   },
   "readingView": {
     "configBlockTitle": "TLB CONFIG BLOCK"
@@ -313,5 +318,21 @@
   "textLinkCell": {
     "openInternal": "在新标签页打开笔记：{{target}}",
     "openExternal": "打开链接：{{target}}"
+  },
+  "backup": {
+    "menuLabel": "恢复备份",
+    "modalTitle": "{{file}} 的备份",
+    "errorNoFile": "当前文件不可用。",
+    "errorUnavailable": "备份服务尚未就绪。",
+    "errorLoadFailed": "加载备份列表失败，请稍后重试。",
+    "emptyState": "还没有可用的备份。",
+    "restoreButton": "恢复",
+    "restoreButtonAria": "恢复到 {{timestamp}} 的备份",
+    "confirmRestore": "确定要恢复到 {{timestamp}} 的版本吗？",
+    "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。",
+    "noticeRestoreFailed": "恢复备份失败，请查看控制台。",
+    "modalTitleConfirm": "确认恢复",
+    "restoreCancelButton": "取消",
+    "sizeLabel": "大小：{{size}}"
   }
 }

@@ -2,6 +2,7 @@ import type { TableView } from '../TableView';
 import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterViewBar';
 import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
+import { openBackupRestoreModal } from './BackupRestoreModal';
 
 export type FilterColumnKind = 'status' | 'date' | 'text';
 
@@ -36,6 +37,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			},
 			onOpenColumnSettings: (button) => {
 				view.columnInteractionController.openColumnSettingsMenu(button);
+			},
+			onOpenBackupRestore: () => {
+				void openBackupRestoreModal(view);
 			}
 		}
 	});

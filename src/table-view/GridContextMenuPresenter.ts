@@ -9,12 +9,8 @@ import { buildGridContextMenu } from './GridContextMenuBuilder';
 import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInteractionMenuHelpers';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { GridCellClipboardController } from './GridCellClipboardController';
-<<<<<<< HEAD
 import type { RowMigrationController } from './RowMigrationController';
-=======
 import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
->>>>>>> feat/T0108-paragraph-to-note
-
 interface GridContextMenuParams {
 	app: App;
 	container: HTMLElement | null;
@@ -140,3 +136,4 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 
 	return menu;
 }
+

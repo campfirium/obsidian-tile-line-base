@@ -1,4 +1,4 @@
-﻿{
+{
   "tableView": {
     "displayName": "TileLineBase ����",
     "titleWithFile": "{{name}}（表格视图）"
@@ -336,46 +336,44 @@
     "openInternal": "在新标签页打开笔记：{{target}}",
     "openExternal": "打开链接：{{target}}"
   },
-<<<<<<< HEAD
   "backup": {
-    "menuLabel": "恢复备份",
-    "modalTitle": "{{file}} 的备份",
-    "errorNoFile": "当前文件不可用。",
-    "errorUnavailable": "备份服务尚未就绪。",
-    "errorLoadFailed": "加载备份列表失败，请稍后重试。",
-    "emptyState": "还没有可用的备份。",
-    "restoreButton": "恢复",
-    "restoreButtonAria": "恢复到 {{timestamp}} 的备份",
-    "confirmRestore": "确定要恢复到 {{timestamp}} 的版本吗？",
-    "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。",
-    "noticeRestoreFailed": "恢复备份失败，请查看控制台。",
-    "modalTitleConfirm": "确认恢复",
-    "restoreCancelButton": "取消",
-    "sizeLabel": "大小：{{size}}"
-=======
+    "menuLabel": "�ָ�����",
+    "modalTitle": "{{file}} �ı���",
+    "errorNoFile": "��ǰ�ļ������á�",
+    "errorUnavailable": "���ݷ�����δ������",
+    "errorLoadFailed": "���ر����б�ʧ�ܣ����Ժ����ԡ�",
+    "emptyState": "��û�п��õı��ݡ�",
+    "restoreButton": "�ָ�",
+    "restoreButtonAria": "�ָ��� {{timestamp}} �ı���",
+    "confirmRestore": "ȷ��Ҫ�ָ��� {{timestamp}} �İ汾��",
+    "noticeRestoreSuccess": "�ѻָ��� {{timestamp}} �ı��ݡ�",
+    "noticeRestoreFailed": "�ָ�����ʧ�ܣ���鿴����̨��",
+    "modalTitleConfirm": "ȷ�ϻָ�",
+    "restoreCancelButton": "ȡ��",
+    "sizeLabel": "��С��{{size}}"
+  },
   "paragraphPromotion": {
-    "menuLabel": "提升为独立笔记",
-    "modalTitle": "提升为笔记",
-    "modalDescription": "请选择要写入新笔记 YAML 前言的字段。",
-    "noColumns": "当前没有可导出的字段。",
-    "fieldsColumnLabel": "字段",
-    "yamlColumnLabel": "写入 YAML",
-    "bodyColumnLabel": "写入正文",
-    "headerYamlToggleHint": "将所有字段写入 YAML 前言",
-    "headerBodyToggleHint": "将所有字段写入正文",
-    "globalRowLabel": "全部字段",
-    "includeEmptyLabel": "包含空字段",
-    "includeEmptyDescription": "即使字段为空值也写入 YAML 前言。",
-    "confirmButton": "创建笔记",
-    "cancelButton": "取消",
-    "linkColumnName": "关联笔记",
-    "noSelectionNotice": "请先选择至少一行。",
-    "linkColumnFailed": "无法创建关联笔记字段。",
-    "linkColumnCreatedNotice": "已创建字段：{{name}}",
-    "successNotice": "已创建 {{count}} 条笔记。",
-    "partialNotice": "已创建 {{success}} 条笔记，{{failed}} 条失败。",
-    "failureNotice": "笔记创建失败。",
-    "noteNameFallback": "提升的笔记"
->>>>>>> feat/T0108-paragraph-to-note
+    "menuLabel": "����Ϊ�����ʼ�",
+    "modalTitle": "����Ϊ�ʼ�",
+    "modalDescription": "��ѡ��Ҫд���±ʼ� YAML ǰ�Ե��ֶΡ�",
+    "noColumns": "��ǰû�пɵ������ֶΡ�",
+    "fieldsColumnLabel": "�ֶ�",
+    "yamlColumnLabel": "д�� YAML",
+    "bodyColumnLabel": "д������",
+    "headerYamlToggleHint": "�������ֶ�д�� YAML ǰ��",
+    "headerBodyToggleHint": "�������ֶ�д������",
+    "globalRowLabel": "ȫ���ֶ�",
+    "includeEmptyLabel": "�������ֶ�",
+    "includeEmptyDescription": "��ʹ�ֶ�Ϊ��ֵҲд�� YAML ǰ�ԡ�",
+    "confirmButton": "�����ʼ�",
+    "cancelButton": "ȡ��",
+    "linkColumnName": "�����ʼ�",
+    "noSelectionNotice": "����ѡ������һ�С�",
+    "linkColumnFailed": "�޷����������ʼ��ֶΡ�",
+    "linkColumnCreatedNotice": "�Ѵ����ֶΣ�{{name}}",
+    "successNotice": "�Ѵ��� {{count}} ���ʼǡ�",
+    "partialNotice": "�Ѵ��� {{success}} ���ʼǣ�{{failed}} ��ʧ�ܡ�",
+    "failureNotice": "�ʼǴ���ʧ�ܡ�",
+    "noteNameFallback": "�����ıʼ�"
   }
 }

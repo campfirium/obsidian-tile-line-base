@@ -2,11 +2,12 @@ import { ColDef } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
-import { COLUMN_MAX_WIDTH, COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
+import { COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
 import { IconHeaderComponent } from '../headers/IconHeaderComponent';
 import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
 import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
 import { formatDateForDisplay } from '../../utils/datetime';
+import { t } from '../../i18n';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
@@ -58,12 +59,12 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 
 function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 	const headerName = column.headerName ?? 'Status';
+	const headerAriaLabel = t('statusCell.headerAriaLabel');
 
 	return {
 		field: column.field,
 		headerName,
 		headerClass: 'tlb-status-header-cell',
-		headerTooltip: undefined,
 		editable: false,
 		pinned: 'left',
 		lockPinned: true,
@@ -86,7 +87,8 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 		headerComponentParams: {
 			icon: 'list-checks',
 			fallbacks: ['checklist', 'check-square'],
-			tooltip: undefined
+			tooltip: undefined,
+			ariaLabel: headerAriaLabel
 		}
 	};
 }
@@ -126,10 +128,11 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 			typeof mergedColDef.minWidth === 'number'
 				? clampColumnWidth(mergedColDef.minWidth)
 				: COLUMN_MIN_WIDTH;
-		mergedColDef.maxWidth =
-			typeof mergedColDef.maxWidth === 'number'
-				? clampColumnWidth(mergedColDef.maxWidth)
-				: COLUMN_MAX_WIDTH;
+		if (typeof mergedColDef.maxWidth === 'number') {
+			mergedColDef.maxWidth = clampColumnWidth(mergedColDef.maxWidth);
+		} else {
+			delete (mergedColDef as any).maxWidth;
+		}
 	}
 
 	if (typeof column.field === 'string' && PINNED_FIELDS.has(column.field)) {

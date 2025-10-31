@@ -50,7 +50,7 @@ export class ColumnLayoutManager {
 			const hasFlex = typeof colDef.flex === 'number' && colDef.flex > 0;
 
 			if (typeof stored === 'number') {
-				assignments.push({ key: colId, newWidth: clampColumnWidth(stored) });
+				assignments.push({ key: colId, newWidth: clampColumnWidth(stored, { clampMax: false }) });
 				continue;
 			}
 
@@ -124,6 +124,7 @@ export class ColumnLayoutManager {
 		const colDef = (column.getColDef() ?? {}) as any;
 		const context = (colDef.context ?? {}) as Record<string, unknown>;
 		context.tlbStoredWidth = width;
+		context.tlbWidthSource = 'auto';
 		colDef.context = context;
 	}
 
@@ -135,10 +136,22 @@ export class ColumnLayoutManager {
 				continue;
 			}
 
+			const colDef = (column.getColDef() ?? {}) as any;
+			const context = (colDef.context ?? {}) as Record<string, unknown>;
+			const widthSource = typeof context.tlbWidthSource === 'string' ? context.tlbWidthSource : null;
+			const clampMax = widthSource === 'manual' ? false : true;
+
 			const current = column.getActualWidth();
-			const clamped = clampColumnWidth(current);
+			const clamped = clampColumnWidth(current, { clampMax });
 			if (Math.abs(clamped - current) > 0.5) {
 				gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
+				context.tlbStoredWidth = clamped;
+				if (clampMax) {
+					context.tlbWidthSource = widthSource ?? 'auto';
+				} else {
+					context.tlbWidthSource = 'manual';
+				}
+				colDef.context = context;
 				adjusted = true;
 			}
 		}

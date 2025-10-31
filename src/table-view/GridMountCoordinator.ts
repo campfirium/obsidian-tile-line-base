@@ -31,7 +31,6 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		const normalizedName = name.trim().toLowerCase();
 		if (normalizedName === 'status') {
 			baseColDef.headerName = '';
-			baseColDef.headerTooltip = 'Status';
 			(baseColDef as any).suppressMovable = true;
 			(baseColDef as any).lockPosition = true;
 			(baseColDef as any).lockPinned = true;
@@ -71,6 +70,7 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 			(baseColDef as any).width = width;
 			const context = (baseColDef as any).context ?? {};
 			context.tlbStoredWidth = width;
+			context.tlbWidthSource = 'manual';
 			(baseColDef as any).context = context;
 			(baseColDef as any).suppressSizeToFit = true;
 		}

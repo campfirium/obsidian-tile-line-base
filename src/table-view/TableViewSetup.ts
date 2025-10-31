@@ -23,6 +23,8 @@ import {
 import { getAvailableColumns, getFilterColumnOptions, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
 import { getPluginContext } from '../pluginContext';
+import { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
+import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 
 const logger = getLogger('table-view:setup');
 
@@ -30,6 +32,7 @@ export function initializeTableView(view: TableView): void {
 	logger.info(t('tableViewSetup.constructorStart'));
 	logger.debug('leaf', view.leaf);
 
+	view.refreshCoordinator = new TableRefreshCoordinator(view);
 	view.configManager = new TableConfigManager(view.app);
 	view.persistenceService = new TablePersistenceService({
 		app: view.app,
@@ -41,7 +44,8 @@ export function initializeTableView(view: TableView): void {
 		getFilterViewState: () => view.filterViewState,
 		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null,
-		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null
+		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null,
+		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)
 	});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,
@@ -84,6 +88,16 @@ export function initializeTableView(view: TableView): void {
 		},
 		persistTemplate: () => view.persistenceService.saveConfig()
 	});
+	view.paragraphPromotionController = new ParagraphPromotionController({
+		app: view.app,
+		dataStore: view.dataStore,
+		history: view.historyManager,
+		getSchema: () => view.schema,
+		getFile: () => view.file,
+		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
+		refreshGrid: () => view.filterOrchestrator.refresh(),
+		scheduleSave: () => view.persistenceService.scheduleSave()
+	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
 		getGridAdapter: () => view.gridAdapter
 	});
@@ -105,7 +119,8 @@ export function initializeTableView(view: TableView): void {
 		dataStore: view.dataStore,
 		getGridAdapter: () => view.gridAdapter,
 		copyTemplate: view.copyTemplateController,
-		history: view.historyManager
+		history: view.historyManager,
+		paragraphPromotion: view.paragraphPromotionController
 	});
 	view.gridLayoutController = new GridLayoutController(view.app, view.gridController);
 	view.focusManager = new FocusManager({
@@ -186,3 +201,4 @@ function collectUniqueFieldValues(view: TableView, field: string, limit: number)
 	}
 	return result;
 }
+

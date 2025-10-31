@@ -31,6 +31,8 @@ import { t } from "./i18n";
 import { CopyTemplateController } from "./table-view/CopyTemplateController";
 import { TableHistoryManager } from "./table-view/TableHistoryManager";
 import { getPluginContext } from "./pluginContext";
+import type { ParagraphPromotionController } from "./table-view/paragraph/ParagraphPromotionController";
+import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -64,7 +66,9 @@ export class TableView extends ItemView {
 	public focusManager!: FocusManager;
 	public globalQuickFilterController!: GlobalQuickFilterController;
 	public copyTemplateController!: CopyTemplateController;
+	public paragraphPromotionController!: ParagraphPromotionController;
 	public historyManager = new TableHistoryManager(this);
+	public refreshCoordinator!: TableRefreshCoordinator;
 	public tableContainer: HTMLElement | null = null;
 	public filterViewBar: FilterViewBar | null = null;
 	public filterViewController!: FilterViewController;
@@ -95,8 +99,11 @@ export class TableView extends ItemView {
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
 			if (file instanceof TFile) {
 				this.file = file;
+				this.refreshCoordinator.setTrackedFile(file);
 				await this.render();
 				this.updateViewHeaderTitle();
+			} else {
+				this.refreshCoordinator.setTrackedFile(null);
 			}
 		} catch (error) {
 			logger.error("setState failed", error);
@@ -109,7 +116,11 @@ export class TableView extends ItemView {
 	}
 
 	async render(): Promise<void> {
+		const snapshot = this.refreshCoordinator ? this.refreshCoordinator.captureViewSnapshot() : null;
 		await renderTableView(this);
+		if (this.refreshCoordinator) {
+			await this.refreshCoordinator.finalizeRender(snapshot);
+		}
 		this.updateViewHeaderTitle();
 	}
 
@@ -124,6 +135,9 @@ export class TableView extends ItemView {
 			this.markdownToggleButton = null;
 		}
 		await handleOnClose(this);
+		if (this.refreshCoordinator) {
+			this.refreshCoordinator.dispose();
+		}
 	}
 
 	private ensureMarkdownToggle(): void {

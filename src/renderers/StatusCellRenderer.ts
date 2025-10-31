@@ -100,6 +100,7 @@ const STATUS_MENU_STATUSES: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhol
 export class StatusCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
 	private params!: ICellRendererParams;
+	private hostCell: HTMLElement | null = null;
 	private clickHandler?: (e: MouseEvent) => void;
 	private contextMenuHandler?: (e: MouseEvent) => void;
 	private keydownHandler?: (e: KeyboardEvent) => void;
@@ -119,6 +120,10 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 		// �� AG Grid �ĵ�Ԫ��Ԫ�ػ�ȡ��ȷ�� document��֧�� pop-out ���ڣ�
 		const doc = (params.eGridCell?.ownerDocument || document);
+		this.hostCell = params.eGridCell ?? null;
+		if (this.hostCell) {
+			this.hostCell.setAttribute('data-tlb-tooltip-disabled', 'true');
+		}
 
 		// ��������Ԫ��
 		this.eGui = doc.createElement('div');
@@ -135,6 +140,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.setAttribute('aria-haspopup', 'menu');
 		this.eGui.setAttribute('aria-keyshortcuts', 'Space Enter Shift+F10');
 		this.eGui.setAttribute('data-tlb-status-cell', 'true');
+		this.eGui.setAttribute('data-tlb-tooltip-disabled', 'true');
 
 		// ��Ⱦͼ��
 		this.renderIcon();
@@ -559,6 +565,13 @@ export class StatusCellRenderer implements ICellRendererComp {
 	destroy(): void {
 		this.shouldRestoreFocusToCell = false;
 		this.hideContextMenu();
+
+		if (this.hostCell) {
+			if (this.hostCell.getAttribute('data-tlb-tooltip-disabled') === 'true') {
+				this.hostCell.removeAttribute('data-tlb-tooltip-disabled');
+			}
+			this.hostCell = null;
+		}
 
 		if (this.clickHandler && this.eGui) {
 			this.eGui.removeEventListener('click', this.clickHandler);

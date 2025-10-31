@@ -10,7 +10,7 @@ import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInt
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { GridCellClipboardController } from './GridCellClipboardController';
 import type { RowMigrationController } from './RowMigrationController';
-
+import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
 interface GridContextMenuParams {
 	app: App;
 	container: HTMLElement | null;
@@ -27,6 +27,7 @@ interface GridContextMenuParams {
 	onCopySelectionAsTemplate: (blockIndex: number) => void;
 	onRequestClose: () => void;
 	history: TableHistoryManager;
+	paragraphPromotion: ParagraphPromotionController;
 }
 
 export function createGridContextMenu(params: GridContextMenuParams): Menu | null {
@@ -76,10 +77,12 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 		};
 	}
 
+	const promotionTargets = targetIndexes.length > 0 ? [...targetIndexes] : [];
 	const menu = buildGridContextMenu({
 		isIndexColumn,
 		isMultiSelect,
 		selectedRowCount: selectedRows.length,
+		promotionCount: promotionTargets.length,
 		fillSelectionLabelParams: fillSelection.params,
 		undoRedo: {
 			canUndo: params.history.canUndo(),
@@ -112,6 +115,9 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 						},
 						moveToExisting: () => {
 							void params.rowMigration.moveSelectionToExistingFile(migrateIndexes);
+						},
+						copyToExisting: () => {
+							void params.rowMigration.copySelectionToExistingFile(migrateIndexes);
 						}
 					}
 				: undefined,
@@ -122,9 +128,15 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 			deleteSelection: () => params.rowInteraction.deleteRows(selectedRows),
 			duplicateRow: () => params.rowInteraction.duplicateRow(params.blockIndex),
 			deleteRow: () => params.rowInteraction.deleteRow(params.blockIndex),
-			close: params.onRequestClose
+			close: params.onRequestClose,
+			promoteToNote: promotionTargets.length > 0
+				? () => {
+						void params.paragraphPromotion.promoteRows([...promotionTargets]);
+					}
+				: undefined
 		}
 	});
 
 	return menu;
 }
+

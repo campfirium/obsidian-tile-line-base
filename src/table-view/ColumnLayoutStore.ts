@@ -43,7 +43,7 @@ export class ColumnLayoutStore {
 			return false;
 		}
 		this.ensureSettingsLoaded();
-		const clamped = clampColumnWidth(width);
+		const clamped = clampColumnWidth(width, { clampMax: false });
 		if (this.columnWidths[field] === clamped) {
 			return false;
 		}

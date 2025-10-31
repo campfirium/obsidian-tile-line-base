@@ -71,7 +71,7 @@ export class TableConfigManager {
 		return data;
 	}
 
-	async save(file: TFile, data: TableConfigData): Promise<void> {
+	async save(file: TFile, data: TableConfigData, options?: { beforeWrite?: (file: TFile) => void }): Promise<void> {
 		const fileId = this.ensureFileId();
 		const version = Date.now();
 
@@ -101,6 +101,7 @@ export class TableConfigManager {
 		const cleaned = stripExistingConfigBlock(content).trimEnd();
 		const newContent = cleaned.length > 0 ? `${cleaned}\n\n${configBlock}\n` : `${configBlock}\n`;
 
+		options?.beforeWrite?.(file);
 		await this.app.vault.modify(file, newContent);
 
 		const plugin = getPluginContext();

@@ -23,6 +23,7 @@ interface TablePersistenceDeps {
 	getTagGroupState: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
+	markSelfMutation?: (file: TFile) => void;
 }
 
 /**
@@ -73,8 +74,11 @@ export class TablePersistenceService {
 					logger.warn('Backup snapshot failed before save', error);
 				}
 			}
+			this.deps.markSelfMutation?.(file);
 			await this.deps.app.vault.modify(file, `${markdown}\n`);
-			await this.saveConfig();
+			await this.saveConfig({
+				beforeWrite: (target) => this.deps.markSelfMutation?.(target)
+			});
 		} catch (error) {
 			logger.error('Failed to save file', error);
 			new Notice(t('tablePersistence.saveFailed'));
@@ -100,13 +104,20 @@ export class TablePersistenceService {
 		};
 	}
 
-	async saveConfig(): Promise<void> {
+	async saveConfig(options?: { beforeWrite?: (file: TFile) => void }): Promise<void> {
 		const file = this.deps.getFile();
 		if (!file) {
 			return;
 		}
 
-		await this.deps.configManager.save(file, this.getConfigPayload());
+		const beforeWrite =
+			typeof options?.beforeWrite === 'function'
+				? options.beforeWrite
+				: (target: TFile) => this.deps.markSelfMutation?.(target);
+
+		await this.deps.configManager.save(file, this.getConfigPayload(), {
+			beforeWrite
+		});
 	}
 
 	dispose(): void {

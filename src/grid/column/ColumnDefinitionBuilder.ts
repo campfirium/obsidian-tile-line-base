@@ -7,6 +7,7 @@ import { IconHeaderComponent } from '../headers/IconHeaderComponent';
 import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
 import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
 import { formatDateForDisplay } from '../../utils/datetime';
+import { t } from '../../i18n';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
@@ -58,12 +59,12 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 
 function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 	const headerName = column.headerName ?? 'Status';
+	const headerAriaLabel = t('statusCell.headerAriaLabel');
 
 	return {
 		field: column.field,
 		headerName,
 		headerClass: 'tlb-status-header-cell',
-		headerTooltip: undefined,
 		editable: false,
 		pinned: 'left',
 		lockPinned: true,
@@ -86,7 +87,8 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 		headerComponentParams: {
 			icon: 'list-checks',
 			fallbacks: ['checklist', 'check-square'],
-			tooltip: undefined
+			tooltip: undefined,
+			ariaLabel: headerAriaLabel
 		}
 	};
 }

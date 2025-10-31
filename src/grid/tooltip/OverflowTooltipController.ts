@@ -87,8 +87,15 @@ export class OverflowTooltipController {
 	}
 
 	private handleEnter(cell: HTMLElement): void {
+		if (this.isTooltipDisabled(cell)) {
+			return;
+		}
+
 		const { anchor, text } = this.extractTooltipTarget(cell);
 		if (!anchor || !text) {
+			return;
+		}
+		if (this.isTooltipDisabled(anchor)) {
 			return;
 		}
 		if (!this.isOverflowing(anchor)) {
@@ -109,6 +116,17 @@ export class OverflowTooltipController {
 		const anchor = preferred ?? fallback ?? null;
 		const text = anchor?.textContent?.trim() ?? null;
 		return { anchor, text };
+	}
+
+	private isTooltipDisabled(element: HTMLElement | null): boolean {
+		if (!element) {
+			return false;
+		}
+		if (element.getAttribute('data-tlb-tooltip-disabled') === 'true') {
+			return true;
+		}
+		const disabledAncestor = element.closest('[data-tlb-tooltip-disabled="true"]');
+		return Boolean(disabledAncestor);
 	}
 
 	private isOverflowing(element: HTMLElement): boolean {

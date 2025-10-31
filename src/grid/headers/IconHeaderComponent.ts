@@ -11,12 +11,14 @@ export interface IconHeaderParams extends IHeaderParams {
 	icon: string;
 	fallbacks?: string[];
 	tooltip?: string;
+	ariaLabel?: string;
 }
 
 export class IconHeaderComponent implements IHeaderComp {
 	private eGui!: HTMLDivElement;
 	private iconEl!: HTMLDivElement;
 	private params!: IconHeaderParams;
+	private srLabelEl: HTMLSpanElement | null = null;
 
 	init(params: IconHeaderParams): void {
 		this.params = params;
@@ -28,7 +30,6 @@ export class IconHeaderComponent implements IHeaderComp {
 
 		this.iconEl = doc.createElement('div');
 		this.iconEl.className = 'tlb-header-icon';
-		this.iconEl.setAttribute('aria-hidden', 'true');
 
 		setIcon(this.iconEl, params.icon);
 
@@ -41,10 +42,33 @@ export class IconHeaderComponent implements IHeaderComp {
 			}
 		}
 
+		this.iconEl.setAttribute('aria-hidden', 'true');
+
+		const ariaLabel = params.ariaLabel ?? params.tooltip ?? null;
+		if (ariaLabel) {
+			const srLabel = doc.createElement('span');
+			srLabel.textContent = ariaLabel;
+			srLabel.style.position = 'absolute';
+			srLabel.style.width = '1px';
+			srLabel.style.height = '1px';
+			srLabel.style.padding = '0';
+			srLabel.style.margin = '-1px';
+			srLabel.style.overflow = 'hidden';
+			srLabel.style.clip = 'rect(0, 0, 0, 0)';
+			srLabel.style.whiteSpace = 'nowrap';
+			srLabel.style.border = '0';
+			this.srLabelEl = srLabel;
+			this.eGui.appendChild(srLabel);
+		}
+
 		if (params.tooltip) {
 			this.eGui.setAttribute('title', params.tooltip);
-			this.iconEl.setAttribute('aria-label', params.tooltip);
+		} else {
+			this.eGui.removeAttribute('title');
 		}
+
+		const headerCell = this.eGui.closest<HTMLElement>('.ag-header-cell');
+		headerCell?.removeAttribute('title');
 
 		this.eGui.appendChild(this.iconEl);
 	}
@@ -61,6 +85,8 @@ export class IconHeaderComponent implements IHeaderComp {
 		if (this.iconEl) {
 			this.iconEl.replaceChildren();
 		}
+		if (this.srLabelEl && this.srLabelEl.isConnected) {
+			this.srLabelEl.remove();
+		}
 	}
 }
-

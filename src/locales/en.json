@@ -130,6 +130,7 @@
       "someday": "Someday",
       "canceled": "Canceled"
     },
+    "headerAriaLabel": "Status column",
     "menuLabel": "Status options"
   },
   "quickFilter": {

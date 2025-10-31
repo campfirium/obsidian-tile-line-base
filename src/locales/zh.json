@@ -227,6 +227,7 @@
     "tagGroupButtonLabel": "View group",
     "addButtonAriaLabel": "新建过滤视图",
     "settingsMenuAriaLabel": "打开表格操作",
+    "settingsMenuAutoWidthLabel": "调整列宽",
     "settingsMenuColumnLabel": "列设置"
   },
   "filterViewController": {

@@ -173,4 +173,9 @@ export interface GridAdapter {
 	setQuickFilter?(value: string | null): void;
 
 	setSideBarVisible?(visible: boolean): void;
+
+	/**
+	 * 调整列宽以填充当前容器
+	 */
+	fillColumnsToMinimumWidth?(): void;
 }

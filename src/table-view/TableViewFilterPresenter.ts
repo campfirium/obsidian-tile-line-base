@@ -41,6 +41,12 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			onOpenColumnSettings: (button) => {
 				view.columnInteractionController.openColumnSettingsMenu(button);
 			},
+			onAdjustColumnWidths: () => {
+				const adapter = view.gridAdapter;
+				if (adapter && typeof adapter.fillColumnsToMinimumWidth === 'function') {
+					adapter.fillColumnsToMinimumWidth();
+				}
+			},
 			onOpenBackupRestore: () => {
 				void openBackupRestoreModal(view);
 			}

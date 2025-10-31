@@ -3,6 +3,9 @@ import { Column, GridApi } from 'ag-grid-community';
 import { clampColumnWidth } from '../columnSizing';
 import { isDisplayedSystemColumn } from '../systemColumnUtils';
 
+// Ensure auto-sized columns still occupy most of the grid to avoid wide empty gaps.
+const MINIMUM_AUTO_FILL_RATIO = 0.9;
+
 interface ColumnLayoutDependencies {
 	getContainer: () => HTMLElement | null;
 }
@@ -73,6 +76,10 @@ export class ColumnLayoutManager {
 		let autoSized: ColumnAutoSizeResult[] = [];
 		if (autoSizeCandidates.length > 0) {
 			autoSized = this.autoSizeColumns(gridApi, autoSizeCandidates);
+			const adjustedAutoSized = this.ensureMinimumFill(gridApi, columns, containerWidth, autoSized);
+			if (adjustedAutoSized) {
+				autoSized = adjustedAutoSized;
+			}
 		}
 
 		const adjusted = this.applyWidthClamping(gridApi, columns);
@@ -82,6 +89,36 @@ export class ColumnLayoutManager {
 		}
 
 		return { applied: true, autoSized };
+	}
+
+	fillToMinimumWidth(
+		gridApi: GridApi,
+		columns: Column[],
+		options?: { overrideManual?: boolean }
+	): ColumnAutoSizeResult[] {
+		const container = this.deps.getContainer();
+		if (!container) {
+			return [];
+		}
+		const containerWidth = container.clientWidth ?? 0;
+		if (containerWidth <= 0) {
+			return [];
+		}
+		let autoSized: ColumnAutoSizeResult[] | null = null;
+		if (options?.overrideManual) {
+			const candidates = columns.filter((column) => {
+				const colId = column.getColId();
+				return typeof colId === 'string' && colId.length > 0 && !isDisplayedSystemColumn(colId);
+			});
+			if (candidates.length > 0) {
+				autoSized = this.autoSizeColumns(gridApi, candidates);
+			}
+		}
+		const adjusted = this.ensureMinimumFill(gridApi, columns, containerWidth, autoSized, options);
+		if (adjusted) {
+			return adjusted;
+		}
+		return autoSized ?? [];
 	}
 
 	private autoSizeColumns(gridApi: GridApi, columns: Column[]): ColumnAutoSizeResult[] {
@@ -156,5 +193,118 @@ export class ColumnLayoutManager {
 			}
 		}
 		return adjusted;
+	}
+
+	private ensureMinimumFill(
+		gridApi: GridApi,
+		columns: Column[],
+		containerWidth: number,
+		autoSized: ColumnAutoSizeResult[] | null,
+		options?: { overrideManual?: boolean }
+	): ColumnAutoSizeResult[] | null {
+		const overrideManual = options?.overrideManual === true;
+		const targetWidth = Math.floor(containerWidth * MINIMUM_AUTO_FILL_RATIO);
+		if (targetWidth <= 0) {
+			return autoSized;
+		}
+
+		const nonSystemColumns = columns.filter((column) => {
+			const colId = column.getColId();
+			return typeof colId === 'string' && colId.length > 0 && !isDisplayedSystemColumn(colId);
+		});
+
+		if (nonSystemColumns.length === 0) {
+			return autoSized;
+		}
+
+		const currentWidth = nonSystemColumns.reduce((total, column) => total + column.getActualWidth(), 0);
+		if (currentWidth >= targetWidth) {
+			return autoSized;
+		}
+
+		const autoSizedKeys = autoSized ? new Set(autoSized.map((entry) => entry.key)) : null;
+		const adjustableColumns = nonSystemColumns.filter((column) => {
+			const colId = column.getColId();
+			if (!colId) {
+				return false;
+			}
+			if (autoSizedKeys) {
+				return autoSizedKeys.has(colId);
+			}
+			const colDef = (column.getColDef() ?? {}) as any;
+			const context = (colDef.context ?? {}) as Record<string, unknown>;
+			const widthSource = typeof context.tlbWidthSource === 'string' ? context.tlbWidthSource : null;
+			if (widthSource === 'manual' && !overrideManual) {
+				return false;
+			}
+			return true;
+		});
+
+		if (adjustableColumns.length === 0) {
+			return autoSized;
+		}
+
+		const desiredExtra = targetWidth - currentWidth;
+		if (desiredExtra <= 0) {
+			return autoSized;
+		}
+
+		const adjustableWidth = adjustableColumns.reduce((total, column) => total + column.getActualWidth(), 0);
+		if (adjustableWidth <= 0) {
+			return autoSized;
+		}
+
+		const updates: Array<{ key: string; newWidth: number }> = [];
+		const updatedAutoSized = autoSized ? autoSized.map((entry) => ({ ...entry })) : [];
+		let remainingExtra = desiredExtra;
+
+		for (let index = 0; index < adjustableColumns.length && remainingExtra > 0; index++) {
+			const column = adjustableColumns[index];
+			const colId = column.getColId();
+			if (!colId) {
+				continue;
+			}
+
+			const baseWidth = column.getActualWidth();
+			const ratio = baseWidth / adjustableWidth;
+			const plannedIncrement = index === adjustableColumns.length - 1 ? remainingExtra : desiredExtra * ratio;
+			if (!Number.isFinite(plannedIncrement) || plannedIncrement <= 0) {
+				continue;
+			}
+
+			const desiredWidth = baseWidth + Math.min(plannedIncrement, remainingExtra);
+			const newWidth = clampColumnWidth(desiredWidth);
+			const appliedIncrement = Math.max(0, newWidth - baseWidth);
+			if (appliedIncrement <= 0) {
+				continue;
+			}
+
+			updates.push({ key: colId, newWidth });
+			remainingExtra = Math.max(0, remainingExtra - appliedIncrement);
+
+			const colDef = (column.getColDef() ?? {}) as any;
+			const context = (colDef.context ?? {}) as Record<string, unknown>;
+			context.tlbStoredWidth = newWidth;
+			context.tlbWidthSource = 'auto';
+			colDef.context = context;
+			this.storeMeasuredWidth(column, newWidth);
+
+			const autoSizedIndex = updatedAutoSized.findIndex((entry) => entry.key === colId);
+			if (autoSizedIndex >= 0) {
+				updatedAutoSized[autoSizedIndex] = { key: colId, width: newWidth };
+			} else {
+				updatedAutoSized.push({ key: colId, width: newWidth });
+			}
+		}
+
+		if (updates.length > 0) {
+			gridApi.setColumnWidths(updates);
+			if (updatedAutoSized.length > 0) {
+				return updatedAutoSized;
+			}
+			return updates.map((entry) => ({ key: entry.key, width: entry.newWidth }));
+		}
+
+		return autoSized;
 	}
 }

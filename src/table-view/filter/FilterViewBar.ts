@@ -12,6 +12,7 @@ export interface FilterViewBarCallbacks {
 	onOpenTableCreation(button: HTMLElement): void;
 	onOpenColumnSettings(button: HTMLElement): void;
 	onOpenBackupRestore(button: HTMLElement): void;
+	onAdjustColumnWidths(): void;
 }
 
 interface FilterViewBarOptions {
@@ -33,6 +34,7 @@ export class FilterViewBar {
 	private readonly searchEl: HTMLElement;
 	private readonly addClickHandler: () => void;
 	private readonly settingsMenuClickHandler: (event: MouseEvent) => void;
+	private readonly adjustWidthsHandler: () => void;
 	private tagGroupState: FilterViewBarTagGroupState = {
 		activeGroupId: null,
 		activeGroupName: null,
@@ -87,6 +89,10 @@ export class FilterViewBar {
 		this.settingsButtonEl.addEventListener('click', this.settingsMenuClickHandler);
 		this.settingsButtonEl.style.width = 'auto';
 		this.settingsButtonEl.style.minWidth = 'auto';
+
+		this.adjustWidthsHandler = () => {
+			this.options.callbacks.onAdjustColumnWidths();
+		};
 	}
 
 	render(state: FileFilterViewState): void {
@@ -215,6 +221,14 @@ export class FilterViewBar {
 				.setIcon('table')
 				.onClick(() => {
 					this.options.callbacks.onOpenTableCreation(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuAutoWidthLabel'))
+				.setIcon('maximize-2')
+				.onClick(() => {
+					this.adjustWidthsHandler();
 				});
 		});
 		menu.addItem((item) => {

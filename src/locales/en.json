@@ -251,6 +251,7 @@
     "tagGroupButtonLabel": "View group",
     "addButtonAriaLabel": "Create a new filter view",
     "settingsMenuAriaLabel": "Open table actions",
+    "settingsMenuAutoWidthLabel": "Adjust column widths",
     "settingsMenuColumnLabel": "Column settings"
   },
   "backup": {

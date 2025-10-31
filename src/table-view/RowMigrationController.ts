@@ -36,23 +36,18 @@ export class RowMigrationController {
 	}
 
 	async moveSelectionToExistingFile(blockIndexes: number[]): Promise<void> {
+		new Notice('move-existing-start');
 		const context = this.ensureContext(blockIndexes);
 		if (!context) {
 			return;
 		}
 
-			const candidates = this.getKnownTableFiles(context.file);
-			if (candidates.length === 0) {
-				new Notice(t('gridInteraction.migrateSelectionNoTargets'));
-				this.logger.warn('migrate:no-existing-targets');
-				return;
-			}
-
-			const targetFile = await this.promptForTargetFile(context.file, candidates);
-			if (!targetFile) {
-				this.logger.info('migrate:select-existing-cancelled');
-				return;
-			}
+		const targetFile = await this.selectExistingTarget(context.file);
+		if (!targetFile) {
+			new Notice('select-existing-target: none');
+			return;
+		}
+		new Notice(`selected target: ${targetFile.basename}`);
 
 		if (targetFile.path === context.file.path) {
 			new Notice(t('gridInteraction.migrateSelectionSameFile'));
@@ -60,12 +55,22 @@ export class RowMigrationController {
 			return;
 		}
 
-		const preparedBlocks = this.prepareBlocks(context.schema, context.sourceBlocks, context.indexes);
-		const blockMarkdown = this.serializeBlocks(context.schema, preparedBlocks);
+	const preparedBlocks = this.prepareBlocks(context.schema, context.sourceBlocks, context.indexes);
+	const blockMarkdown = this.serializeBlocks(context.schema, preparedBlocks);
 
-		try {
-			await this.appendBlocksToExistingFile(targetFile, blockMarkdown);
-			this.deps.rowInteraction.deleteRows(context.indexes);
+	try {
+		const contextInfo = { target: targetFile.path, count: preparedBlocks.length };
+		console.error('[RowMigration] move-existing-start', contextInfo);
+		new Notice(`move-existing: ${targetFile.basename}`);
+		this.logger.warn('migrate:existing-start', {
+			target: targetFile.path,
+			mode: 'move',
+			blockCount: preparedBlocks.length,
+			markdownLength: blockMarkdown.length
+		});
+		await this.appendBlocksToExistingFile(targetFile, blockMarkdown);
+		this.deps.rowInteraction.deleteRows(context.indexes);
+		console.error('[RowMigration] move-existing-complete', { target: targetFile.path, removed: context.indexes.length });
 			new Notice(
 				t('gridInteraction.migrateSelectionMergeSuccess', {
 					count: String(context.indexes.length),
@@ -78,6 +83,56 @@ export class RowMigrationController {
 			});
 		} catch (error) {
 			this.logger.error('migrate:merge-existing-failed', error);
+			new Notice(t('gridInteraction.migrateSelectionFailed'));
+		}
+	}
+
+	async copySelectionToExistingFile(blockIndexes: number[]): Promise<void> {
+		new Notice('copy-existing-start');
+		const context = this.ensureContext(blockIndexes);
+		if (!context) {
+			return;
+		}
+
+		const targetFile = await this.selectExistingTarget(context.file);
+		if (!targetFile) {
+			new Notice('select-existing-target: none');
+			return;
+		}
+		new Notice(`selected target: ${targetFile.basename}`);
+
+		if (targetFile.path === context.file.path) {
+			new Notice(t('gridInteraction.migrateSelectionSameFile'));
+			this.logger.warn('copy:same-file-selected', { path: targetFile.path });
+			return;
+		}
+
+	const preparedBlocks = this.prepareBlocks(context.schema, context.sourceBlocks, context.indexes);
+	const blockMarkdown = this.serializeBlocks(context.schema, preparedBlocks);
+
+	try {
+		console.error('[RowMigration] copy-existing-start', { target: targetFile.path, count: preparedBlocks.length });
+		new Notice(`copy-existing: ${targetFile.basename}`);
+		this.logger.warn('copy:existing-start', {
+			target: targetFile.path,
+			mode: 'copy',
+			blockCount: preparedBlocks.length,
+			markdownLength: blockMarkdown.length
+		});
+		await this.appendBlocksToExistingFile(targetFile, blockMarkdown);
+		console.error('[RowMigration] copy-existing-complete', { target: targetFile.path, count: preparedBlocks.length });
+			new Notice(
+				t('gridInteraction.migrateSelectionCopyMergeSuccess', {
+					count: String(context.indexes.length),
+					fileName: targetFile.basename
+				})
+			);
+			this.logger.info('copy:merge-existing-success', {
+				target: targetFile.path,
+				count: context.indexes.length
+			});
+		} catch (error) {
+			this.logger.error('copy:merge-existing-failed', error);
 			new Notice(t('gridInteraction.migrateSelectionFailed'));
 		}
 	}
@@ -277,6 +332,54 @@ export class RowMigrationController {
 		return this.sanitizeFileName(base);
 	}
 
+	private async selectExistingTarget(currentFile: TFile): Promise<TFile | null> {
+		const candidates = this.buildExistingFileCandidates(currentFile);
+		if (candidates.length === 0) {
+			new Notice(t('gridInteraction.migrateSelectionNoTargets'));
+			this.logger.warn('migrate:no-existing-targets');
+			return null;
+		}
+
+		const targetFile = await this.promptForTargetFile(currentFile, candidates);
+		if (!targetFile) {
+			this.logger.info('migrate:select-existing-cancelled');
+			return null;
+		}
+		return targetFile;
+	}
+
+	private buildExistingFileCandidates(currentFile: TFile): TFile[] {
+		const plugin = getPluginContext();
+		const cacheManager = plugin?.cacheManager ?? null;
+		const vault = this.deps.app.vault;
+		const seen = new Set<string>();
+		const result: TFile[] = [];
+
+		if (cacheManager) {
+			for (const path of cacheManager.listFilePaths()) {
+				if (!path || path === currentFile.path) {
+					continue;
+				}
+				const file = vault.getAbstractFileByPath(path);
+				if (file instanceof TFile && !seen.has(file.path)) {
+					seen.add(file.path);
+					result.push(file);
+				}
+			}
+		}
+
+		for (const file of vault.getMarkdownFiles()) {
+			if (file.path === currentFile.path || seen.has(file.path)) {
+				continue;
+			}
+			seen.add(file.path);
+			result.push(file);
+		}
+
+		result.sort((a, b) => a.basename.localeCompare(b.basename, undefined, { sensitivity: 'base' }));
+		return result;
+	}
+
 	private sanitizeFileName(name: string): string {
 		const stripped = name.replace(/[\\/:*?"<>|\r\n]+/g, '').replace(/\s+/g, ' ').trim();
 		return stripped.replace(/[. ]+$/g, '');
@@ -317,23 +420,42 @@ export class RowMigrationController {
 	}
 
 	private async appendBlocksToExistingFile(targetFile: TFile, blockMarkdown: string): Promise<void> {
-		const existingContent = await this.deps.app.vault.read(targetFile);
+		console.error('[RowMigration] append-existing-enter', { target: targetFile.path, length: blockMarkdown.length });
+		this.logger.warn('append-existing:enter', { target: targetFile.path, payloadLength: blockMarkdown.length });
+		const trimmedPayload = blockMarkdown.trim();
+		if (!trimmedPayload) {
+			this.logger.warn('append-existing:empty-payload', { target: targetFile.path });
+			console.warn('[RowMigration] append-existing-empty', targetFile.path);
+			return;
+		}
+
+		this.logger.warn('append-existing:read', { target: targetFile.path });
+		console.info('[RowMigration] append-existing-read', targetFile.path);
+		const adapter = this.deps.app.vault.adapter;
+		const existingContent = await adapter.read(targetFile.path);
 		const { contentWithoutConfig, configSection } = this.separateConfigSection(existingContent);
 		const trimmedBase = contentWithoutConfig.trimEnd();
 
-		let newContent = trimmedBase.length > 0 ? `${trimmedBase}\n\n${blockMarkdown}` : blockMarkdown;
+		let newContent = trimmedBase.length > 0 ? `${trimmedBase}\n\n${trimmedPayload}` : `${trimmedPayload}`;
 		if (!newContent.endsWith('\n')) {
 			newContent += '\n';
 		}
 
 		if (configSection) {
-			newContent = `${newContent.trimEnd()}\n\n${configSection}`;
+			const baseWithPayload = newContent.trimEnd();
+			newContent = `${baseWithPayload}\n\n${configSection.trimStart()}`;
 			if (!newContent.endsWith('\n')) {
 				newContent += '\n';
 			}
 		}
 
-		await this.deps.app.vault.modify(targetFile, newContent);
+		await adapter.write(targetFile.path, newContent);
+		this.logger.warn('append-existing:done', {
+			target: targetFile.path,
+			length: trimmedPayload.length
+		});
+		console.error('[RowMigration] append-existing-done', { target: targetFile.path, length: trimmedPayload.length });
+		new Notice(`append-existing-done: ${targetFile.basename}`);
 	}
 
 	private separateConfigSection(source: string): { contentWithoutConfig: string; configSection: string | null } {

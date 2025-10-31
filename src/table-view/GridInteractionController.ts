@@ -9,6 +9,7 @@ import type { TableHistoryManager } from './TableHistoryManager';
 import { GridClipboardHelper } from './GridClipboardHelper';
 import { createGridContextMenu } from './GridContextMenuPresenter';
 import { getLogger } from '../utils/logger';
+import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
 
 interface GridInteractionDeps {
 	app: App;
@@ -18,6 +19,7 @@ interface GridInteractionDeps {
 	getGridAdapter: () => GridAdapter | null;
 	copyTemplate: CopyTemplateController;
 	history: TableHistoryManager;
+	paragraphPromotion: ParagraphPromotionController;
 }
 
 export class GridInteractionController {
@@ -246,7 +248,8 @@ export class GridInteractionController {
 				void this.clipboardHelper.copySectionAsTemplate(index);
 			},
 			onRequestClose: () => this.hideContextMenu(),
-			history: this.history
+			history: this.history,
+			paragraphPromotion: this.deps.paragraphPromotion
 		});
 
 		if (!menu) {

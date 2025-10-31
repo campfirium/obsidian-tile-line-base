@@ -5,6 +5,7 @@ interface MenuBuilderOptions {
 	isIndexColumn: boolean;
 	isMultiSelect: boolean;
 	selectedRowCount: number;
+	promotionCount?: number;
 	fillSelectionLabelParams?: Record<string, string>;
 	undoRedo?: {
 		canUndo: boolean;
@@ -21,6 +22,7 @@ interface MenuBuilderOptions {
 		copySelection?: () => void;
 		copySelectionAsTemplate: () => void;
 		editCopyTemplate: () => void;
+		promoteToNote?: () => void;
 		insertAbove: () => void;
 		insertBelow: () => void;
 		fillSelectionWithValue?: () => void;
@@ -121,6 +123,13 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 		}
 		addItem('copyTemplate.menuCopy', 'clipboard', options.actions.copySelectionAsTemplate);
 		addItem('copyTemplate.menuEdit', 'pencil', options.actions.editCopyTemplate);
+		if (options.actions.promoteToNote) {
+			const params =
+				typeof options.promotionCount === 'number' && options.promotionCount > 1
+					? { count: String(options.promotionCount) }
+					: undefined;
+			addItem('paragraphPromotion.menuLabel', 'file-plus', options.actions.promoteToNote, { params });
+		}
 		addSeparator();
 	}
 

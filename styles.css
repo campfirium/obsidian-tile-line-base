@@ -8,6 +8,123 @@
   flex-direction: column;
 }
 
+.tlb-paragraph-promotion-modal {
+	width: fit-content;
+	min-width: 420px;
+	max-width: min(760px, calc(100vw - 48px));
+	margin: 0 auto;
+	padding: var(--size-4-2, 12px) var(--size-4-3, 16px) var(--size-4-3, 16px);
+}
+
+.tlb-paragraph-promotion-include-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tlb-paragraph-promotion-include-row__label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+
+.tlb-paragraph-promotion-include-row__toggle {
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+}
+
+.tlb-paragraph-promotion-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.tlb-paragraph-promotion-header,
+.tlb-paragraph-promotion-row {
+	display: grid;
+	grid-template-columns: minmax(220px, max-content) repeat(2, minmax(68px, 96px));
+	align-items: center;
+	gap: 12px;
+}
+
+.tlb-paragraph-promotion-header {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-muted);
+	padding: 4px 0;
+	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 75%, transparent);
+	margin-bottom: 4px;
+}
+
+.tlb-paragraph-promotion-header__label {
+	font-weight: 600;
+}
+
+.tlb-paragraph-promotion-header__label--center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+
+.tlb-paragraph-promotion-row {
+	padding: 6px 0;
+	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 70%, transparent);
+}
+
+.tlb-paragraph-promotion-row:last-of-type {
+  border-bottom: none;
+}
+
+.tlb-paragraph-promotion-row-global .tlb-paragraph-promotion-row__title {
+  font-weight: 600;
+}
+
+.tlb-paragraph-promotion-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tlb-paragraph-promotion-cell-label {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.tlb-paragraph-promotion-row__title {
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.tlb-paragraph-promotion-row__description {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tlb-paragraph-promotion-cell-toggle {
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+	min-width: 68px;
+}
+
+.tlb-paragraph-promotion-cell-toggle input[type="radio"],
+.tlb-paragraph-promotion-cell-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.tlb-paragraph-promotion-row-meta {
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
+}
+
 .tlb-table-view-content {
   display: flex;
   flex-direction: column;

@@ -30,6 +30,7 @@ import { t } from "./i18n";
 import { CopyTemplateController } from "./table-view/CopyTemplateController";
 import { TableHistoryManager } from "./table-view/TableHistoryManager";
 import { getPluginContext } from "./pluginContext";
+import type { ParagraphPromotionController } from "./table-view/paragraph/ParagraphPromotionController";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -62,6 +63,7 @@ export class TableView extends ItemView {
 	public focusManager!: FocusManager;
 	public globalQuickFilterController!: GlobalQuickFilterController;
 	public copyTemplateController!: CopyTemplateController;
+	public paragraphPromotionController!: ParagraphPromotionController;
 	public historyManager = new TableHistoryManager(this);
 	public tableContainer: HTMLElement | null = null;
 	public filterViewBar: FilterViewBar | null = null;

@@ -1,4 +1,4 @@
-{
+﻿{
   "tableView": {
     "displayName": "TileLineBase Table",
     "titleWithFile": "{{name}} (Table View)"
@@ -313,6 +313,30 @@
     "createFieldNoViews": "Failed to generate filter views for the selected field.",
     "createFieldNoColumns": "No columns available for view groups.",
     "emptyValueName": "(Empty) {{field}}"
+  },
+  "paragraphPromotion": {
+    "menuLabel": "Promote to note",
+    "modalTitle": "Promote to note",
+    "modalDescription": "Choose which fields should be written into the YAML frontmatter of the new note.",
+    "noColumns": "No fields available to export.",
+    "fieldsColumnLabel": "Field",
+    "yamlColumnLabel": "YAML frontmatter",
+    "bodyColumnLabel": "Body content",
+    "headerYamlToggleHint": "Write every field into YAML frontmatter",
+    "headerBodyToggleHint": "Write every field into the body",
+    "globalRowLabel": "All fields",
+    "includeEmptyLabel": "Include empty fields",
+    "includeEmptyDescription": "Write fields even when they contain empty values.",
+    "confirmButton": "Create notes",
+    "cancelButton": "Cancel",
+    "linkColumnName": "Linked note",
+    "noSelectionNotice": "Select at least one row first.",
+    "linkColumnFailed": "Failed to create linked note field.",
+    "linkColumnCreatedNotice": "Created field: {{name}}",
+    "successNotice": "Created {{count}} notes.",
+    "partialNotice": "Created {{success}} notes, {{failed}} failed.",
+    "failureNotice": "Failed to create notes.",
+    "noteNameFallback": "Promoted note"
   },
   "textLinkCell": {
     "openInternal": "Open note in new tab: {{target}}",

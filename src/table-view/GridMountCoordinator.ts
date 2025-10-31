@@ -31,7 +31,6 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		const normalizedName = name.trim().toLowerCase();
 		if (normalizedName === 'status') {
 			baseColDef.headerName = '';
-			baseColDef.headerTooltip = 'Status';
 			(baseColDef as any).suppressMovable = true;
 			(baseColDef as any).lockPosition = true;
 			(baseColDef as any).lockPinned = true;

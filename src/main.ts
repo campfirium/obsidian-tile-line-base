@@ -22,6 +22,7 @@ import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
 import { t } from './i18n';
 import { ViewActionManager } from './plugin/ViewActionManager';
+import { OnboardingManager } from './plugin/OnboardingManager';
 
 const logger = getLogger('plugin:main');
 const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
@@ -57,6 +58,7 @@ export default class TileLineBasePlugin extends Plugin {
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
+	private onboardingManager: OnboardingManager | null = null;
 
 	async onload() {
 		setPluginContext(this);
@@ -118,6 +120,14 @@ export default class TileLineBasePlugin extends Plugin {
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 		this.viewActionManager.refreshAll();
+
+		this.onboardingManager = new OnboardingManager({
+			app: this.app,
+			plugin: this,
+			settingsService: this.settingsService,
+			viewSwitch: this.viewCoordinator
+		});
+		await this.onboardingManager.runInitialOnboarding();
 
 		this.registerEvent(
 			this.app.workspace.on('file-open', (openedFile) => {
@@ -230,6 +240,17 @@ export default class TileLineBasePlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'tile-line-base-open-help',
+			name: t('commands.openHelpDocument'),
+			callback: () => {
+				if (!this.onboardingManager) {
+					return;
+				}
+				void this.onboardingManager.openHelpDocument();
+			}
+		});
+
 		this.registerEvent(
 			this.app.workspace.on('window-open', (workspaceWindow: WorkspaceWindow, win: Window) => {
 				logger.debug('window-open', { window: this.windowContextManager.describeWindow(win) });
@@ -270,11 +291,19 @@ export default class TileLineBasePlugin extends Plugin {
 			this.editorConfigController = null;
 		}
 
+		this.onboardingManager = null;
 
 		if (this.unsubscribeLogging) {
 			this.unsubscribeLogging();
 			this.unsubscribeLogging = null;
 		}
+	}
+
+	async openHelpDocument(): Promise<void> {
+		if (!this.onboardingManager) {
+			return;
+		}
+		await this.onboardingManager.openHelpDocument();
 	}
 
 	getColumnLayout(filePath: string): Record<string, number> | undefined {

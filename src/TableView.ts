@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, Menu } from "obsidian";
 import type { ColumnState } from "ag-grid-community";
 import type { GridAdapter } from "./grid/GridAdapter";
 import { getLogger } from "./utils/logger";
@@ -138,6 +138,21 @@ export class TableView extends ItemView {
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();
 		}
+	}
+
+	onMoreOptions(menu: Menu): void {
+		const plugin = getPluginContext();
+		if (!plugin) {
+			return;
+		}
+		menu.addItem((item) => {
+			item
+				.setTitle(t("commands.openHelpDocument"))
+				.setIcon("info")
+				.onClick(() => {
+					void plugin.openHelpDocument();
+				});
+		});
 	}
 
 	private ensureMarkdownToggle(): void {

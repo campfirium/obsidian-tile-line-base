@@ -8,6 +8,7 @@ type SidebarSettingHost = Plugin & {
 	setBackupEnabled(value: boolean): Promise<void>;
 	getBackupCapacityLimit(): number;
 	setBackupCapacityLimit(value: number): Promise<void>;
+	openHelpDocument(): Promise<void>;
 };
 
 export class TileLineBaseSettingTab extends PluginSettingTab {
@@ -74,5 +75,23 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				}
 			});
 		});
+
+		containerEl.createEl('h2', { text: t('settings.helpHeading') });
+
+		new Setting(containerEl)
+			.setName(t('settings.helpOpenLabel'))
+			.setDesc(t('settings.helpOpenDesc'))
+			.addButton((button) => {
+				button.setButtonText(t('settings.helpOpenButton'));
+				button.setCta();
+				button.onClick(async () => {
+					button.setDisabled(true);
+					try {
+						await this.plugin.openHelpDocument();
+					} finally {
+						button.setDisabled(false);
+					}
+				});
+			});
 	}
 }

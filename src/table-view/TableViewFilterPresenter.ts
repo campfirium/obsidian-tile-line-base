@@ -3,6 +3,7 @@ import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterV
 import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
 import { openBackupRestoreModal } from './BackupRestoreModal';
+import { getPluginContext } from '../pluginContext';
 
 export type FilterColumnKind = 'status' | 'date' | 'text';
 
@@ -40,6 +41,13 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			},
 			onOpenBackupRestore: () => {
 				void openBackupRestoreModal(view);
+			},
+			onOpenHelp: () => {
+				const plugin = getPluginContext();
+				if (!plugin) {
+					return;
+				}
+				void plugin.openHelpDocument();
 			}
 		}
 	});

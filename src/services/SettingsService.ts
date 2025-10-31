@@ -12,6 +12,11 @@ export interface BackupSettings {
 	maxSizeMB: number;
 }
 
+export interface OnboardingState {
+	completed: boolean;
+	helpFilePath: string | null;
+}
+
 export interface TileLineBaseSettings {
 	fileViewPrefs: Record<string, 'markdown' | 'table'>;
 	columnLayouts: Record<string, Record<string, number>>;
@@ -21,6 +26,7 @@ export interface TileLineBaseSettings {
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
 	backups: BackupSettings;
+	onboarding: OnboardingState;
 }
 
 export const DEFAULT_SETTINGS: TileLineBaseSettings = {
@@ -37,6 +43,10 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	backups: {
 		enabled: true,
 		maxSizeMB: 200
+	},
+	onboarding: {
+		completed: false,
+		helpFilePath: null
 	}
 };
 
@@ -61,6 +71,7 @@ export class SettingsService {
 			: DEFAULT_SETTINGS.hideRightSidebar;
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
 		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
+		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
@@ -298,6 +309,22 @@ export class SettingsService {
 		return true;
 	}
 
+	getOnboardingState(): OnboardingState {
+		return {
+			completed: this.settings.onboarding.completed,
+			helpFilePath: this.settings.onboarding.helpFilePath
+		};
+	}
+
+	async updateOnboardingState(updates: Partial<OnboardingState>): Promise<OnboardingState> {
+		this.settings.onboarding = {
+			...this.settings.onboarding,
+			...updates
+		};
+		await this.persist();
+		return this.getOnboardingState();
+	}
+
 	private cloneTagGroupState(source: FileTagGroupState | null): FileTagGroupState {
 		if (!source) {
 			return { activeGroupId: null, groups: [] };
@@ -356,6 +383,18 @@ export class SettingsService {
 		return {
 			enabled,
 			maxSizeMB: maxSize
+		};
+	}
+
+	private sanitizeOnboardingState(raw: Partial<OnboardingState> | undefined): OnboardingState {
+		const base = DEFAULT_SETTINGS.onboarding;
+		const completed = typeof raw?.completed === 'boolean' ? raw.completed : base.completed;
+		const helpFilePath = typeof raw?.helpFilePath === 'string' && raw.helpFilePath.trim().length > 0
+			? raw.helpFilePath.trim()
+			: base.helpFilePath;
+		return {
+			completed,
+			helpFilePath
 		};
 	}
 }

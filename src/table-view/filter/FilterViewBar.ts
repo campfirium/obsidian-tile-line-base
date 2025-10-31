@@ -11,6 +11,7 @@ export interface FilterViewBarCallbacks {
 	onOpenTagGroupMenu(button: HTMLElement): void;
 	onOpenColumnSettings(button: HTMLElement): void;
 	onOpenBackupRestore(button: HTMLElement): void;
+	onOpenHelp(): void;
 }
 
 interface FilterViewBarOptions {
@@ -222,6 +223,14 @@ export class FilterViewBar {
 				.setIcon('history')
 				.onClick(() => {
 					this.options.callbacks.onOpenBackupRestore(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuHelpLabel'))
+				.setIcon('info')
+				.onClick(() => {
+					this.options.callbacks.onOpenHelp();
 				});
 		});
 

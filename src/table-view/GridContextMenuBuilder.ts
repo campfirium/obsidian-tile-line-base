@@ -26,6 +26,7 @@ interface MenuBuilderOptions {
 			moveToNew: () => void;
 			copyToNew: () => void;
 			moveToExisting: () => void;
+			copyToExisting: () => void;
 		};
 		promoteToNote?: () => void;
 		insertAbove: () => void;
@@ -120,11 +121,15 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 
 	if (options.isIndexColumn) {
 		if (options.actions.copySelection) {
-			addItem('gridInteraction.menuCopySelection', 'copy', options.actions.copySelection, { disabled: options.selectedRowCount === 0 });
+			addItem(
+				'gridInteraction.menuCopySelection',
+				'copy',
+				options.actions.copySelection,
+				{ disabled: options.selectedRowCount === 0 }
+			);
 		}
 		addItem('copyTemplate.menuCopy', 'clipboard', options.actions.copySelectionAsTemplate);
 		addItem('copyTemplate.menuEdit', 'pencil', options.actions.editCopyTemplate);
-
 		const migrateActions = options.actions.migrateSelection;
 		if (migrateActions) {
 			menu.addItem((item) => {
@@ -167,6 +172,11 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 						subItem.setTitle(t('gridInteraction.migrateMenuMoveToExisting'));
 						subItem.setIcon('corner-down-right');
 						subItem.onClick(withClose(migrateActions.moveToExisting, options.actions.close));
+					});
+					submenu.addItem((subItem) => {
+						subItem.setTitle(t('gridInteraction.migrateMenuCopyToExisting'));
+						subItem.setIcon('corner-down-right');
+						subItem.onClick(withClose(migrateActions.copyToExisting, options.actions.close));
 					});
 
 					submenu.showAtPosition({ x, y }, ownerDoc);
@@ -216,5 +226,3 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 
 	return menu;
 }
-
-

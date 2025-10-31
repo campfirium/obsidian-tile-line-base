@@ -155,6 +155,7 @@
     "migrateMenuMoveToNew": "Move to new file",
     "migrateMenuCopyToNew": "Copy to new file",
     "migrateMenuMoveToExisting": "Move to existing file",
+    "migrateMenuCopyToExisting": "Copy to existing file",
     "copyCellSuccess": "Copied cell value",
     "copySelectionSuccess": "Copied selection",
     "migrateSelectionSuccess": "Migrated {{count}} rows to \"{{fileName}}\"",

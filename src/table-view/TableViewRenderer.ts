@@ -164,6 +164,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 			handlers: {
 				onStatusChange: (rowId, newStatus) => handleStatusChange(view, rowId, newStatus),
 				onColumnResize: (field, width) => handleColumnResize(view, field, width),
+				onCopySelectionAsTemplate: (rowIndex) => {
+					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
+				},
 				onCopyH2Section: (rowIndex) => {
 					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
 				},

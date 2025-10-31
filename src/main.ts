@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
-=======
-import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
->>>>>>> feat/T0104-simple-backup-system
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
 import {
@@ -51,16 +47,16 @@ function snapshotLeaf(manager: WindowContextManager, leaf: WorkspaceLeaf | null 
 export default class TileLineBasePlugin extends Plugin {
 	private windowContextManager!: WindowContextManager;
 	private mainContext: WindowContext | null = null;
-<<<<<<< HEAD
 	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
 	private settingsService!: SettingsService;
 	private suppressAutoSwitchUntil = new Map<string, number>();
 	private viewCoordinator!: ViewSwitchCoordinator;
 	private editorConfigController: EditorConfigBlockController | null = null;
+	private backupManager: BackupManager | null = null;
+	private viewActionManager!: ViewActionManager;
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
-	private viewActionManager!: ViewActionManager;
 
 	async onload() {
 		setPluginContext(this);
@@ -68,26 +64,6 @@ export default class TileLineBasePlugin extends Plugin {
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
-		this.editorConfigController = new EditorConfigBlockController(this.app);
-		await this.loadSettings();
-
-		applyLoggingConfig(this.settings.logging);
-=======
-	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
-	private settingsService!: SettingsService;
-	private suppressAutoSwitchUntil = new Map<string, number>();
-	private viewCoordinator!: ViewSwitchCoordinator;
-	private editorConfigController: EditorConfigBlockController | null = null;
-	private backupManager: BackupManager | null = null;
-	public cacheManager: FileCacheManager | null = null;
-	private unsubscribeLogging: (() => void) | null = null;
-	private rightSidebarState = { applied: false, wasCollapsed: false };
-
-	async onload() {
-		setPluginContext(this);
-		this.settingsService = new SettingsService(this);
-		this.windowContextManager = new WindowContextManager(this.app);
-		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		this.editorConfigController = new EditorConfigBlockController(this.app);
 		await this.loadSettings();
 
@@ -103,7 +79,6 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 
 		applyLoggingConfig(this.settings.logging);
->>>>>>> feat/T0104-simple-backup-system
 		this.unsubscribeLogging = subscribeLoggingConfig((config) => {
 			this.settingsService.saveLoggingConfig(config).catch((error) => {
 				logger.error('Failed to persist logging configuration', error);
@@ -356,12 +331,12 @@ export default class TileLineBasePlugin extends Plugin {
 		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
 	}
 
-<<<<<<< HEAD
 	async toggleLeafView(leaf: WorkspaceLeaf): Promise<void> {
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 		const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
 		await this.viewCoordinator.toggleTableView(leaf, context ?? null);
-=======
+	}
+
 	getBackupManager(): BackupManager | null {
 		return this.backupManager;
 	}
@@ -395,7 +370,6 @@ export default class TileLineBasePlugin extends Plugin {
 				logger.warn('Failed to enforce backup capacity after update', error);
 			}
 		}
->>>>>>> feat/T0104-simple-backup-system
 	}
 
 	private getActiveTableView(): TableView | null {

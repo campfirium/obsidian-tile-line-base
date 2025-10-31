@@ -9,6 +9,7 @@ import type { TableHistoryManager } from './TableHistoryManager';
 import { GridClipboardHelper } from './GridClipboardHelper';
 import { createGridContextMenu } from './GridContextMenuPresenter';
 import { getLogger } from '../utils/logger';
+import { handleGridKeydown } from './GridKeybindingHandler';
 
 interface GridInteractionDeps {
 	app: App;
@@ -147,69 +148,15 @@ export class GridInteractionController {
 	}
 
 	private handleKeydown(event: KeyboardEvent): void {
-		const container = this.container;
-		if (!container) {
-			return;
-		}
-		const ownerDoc = container.ownerDocument;
-		const target = event.target as HTMLElement | null;
-		const activeElement = ownerDoc.activeElement as HTMLElement | null;
-		const targetInside = target ? this.isElementWithinGrid(target, container) : false;
-		const activeInside = activeElement ? this.isElementWithinGrid(activeElement, container) : false;
-		if (!targetInside && !activeInside) {
-			this.logger.warn('undo-skip-outside', { key: event.key });
-			return;
-		}
-		if (activeElement?.classList.contains('ag-cell-edit-input')) {
-			this.logger.warn('undo-skip-editor', { key: event.key });
-			return;
-		}
-
-		const ctrlLike = event.metaKey || event.ctrlKey;
-		if (ctrlLike && !event.altKey) {
-			if (event.key === 'z' || event.key === 'Z') {
-				event.preventDefault();
-				event.stopPropagation();
-				if (event.shiftKey) {
-					const applied = this.history.redo();
-					if (!applied) {
-						this.logger.warn('redo:empty');
-					} else {
-						this.logger.warn('redo:applied', { reason: 'shift+ctrl+z' });
-					}
-				} else {
-					const applied = this.history.undo();
-					if (!applied) {
-						this.logger.warn('undo:empty');
-					} else {
-						this.logger.warn('undo:applied', { reason: 'ctrl+z' });
-					}
-				}
-				return;
-			}
-			if (event.key === 'y' || event.key === 'Y') {
-				event.preventDefault();
-				event.stopPropagation();
-				const applied = this.history.redo();
-				if (!applied) {
-					this.logger.warn('redo:empty');
-				} else {
-					this.logger.warn('redo:applied', { reason: 'ctrl+y' });
-				}
-				return;
-			}
-		}
-
-		const gridAdapter = this.deps.getGridAdapter();
-		const selectedRows = gridAdapter?.getSelectedRows?.() || [];
-		if ((event.metaKey || event.ctrlKey) && event.key === 'd' && selectedRows.length > 0) {
-			event.preventDefault();
-			if (selectedRows.length > 1) {
-				this.deps.rowInteraction.duplicateRows(selectedRows);
-			} else {
-				this.deps.rowInteraction.duplicateRow(selectedRows[0]);
-			}
-		}
+		handleGridKeydown(event, {
+			container: this.container,
+			logger: this.logger,
+			getGridAdapter: this.deps.getGridAdapter,
+			rowInteraction: this.deps.rowInteraction,
+			history: this.history,
+			isElementWithinGrid: (element, container) => this.isElementWithinGrid(element, container),
+			copySectionAsTemplate: (blockIndex) => this.copySectionAsTemplate(blockIndex)
+		});
 	}
 
 	private isElementWithinGrid(element: HTMLElement, container: HTMLElement): boolean {

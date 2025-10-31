@@ -83,4 +83,14 @@ export class FileCacheManager {
 			logger.error('Failed to clear config cache', error);
 		});
 	}
+
+	listEntries(): Array<{ fileId: string; entry: ConfigCacheEntry }> {
+		return Object.entries(this.cache).map(([fileId, entry]) => ({ fileId, entry }));
+	}
+
+	listFilePaths(): string[] {
+		return Object.values(this.cache)
+			.map((entry) => entry.filePath)
+			.filter((path, index, all) => typeof path === 'string' && path.length > 0 && all.indexOf(path) === index);
+	}
 }

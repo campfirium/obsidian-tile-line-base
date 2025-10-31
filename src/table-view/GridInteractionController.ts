@@ -6,6 +6,7 @@ import type { ColumnInteractionController } from './ColumnInteractionController'
 import { CopyTemplateController } from './CopyTemplateController';
 import { GridCellClipboardController } from './GridCellClipboardController';
 import type { TableHistoryManager } from './TableHistoryManager';
+import type { RowMigrationController } from './RowMigrationController';
 import { GridClipboardHelper } from './GridClipboardHelper';
 import { createGridContextMenu } from './GridContextMenuPresenter';
 import { getLogger } from '../utils/logger';
@@ -14,6 +15,7 @@ interface GridInteractionDeps {
 	app: App;
 	columnInteraction: ColumnInteractionController;
 	rowInteraction: RowInteractionController;
+	rowMigration: RowMigrationController;
 	dataStore: TableDataStore;
 	getGridAdapter: () => GridAdapter | null;
 	copyTemplate: CopyTemplateController;
@@ -238,6 +240,7 @@ export class GridInteractionController {
 			columnInteraction: this.deps.columnInteraction,
 			copyTemplate: this.deps.copyTemplate,
 			getGridAdapter: this.deps.getGridAdapter,
+			rowMigration: this.deps.rowMigration,
 			cellClipboard: this.cellClipboard,
 			onCopySelection: (index) => {
 				void this.clipboardHelper.copySection(index);

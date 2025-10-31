@@ -146,11 +146,28 @@
     "menuUndo": "Undo",
     "menuRedo": "Redo",
     "menuCopySelection": "Copy Selection",
+    "menuMigrateSelection": "Migrate selection...",
+    "migrateMenuMoveToNew": "Move to new file",
+    "migrateMenuCopyToNew": "Copy to new file",
+    "migrateMenuMoveToExisting": "Move to existing file",
     "copyCellSuccess": "Copied cell value",
     "copySelectionSuccess": "Copied selection",
+    "migrateSelectionSuccess": "Migrated {{count}} rows to \"{{fileName}}\"",
+    "migrateSelectionCopySuccess": "Copied {{count}} rows to \"{{fileName}}\"",
+    "migrateSelectionMergeSuccess": "Migrated {{count}} rows into \"{{fileName}}\"",
+    "migrateSelectionFailed": "Failed to migrate selection",
+    "migrateSelectionNoFile": "No active file to migrate from",
+    "migrateSelectionNoTargets": "No other table files available",
+    "migrateSelectionSameFile": "Please choose a different file",
+    "migrateSelectFilePlaceholder": "Search for target file",
     "pasteCellFailed": "Failed to paste cell value",
     "pasteCellFailedLog": "Paste cell failed:",
     "pasteCellFormulaDisabled": "Formulas cannot be overwritten"
+  },
+  "rowMigration": {
+    "defaultFileName": "Migrated Rows",
+    "multiSuffix": " (multi selection)",
+    "duplicatePattern": "{{base}} ({{index}})"
   },
   "gridFillModal": {
     "title": "Fill column: {{column}}",

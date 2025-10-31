@@ -17,6 +17,7 @@ import { TableDataStore } from "./table-view/TableDataStore";
 import type { TableConfigManager } from "./table-view/TableConfigManager";
 import type { ColumnInteractionController } from "./table-view/ColumnInteractionController";
 import type { RowInteractionController } from "./table-view/RowInteractionController";
+import type { RowMigrationController } from "./table-view/RowMigrationController";
 import type { GridInteractionController } from "./table-view/GridInteractionController";
 import type { FocusManager } from "./table-view/FocusManager";
 import type { GridLayoutController } from "./table-view/GridLayoutController";
@@ -56,6 +57,7 @@ export class TableView extends ItemView {
 	public persistenceService!: TablePersistenceService;
 	public columnInteractionController!: ColumnInteractionController;
 	public rowInteractionController!: RowInteractionController;
+	public rowMigrationController!: RowMigrationController;
 	public gridInteractionController!: GridInteractionController;
 	public filterOrchestrator!: FilterViewOrchestrator;
 	public gridLayoutController!: GridLayoutController;

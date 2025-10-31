@@ -21,6 +21,11 @@ interface MenuBuilderOptions {
 		copySelection?: () => void;
 		copySelectionAsTemplate: () => void;
 		editCopyTemplate: () => void;
+		migrateSelection?: {
+			moveToNew: () => void;
+			copyToNew: () => void;
+			moveToExisting: () => void;
+		};
 		insertAbove: () => void;
 		insertBelow: () => void;
 		fillSelectionWithValue?: () => void;
@@ -47,6 +52,7 @@ function withClose(handler: () => void, close: () => void): () => void {
 
 export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 	const menu = new Menu();
+	let activeSubmenu: Menu | null = null;
 
 	const addItem = (
 		labelKey: Parameters<typeof t>[0],
@@ -121,8 +127,56 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 		}
 		addItem('copyTemplate.menuCopy', 'clipboard', options.actions.copySelectionAsTemplate);
 		addItem('copyTemplate.menuEdit', 'pencil', options.actions.editCopyTemplate);
-		addSeparator();
-	}
+			const migrateActions = options.actions.migrateSelection;
+			if (migrateActions) {
+				menu.addItem((item) => {
+					item.setTitle(t('gridInteraction.menuMigrateSelection'));
+					item.setIcon('corner-down-right');
+
+					item.onClick((evt: MouseEvent) => {
+						evt.preventDefault();
+						evt.stopPropagation();
+						const dom = (item as unknown as { dom?: HTMLElement }).dom;
+						const rect = dom?.getBoundingClientRect();
+						const ownerDoc = dom?.ownerDocument ?? document;
+						const defaultView = ownerDoc.defaultView ?? window;
+						const x = rect ? rect.right + 8 : evt.pageX ?? defaultView.innerWidth / 2;
+						const y = rect ? rect.top : evt.pageY ?? defaultView.innerHeight / 2;
+
+						if (activeSubmenu) {
+							activeSubmenu.hide();
+							activeSubmenu = null;
+						}
+
+						const submenu = new Menu();
+						activeSubmenu = submenu;
+						submenu.onHide(() => {
+							if (activeSubmenu === submenu) {
+								activeSubmenu = null;
+							}
+						});
+						submenu.addItem((subItem) => {
+							subItem.setTitle(t('gridInteraction.migrateMenuMoveToNew'));
+							subItem.setIcon('arrow-right');
+							subItem.onClick(withClose(migrateActions.moveToNew, options.actions.close));
+						});
+						submenu.addItem((subItem) => {
+							subItem.setTitle(t('gridInteraction.migrateMenuCopyToNew'));
+							subItem.setIcon('copy');
+							subItem.onClick(withClose(migrateActions.copyToNew, options.actions.close));
+						});
+						submenu.addItem((subItem) => {
+							subItem.setTitle(t('gridInteraction.migrateMenuMoveToExisting'));
+							subItem.setIcon('corner-down-right');
+							subItem.onClick(withClose(migrateActions.moveToExisting, options.actions.close));
+						});
+
+						submenu.showAtPosition({ x, y }, ownerDoc);
+					});
+				});
+			}
+			addSeparator();
+		}
 
 	addItem('gridInteraction.insertRowAbove', 'arrow-up', options.actions.insertAbove);
 	addItem('gridInteraction.insertRowBelow', 'arrow-down', options.actions.insertBelow);
@@ -145,6 +199,13 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 		addItem('gridInteraction.duplicateRow', 'copy', options.actions.duplicateRow);
 		addItem('gridInteraction.deleteRow', 'trash', options.actions.deleteRow, { danger: true });
 	}
+
+	menu.onHide(() => {
+		if (activeSubmenu) {
+			activeSubmenu.hide();
+			activeSubmenu = null;
+		}
+	});
 
 	return menu;
 }

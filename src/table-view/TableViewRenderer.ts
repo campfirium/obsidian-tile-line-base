@@ -142,7 +142,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			primaryField,
 			dataStore: view.dataStore,
 			columnLayoutStore: view.columnLayoutStore,
-			clampWidth: clampColumnWidth
+			clampWidth: (value) => clampColumnWidth(value, { clampMax: false })
 		})
 	];
 

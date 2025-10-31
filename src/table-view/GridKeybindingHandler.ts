@@ -25,11 +25,11 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 	const targetInside = target ? context.isElementWithinGrid(target, container) : false;
 	const activeInside = activeElement ? context.isElementWithinGrid(activeElement, container) : false;
 	if (!targetInside && !activeInside) {
-		context.logger.warn('undo-skip-outside', { key: event.key });
+		context.logger.debug('undo-skip-outside', { key: event.key });
 		return;
 	}
 	if (activeElement?.classList.contains('ag-cell-edit-input')) {
-		context.logger.warn('undo-skip-editor', { key: event.key });
+		context.logger.debug('undo-skip-editor', { key: event.key });
 		return;
 	}
 

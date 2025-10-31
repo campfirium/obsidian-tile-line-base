@@ -50,7 +50,6 @@ export function createAgGridOptions({
 		enableBrowserTooltips: false,
 		tooltipShowDelay: 0,
 		tooltipHideDelay: 0,
-		tooltipShowMode: 'standard',
 		onCellKeyDown: (event: CellKeyDownEvent) => {
 			interaction.handleGridCellKeyDown(event);
 		},

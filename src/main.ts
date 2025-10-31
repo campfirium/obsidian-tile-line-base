@@ -337,6 +337,18 @@ export default class TileLineBasePlugin extends Plugin {
 		await this.viewCoordinator.toggleTableView(leaf, context ?? null);
 	}
 
+	async openFileInTableView(file: TFile): Promise<void> {
+		const activeLeaf = this.app.workspace.activeLeaf ?? null;
+		const preferredWindow = this.windowContextManager.getLeafWindow(activeLeaf ?? null);
+		const workspace = this.windowContextManager.getWorkspaceForLeaf(activeLeaf ?? null) ?? this.app.workspace;
+
+		await this.viewCoordinator.openTableView(file, {
+			leaf: activeLeaf,
+			preferredWindow,
+			workspace
+		});
+	}
+
 	getBackupManager(): BackupManager | null {
 		return this.backupManager;
 	}

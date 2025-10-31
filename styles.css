@@ -1244,3 +1244,17 @@
 	color: inherit;
 	font-size: inherit;
 }
+.tlb-table-creation-modal .setting-item {
+	margin-bottom: 12px;
+}
+
+.tlb-table-creation-error {
+	display: none;
+	color: var(--color-red);
+	font-size: 0.9em;
+	margin: 4px 0 0;
+}
+
+.tlb-table-creation-error--visible {
+	display: block;
+}

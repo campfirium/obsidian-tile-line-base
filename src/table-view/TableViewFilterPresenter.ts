@@ -35,6 +35,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			onOpenTagGroupMenu: (button) => {
 				view.tagGroupController?.openTagGroupMenu(button);
 			},
+			onOpenTableCreation: (button) => {
+				view.tableCreationController.openCreationModal(button);
+			},
 			onOpenColumnSettings: (button) => {
 				view.columnInteractionController.openColumnSettingsMenu(button);
 			},

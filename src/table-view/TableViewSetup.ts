@@ -6,6 +6,7 @@ import { RowInteractionController } from './RowInteractionController';
 import { GlobalQuickFilterController } from './GlobalQuickFilterController';
 import { FilterViewOrchestrator } from './FilterViewOrchestrator';
 import { GridInteractionController } from './GridInteractionController';
+import { RowMigrationController } from './RowMigrationController';
 import { GridLayoutController } from './GridLayoutController';
 import { FocusManager } from './FocusManager';
 import { FilterViewController } from './filter/FilterViewController';
@@ -65,6 +66,13 @@ export function initializeTableView(view: TableView): void {
 		getActiveFilterPrefills: () => getActiveFilterPrefills(view),
 		history: view.historyManager
 	});
+	view.rowMigrationController = new RowMigrationController({
+		app: view.app,
+		dataStore: view.dataStore,
+		persistence: view.persistenceService,
+		rowInteraction: view.rowInteractionController,
+		getCurrentFile: () => view.file
+	});
 	view.copyTemplateController = new CopyTemplateController({
 		app: view.app,
 		dataStore: view.dataStore,
@@ -93,6 +101,7 @@ export function initializeTableView(view: TableView): void {
 		app: view.app,
 		columnInteraction: view.columnInteractionController,
 		rowInteraction: view.rowInteractionController,
+		rowMigration: view.rowMigrationController,
 		dataStore: view.dataStore,
 		getGridAdapter: () => view.gridAdapter,
 		copyTemplate: view.copyTemplateController,

@@ -9,6 +9,7 @@ import { buildGridContextMenu } from './GridContextMenuBuilder';
 import { createFillSelectionAction, resolveBlockIndexesForCopy } from './GridInteractionMenuHelpers';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { GridCellClipboardController } from './GridCellClipboardController';
+import type { RowMigrationController } from './RowMigrationController';
 
 interface GridContextMenuParams {
 	app: App;
@@ -20,6 +21,7 @@ interface GridContextMenuParams {
 	columnInteraction: ColumnInteractionController;
 	copyTemplate: CopyTemplateController;
 	getGridAdapter: () => GridAdapter | null;
+	rowMigration: RowMigrationController;
 	cellClipboard: GridCellClipboardController;
 	onCopySelection: (blockIndex: number) => void;
 	onCopySelectionAsTemplate: (blockIndex: number) => void;
@@ -34,6 +36,8 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 	const isIndexColumn = params.colId === '#';
 	const isSystemColumn = params.colId ? isReservedColumnId(params.colId) : true;
 	const targetIndexes = resolveBlockIndexesForCopy(params.getGridAdapter, params.dataStore, params.blockIndex);
+	const migrateIndexes = targetIndexes;
+	const hasMigrateTargets = migrateIndexes.length > 0;
 
 	let fillSelection: ReturnType<typeof createFillSelectionAction> = {};
 	if (isMultiSelect && !isSystemColumn) {
@@ -98,6 +102,19 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 			editCopyTemplate: () => {
 				params.copyTemplate.openEditor(params.container, targetIndexes);
 			},
+			migrateSelection: hasMigrateTargets
+				? {
+						moveToNew: () => {
+							void params.rowMigration.moveSelectionToNewFile(migrateIndexes);
+						},
+						copyToNew: () => {
+							void params.rowMigration.copySelectionToNewFile(migrateIndexes);
+						},
+						moveToExisting: () => {
+							void params.rowMigration.moveSelectionToExistingFile(migrateIndexes);
+						}
+					}
+				: undefined,
 			insertAbove: () => params.rowInteraction.addRow(params.blockIndex),
 			insertBelow: () => params.rowInteraction.addRow(params.blockIndex + 1),
 			fillSelectionWithValue: fillSelection.action,

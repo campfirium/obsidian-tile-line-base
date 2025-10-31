@@ -4,7 +4,7 @@ import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
-import type { TableConfigManager } from './TableConfigManager';
+import type { TableConfigData, TableConfigManager } from './TableConfigManager';
 import type { FilterStateStore } from './filter/FilterStateStore';
 import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
@@ -83,26 +83,30 @@ export class TablePersistenceService {
 		}
 	}
 
+	getConfigPayload(): TableConfigData {
+		const schema = this.deps.dataStore.getSchema();
+		const columnConfigs =
+			schema?.columnConfigs
+				?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
+				?.map((config) => this.deps.dataStore.serializeColumnConfig(config)) ?? [];
+
+		return {
+			filterViews: this.deps.getFilterViewState(),
+			tagGroups: this.deps.getTagGroupState(),
+			columnWidths: this.deps.columnLayoutStore.exportPreferences(),
+			columnConfigs,
+			viewPreference: 'table',
+			copyTemplate: this.deps.getCopyTemplate()
+		};
+	}
+
 	async saveConfig(): Promise<void> {
 		const file = this.deps.getFile();
 		if (!file) {
 			return;
 		}
 
-		const schema = this.deps.dataStore.getSchema();
-		const columnConfigs = schema?.columnConfigs
-			?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
-			?.map((config) => this.deps.dataStore.serializeColumnConfig(config)) ?? [];
-
-		const widthPrefs = this.deps.columnLayoutStore.exportPreferences();
-		await this.deps.configManager.save(file, {
-			filterViews: this.deps.getFilterViewState(),
-			tagGroups: this.deps.getTagGroupState(),
-			columnWidths: widthPrefs,
-			columnConfigs,
-			viewPreference: 'table',
-			copyTemplate: this.deps.getCopyTemplate()
-		});
+		await this.deps.configManager.save(file, this.getConfigPayload());
 	}
 
 	dispose(): void {

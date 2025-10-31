@@ -183,7 +183,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			}
 		});
 
-		view.gridAdapter = gridAdapter;
+	view.gridAdapter = gridAdapter;
 		view.tableContainer = gridContainer;
 		view.gridLayoutController.attach(gridContainer);
 		view.filterOrchestrator.applyActiveView();

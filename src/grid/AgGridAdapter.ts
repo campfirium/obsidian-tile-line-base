@@ -28,6 +28,7 @@ import { createAgGridOptions } from './options/createAgGridOptions';
 import { AgGridSelectionController } from './selection/AgGridSelectionController';
 import { AgGridStateService } from './state/AgGridStateService';
 import { SideBarController } from './sidebar/SideBarController';
+import { OverflowTooltipController } from './tooltip/OverflowTooltipController';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -49,6 +50,7 @@ export class AgGridAdapter implements GridAdapter {
 	private readonly interaction: AgGridInteractionController;
 	private readonly selection: AgGridSelectionController;
 	private readonly state: AgGridStateService;
+	private readonly overflowTooltip = new OverflowTooltipController();
 
 	get gridApi(): GridApi | null {
 		return this.lifecycle.getGridApi();
@@ -111,6 +113,7 @@ export class AgGridAdapter implements GridAdapter {
 		this.containerEl = container;
 		this.gridContext = context;
 		this.interaction.setContainer(container);
+		this.overflowTooltip.attach(container);
 		this.columnService.configureCallbacks({
 			onColumnResize: context?.onColumnResize,
 			onColumnOrderChange: context?.onColumnOrderChange
@@ -201,6 +204,7 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	destroy(): void {
+		this.overflowTooltip.detach();
 		this.lifecycle.destroy();
 		this.sideBar.reset();
 		this.columnService.detachApis();

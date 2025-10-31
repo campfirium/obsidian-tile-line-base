@@ -17,7 +17,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 
 	init(params: ICellRendererParams): void {
 		this.params = params;
-		const doc = (params.eGridCell?.ownerDocument ?? document);
+		const doc = params.eGridCell?.ownerDocument ?? document;
 
 		this.eGui = doc.createElement('div');
 		this.eGui.className = 'tlb-link-cell';
@@ -64,7 +64,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		}
 
 		if (!this.buttonEl) {
-			const doc = (this.params.eGridCell?.ownerDocument ?? document);
+			const doc = this.params.eGridCell?.ownerDocument ?? document;
 			this.buttonEl = doc.createElement('button');
 			this.buttonEl.type = 'button';
 			this.buttonEl.className = 'tlb-link-cell__button';
@@ -159,7 +159,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 	}
 
 	private getRawValue(): string {
-		const value = this.params.value;
+		const value =	this.params.value;
 		return typeof value === 'string' ? value : value != null ? String(value) : '';
 	}
 

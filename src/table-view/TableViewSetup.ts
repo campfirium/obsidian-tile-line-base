@@ -25,6 +25,7 @@ import type { TableView } from '../TableView';
 import { getPluginContext } from '../pluginContext';
 import { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
+import { TableCreationController } from './TableCreationController';
 
 const logger = getLogger('table-view:setup');
 
@@ -97,6 +98,10 @@ export function initializeTableView(view: TableView): void {
 		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
 		refreshGrid: () => view.filterOrchestrator.refresh(),
 		scheduleSave: () => view.persistenceService.scheduleSave()
+	});
+	view.tableCreationController = new TableCreationController({
+		app: view.app,
+		getCurrentFile: () => view.file
 	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
 		getGridAdapter: () => view.gridAdapter

@@ -198,7 +198,7 @@
   },
   "tableDataStore": {
     "newRowPrefix": "����Ŀ",
-    "newColumnName": "����",
+    "newColumnName": "Field",
     "formulaSelfReference": "��ʽ��������������",
     "formulaParseFailed": "��ʽ����ʧ�ܣ�{{error}}",
     "formulaDisabled": "��ʽ����ͣ�ã��������� {{limit}}��",
@@ -378,5 +378,26 @@
     "partialNotice": "�Ѵ��� {{success}} ���ʼǣ�{{failed}} ��ʧ�ܡ�",
     "failureNotice": "�ʼǴ���ʧ�ܡ�",
     "noteNameFallback": "�����ıʼ�"
+  },
+  "tableCreation": {
+    "menuLabel": "新建表格",
+    "modalTitle": "新建表格",
+    "nameLabel": "表格名称",
+    "nameDesc": "用于主字段的默认值。",
+    "namePlaceholder": "新建表格",
+    "nameRequired": "请输入表格名称。",
+    "rowsLabel": "行数",
+    "rowsDesc": "创建的行数（{{min}}-{{max}}）。",
+    "rowsOutOfRange": "行数必须在 {{min}} 到 {{max}} 之间。",
+    "columnsLabel": "列数",
+    "columnsDesc": "包含主字段和状态列在内的总列数（{{min}}-{{max}}）。",
+    "columnsOutOfRange": "列数必须在 {{min}} 到 {{max}} 之间。",
+    "createButton": "创建",
+    "cancelButton": "取消",
+    "successNotice": "已创建表格：{{name}}",
+    "failureNotice": "新建表格失败。",
+    "defaultTableName": "新建表格",
+    "primaryFieldName": "任务",
+    "fieldBaseName": "Field"
   }
 }

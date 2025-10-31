@@ -201,12 +201,33 @@
   },
   "tableDataStore": {
     "newRowPrefix": "New item",
-    "newColumnName": "New column",
+    "newColumnName": "Field",
     "formulaSelfReference": "Formulas cannot reference the same column",
     "formulaParseFailed": "Formula parsing failed: {{error}}",
     "formulaDisabled": "Formula column disabled (row count exceeds {{limit}})",
     "formulaError": "Formula error: {{error}}",
     "duplicateColumnBase": "{{field}} (copy)"
+  },
+  "tableCreation": {
+    "menuLabel": "Create table",
+    "modalTitle": "Create table",
+    "nameLabel": "Table name",
+    "nameDesc": "Used as the value of the primary field.",
+    "namePlaceholder": "New table",
+    "nameRequired": "Please enter a table name.",
+    "rowsLabel": "Rows",
+    "rowsDesc": "Number of rows to create ({{min}}-{{max}}).",
+    "rowsOutOfRange": "Row count must be between {{min}} and {{max}}.",
+    "columnsLabel": "Columns",
+    "columnsDesc": "Total columns including the primary field and status ({{min}}-{{max}}).",
+    "columnsOutOfRange": "Column count must be between {{min}} and {{max}}.",
+    "createButton": "Create",
+    "cancelButton": "Cancel",
+    "successNotice": "Created table: {{name}}",
+    "failureNotice": "Failed to create table.",
+    "defaultTableName": "New table",
+    "primaryFieldName": "Task",
+    "fieldBaseName": "Field"
   },
   "tablePersistence": {
     "saveFailed": "Failed to save, please check console logs"

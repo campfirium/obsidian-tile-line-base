@@ -9,6 +9,7 @@ export interface FilterViewBarCallbacks {
 	onContextMenu(view: FilterViewDefinition, event: MouseEvent): void;
 	onReorder(draggedId: string, targetId: string): void;
 	onOpenTagGroupMenu(button: HTMLElement): void;
+	onOpenTableCreation(button: HTMLElement): void;
 	onOpenColumnSettings(button: HTMLElement): void;
 	onOpenBackupRestore(button: HTMLElement): void;
 }
@@ -208,6 +209,14 @@ export class FilterViewBar {
 
 	private openSettingsMenu(): void {
 		const menu = new Menu();
+		menu.addItem((item) => {
+			item
+				.setTitle(t('tableCreation.menuLabel'))
+				.setIcon('table')
+				.onClick(() => {
+					this.options.callbacks.onOpenTableCreation(this.settingsButtonEl);
+				});
+		});
 		menu.addItem((item) => {
 			item
 				.setTitle(t('filterViewBar.settingsMenuColumnLabel'))

@@ -10,6 +10,7 @@ import { getLogger } from '../utils/logger';
 import { RowMigrationTargetModal } from './RowMigrationTargetModal';
 import { TableConfigManager } from './TableConfigManager';
 import { getPluginContext } from '../pluginContext';
+import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 
 interface RowMigrationDeps {
 	app: App;
@@ -65,6 +66,12 @@ export class RowMigrationController {
 
 		try {
 			await this.appendBlocksToExistingFile(targetFile, blockMarkdown);
+			TableRefreshCoordinator.requestRefreshForPath(targetFile.path, {
+				source: 'table-operation',
+				structural: true,
+				reason: 'row-migration:merge',
+				immediate: true
+			});
 			this.deps.rowInteraction.deleteRows(context.indexes);
 			new Notice(
 				t('gridInteraction.migrateSelectionMergeSuccess', {
@@ -115,6 +122,12 @@ private async exportSelectionToNewFile(blockIndexes: number[], mode: ExportMode)
 			const { path, fileName } = await this.resolveAvailableFilePath(folderPath, baseName);
 			newFile = await this.deps.app.vault.create(path, blockMarkdown);
 			await this.writeConfigForNewFile(newFile);
+			TableRefreshCoordinator.requestRefreshForPath(newFile.path, {
+				source: 'table-operation',
+				structural: true,
+				reason: mode === 'move' ? 'row-migration:move-new-file' : 'row-migration:copy-new-file',
+				immediate: true
+			});
 
 			if (mode === 'move') {
 				this.deps.rowInteraction.deleteRows(context.indexes);

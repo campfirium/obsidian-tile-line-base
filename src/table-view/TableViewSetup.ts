@@ -24,6 +24,7 @@ import { getAvailableColumns, getFilterColumnOptions, persistFilterViews, persis
 import type { TableView } from '../TableView';
 import { getPluginContext } from '../pluginContext';
 import { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
+import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 
 const logger = getLogger('table-view:setup');
 
@@ -31,6 +32,7 @@ export function initializeTableView(view: TableView): void {
 	logger.info(t('tableViewSetup.constructorStart'));
 	logger.debug('leaf', view.leaf);
 
+	view.refreshCoordinator = new TableRefreshCoordinator(view);
 	view.configManager = new TableConfigManager(view.app);
 	view.persistenceService = new TablePersistenceService({
 		app: view.app,
@@ -42,7 +44,8 @@ export function initializeTableView(view: TableView): void {
 		getFilterViewState: () => view.filterViewState,
 		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null,
-		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null
+		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null,
+		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)
 	});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,

@@ -138,7 +138,7 @@ export class AgGridColumnService {
 			return;
 		}
 
-		const clamped = clampColumnWidth(event.column.getActualWidth());
+		const clamped = clampColumnWidth(event.column.getActualWidth(), { clampMax: false });
 		if (Math.abs(clamped - event.column.getActualWidth()) > 0.5 && gridApi) {
 			gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
 		}
@@ -146,6 +146,7 @@ export class AgGridColumnService {
 		const colDef = event.column.getColDef() as any;
 		const context = colDef.context ?? {};
 		context.tlbStoredWidth = clamped;
+		context.tlbWidthSource = 'manual';
 		colDef.context = context;
 
 		this.callbacks.onColumnResize?.(colId, clamped);

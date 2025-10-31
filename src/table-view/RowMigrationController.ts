@@ -36,7 +36,6 @@ export class RowMigrationController {
 	}
 
 	async moveSelectionToExistingFile(blockIndexes: number[]): Promise<void> {
-		new Notice('move-existing-start');
 		const context = this.ensureContext(blockIndexes);
 		if (!context) {
 			return;
@@ -44,10 +43,8 @@ export class RowMigrationController {
 
 		const targetFile = await this.selectExistingTarget(context.file);
 		if (!targetFile) {
-			new Notice('select-existing-target: none');
 			return;
 		}
-		new Notice(`selected target: ${targetFile.basename}`);
 
 		if (targetFile.path === context.file.path) {
 			new Notice(t('gridInteraction.migrateSelectionSameFile'));
@@ -61,7 +58,6 @@ export class RowMigrationController {
 	try {
 		const contextInfo = { target: targetFile.path, count: preparedBlocks.length };
 		console.error('[RowMigration] move-existing-start', contextInfo);
-		new Notice(`move-existing: ${targetFile.basename}`);
 		this.logger.warn('migrate:existing-start', {
 			target: targetFile.path,
 			mode: 'move',
@@ -88,7 +84,6 @@ export class RowMigrationController {
 	}
 
 	async copySelectionToExistingFile(blockIndexes: number[]): Promise<void> {
-		new Notice('copy-existing-start');
 		const context = this.ensureContext(blockIndexes);
 		if (!context) {
 			return;
@@ -96,10 +91,8 @@ export class RowMigrationController {
 
 		const targetFile = await this.selectExistingTarget(context.file);
 		if (!targetFile) {
-			new Notice('select-existing-target: none');
 			return;
 		}
-		new Notice(`selected target: ${targetFile.basename}`);
 
 		if (targetFile.path === context.file.path) {
 			new Notice(t('gridInteraction.migrateSelectionSameFile'));
@@ -112,7 +105,6 @@ export class RowMigrationController {
 
 	try {
 		console.error('[RowMigration] copy-existing-start', { target: targetFile.path, count: preparedBlocks.length });
-		new Notice(`copy-existing: ${targetFile.basename}`);
 		this.logger.warn('copy:existing-start', {
 			target: targetFile.path,
 			mode: 'copy',
@@ -455,7 +447,6 @@ export class RowMigrationController {
 			length: trimmedPayload.length
 		});
 		console.error('[RowMigration] append-existing-done', { target: targetFile.path, length: trimmedPayload.length });
-		new Notice(`append-existing-done: ${targetFile.basename}`);
 	}
 
 	private separateConfigSection(source: string): { contentWithoutConfig: string; configSection: string | null } {

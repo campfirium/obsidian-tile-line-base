@@ -82,7 +82,24 @@ export class RowMigrationController {
 		}
 	}
 
-	private async exportSelectionToNewFile(blockIndexes: number[], mode: ExportMode): Promise<void> {
+	
+	private async selectExistingTarget(currentFile: TFile): Promise<TFile | null> {
+		const candidates = this.getKnownTableFiles(currentFile);
+		if (candidates.length === 0) {
+			new Notice(t('gridInteraction.migrateSelectionNoTargets'));
+			this.logger.warn('migrate:no-existing-targets');
+			return null;
+		}
+
+		const targetFile = await this.promptForTargetFile(currentFile, candidates);
+		if (!targetFile) {
+			this.logger.info('migrate:select-existing-cancelled');
+			return null;
+		}
+		return targetFile;
+	}
+
+private async exportSelectionToNewFile(blockIndexes: number[], mode: ExportMode): Promise<void> {
 		const context = this.ensureContext(blockIndexes);
 		if (!context) {
 			return;

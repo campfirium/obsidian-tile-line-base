@@ -23,6 +23,7 @@ import {
 import { getAvailableColumns, getFilterColumnOptions, persistFilterViews, persistTagGroups, syncFilterViewState, updateFilterViewBarTagGroupState } from './TableViewFilterPresenter';
 import type { TableView } from '../TableView';
 import { getPluginContext } from '../pluginContext';
+import { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
 
 const logger = getLogger('table-view:setup');
 
@@ -84,6 +85,16 @@ export function initializeTableView(view: TableView): void {
 		},
 		persistTemplate: () => view.persistenceService.saveConfig()
 	});
+	view.paragraphPromotionController = new ParagraphPromotionController({
+		app: view.app,
+		dataStore: view.dataStore,
+		history: view.historyManager,
+		getSchema: () => view.schema,
+		getFile: () => view.file,
+		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
+		refreshGrid: () => view.filterOrchestrator.refresh(),
+		scheduleSave: () => view.persistenceService.scheduleSave()
+	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
 		getGridAdapter: () => view.gridAdapter
 	});
@@ -105,7 +116,8 @@ export function initializeTableView(view: TableView): void {
 		dataStore: view.dataStore,
 		getGridAdapter: () => view.gridAdapter,
 		copyTemplate: view.copyTemplateController,
-		history: view.historyManager
+		history: view.historyManager,
+		paragraphPromotion: view.paragraphPromotionController
 	});
 	view.gridLayoutController = new GridLayoutController(view.app, view.gridController);
 	view.focusManager = new FocusManager({
@@ -186,3 +198,4 @@ function collectUniqueFieldValues(view: TableView, field: string, limit: number)
 	}
 	return result;
 }
+

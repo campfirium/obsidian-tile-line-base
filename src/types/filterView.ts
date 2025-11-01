@@ -38,10 +38,17 @@ export interface FilterViewDefinition {
 	sortRules: SortRule[];
 	columnState?: any[] | null;
 	quickFilter?: string | null;
+	icon?: string | null;           // 可选 Lucide 图标 ID
+}
+
+export interface DefaultFilterViewPreferences {
+	name?: string;
+	icon?: string | null;
 }
 
 export interface FilterViewMetadata {
 	statusBaselineSeeded?: boolean;
+	defaultView?: DefaultFilterViewPreferences | null;
 }
 
 export interface FileFilterViewState {

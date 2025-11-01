@@ -14,6 +14,7 @@ const logger = getLogger('table-view:csv');
 const EXCLUDED_FIELDS = new Set(['#', ROW_ID_FIELD, '__tlb_status', '__tlb_index']);
 const UTF8_BOM = '\uFEFF';
 const TABLE_FILE_EXTENSION = '.md';
+const HIDDEN_ELEMENT_CLASS = 'tlb-visually-hidden';
 
 interface ImportCsvAsNewTableOptions {
 	triggerElement?: HTMLElement | null;
@@ -77,7 +78,7 @@ export async function importTableFromCsv(view: TableView): Promise<void> {
 	const inputEl = ownerDocument.createElement('input');
 	inputEl.type = 'file';
 	inputEl.accept = '.csv,text/csv';
-	inputEl.style.display = 'none';
+	inputEl.classList.add(HIDDEN_ELEMENT_CLASS);
 	ownerDocument.body.appendChild(inputEl);
 
 	const cleanup = () => {
@@ -87,7 +88,7 @@ export async function importTableFromCsv(view: TableView): Promise<void> {
 		}
 	};
 
-	inputEl.addEventListener('change', async () => {
+	const handleFileSelection = async () => {
 		try {
 			const file = inputEl.files?.[0] ?? null;
 			if (!file) {
@@ -106,6 +107,10 @@ export async function importTableFromCsv(view: TableView): Promise<void> {
 		} finally {
 			cleanup();
 		}
+	};
+
+	inputEl.addEventListener('change', () => {
+		void handleFileSelection();
 	});
 
 	inputEl.click();
@@ -116,7 +121,7 @@ export function importCsvAsNewTable(app: App, options: ImportCsvAsNewTableOption
 	const inputEl = ownerDocument.createElement('input');
 	inputEl.type = 'file';
 	inputEl.accept = '.csv,text/csv';
-	inputEl.style.display = 'none';
+	inputEl.classList.add(HIDDEN_ELEMENT_CLASS);
 	ownerDocument.body.appendChild(inputEl);
 
 	const cleanup = () => {
@@ -126,7 +131,7 @@ export function importCsvAsNewTable(app: App, options: ImportCsvAsNewTableOption
 		}
 	};
 
-	inputEl.addEventListener('change', async () => {
+	const handleFileSelection = async () => {
 		try {
 			const file = inputEl.files?.[0] ?? null;
 			if (!file) {
@@ -168,6 +173,10 @@ export function importCsvAsNewTable(app: App, options: ImportCsvAsNewTableOption
 		} finally {
 			cleanup();
 		}
+	};
+
+	inputEl.addEventListener('change', () => {
+		void handleFileSelection();
 	});
 
 	inputEl.click();
@@ -232,7 +241,7 @@ function triggerDownload(view: TableView, content: string, fileName: string): vo
 	const anchor = ownerDocument.createElement('a');
 	anchor.href = url;
 	anchor.download = fileName || 'table.csv';
-	anchor.style.display = 'none';
+	anchor.classList.add(HIDDEN_ELEMENT_CLASS);
 	ownerDocument.body.appendChild(anchor);
 	anchor.click();
 	ownerDocument.body.removeChild(anchor);

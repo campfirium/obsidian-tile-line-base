@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 import { ESLint } from 'eslint';
+import eslintExperimental from 'eslint/use-at-your-own-risk';
+const { FlatESLint } = eslintExperimental;
 import { mkdir, rm, writeFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+if (!process.env.ESLINT_USE_FLAT_CONFIG) {
+	process.env.ESLINT_USE_FLAT_CONFIG = 'true';
+}
 const repoRoot = path.resolve(__dirname, '..');
 const docsDir = path.join(repoRoot, 'docs');
 const reportPath = path.join(docsDir, 'reports.md');
@@ -139,7 +145,11 @@ const buildReportLines = (timestamp, totals, issues) => {
 };
 
 const run = async () => {
-	const eslint = new ESLint();
+	const ESLintImpl = process.env.ESLINT_USE_FLAT_CONFIG ? FlatESLint : ESLint;
+	const constructorOptions = process.env.ESLINT_USE_FLAT_CONFIG
+		? { overrideConfigFile: path.join(repoRoot, 'eslint.config.mjs'), cwd: repoRoot }
+		: {};
+	const eslint = new ESLintImpl(constructorOptions);
 	const lintTargets = [
 		'src/**/*.{ts,tsx}',
 		'src/locales/**/*.json',

@@ -3,6 +3,8 @@ import type { FileFilterViewState, FilterViewDefinition } from '../../types/filt
 import { t } from '../../i18n';
 import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../renderers/StatusCellRenderer';
 
+const DEFAULT_ALL_VIEW_ICON = 'layout-grid';
+
 export interface FilterViewBarCallbacks {
 	onCreate(): void;
 	onActivate(viewId: string | null): void;
@@ -14,6 +16,8 @@ export interface FilterViewBarCallbacks {
 	onOpenBackupRestore(button: HTMLElement): void;
 	onAdjustColumnWidths(): void;
 	onOpenHelp(): void;
+	onDefaultViewMenu(button: HTMLElement, event?: MouseEvent): void;
+	onEditDefaultView(): void;
 }
 
 interface FilterViewBarOptions {
@@ -98,15 +102,33 @@ export class FilterViewBar {
 		this.tabsEl.append(this.tagGroupButtonEl);
 		this.updateTagGroupButton();
 
-		const defaultLabel = t('filterViewBar.allTabLabel');
+		const defaultName = this.getDefaultViewName(state);
+		const defaultIcon = this.getDefaultViewIcon(state);
 		const defaultButton = this.tabsEl.createEl('button', {
-			cls: 'tlb-filter-view-button',
-			text: defaultLabel
+			cls: 'tlb-filter-view-button'
 		});
-		defaultButton.setAttribute('title', defaultLabel);
-		defaultButton.setAttribute('aria-label', defaultLabel);
+		defaultButton.setAttribute('data-default-view', 'true');
+		this.applyButtonContent(defaultButton, defaultName, defaultIcon, { status: false });
 		defaultButton.addEventListener('click', () => {
 			this.options.callbacks.onActivate(null);
+		});
+		defaultButton.addEventListener('contextmenu', (event) => {
+			event.preventDefault();
+			this.options.callbacks.onDefaultViewMenu(defaultButton, event);
+		});
+		defaultButton.addEventListener('dblclick', (event) => {
+			event.preventDefault();
+			this.options.callbacks.onEditDefaultView();
+		});
+		defaultButton.addEventListener('keydown', (event) => {
+			if (event.key === 'F2') {
+				event.preventDefault();
+				this.options.callbacks.onEditDefaultView();
+			}
+			if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+				event.preventDefault();
+				this.options.callbacks.onDefaultViewMenu(defaultButton);
+			}
 		});
 		if (!state.activeViewId) {
 			defaultButton.classList.add('is-active');
@@ -193,22 +215,8 @@ export class FilterViewBar {
 
 	private setFilterButtonContent(button: HTMLButtonElement, view: FilterViewDefinition): void {
 		const name = typeof view.name === 'string' ? view.name : '';
-		const status = this.getStatusFromFilterView(view);
-		button.textContent = '';
-		button.title = name;
-		button.setAttribute('aria-label', name);
-		button.classList.toggle('tlb-filter-view-button--status', !!status);
-		if (!status) {
-			button.classList.remove('tlb-filter-view-button--status');
-			button.textContent = name;
-			return;
-		}
-
-		const iconEl = button.createSpan({ cls: 'tlb-filter-view-button__icon' });
-		setIcon(iconEl, getStatusIcon(status));
-
-		const labelEl = button.createSpan({ cls: 'tlb-filter-view-button__label' });
-		labelEl.textContent = name;
+		const { icon, isStatusIcon } = this.getIconForView(view);
+		this.applyButtonContent(button, name, icon, { status: isStatusIcon });
 	}
 
 	private openSettingsMenu(): void {
@@ -291,6 +299,75 @@ export class FilterViewBar {
 		this.tagGroupLabelEl.textContent = buttonLabel;
 		this.tagGroupButtonEl.setAttribute('title', tooltip);
 		this.tagGroupButtonEl.setAttribute('aria-label', t('tagGroups.buttonAriaLabel', { name: buttonLabel }));
+	}
+
+	private applyButtonContent(
+		button: HTMLButtonElement,
+		label: string,
+		iconId: string | null,
+		options?: { status?: boolean }
+	): void {
+		const trimmed = typeof label === 'string' ? label.trim() : '';
+		const fallbackLabel = trimmed.length > 0 ? trimmed : t('filterViewBar.unnamedViewLabel');
+		button.title = fallbackLabel;
+		button.setAttribute('aria-label', fallbackLabel);
+		this.clearElement(button);
+		const isStatus = options?.status === true;
+		button.classList.toggle('tlb-filter-view-button--status', isStatus);
+		if (!iconId) {
+			button.textContent = fallbackLabel;
+			return;
+		}
+
+		const iconEl = button.createSpan({ cls: 'tlb-filter-view-button__icon' });
+		setIcon(iconEl, iconId);
+		if (!iconEl.querySelector('svg')) {
+			iconEl.remove();
+			button.classList.remove('tlb-filter-view-button--status');
+			button.textContent = fallbackLabel;
+			return;
+		}
+		const labelEl = button.createSpan({ cls: 'tlb-filter-view-button__label' });
+		labelEl.textContent = fallbackLabel;
+	}
+
+	private getIconForView(view: FilterViewDefinition): { icon: string | null; isStatusIcon: boolean } {
+		const customIcon = this.sanitizeIconId(view.icon);
+		if (customIcon) {
+			return { icon: customIcon, isStatusIcon: false };
+		}
+		const status = this.getStatusFromFilterView(view);
+		if (status) {
+			return { icon: getStatusIcon(status), isStatusIcon: true };
+		}
+		return { icon: null, isStatusIcon: false };
+	}
+
+	private getDefaultViewName(state: FileFilterViewState): string {
+		const name = state.metadata?.defaultView?.name;
+		if (typeof name === 'string') {
+			const trimmed = name.trim();
+			if (trimmed.length > 0) {
+				return trimmed;
+			}
+		}
+		return t('filterViewBar.allTabLabel');
+	}
+
+	private getDefaultViewIcon(state: FileFilterViewState): string | null {
+		const prefs = state.metadata?.defaultView;
+		if (prefs) {
+			return this.sanitizeIconId(prefs.icon);
+		}
+		return DEFAULT_ALL_VIEW_ICON;
+	}
+
+	private sanitizeIconId(icon: unknown): string | null {
+		if (typeof icon !== 'string') {
+			return null;
+		}
+		const trimmed = icon.trim();
+		return trimmed.length > 0 ? trimmed : null;
 	}
 }
 

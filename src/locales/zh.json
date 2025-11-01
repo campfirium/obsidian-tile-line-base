@@ -15,6 +15,18 @@
     "toggleTableView": "切换表格视图",
     "importCsvAsTable": "导入 CSV 并创建新表格"
   },
+  "csv": {
+    "errorNoFile": "请先保存笔记，当前文件不存在，无法导出。",
+    "exportFailure": "导出 CSV 失败，请查看控制台。",
+    "exportSuccess": "已导出 {{rows}} 行到 CSV。",
+    "importFailure": "导入 CSV 失败，请查看控制台。",
+    "defaultFileName": "导入的表格",
+    "createSuccess": "已新建 {{name}}，共 {{rows}} 行。",
+    "createFailure": "根据 CSV 创建新表格失败。",
+    "importNoHeaders": "CSV 文件缺少表头。",
+    "importNoRows": "CSV 文件中没有可导入的行。",
+    "importSuccess": "已从 CSV 导入 {{rows}} 行。"
+  },
   "settings": {
     "generalHeading": "常规",
     "hideRightSidebarLabel": "表格视图时隐藏右侧边栏",
@@ -265,7 +277,8 @@
     "settingsMenuAriaLabel": "打开表格操作菜单",
     "settingsMenuAutoWidthLabel": "调整列宽",
     "settingsMenuColumnLabel": "列设置",
-    "settingsMenuHelpLabel": "打开帮助笔记"
+    "settingsMenuHelpLabel": "打开帮助笔记",
+    "unnamedViewLabel": "未命名视图"
   },
   "backup": {
     "menuLabel": "恢复备份",
@@ -294,7 +307,10 @@
     "renamePlaceholder": "输入新名称",
     "duplicateNameSuffix": "副本",
     "duplicateNotice": "已复制视图：{{name}}",
-    "duplicateModalTitle": "复制视图：{{name}}"
+    "duplicateModalTitle": "复制视图：{{name}}",
+    "menuEditDefault": "编辑默认视图",
+    "menuResetDefault": "重置默认视图",
+    "editDefaultModalTitle": "编辑默认视图"
   },
   "filterViewModals": {
     "saveButton": "保存",
@@ -338,7 +354,19 @@
     "sortsEmptyHint": "暂未添加排序规则，点击「添加排序」进行配置。",
     "sortsNoColumnsHint": "暂无可用列，无法设置排序。",
     "sortDirectionAsc": "升序（A → Z）",
-    "sortDirectionDesc": "降序（Z → A）"
+    "sortDirectionDesc": "降序（Z → A）",
+    "iconLabel": "图标",
+    "iconDescription": "选择一个 Lucide 图标（示例：table、filter）。",
+    "iconPlaceholder": "搜索 Lucide 图标（示例：table、filter）",
+    "iconPickerTooltip": "浏览图标列表",
+    "iconPreviewInvalid": "未找到图标“{{icon}}”",
+    "iconPreviewEmpty": "尚未选择图标",
+    "iconPickerPlaceholder": "搜索图标...",
+    "iconMatchesEmpty": "没有匹配的图标。",
+    "iconMatchAriaLabel": "使用图标 {{icon}}",
+    "iconNavPrev": "上一组图标",
+    "iconNavNext": "下一组图标",
+    "iconStatusEmpty": "尚未选择图标"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] 无法在 compositionstart 中重置光标",

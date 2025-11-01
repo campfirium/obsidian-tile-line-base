@@ -26,7 +26,8 @@ export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''>;
 
 const FALLBACK_LOCALE: LocaleCode = 'en';
 let activeLocale: LocaleCode = FALLBACK_LOCALE;
-const hasOwn = Object.prototype.hasOwnProperty;
+const hasOwn = <T extends object>(target: T, property: PropertyKey): boolean =>
+	Object.prototype.hasOwnProperty.call(target, property);
 
 function getLocaleObject(locale: LocaleCode): LocaleTree {
 	return locales[locale];
@@ -59,11 +60,11 @@ export function normalizeLocaleCode(localeLike: string | null | undefined): Loca
 	if (!normalized) {
 		return null;
 	}
-	if (hasOwn.call(locales, normalized)) {
+	if (hasOwn(locales, normalized as PropertyKey)) {
 		return normalized as LocaleCode;
 	}
 	const primary = normalized.split('-')[0];
-	if (hasOwn.call(locales, primary)) {
+	if (hasOwn(locales, primary as PropertyKey)) {
 		return primary as LocaleCode;
 	}
 	return null;

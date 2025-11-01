@@ -10,15 +10,23 @@
   "commands": {
     "undoTableHistory": "Undo last table change",
     "redoTableHistory": "Redo table change",
-<<<<<<< Updated upstream
-    "openHelpDocument": "Open table help document",
-    "createTable": "Create table note",
+    "openHelpDocument": "Open TileLineBase help document",
+    "createTable": "Create TileLineBase table note",
+    "importCsvAsTable": "Import CSV as new table",
     "toggleTableView": "Toggle table view"
   },
-=======
-    "openHelpDocument": "Open TileLineBase help document",
-    "createTable": "Create TileLineBase table note",\r\n    "importCsvAsTable": "Import CSV as new table"\r\n  },
->>>>>>> Stashed changes
+  "csv": {
+    "errorNoFile": "Save the note before exporting; the current file could not be found.",
+    "exportFailure": "Failed to export CSV. Check the console for details.",
+    "exportSuccess": "Exported {{rows}} rows to CSV.",
+    "importFailure": "Failed to import the CSV file. Check the console for details.",
+    "defaultFileName": "Imported Table",
+    "createSuccess": "Created {{name}} with {{rows}} rows.",
+    "createFailure": "Failed to create a table from the CSV file.",
+    "importNoHeaders": "The CSV file is missing a header row.",
+    "importNoRows": "The CSV file does not contain any rows to import.",
+    "importSuccess": "Imported {{rows}} rows from CSV."
+  },
   "settings": {
     "generalHeading": "General",
     "hideRightSidebarLabel": "Hide right sidebar in table view",
@@ -270,7 +278,8 @@
     "settingsMenuAriaLabel": "Open table actions",
     "settingsMenuAutoWidthLabel": "Adjust column widths",
     "settingsMenuColumnLabel": "Column settings",
-    "settingsMenuHelpLabel": "Open help note"
+    "settingsMenuHelpLabel": "Open help note",
+    "unnamedViewLabel": "Unnamed view"
   },
   "backup": {
     "menuLabel": "Restore backup",
@@ -299,7 +308,10 @@
     "renamePlaceholder": "Enter new name",
     "duplicateNameSuffix": "copy",
     "duplicateNotice": "Duplicated view: {{name}}",
-    "duplicateModalTitle": "Duplicate view: {{name}}"
+    "duplicateModalTitle": "Duplicate view: {{name}}",
+    "menuEditDefault": "Edit default view",
+    "menuResetDefault": "Reset default view",
+    "editDefaultModalTitle": "Edit default view"
   },
   "filterViewModals": {
     "saveButton": "Save",
@@ -343,7 +355,19 @@
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
     "sortDirectionAsc": "Ascending (A 閿熸枻鎷?Z)",
-    "sortDirectionDesc": "Descending (Z 閿熸枻鎷?A)"
+    "sortDirectionDesc": "Descending (Z 閿熸枻鎷?A)",
+    "iconLabel": "Icon",
+    "iconDescription": "Pick a Lucide icon (for example: table, filter).",
+    "iconPlaceholder": "Pick a Lucide icon (e.g. table, filter)",
+    "iconPickerTooltip": "Browse icon list",
+    "iconPreviewInvalid": "No icon named \"{{icon}}\"",
+    "iconPreviewEmpty": "No icon selected",
+    "iconPickerPlaceholder": "Search icons...",
+    "iconMatchesEmpty": "No icons match your search.",
+    "iconMatchAriaLabel": "Use icon {{icon}}",
+    "iconNavPrev": "Previous icons",
+    "iconNavNext": "Next icons",
+    "iconStatusEmpty": "No icon selected"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
@@ -428,9 +452,4 @@
     "createHelpFailed": "TileLineBase failed to create the help document. Check the console for details.",
     "openHelpFailed": "TileLineBase could not open the help document."
   }
-<<<<<<< Updated upstream
 }
-=======
-}
-
->>>>>>> Stashed changes

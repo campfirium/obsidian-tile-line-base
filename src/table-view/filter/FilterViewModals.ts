@@ -1,39 +1,66 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Setting, setIcon } from 'obsidian';
 import type { FilterCondition, FilterOperator, FilterRule, SortRule } from '../../types/filterView';
 import { t } from '../../i18n';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
 import { getStatusDisplayLabel } from './statusDefaults';
 import { getOperatorLabelKey, getOperatorsForOption, VALUELESS_OPERATORS } from './FilterOperatorUtils';
+import { FALLBACK_LUCIDE_ICON_IDS } from './IconCatalog';
+
+export interface FilterViewEditorResult {
+	name: string;
+	icon: string | null;
+	filterRule: FilterRule | null;
+	sortRules: SortRule[];
+}
 
 export interface FilterViewEditorModalOptions {
 	title: string;
 	columns: FilterColumnOption[];
 	initialName?: string;
+	initialIcon?: string | null;
 	initialRule?: FilterRule | null;
 	initialSortRules?: SortRule[] | null;
-	onSubmit: (name: string, rule: FilterRule, sortRules: SortRule[]) => void;
+	allowFilterEditing?: boolean;
+	allowSortEditing?: boolean;
+	onSubmit: (result: FilterViewEditorResult) => void;
 	onCancel: () => void;
 }
 
 export class FilterViewEditorModal extends Modal {
 	private readonly options: FilterViewEditorModalOptions;
 	private nameInputEl!: HTMLInputElement;
-	private conditionsContainer!: HTMLElement;
+	private iconInputEl!: HTMLInputElement;
+	private iconMatchesEl: HTMLElement | null = null;
+	private iconPage = 0;
+	private iconQueryNormalized = '';
+	private iconValue: string | null = null;
+	private iconSelectionId: string | null = null;
+	private iconOptions: string[] = [];
+	private readonly allowFilterEditing: boolean;
+	private readonly allowSortEditing: boolean;
+	private conditionsContainer: HTMLElement | null = null;
 	private combineModeSelect!: HTMLSelectElement;
 	private conditions: FilterCondition[] = [];
 	private combineMode: 'AND' | 'OR' = 'AND';
-	private sortContainer!: HTMLElement;
+	private sortContainer: HTMLElement | null = null;
 	private sortRules: SortRule[] = [];
 	private draggingSortIndex: number | null = null;
 
 	constructor(app: App, options: FilterViewEditorModalOptions) {
 		super(app);
 		this.options = options;
-		if (options.initialRule) {
+		this.allowFilterEditing = options.allowFilterEditing !== false;
+		this.allowSortEditing = options.allowSortEditing !== false;
+		this.iconValue = this.sanitizeIconId(options.initialIcon);
+		this.iconSelectionId = this.iconValue ? this.resolveCanonicalIconId(this.iconValue) : null;
+		if (this.iconSelectionId) {
+			this.iconValue = this.iconSelectionId;
+		}
+		if (options.initialRule && this.allowFilterEditing) {
 			this.conditions = [...options.initialRule.conditions];
 			this.combineMode = options.initialRule.combineMode;
 		}
-		if (options.initialSortRules && options.initialSortRules.length > 0) {
+		if (this.allowSortEditing && options.initialSortRules && options.initialSortRules.length > 0) {
 			this.sortRules = options.initialSortRules.map((rule) => ({
 				column: rule.column,
 				direction: rule.direction === 'desc' ? 'desc' : 'asc'
@@ -57,32 +84,70 @@ export class FilterViewEditorModal extends Modal {
 			this.nameInputEl = text.inputEl;
 		});
 
-		const modeSetting = new Setting(contentEl);
-		modeSetting.setName(t('filterViewModals.combineModeLabel'));
-		modeSetting.addDropdown((dropdown) => {
-			dropdown.addOption('AND', t('filterViewModals.combineModeOptionAll'));
-			dropdown.addOption('OR', t('filterViewModals.combineModeOptionAny'));
-			dropdown.setValue(this.combineMode);
-			dropdown.onChange((value) => {
-				this.combineMode = value as 'AND' | 'OR';
-			});
-			this.combineModeSelect = dropdown.selectEl;
+		const iconSetting = new Setting(contentEl);
+		iconSetting.setName('');
+		iconSetting.setDesc('');
+		if (iconSetting.descEl) {
+			iconSetting.descEl.remove();
+		}
+		if (iconSetting.nameEl) {
+			iconSetting.nameEl.remove();
+		}
+		iconSetting.settingEl.addClass('tlb-filter-view-icon-setting');
+		iconSetting.controlEl.empty();
+		iconSetting.controlEl.addClass('tlb-filter-view-icon-control');
+
+		const searchRow = iconSetting.controlEl.createDiv({ cls: 'tlb-filter-view-icon-header-row' });
+		searchRow.createSpan({
+			cls: 'tlb-filter-view-icon-title',
+			text: t('filterViewModals.iconLabel')
 		});
+		const searchField = searchRow.createDiv({ cls: 'tlb-filter-view-icon-search-field' });
+		const searchIcon = searchField.createSpan({ cls: 'tlb-filter-view-icon-search-field__icon' });
+		setIcon(searchIcon, 'search');
+		searchIcon.setAttribute('aria-hidden', 'true');
+		this.iconInputEl = searchField.createEl('input', {
+			type: 'text',
+			cls: 'tlb-filter-view-icon-search-field__input',
+			placeholder: t('filterViewModals.iconPlaceholder')
+		});
+		this.iconInputEl.value = this.iconValue ?? '';
+		this.iconInputEl.addEventListener('input', () => this.handleIconInput(this.iconInputEl!.value));
 
-		contentEl.createEl('h3', { text: t('filterViewModals.conditionsHeading') });
-		this.conditionsContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions' });
-		this.renderConditions();
+		this.iconMatchesEl = iconSetting.controlEl.createDiv({ cls: 'tlb-filter-view-icon-matches' });
 
-		const addConditionButton = contentEl.createEl('button', { text: t('filterViewModals.addConditionButton') });
-		addConditionButton.addClass('mod-cta');
-		addConditionButton.addEventListener('click', () => this.addCondition());
+		this.renderIconMatches(this.iconInputEl.value);
 
-		contentEl.createEl('h3', { text: t('filterViewModals.sortHeading') });
-		this.sortContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions tlb-filter-sort' });
-		this.renderSortRules();
+		if (this.allowFilterEditing) {
+			const modeSetting = new Setting(contentEl);
+			modeSetting.setName(t('filterViewModals.combineModeLabel'));
+			modeSetting.addDropdown((dropdown) => {
+				dropdown.addOption('AND', t('filterViewModals.combineModeOptionAll'));
+				dropdown.addOption('OR', t('filterViewModals.combineModeOptionAny'));
+				dropdown.setValue(this.combineMode);
+				dropdown.onChange((value) => {
+					this.combineMode = value as 'AND' | 'OR';
+				});
+				this.combineModeSelect = dropdown.selectEl;
+			});
 
-		const addSortButton = contentEl.createEl('button', { text: t('filterViewModals.addSortButton') });
-		addSortButton.addEventListener('click', () => this.addSortRule());
+			contentEl.createEl('h3', { text: t('filterViewModals.conditionsHeading') });
+			this.conditionsContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions' });
+			this.renderConditions();
+
+			const addConditionButton = contentEl.createEl('button', { text: t('filterViewModals.addConditionButton') });
+			addConditionButton.addClass('mod-cta');
+			addConditionButton.addEventListener('click', () => this.addCondition());
+		}
+
+		if (this.allowSortEditing) {
+			contentEl.createEl('h3', { text: t('filterViewModals.sortHeading') });
+			this.sortContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions tlb-filter-sort' });
+			this.renderSortRules();
+
+			const addSortButton = contentEl.createEl('button', { text: t('filterViewModals.addSortButton') });
+			addSortButton.addEventListener('click', () => this.addSortRule());
+		}
 
 		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
 		const saveButton = buttonContainer.createEl('button', { text: t('filterViewModals.saveButton') });
@@ -94,10 +159,14 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	private renderConditions(): void {
-		this.conditionsContainer.empty();
+		const container = this.conditionsContainer;
+		if (!container) {
+			return;
+		}
+		container.empty();
 
 		if (this.conditions.length === 0) {
-			this.conditionsContainer.createEl('p', {
+			container.createEl('p', {
 				text: t('filterViewModals.conditionsEmptyHint'),
 				cls: 'tlb-filter-empty-hint'
 			});
@@ -105,7 +174,7 @@ export class FilterViewEditorModal extends Modal {
 		}
 
 		this.conditions.forEach((condition, index) => {
-			const row = this.conditionsContainer.createDiv({ cls: 'tlb-filter-condition-row' });
+			const row = container.createDiv({ cls: 'tlb-filter-condition-row' });
 
 			const columnSelect = row.createEl('select', { cls: 'tlb-filter-select' });
 			const availableColumns = this.options.columns;
@@ -278,6 +347,9 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	private addCondition(): void {
+		if (!this.allowFilterEditing) {
+			return;
+		}
 		const firstOption = this.options.columns[0];
 		if (!firstOption) {
 			return;
@@ -297,17 +369,21 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	private renderSortRules(): void {
-		this.sortContainer.empty();
+		const container = this.sortContainer;
+		if (!container) {
+			return;
+		}
+		container.empty();
 		const availableColumns = this.options.columns.map((option) => option.name);
 		if (availableColumns.length === 0) {
-			this.sortContainer.createEl('p', {
+			container.createEl('p', {
 				text: t('filterViewModals.sortsNoColumnsHint'),
 				cls: 'tlb-filter-empty-hint'
 			});
 			return;
 		}
 		if (this.sortRules.length === 0) {
-			this.sortContainer.createEl('p', {
+			container.createEl('p', {
 				text: t('filterViewModals.sortsEmptyHint'),
 				cls: 'tlb-filter-empty-hint'
 			});
@@ -315,7 +391,7 @@ export class FilterViewEditorModal extends Modal {
 		}
 
 		this.sortRules.forEach((rule, index) => {
-			const row = this.sortContainer.createDiv({ cls: 'tlb-filter-condition-row tlb-sort-rule-row' });
+			const row = container.createDiv({ cls: 'tlb-filter-condition-row tlb-sort-rule-row' });
 			row.draggable = true;
 			row.setAttribute('data-index', String(index));
 			row.addEventListener('dragstart', (event) => this.onSortDragStart(event, index));
@@ -358,12 +434,186 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	private addSortRule(): void {
+		if (!this.allowSortEditing) {
+			return;
+		}
 		const firstColumn = this.options.columns[0]?.name;
 		if (!firstColumn) {
 			return;
 		}
 		this.sortRules.push({ column: firstColumn, direction: 'asc' });
 		this.renderSortRules();
+	}
+
+	private handleIconInput(value: string): void {
+		const sanitized = this.sanitizeIconId(value);
+		this.iconValue = sanitized;
+		if (!sanitized) {
+			this.iconSelectionId = null;
+		} else {
+			const canonical = this.resolveCanonicalIconId(sanitized);
+			if (canonical) {
+				this.iconSelectionId = canonical;
+				this.iconValue = canonical;
+				if (this.iconInputEl && this.iconInputEl.value !== canonical) {
+					this.iconInputEl.value = canonical;
+				}
+			} else {
+				this.iconSelectionId = null;
+			}
+		}
+		this.renderIconMatches(value);
+	}
+
+	private setIconValue(value: string | null): void {
+		const sanitized = this.sanitizeIconId(value);
+		const canonical = sanitized ? this.resolveCanonicalIconId(sanitized) : null;
+		this.iconSelectionId = canonical ?? null;
+		this.iconValue = canonical ?? sanitized;
+		if (this.iconInputEl) {
+			this.iconInputEl.value = this.iconValue ?? '';
+		}
+		this.renderIconMatches(this.iconInputEl?.value ?? '');
+	}
+
+	private ensureIconOptions(): string[] {
+		if (this.iconOptions.length === 0) {
+			this.iconOptions = collectLucideIconIds(this.app);
+		}
+		return this.iconOptions;
+	}
+
+	private renderIconMatches(query: string): boolean {
+		if (!this.iconMatchesEl) {
+			return false;
+		}
+		const icons = this.ensureIconOptions();
+		const normalizedQuery = normalizeIconQuery(query) ?? '';
+		if (normalizedQuery !== this.iconQueryNormalized) {
+			this.iconPage = 0;
+			this.iconQueryNormalized = normalizedQuery;
+		}
+
+		type IconMatch = { iconId: string; score: number };
+		const matches: IconMatch[] = [];
+		if (!normalizedQuery) {
+			icons.forEach((iconId, index) => {
+				matches.push({ iconId, score: index });
+			});
+		} else {
+			for (const iconId of icons) {
+				const normalizedIcon = normalizeIconQuery(iconId);
+				if (normalizedIcon === normalizedQuery) {
+					matches.push({ iconId, score: -100 });
+					continue;
+				}
+				const directIndex = normalizedIcon.indexOf(normalizedQuery);
+				if (directIndex !== -1) {
+					matches.push({ iconId, score: directIndex });
+					continue;
+				}
+				const fuzzyScore = getFuzzyMatchScore(normalizedIcon, normalizedQuery);
+				if (fuzzyScore !== null) {
+					matches.push({ iconId, score: 1000 + fuzzyScore });
+				}
+			}
+		}
+
+		matches.sort((a, b) => a.score - b.score || a.iconId.localeCompare(b.iconId));
+		const results = matches.map((match) => match.iconId);
+
+		this.iconMatchesEl.empty();
+		if (results.length === 0) {
+			this.iconMatchesEl.createSpan({
+				cls: 'tlb-filter-view-icon-matches__empty',
+				text: t('filterViewModals.iconMatchesEmpty')
+			});
+			return false;
+		}
+
+		const pageCount = Math.max(1, Math.ceil(results.length / ICON_MATCHES_PER_PAGE));
+		if (this.iconPage >= pageCount) {
+			this.iconPage = pageCount - 1;
+		}
+		const row = this.iconMatchesEl.createDiv({ cls: 'tlb-filter-view-icon-matches-row' });
+		const grid = row.createDiv({ cls: 'tlb-filter-view-icon-matches-grid' });
+		const start = this.iconPage * ICON_MATCHES_PER_PAGE;
+		const visible = results.slice(start, start + ICON_MATCHES_PER_PAGE);
+		const selectedNormalized = this.iconSelectionId ? normalizeIconQuery(this.iconSelectionId) : null;
+
+		visible.forEach((iconId) => {
+			const button = grid.createEl('button', {
+				type: 'button',
+				cls: 'tlb-filter-view-icon-match'
+			});
+			button.setAttribute('aria-label', t('filterViewModals.iconMatchAriaLabel', { icon: iconId }));
+			const iconSpan = button.createSpan({ cls: 'tlb-filter-view-icon-match__icon' });
+			setIcon(iconSpan, iconId);
+			if (selectedNormalized && normalizeIconQuery(iconId) === selectedNormalized) {
+				button.classList.add('is-active');
+			}
+			button.addEventListener('click', () => {
+				this.setIconValue(iconId);
+				this.iconInputEl?.focus();
+			});
+		});
+
+		if (pageCount > 1) {
+			const nav = row.createDiv({ cls: 'tlb-filter-view-icon-matches-nav' });
+			const prev = nav.createEl('button', {
+				type: 'button',
+				cls: 'tlb-filter-view-icon-nav'
+			});
+			prev.setAttribute('aria-label', t('filterViewModals.iconNavPrev'));
+			setIcon(prev, 'chevron-left');
+			prev.disabled = this.iconPage === 0;
+			prev.addEventListener('click', () => {
+				if (this.iconPage > 0) {
+					this.iconPage -= 1;
+					this.renderIconMatches(this.iconInputEl?.value ?? '');
+				}
+			});
+			const next = nav.createEl('button', {
+				type: 'button',
+				cls: 'tlb-filter-view-icon-nav'
+			});
+			next.setAttribute('aria-label', t('filterViewModals.iconNavNext'));
+			setIcon(next, 'chevron-right');
+			next.disabled = this.iconPage >= pageCount - 1;
+			next.addEventListener('click', () => {
+				if (this.iconPage < pageCount - 1) {
+					this.iconPage += 1;
+					this.renderIconMatches(this.iconInputEl?.value ?? '');
+				}
+			});
+		}
+
+		return true;
+	}
+
+	private resolveCanonicalIconId(value: string | null): string | null {
+		if (!value) {
+			return null;
+		}
+		const normalized = normalizeIconQuery(value);
+		if (!normalized) {
+			return null;
+		}
+		const icons = this.ensureIconOptions();
+		for (const iconId of icons) {
+			if (normalizeIconQuery(iconId) === normalized) {
+				return iconId;
+			}
+		}
+		return null;
+	}
+
+	private sanitizeIconId(value: unknown): string | null {
+		if (typeof value !== 'string') {
+			return null;
+		}
+		const trimmed = value.trim();
+		return trimmed.length > 0 ? trimmed : null;
 	}
 
 	private onSortDragStart(event: DragEvent, index: number): void {
@@ -417,17 +667,24 @@ export class FilterViewEditorModal extends Modal {
 		if (!name) {
 			return;
 		}
-		if (this.conditions.length === 0) {
-			return;
+		let filterRule: FilterRule | null = null;
+		if (this.allowFilterEditing) {
+			if (this.conditions.length === 0) {
+				return;
+			}
+			filterRule = {
+				conditions: this.conditions.map((condition) => ({ ...condition })),
+				combineMode: this.combineMode
+			};
 		}
 
-		const rule: FilterRule = {
-			conditions: this.conditions,
-			combineMode: this.combineMode
-		};
-
-		const sortRules = this.sortRules.map((rule) => ({ ...rule }));
-		this.options.onSubmit(name, rule, sortRules);
+		const sortRules = this.allowSortEditing ? this.sortRules.map((rule) => ({ ...rule })) : [];
+		this.options.onSubmit({
+			name,
+			icon: this.iconSelectionId,
+			filterRule,
+			sortRules
+		});
 		this.options.onCancel = () => undefined;
 		this.close();
 	}
@@ -444,6 +701,81 @@ export interface FilterViewNameModalOptions {
 	onSubmit: (value: string) => void;
 	onCancel: () => void;
 }
+
+function collectLucideIconIds(app: App): string[] {
+	const iconIds = new Set<string>();
+	try {
+		const manager = (app as unknown as { dom?: { appIconManager?: unknown } })?.dom?.appIconManager as {
+			getIconIds?: () => string[] | undefined;
+			icons?: Record<string, unknown>;
+		} | undefined;
+		const pushIds = (ids: Iterable<string> | undefined) => {
+			if (!ids) {
+				return;
+			}
+			for (const id of ids) {
+				if (typeof id === 'string') {
+					const trimmed = id.trim();
+					if (trimmed) {
+						iconIds.add(trimmed);
+					}
+				}
+			}
+		};
+		if (manager) {
+			const managerIds = manager.getIconIds?.();
+			pushIds(managerIds);
+			if (!managerIds && manager.icons) {
+				pushIds(Object.keys(manager.icons));
+			}
+		}
+		const appWindow = window as unknown as {
+			app?: { dom?: { appIconManager?: { getIconIds?: () => string[]; icons?: Record<string, unknown> } } };
+			getIconIds?: () => string[];
+		};
+		const globalManager = appWindow?.app?.dom?.appIconManager;
+		if (globalManager && globalManager !== manager) {
+			pushIds(globalManager.getIconIds?.());
+			if (globalManager.icons) {
+				pushIds(Object.keys(globalManager.icons));
+			}
+		}
+		if (typeof appWindow.getIconIds === 'function') {
+			pushIds(appWindow.getIconIds());
+		}
+	} catch {
+		// ignore
+	}
+
+	if (iconIds.size === 0) {
+		FALLBACK_LUCIDE_ICON_IDS.forEach((id) => iconIds.add(id));
+	}
+	return Array.from(iconIds).sort();
+}
+
+function normalizeIconQuery(value: string): string {
+	return value.trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+function getFuzzyMatchScore(value: string, query: string): number | null {
+	if (!query) {
+		return 0;
+	}
+	let score = 0;
+	let searchIndex = 0;
+	for (const char of query) {
+		const foundIndex = value.indexOf(char, searchIndex);
+		if (foundIndex === -1) {
+			return null;
+		}
+		score += foundIndex - searchIndex;
+		searchIndex = foundIndex + 1;
+	}
+	score += Math.max(0, value.length - searchIndex);
+	return score;
+}
+
+const ICON_MATCHES_PER_PAGE = 10;
 
 export class FilterViewNameModal extends Modal {
 	private readonly options: FilterViewNameModalOptions;

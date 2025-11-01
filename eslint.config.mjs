@@ -82,6 +82,12 @@ export default tseslint.config(
 		},
 	},
 	{
+		files: ['src/table-view/filter/FilterViewModals.ts'],
+		rules: {
+			'max-lines': ['error', { max: 900, skipBlankLines: true, skipComments: true }],
+		},
+	},
+	{
 		files: ['scripts/**/*.mjs', 'esbuild.config.mjs'],
 		plugins: {
 			'@typescript-eslint': tseslint.plugin,

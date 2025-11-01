@@ -12,6 +12,8 @@
     "redoTableHistory": "Redo table change",
     "openHelpDocument": "Open TileLineBase help document",
     "createTable": "Create TileLineBase table note",
+    "exportCsv": "Export current table as CSV",
+    "importCsv": "Import CSV into current table",
     "importCsvAsTable": "Import CSV as new table",
     "toggleTableView": "Toggle table view"
   },
@@ -294,6 +296,9 @@
     "settingsMenuAriaLabel": "Open table actions",
     "settingsMenuAutoWidthLabel": "Adjust column widths",
     "settingsMenuColumnLabel": "Column settings",
+    "settingsMenuExportCsvLabel": "Export table as CSV",
+    "settingsMenuImportCsvLabel": "Import CSV into table",
+    "settingsMenuImportCsvAsTableLabel": "Import CSV as new table",
     "settingsMenuHelpLabel": "Open help note",
     "unnamedViewLabel": "Unnamed view"
   },

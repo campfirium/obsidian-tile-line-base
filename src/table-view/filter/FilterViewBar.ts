@@ -114,6 +114,7 @@ export class FilterViewBar {
 		});
 		defaultButton.addEventListener('contextmenu', (event) => {
 			event.preventDefault();
+			event.stopPropagation();
 			this.options.callbacks.onDefaultViewMenu(defaultButton, event);
 		});
 		defaultButton.addEventListener('dblclick', (event) => {
@@ -183,6 +184,8 @@ export class FilterViewBar {
 			});
 
 			button.addEventListener('contextmenu', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
 				this.options.callbacks.onContextMenu(view, event);
 			});
 		}

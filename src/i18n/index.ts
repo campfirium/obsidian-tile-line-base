@@ -26,6 +26,7 @@ export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''>;
 
 const FALLBACK_LOCALE: LocaleCode = 'en';
 let activeLocale: LocaleCode = FALLBACK_LOCALE;
+const hasOwn = Object.prototype.hasOwnProperty;
 
 function getLocaleObject(locale: LocaleCode): LocaleTree {
 	return locales[locale];
@@ -50,8 +51,36 @@ function applyReplacements(template: string, replacements?: Record<string, strin
 	});
 }
 
+export function normalizeLocaleCode(localeLike: string | null | undefined): LocaleCode | null {
+	if (!localeLike) {
+		return null;
+	}
+	const normalized = localeLike.trim().toLowerCase().replace('_', '-');
+	if (!normalized) {
+		return null;
+	}
+	if (hasOwn.call(locales, normalized)) {
+		return normalized as LocaleCode;
+	}
+	const primary = normalized.split('-')[0];
+	if (hasOwn.call(locales, primary)) {
+		return primary as LocaleCode;
+	}
+	return null;
+}
+
+export function resolveLocaleCode(...candidates: Array<string | null | undefined>): LocaleCode {
+	for (const candidate of candidates) {
+		const normalized = normalizeLocaleCode(candidate);
+		if (normalized) {
+			return normalized;
+		}
+	}
+	return FALLBACK_LOCALE;
+}
+
 export function setLocale(locale: LocaleCode): void {
-	if (locale in locales) {
+	if (hasOwn.call(locales, locale)) {
 		activeLocale = locale;
 	}
 }

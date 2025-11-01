@@ -12,7 +12,8 @@
     "redoTableHistory": "重做表格更改",
     "openHelpDocument": "打开 TileLineBase 帮助文档",
     "createTable": "新建 TileLineBase 表格笔记",
-    "toggleTableView": "切换表格视图"
+    "toggleTableView": "切换表格视图",
+    "importCsvAsTable": "导入 CSV 并创建新表格"
   },
   "settings": {
     "generalHeading": "常规",

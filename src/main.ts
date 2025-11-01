@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableCreationController } from './table-view/TableCreationController';
@@ -9,6 +10,19 @@ import {
 	setGlobalLogLevel,
 	subscribeLoggingConfig
 } from './utils/logger';
+=======
+﻿import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+import { TableView, TABLE_VIEW_TYPE } from './TableView';
+import { TableCreationController } from './table-view/TableCreationController';
+import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
+import {
+	applyLoggingConfig,
+	getLogger,
+	installLoggerConsoleBridge,
+	setGlobalLogLevel,
+	subscribeLoggingConfig
+} from './utils/logger';
+>>>>>>> Stashed changes
 import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
 import type { FileTagGroupState } from './types/tagGroup';
@@ -553,3 +567,8 @@ export default class TileLineBasePlugin extends Plugin {
 
 }
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes

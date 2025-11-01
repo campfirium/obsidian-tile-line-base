@@ -1,4 +1,4 @@
-{
+﻿{
   "tableView": {
     "displayName": "TileLineBase Table",
     "titleWithFile": "{{name}} (Table View)"
@@ -10,10 +10,15 @@
   "commands": {
     "undoTableHistory": "Undo last table change",
     "redoTableHistory": "Redo table change",
+<<<<<<< Updated upstream
     "openHelpDocument": "Open table help document",
     "createTable": "Create table note",
     "toggleTableView": "Toggle table view"
   },
+=======
+    "openHelpDocument": "Open TileLineBase help document",
+    "createTable": "Create TileLineBase table note",\r\n    "importCsvAsTable": "Import CSV as new table"\r\n  },
+>>>>>>> Stashed changes
   "settings": {
     "generalHeading": "General",
     "hideRightSidebarLabel": "Hide right sidebar in table view",
@@ -104,7 +109,7 @@
     "mdyLong": "Month Day, Year (January 31, 2024)",
     "dmyLong": "Day Month Year (31 January 2024)",
     "monthDay": "Month Day (Jan 31)",
-    "chineseLong": "Chinese long form (2024年1月31日)"
+    "chineseLong": "Chinese long form (2024骞?鏈?1鏃?"
   },
   "columnInteraction": {
     "menuEdit": "Edit column",
@@ -337,8 +342,8 @@
     "addSortButton": "+ Add sort",
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
-    "sortDirectionAsc": "Ascending (A 锟斤拷 Z)",
-    "sortDirectionDesc": "Descending (Z 锟斤拷 A)"
+    "sortDirectionAsc": "Ascending (A 閿熸枻鎷?Z)",
+    "sortDirectionDesc": "Descending (Z 閿熸枻鎷?A)"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
@@ -419,8 +424,13 @@
   },
   "onboarding": {
     "helpFileName": "TileLineBase Getting Started",
-    "helpFileContent": "## TileLineBase Template\nFeature: Step 0: What you get\nDescription: Use the first row as the column template; the sample rows below show you what the table can display.\n\n## TileLineBase Open\nFeature: Step 1: Open the table\nDescription: Right-click a note or use the command palette to switch from Markdown to the TileLineBase table view.\n\n## TileLineBase Columns\nFeature: Step 2: Read the headings\nDescription: The very first H2 heading defines the column names; every following H2 becomes a data row.\n\n## TileLineBase Fill\nFeature: Step 3: Enter values\nDescription: Click a cell to start typing, press Enter to confirm; edits are saved back to the note automatically.\n\n## TileLineBase Paste\nFeature: Step 4: Paste from sheets\nDescription: Copy rows from Excel or another table and paste—values will drop into matching columns.\n\n## TileLineBase Filter\nFeature: Step 5: Filter & sort\nDescription: Use the header icons to add filters or order the list; save them as named views for quick reuse.\n\n## TileLineBase Group\nFeature: Step 6: Organise views\nDescription: Group frequently used filter views so teammates can jump straight to the right perspective.\n\n## TileLineBase Export\nFeature: Step 7: Turn rows into notes\nDescription: Select rows and export or promote them—new notes are created with backlinks inserted automatically.\n\n## TileLineBase Shortcuts\nFeature: Step 8: Keep it close\nDescription: Bind a hotkey to reopen the table and pin this help note to your sidebar when you need a refresher.\n",
+    "helpFileContent": "## TileLineBase Template\nFeature: Step 0: What you get\nDescription: Use the first row as the column template; the sample rows below show you what the table can display.\n\n## TileLineBase Open\nFeature: Step 1: Open the table\nDescription: Right-click a note or use the command palette to switch from Markdown to the TileLineBase table view.\n\n## TileLineBase Columns\nFeature: Step 2: Read the headings\nDescription: The very first H2 heading defines the column names; every following H2 becomes a data row.\n\n## TileLineBase Fill\nFeature: Step 3: Enter values\nDescription: Click a cell to start typing, press Enter to confirm; edits are saved back to the note automatically.\n\n## TileLineBase Paste\nFeature: Step 4: Paste from sheets\nDescription: Copy rows from Excel or another table and paste鈥攙alues will drop into matching columns.\n\n## TileLineBase Filter\nFeature: Step 5: Filter & sort\nDescription: Use the header icons to add filters or order the list; save them as named views for quick reuse.\n\n## TileLineBase Group\nFeature: Step 6: Organise views\nDescription: Group frequently used filter views so teammates can jump straight to the right perspective.\n\n## TileLineBase Export\nFeature: Step 7: Turn rows into notes\nDescription: Select rows and export or promote them鈥攏ew notes are created with backlinks inserted automatically.\n\n## TileLineBase Shortcuts\nFeature: Step 8: Keep it close\nDescription: Bind a hotkey to reopen the table and pin this help note to your sidebar when you need a refresher.\n",
     "createHelpFailed": "TileLineBase failed to create the help document. Check the console for details.",
     "openHelpFailed": "TileLineBase could not open the help document."
   }
+<<<<<<< Updated upstream
 }
+=======
+}
+
+>>>>>>> Stashed changes

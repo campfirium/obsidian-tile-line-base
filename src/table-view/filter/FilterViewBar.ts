@@ -1,4 +1,4 @@
-import { Menu, setIcon } from 'obsidian';
+﻿import { Menu, setIcon } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
 import { t } from '../../i18n';
 import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../renderers/StatusCellRenderer';

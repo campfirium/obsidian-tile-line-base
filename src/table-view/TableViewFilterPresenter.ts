@@ -3,97 +3,65 @@ import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterV
 import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
 import { openBackupRestoreModal } from './BackupRestoreModal';
-
+import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './TableCsvController';
 import { getPluginContext } from '../pluginContext';
-
-
 
 export type FilterColumnKind = 'status' | 'date' | 'time' | 'text';
 
-
-
 export interface FilterColumnOption {
-
 	name: string;
-
 	kind: FilterColumnKind;
-
 	allowNumericOperators?: boolean;
-
 	statusValues?: string[];
-
 }
 
-
-
 export function renderFilterViewControls(view: TableView, container: Element): void {
-
 	view.globalQuickFilterController.cleanup();
 
-
-
 	view.filterViewBar = new FilterViewBar({
-
 		container,
-
 		renderQuickFilter: (searchContainer) => view.globalQuickFilterController.render(searchContainer),
-
 		callbacks: {
-
 			onCreate: () => {
-
 				void view.filterViewController.promptCreateFilterView();
-
 			},
-
 			onActivate: (viewId) => {
-
 				view.filterViewController.activateFilterView(viewId);
-
 			},
-
 			onContextMenu: (filterView, event) => {
-
 				view.filterViewController.openFilterViewMenu(filterView, event);
-
 			},
-
 			onReorder: (draggedId, targetId) => {
-
 				view.filterViewController.reorderFilterViews(draggedId, targetId);
-
 			},
-
 			onOpenTagGroupMenu: (button) => {
-
 				view.tagGroupController?.openTagGroupMenu(button);
-
 			},
-
 			onOpenTableCreation: (button) => {
-
 				view.tableCreationController.openCreationModal(button);
-
 			},
-
 			onOpenColumnSettings: (button) => {
-
 				view.columnInteractionController.openColumnSettingsMenu(button);
-
 			},
-
+			onExportCsv: (_button) => {
+				void exportTableToCsv(view);
+			},
+			onImportCsv: (_button) => {
+				void importTableFromCsv(view);
+			},
+			onImportCsvAsTable: (button) => {
+				importCsvAsNewTable(view.app, {
+					triggerElement: button,
+					referenceFile: view.file ?? null,
+					openAfterCreate: true
+				});
+			},
 			onAdjustColumnWidths: () => {
-
 				const adapter = view.gridAdapter;
-
 				if (adapter && typeof adapter.fillColumnsToMinimumWidth === 'function') {
-
 					adapter.fillColumnsToMinimumWidth();
-
 				}
-
 			},
-
 			onOpenBackupRestore: () => {
 
 				void openBackupRestoreModal(view);

@@ -14,6 +14,9 @@ export interface FilterViewBarCallbacks {
 	onOpenTableCreation(button: HTMLElement): void;
 	onOpenColumnSettings(button: HTMLElement): void;
 	onOpenBackupRestore(button: HTMLElement): void;
+	onExportCsv(button: HTMLElement): void;
+	onImportCsv(button: HTMLElement): void;
+	onImportCsvAsTable(button: HTMLElement): void;
 	onAdjustColumnWidths(): void;
 	onOpenHelp(): void;
 	onDefaultViewMenu(button: HTMLElement, event?: MouseEvent): void;
@@ -227,6 +230,30 @@ export class FilterViewBar {
 				.setIcon('table')
 				.onClick(() => {
 					this.options.callbacks.onOpenTableCreation(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuExportCsvLabel'))
+				.setIcon('download')
+				.onClick(() => {
+					this.options.callbacks.onExportCsv(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuImportCsvLabel'))
+				.setIcon('upload')
+				.onClick(() => {
+					this.options.callbacks.onImportCsv(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuImportCsvAsTableLabel'))
+				.setIcon('file-plus')
+				.onClick(() => {
+					this.options.callbacks.onImportCsvAsTable(this.settingsButtonEl);
 				});
 		});
 		menu.addItem((item) => {

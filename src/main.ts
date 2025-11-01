@@ -1,6 +1,7 @@
 import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableCreationController } from './table-view/TableCreationController';
+import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
 import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
 import {
 	applyLoggingConfig,
@@ -261,6 +262,37 @@ export default class TileLineBasePlugin extends Plugin {
 					return;
 				}
 				this.getCommandTableCreationController().openCreationModal(null);
+			}
+		});
+		this.addCommand({
+			id: 'table-export-csv',
+			name: t('commands.exportCsv'),
+			checkCallback: (checking: boolean) => {
+				const view = this.getActiveTableView();
+				if (checking) return Boolean(view);
+				if (!view) return false;
+				void exportTableToCsv(view);
+				return true;
+			}
+		});
+		this.addCommand({
+			id: 'table-import-csv',
+			name: t('commands.importCsv'),
+			checkCallback: (checking: boolean) => {
+				const view = this.getActiveTableView();
+				if (checking) return Boolean(view);
+				if (!view) return false;
+				void importTableFromCsv(view);
+				return true;
+			}
+		});
+		this.addCommand({
+			id: 'table-import-csv-as-table',
+			name: t('commands.importCsvAsTable'),
+			callback: () => {
+				importCsvAsNewTable(this.app, {
+					referenceFile: this.app.workspace.getActiveFile() ?? null
+				});
 			}
 		});
 

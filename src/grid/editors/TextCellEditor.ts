@@ -1,57 +1,106 @@
 /**
- * TextCellEditor - 自定义文本编辑器
+ * TextCellEditor - custom AG Grid editor used together with the CompositionProxy.
  *
- * 配合 CompositionProxy（合成代理层）使用：
- * - 首字符由 CompositionProxy 捕获后写�?
- * - 编辑器只负责显示和后续编�?
- * - 不再使用 params.eventKey �?params.charPress（已废弃�?
+ * Notes:
+ * - CompositionProxy captures and writes the first keystroke.
+ * - This editor renders the textarea and handles subsequent editing.
+ * - params.eventKey / params.charPress remain unused by design.
  *
- * 参考文档：
- * - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记�?.md
- * - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记�?分析.md
- *
- * 注意：使用工厂函数而非类，以支�?Obsidian pop-out 窗口（避免跨窗口原型链问题）
+ * Reference docs: docs/specs/251018 AG-Grid IME conflict investigation (parts 1 & 2).
+ * The factory wrapper protects against prototype issues in Obsidian pop-out windows.
  */
 
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
 
-/**
- * 创建 TextCellEditor 的工厂函�?
- *
- * 使用纯对象而不是类实例，避免跨窗口原型链问�?
- * 这样�?Obsidian pop-out 窗口中也能正常工�?
- */
+const MIN_POPUP_WIDTH = 420;
+const MIN_CELL_WIDTH = 160;
+const VIEWPORT_MARGIN = 8;
+
+function resolvePopupWidth(columnWidth: number, viewportWidth: number): number {
+	const viewportLimit = Math.max(MIN_CELL_WIDTH, viewportWidth - VIEWPORT_MARGIN * 2);
+	const desired = Math.max(MIN_POPUP_WIDTH, columnWidth);
+	return Math.min(desired, viewportLimit);
+}
+
 export function createTextCellEditor() {
 	return class implements ICellEditorComp {
-		private eInput!: HTMLInputElement;
+		private wrapper!: HTMLElement;
+		private eInput!: HTMLTextAreaElement;
 		private params!: ICellEditorParams;
 		private initialValue = '';
+		private minHeight = 40;
+		private columnWidth = MIN_CELL_WIDTH;
+		private usePopup = false;
+		private cleanupTasks: Array<() => void> = [];
+		private wrapperChrome = 0;
+		private repositionHandler: (() => void) | null = null;
 
 		init(params: ICellEditorParams): void {
 			this.params = params;
 
-			// �?AG Grid 的单元格元素获取正确�?document（支�?pop-out 窗口�?
-			const doc = (params.eGridCell?.ownerDocument || document);
+			const doc = params.eGridCell?.ownerDocument || document;
+			const cellRect = params.eGridCell?.getBoundingClientRect();
+			this.minHeight = Math.max(36, cellRect?.height ?? 36);
+			const rawWidth = Math.max(MIN_CELL_WIDTH, Math.round(cellRect?.width ?? MIN_CELL_WIDTH));
+			this.columnWidth = rawWidth;
 
-			// 创建输入�?
-			this.eInput = doc.createElement('input');
-			this.eInput.type = 'text';
-			this.eInput.classList.add('ag-cell-edit-input', 'tlb-text-editor-input');
+			const anchor = this.findContentElement(params.eGridCell ?? null);
+			if (anchor) {
+				const overflowed =
+					Math.ceil(anchor.scrollWidth) > Math.floor(anchor.clientWidth + 1) ||
+					Math.ceil(anchor.scrollHeight) > Math.floor(anchor.clientHeight + 1);
+				this.usePopup = overflowed;
+			} else {
+				this.usePopup = false;
+			}
 
-			// 只使用原值，不使�?params.eventKey/charPress
-			// 首字符会�?AgGridAdapter 通过 CompositionProxy 捕获后写�?
+			this.eInput = doc.createElement('textarea');
+			this.eInput.classList.add('ag-cell-edit-input');
+			this.eInput.setAttribute('rows', '1');
+			this.eInput.style.width = '100%';
+			this.eInput.style.minHeight = '0';
+			this.eInput.style.boxSizing = 'border-box';
+			this.eInput.style.resize = 'none';
+			this.eInput.style.overflowY = 'hidden';
+
+			if (this.usePopup) {
+				const wrapper = doc.createElement('div');
+				wrapper.classList.add('tlb-text-editor-popup');
+				wrapper.style.position = 'fixed';
+				wrapper.style.left = '0px';
+				wrapper.style.top = '0px';
+				wrapper.style.pointerEvents = 'auto';
+				wrapper.appendChild(this.eInput);
+				this.wrapper = wrapper;
+				const win = doc.defaultView ?? window;
+				const initialWidth = resolvePopupWidth(this.columnWidth, win.innerWidth);
+				this.applyWrapperSize(this.minHeight, initialWidth);
+			} else {
+				this.eInput.style.height = '100%';
+				this.wrapper = this.eInput;
+			}
+
 			this.initialValue = String(params.value ?? '');
 			this.eInput.value = this.initialValue;
 
-			// 添加键盘事件处理
+			this.eInput.addEventListener('input', () => {
+				if (!this.usePopup) {
+					return;
+				}
+				this.adjustHeight();
+				this.positionPopup();
+			});
+
 			this.eInput.addEventListener('keydown', (event) => {
-				// Enter �?Tab 提交编辑
-				if (event.key === 'Enter' || event.key === 'Tab') {
+				if (event.key === 'Enter' && !event.shiftKey) {
+					event.preventDefault();
 					event.stopPropagation();
 					params.stopEditing(false);
-				}
-				// Escape 取消编辑
-				else if (event.key === 'Escape') {
+				} else if (event.key === 'Tab') {
+					event.preventDefault();
+					event.stopPropagation();
+					params.stopEditing(false);
+				} else if (event.key === 'Escape') {
 					event.stopPropagation();
 					params.stopEditing(true);
 				}
@@ -59,18 +108,47 @@ export function createTextCellEditor() {
 		}
 
 		getGui(): HTMLElement {
-			return this.eInput;
+			return this.wrapper;
 		}
 
 		afterGuiAttached(): void {
-			// 聚焦输入�?
 			this.eInput.focus();
-
-			// 如果是双击启动（有原值），全�?
-			// 如果是按键启动（原值为空），光标在开头（等待 AgGridAdapter 写入文本�?
 			if (this.initialValue) {
 				this.eInput.select();
 			}
+
+			if (!this.usePopup) {
+				return;
+			}
+
+			this.measureWrapperChrome();
+			this.adjustHeight();
+			this.positionPopup();
+
+			const doc = this.eInput.ownerDocument ?? document;
+			const win = doc.defaultView ?? window;
+			const handler = () => {
+				this.measureWrapperChrome();
+				this.adjustHeight();
+				this.positionPopup();
+			};
+			this.repositionHandler = handler;
+			win.addEventListener('resize', handler);
+			win.addEventListener('scroll', handler, true);
+			this.cleanupTasks.push(() => {
+				win.removeEventListener('resize', handler);
+				win.removeEventListener('scroll', handler, true);
+				this.repositionHandler = null;
+			});
+
+			win.requestAnimationFrame(() => {
+				if (!this.usePopup) {
+					return;
+				}
+				this.measureWrapperChrome();
+				this.adjustHeight();
+				this.positionPopup();
+			});
 		}
 
 		getValue(): string {
@@ -78,13 +156,148 @@ export function createTextCellEditor() {
 		}
 
 		destroy(): void {
-			// 清理资源
+			for (const cleanup of this.cleanupTasks) {
+				cleanup();
+			}
+			this.cleanupTasks = [];
+			this.repositionHandler = null;
 		}
 
 		isPopup(): boolean {
-			return false;
+			return this.usePopup;
 		}
+
+		getPopupPosition(): 'over' | 'under' | undefined {
+			return this.usePopup ? 'over' : undefined;
+		}
+
+		private applyWrapperSize(height: number, width: number): void {
+			if (!this.usePopup) {
+				return;
+			}
+			this.wrapper.style.minHeight = `${height}px`;
+			this.wrapper.style.height = `${height}px`;
+			this.wrapper.style.minWidth = `${width}px`;
+			this.wrapper.style.maxWidth = `${width}px`;
+			this.wrapper.style.width = `${width}px`;
+		}
+
+		private adjustHeight(): void {
+			if (!this.usePopup) {
+				return;
+			}
+			const textarea = this.eInput;
+			const doc = textarea.ownerDocument ?? document;
+			const win = doc.defaultView ?? window;
+			const cellRect = this.params?.eGridCell?.getBoundingClientRect();
+
+			textarea.style.height = 'auto';
+			textarea.style.overflowY = 'hidden';
+
+			const scrollHeight = textarea.scrollHeight;
+			let targetHeight = Math.max(this.minHeight, scrollHeight);
+
+			if (cellRect && win) {
+				const spaceBelow = Math.floor(win.innerHeight - cellRect.top - VIEWPORT_MARGIN);
+				const spaceAbove = Math.floor(cellRect.bottom - VIEWPORT_MARGIN);
+				const viewportCap = Math.floor(win.innerHeight - VIEWPORT_MARGIN * 2);
+				const limit = Math.max(this.minHeight, Math.min(viewportCap, Math.max(spaceBelow, spaceAbove)));
+				if (scrollHeight > limit) {
+					targetHeight = limit;
+					textarea.style.overflowY = 'auto';
+				}
+			}
+
+			textarea.style.height = `${targetHeight}px`;
+			const wrapperHeight = targetHeight + this.wrapperChrome;
+			this.wrapper.style.height = `${wrapperHeight}px`;
+			if (wrapperHeight > this.minHeight) {
+				this.wrapper.style.minHeight = `${wrapperHeight}px`;
+			}
+		}
+
+		private positionPopup(): void {
+			if (!this.usePopup) {
+				return;
+			}
+
+			const cellRect = this.params?.eGridCell?.getBoundingClientRect();
+			if (!cellRect) {
+				return;
+			}
+
+			const doc = this.wrapper.ownerDocument ?? document;
+			const win = doc.defaultView ?? window;
+			const viewportWidth = win.innerWidth;
+			const viewportHeight = win.innerHeight;
+
+			const desiredWidth = resolvePopupWidth(this.columnWidth, viewportWidth);
+
+			if (Math.abs((this.wrapper.offsetWidth || 0) - desiredWidth) > 0.5) {
+				this.applyWrapperSize(this.wrapper.offsetHeight || this.minHeight, desiredWidth);
+			}
+
+			const wrapperWidth = this.wrapper.offsetWidth || desiredWidth;
+			const wrapperHeight = this.wrapper.offsetHeight || this.minHeight + this.wrapperChrome;
+
+			let left = Math.round(cellRect.left);
+			let top = Math.round(cellRect.top);
+
+			if (left + wrapperWidth > viewportWidth - VIEWPORT_MARGIN) {
+				left = Math.max(VIEWPORT_MARGIN, viewportWidth - wrapperWidth - VIEWPORT_MARGIN);
+			}
+			if (left < VIEWPORT_MARGIN) {
+				left = VIEWPORT_MARGIN;
+			}
+
+			const spaceBelow = viewportHeight - cellRect.bottom;
+			if (top + wrapperHeight + VIEWPORT_MARGIN > viewportHeight && spaceBelow < wrapperHeight) {
+				const candidateTop = Math.round(cellRect.bottom - wrapperHeight);
+				top = Math.max(VIEWPORT_MARGIN, candidateTop);
+			}
+			if (top + wrapperHeight > viewportHeight - VIEWPORT_MARGIN) {
+				top = Math.max(VIEWPORT_MARGIN, viewportHeight - wrapperHeight - VIEWPORT_MARGIN);
+			}
+			if (top < VIEWPORT_MARGIN) {
+				top = VIEWPORT_MARGIN;
+			}
+
+			this.wrapper.style.left = `${left}px`;
+			this.wrapper.style.top = `${top}px`;
+		}
+
+		private measureWrapperChrome(): void {
+			if (!this.usePopup) {
+				this.wrapperChrome = 0;
+				return;
+			}
+			const doc = this.wrapper.ownerDocument ?? document;
+			const win = doc.defaultView ?? window;
+			const styles = win.getComputedStyle(this.wrapper);
+			const parseLength = (value: string | null) => {
+				if (!value) {
+					return 0;
+				}
+				const parsed = parseFloat(value);
+				return Number.isFinite(parsed) ? parsed : 0;
+			};
+			this.wrapperChrome =
+				parseLength(styles.paddingTop) +
+				parseLength(styles.paddingBottom) +
+				parseLength(styles.borderTopWidth) +
+				parseLength(styles.borderBottomWidth);
+		}
+
+		private findContentElement(cell: HTMLElement | null): HTMLElement | null {
+			if (!cell) {
+				return null;
+			}
+			return (
+				cell.querySelector<HTMLElement>('.tlb-link-cell__text') ??
+				cell.querySelector<HTMLElement>('.ag-cell-value') ??
+				null
+			);
+		}
+
 	};
 }
-
-

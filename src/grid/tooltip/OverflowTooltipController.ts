@@ -1,4 +1,4 @@
-import { hideOverflowTooltip, showOverflowTooltip } from '../../utils/OverflowTooltip';
+﻿import { hideOverflowTooltip, showOverflowTooltip } from '../../utils/OverflowTooltip';
 
 type EventTargetElement = HTMLElement & { closest(selector: string): HTMLElement | null };
 
@@ -103,7 +103,8 @@ export class OverflowTooltipController {
 		}
 		this.currentCell = cell;
 		this.currentAnchor = anchor;
-		showOverflowTooltip(anchor, text);
+		const columnWidth = cell.getBoundingClientRect().width;
+		showOverflowTooltip(anchor, text, { columnWidth });
 	}
 
 	private handleLeave(_cell: HTMLElement): void {
@@ -130,7 +131,9 @@ export class OverflowTooltipController {
 	}
 
 	private isOverflowing(element: HTMLElement): boolean {
-		return element.scrollWidth > element.clientWidth + 1;
+		const widthOverflow = Math.ceil(element.scrollWidth) > Math.floor(element.clientWidth + 1);
+		const heightOverflow = Math.ceil(element.scrollHeight) > Math.floor(element.clientHeight + 1);
+		return widthOverflow || heightOverflow;
 	}
 
 	private hideCurrentTooltip(): void {

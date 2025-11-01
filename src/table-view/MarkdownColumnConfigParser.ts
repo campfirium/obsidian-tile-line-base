@@ -1,5 +1,5 @@
 import type { ColumnConfig } from './MarkdownBlockParser';
-import { normalizeDateFormatPreset } from '../utils/datetime';
+import { normalizeDateFormatPreset, normalizeTimeFormatPreset } from '../utils/datetime';
 import { normalizeFormulaFormatPreset } from './formulaFormatPresets';
 
 
@@ -82,6 +82,8 @@ function applyColumnConfigSegment(config: ColumnConfig, segment: string): void {
 			const normalizedType = value.trim().toLowerCase();
 			if (normalizedType === 'date') {
 				config.type = 'date';
+			} else if (normalizedType === 'time') {
+				config.type = 'time';
 			} else if (normalizedType === 'text') {
 				config.type = 'text';
 			}
@@ -90,6 +92,11 @@ function applyColumnConfigSegment(config: ColumnConfig, segment: string): void {
 		case 'dateFormat': {
 			const preset = normalizeDateFormatPreset(value);
 			config.dateFormat = preset;
+			break;
+		}
+		case 'timeFormat': {
+			const preset = normalizeTimeFormatPreset(value);
+			config.timeFormat = preset;
 			break;
 		}
 		case 'format': {
@@ -123,6 +130,7 @@ function isConfigSegment(segment: string): boolean {
 		key === 'formula' ||
 		key === 'type' ||
 		key === 'dateformat' ||
+		key === 'timeformat' ||
 		key === 'format'
 	);
 }

@@ -39,7 +39,7 @@ export function getOperatorsForOption(option: FilterColumnOption): FilterOperato
 	if (option.kind === 'status') {
 		return [...STATUS_OPERATORS];
 	}
-	if (option.kind === 'date') {
+	if (option.kind === 'date' || option.kind === 'time') {
 		return [...DATE_OPERATORS];
 	}
 	const result: FilterOperator[] = [...TEXT_OPERATORS];
@@ -54,7 +54,7 @@ export function getOperatorsForOption(option: FilterColumnOption): FilterOperato
 }
 
 export function getOperatorLabelKey(option: FilterColumnOption, operator: FilterOperator): TranslationKey | undefined {
-	if (option.kind === 'date') {
+	if (option.kind === 'date' || option.kind === 'time') {
 		const dateKey = DATE_OPERATOR_LABELS[operator];
 		if (dateKey) {
 			return dateKey;

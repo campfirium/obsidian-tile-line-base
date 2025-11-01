@@ -1,13 +1,14 @@
 import { App, Modal, Setting } from 'obsidian';
-import { normalizeDateInput } from '../utils/datetime';
+import { normalizeDateInput, normalizeTimeInput } from '../utils/datetime';
 import { t } from '../i18n';
 
-export type BulkFillColumnType = 'text' | 'date';
+export type BulkFillColumnType = 'text' | 'date' | 'time';
 
 interface GridBulkFillModalOptions {
 	columnName: string;
 	columnType: BulkFillColumnType;
 	dateFormat?: string | null;
+	timeFormat?: string | null;
 	initialValue: string;
 	onSubmit: (value: string) => void;
 }
@@ -33,10 +34,12 @@ export class GridBulkFillModal extends Modal {
 
 		const valueSetting = new Setting(contentEl).setName(t('gridFillModal.valueLabel'));
 		this.inputEl = valueSetting.controlEl.createEl('input', { type: 'text' });
-		this.inputEl.placeholder =
-			this.options.columnType === 'date'
-				? t('gridFillModal.datePlaceholder')
+		const placeholder = this.options.columnType === 'date'
+			? t('gridFillModal.datePlaceholder')
+			: this.options.columnType === 'time'
+				? t('gridFillModal.timePlaceholder')
 				: t('gridFillModal.textPlaceholder');
+		this.inputEl.placeholder = placeholder;
 		this.inputEl.value = this.currentValue;
 		this.inputEl.addEventListener('input', () => {
 			this.currentValue = this.inputEl?.value ?? '';
@@ -53,6 +56,12 @@ export class GridBulkFillModal extends Modal {
 			valueSetting.descEl.setText(
 				t('gridFillModal.dateHint', {
 					format: this.options.dateFormat
+				})
+			);
+		} else if (this.options.columnType === 'time' && this.options.timeFormat) {
+			valueSetting.descEl.setText(
+				t('gridFillModal.timeHint', {
+					format: this.options.timeFormat
 				})
 			);
 		}
@@ -102,6 +111,20 @@ export class GridBulkFillModal extends Modal {
 			this.submitAndClose(normalized);
 			return;
 		}
+		if (this.options.columnType === 'time') {
+			const trimmed = raw.trim();
+			if (trimmed.length === 0) {
+				this.submitAndClose('');
+				return;
+			}
+			const normalized = normalizeTimeInput(trimmed);
+			if (!this.isIsoTime(normalized)) {
+				this.showError(t('gridFillModal.invalidTime'));
+				return;
+			}
+			this.submitAndClose(normalized);
+			return;
+		}
 		this.submitAndClose(raw);
 	}
 
@@ -125,5 +148,9 @@ export class GridBulkFillModal extends Modal {
 
 	private isIsoDate(value: string): boolean {
 		return /^\d{4}-\d{2}-\d{2}$/.test(value);
+	}
+
+	private isIsoTime(value: string): boolean {
+		return /^\d{2}:\d{2}:\d{2}$/.test(value);
 	}
 }

@@ -240,10 +240,13 @@ export class ColumnInteractionController {
 			? 'formula'
 			: existing?.type === 'date'
 				? 'date'
-				: 'text';
+				: existing?.type === 'time'
+					? 'time'
+					: 'text';
 		const initialFormula = existing?.formula ?? '';
 		const initialFormulaFormat = existing?.formulaFormat;
 		const initialDateFormat = existing?.type === 'date' ? existing.dateFormat ?? 'iso' : undefined;
+		const initialTimeFormat = existing?.type === 'time' ? existing.timeFormat ?? 'hh_mm' : undefined;
 		const availableFields = schema.columnNames.filter((name) => name && !isReservedColumnId(name));
 		const validateName = (name: string): string | null => {
 			const trimmed = name.trim();
@@ -267,6 +270,7 @@ export class ColumnInteractionController {
 			initialFormula,
 			initialFormulaFormat,
 			initialDateFormat,
+			initialTimeFormat,
 			validateName,
 			availableFields,
 			onSubmit: (result) => {
@@ -317,6 +321,7 @@ export class ColumnInteractionController {
 			}
 			delete config.type;
 			delete config.dateFormat;
+			delete config.timeFormat;
 		} else if (result.type === 'date') {
 			delete config.formula;
 			delete config.formulaFormat;
@@ -327,11 +332,28 @@ export class ColumnInteractionController {
 			} else {
 				config.dateFormat = preset;
 			}
+			delete config.timeFormat;
+		} else if (result.type === 'time') {
+			delete config.formula;
+			delete config.formulaFormat;
+			delete config.dateFormat;
+			config.type = 'time';
+			const preset = result.timeFormat ?? 'hh_mm';
+			if (preset === 'hh_mm') {
+				delete config.timeFormat;
+			} else {
+				config.timeFormat = preset;
+			}
 		} else {
 			delete config.formula;
 			delete config.formulaFormat;
 			delete config.dateFormat;
-			if (previousConfig?.type === 'date' || previousConfig?.type === 'text') {
+			delete config.timeFormat;
+			if (
+				previousConfig?.type === 'date' ||
+				previousConfig?.type === 'time' ||
+				previousConfig?.type === 'text'
+			) {
 				config.type = 'text';
 			} else {
 				delete config.type;

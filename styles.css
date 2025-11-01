@@ -1035,7 +1035,7 @@
   color: var(--text-normal, #2e3338);
 }
 
-.tlb-date-editor {
+.tlb-date-editor, .tlb-time-editor {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
@@ -1051,17 +1051,20 @@
 	transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.theme-dark .tlb-date-editor {
+.theme-dark .tlb-date-editor,
+.theme-dark .tlb-time-editor {
   background: color-mix(in srgb, var(--background-secondary, #202020) 90%, var(--background-primary, #161616) 10%);
   border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 }
 
-.tlb-date-editor:focus-within {
+.tlb-date-editor:focus-within,
+.tlb-time-editor:focus-within {
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 28%, transparent);
 }
 
-.tlb-date-editor-input {
+.tlb-date-editor-input,
+.tlb-time-editor-input {
 	width: 100%;
 	min-width: 0;
 	height: 100%;
@@ -1072,11 +1075,13 @@
 	font: inherit;
 }
 
-.tlb-date-editor-input:focus {
+.tlb-date-editor-input:focus,
+.tlb-time-editor-input:focus {
   outline: none;
 }
 
-.tlb-date-editor-button {
+.tlb-date-editor-button,
+.tlb-time-editor-button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1090,17 +1095,21 @@
 	padding: 0;
 }
 
-.theme-dark .tlb-date-editor-button {
+.theme-dark .tlb-date-editor-button,
+.theme-dark .tlb-time-editor-button {
   color: var(--text-faint);
 }
 
 .tlb-date-editor-button:hover,
-.tlb-date-editor-button:focus-visible {
+.tlb-time-editor-button:hover,
+.tlb-date-editor-button:focus-visible,
+.tlb-time-editor-button:focus-visible {
   color: var(--interactive-accent);
   background-color: color-mix(in srgb, var(--background-modifier-hover, rgba(128, 128, 128, 0.12)) 80%, transparent);
 }
 
-.tlb-date-editor-button:focus-visible {
+.tlb-date-editor-button:focus-visible,
+.tlb-time-editor-button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 32%, transparent);
 }
@@ -1110,14 +1119,16 @@
   height: 100%;
 }
 
-.tlb-date-editor-hidden-picker {
+.tlb-date-editor-hidden-picker,
+.tlb-time-editor-hidden-picker {
   position: absolute;
   opacity: 0;
   pointer-events: none;
   color-scheme: light;
 }
 
-.theme-dark .tlb-date-editor-hidden-picker {
+.theme-dark .tlb-date-editor-hidden-picker,
+.theme-dark .tlb-time-editor-hidden-picker {
   color-scheme: dark;
 }
 

@@ -1,5 +1,11 @@
 ﻿import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
-import { getCurrentLocalDateTime, normalizeDateFormatPreset, type DateFormatPreset } from '../utils/datetime';
+import {
+	getCurrentLocalDateTime,
+	normalizeDateFormatPreset,
+	normalizeTimeFormatPreset,
+	type DateFormatPreset,
+	type TimeFormatPreset
+} from '../utils/datetime';
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
 import type { Schema, SchemaBuildResult } from './SchemaBuilder';
 import { t } from '../i18n';
@@ -77,13 +83,16 @@ export class TableDataStore {
 		return configs.find((config) => config.name === name) ?? null;
 	}
 
-	getColumnDisplayType(name: string): 'formula' | 'date' | 'text' {
+	getColumnDisplayType(name: string): 'formula' | 'date' | 'time' | 'text' {
 		if (this.isFormulaColumn(name)) {
 			return 'formula';
 		}
 		const config = this.getColumnConfig(name);
 		if (config?.type === 'date') {
 			return 'date';
+		}
+		if (config?.type === 'time') {
+			return 'time';
 		}
 		return 'text';
 	}
@@ -94,6 +103,14 @@ export class TableDataStore {
 			return normalizeDateFormatPreset(config.dateFormat ?? null);
 		}
 		return 'iso';
+	}
+
+	getTimeFormat(name: string): TimeFormatPreset {
+		const config = this.getColumnConfig(name);
+		if (config && config.type === 'time') {
+			return normalizeTimeFormatPreset(config.timeFormat ?? null);
+		}
+		return 'hh_mm';
 	}
 
 	setColumnConfigs(configs: ColumnConfig[] | undefined): void {

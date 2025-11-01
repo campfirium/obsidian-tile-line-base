@@ -4,7 +4,7 @@ import type { TableDataStore } from './TableDataStore';
 import type { RowInteractionController } from './RowInteractionController';
 import { GridBulkFillModal } from './GridBulkFillModal';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
-import { getDateFormatLabel } from '../utils/datetime';
+import { getDateFormatLabel, getTimeFormatLabel } from '../utils/datetime';
 
 interface FillSelectionDeps {
 	app: App;
@@ -46,10 +46,12 @@ export function createFillSelectionAction(
 		params: { column: columnField, count: String(selectedRows.length) },
 		action: () => {
 			const dateFormatPreset = columnType === 'date' ? deps.dataStore.getDateFormat(columnField) : null;
+			const timeFormatPreset = columnType === 'time' ? deps.dataStore.getTimeFormat(columnField) : null;
 			const modal = new GridBulkFillModal(deps.app, {
 				columnName: columnField,
-				columnType: columnType === 'date' ? 'date' : 'text',
+				columnType: columnType === 'date' ? 'date' : columnType === 'time' ? 'time' : 'text',
 				dateFormat: dateFormatPreset ? getDateFormatLabel(dateFormatPreset) : null,
+				timeFormat: timeFormatPreset ? getTimeFormatLabel(timeFormatPreset) : null,
 				initialValue: normalizedValue,
 				onSubmit: (value) => {
 					deps.rowInteraction.fillColumnWithValue(selectedRows, columnField, value, {

@@ -67,6 +67,7 @@
     "typeTextOption": "文本",
     "typeFormulaOption": "公式",
     "typeDateOption": "日期",
+    "typeTimeOption": "时间",
     "formulaLabel": "公式",
     "formulaDescription": "使用 {字段} 引用列；支持 + - * / 运算符并可拼接 \"文本\"。",
     "formulaPlaceholder": "{points} + {cost}",
@@ -88,6 +89,8 @@
     "dateFormatIsoOption": "ISO（2024-01-31）",
     "dateFormatShortOption": "简洁（如 1/31/24）",
     "dateFormatLongOption": "完整（如 2024 年 1 月 31 日）",
+    "timeFormatLabel": "时间显示格式",
+    "timeFormatDescription": "选择在网格中显示时间的方式。",
     "saveButton": "保存",
     "cancelButton": "取消",
     "nameEmptyError": "列名不能为空",
@@ -106,6 +109,12 @@
     "dmyLong": "日 月 年（31 January 2024）",
     "monthDay": "月 日（Jan 31）",
     "chineseLong": "中文长格式（2024 年 1 月 31 日）"
+  },
+  "timeFormats": {
+    "hhMm": "24小时制（23:45）",
+    "hhMmSs": "24小时制含秒（23:45:30）",
+    "hMmA": "12小时制（11:45 PM）",
+    "hMmSsA": "12小时制含秒（11:45:30 PM）"
   },
   "columnInteraction": {
     "menuEdit": "编辑列",
@@ -191,12 +200,15 @@
   "gridFillModal": {
     "title": "填充列：{{column}}",
     "valueLabel": "新值",
-    "textPlaceholder": "输入值",
+    "textPlaceholder": "输入内容",
     "datePlaceholder": "输入日期（YYYY-MM-DD）",
     "dateHint": "当前显示格式：{{format}}",
+    "timePlaceholder": "输入时间（HH:mm 或 HH:mm:ss）",
+    "timeHint": "当前显示格式：{{format}}",
     "confirmButton": "应用",
     "cancelButton": "取消",
-    "invalidDate": "请输入 YYYY-MM-DD 格式的有效日期"
+    "invalidDate": "请输入 YYYY-MM-DD 格式的有效日期",
+    "invalidTime": "请输入 HH:mm 或 HH:mm:ss 格式的有效时间"
   },
   "copyTemplate": {
     "menuCopy": "复制为模板",
@@ -348,6 +360,10 @@
     "openPickerLabel": "打开日期选择器",
     "invalidInput": "请输入有效日期或从日历中选择。"
   },
+  "timeCellEditor": {
+    "openPickerLabel": "打开时间选择器",
+    "invalidInput": "请输入 HH:mm 或 HH:mm:ss 格式的有效时间。"
+  },
   "tagGroups": {
     "menuShowAll": "显示全部筛选视图",
     "menuEmpty": "暂无保存的视图分组",
@@ -422,5 +438,17 @@
     "helpFileContent": "## TileLineBase 模板\n功能：第 0 步——你将获得什么\n说明：使用首行作为列模板，下面的示例行展示表格可呈现的内容。\n\n## TileLineBase 打开\n功能：第 1 步——打开表格\n说明：右键笔记或通过命令面板，在 Markdown 与 TileLineBase 表格视图之间切换。\n\n## TileLineBase 列\n功能：第 2 步——阅读标题\n说明：第一个二级标题定义列名，之后的每个二级标题代表一行数据。\n\n## TileLineBase 填写\n功能：第 3 步——输入内容\n说明：点击单元格开始输入，按 Enter 保存；修改会自动写回笔记。\n\n## TileLineBase 粘贴\n功能：第 4 步——从表格粘贴\n说明：从 Excel 或其它表格复制行粘贴过来，数值会落入对应列。\n\n## TileLineBase 筛选\n功能：第 5 步——筛选与排序\n说明：使用表头图标添加筛选或排序，将结果保存为命名视图以便复用。\n\n## TileLineBase 分组\n功能：第 6 步——整理视图\n说明：将常用筛选视图分组，团队成员即可快速切换到所需角度。\n\n## TileLineBase 导出\n功能：第 7 步——把行转成笔记\n说明：选择多行并导出或提升，会自动创建新笔记并添加反向链接。\n\n## TileLineBase 快捷方式\n功能：第 8 步——随手可得\n说明：绑定快捷键快速打开表格，并在需要时将此帮助笔记固定到侧栏。\n",
     "createHelpFailed": "TileLineBase 创建帮助文档失败，请查看控制台。",
     "openHelpFailed": "TileLineBase 无法打开帮助文档。"
+  },
+  "csv": {
+    "errorNoFile": "请先选择一个 CSV 文件。",
+    "exportFailure": "导出 CSV 失败。",
+    "exportSuccess": "已导出 {{rows}} 行到 CSV。",
+    "importFailure": "导入 CSV 失败。",
+    "defaultFileName": "导入的表格",
+    "createSuccess": "已创建表格“{{name}}”，共导入 {{rows}} 行。",
+    "createFailure": "创建新表格失败。",
+    "importNoHeaders": "CSV 文件缺少表头行。",
+    "importNoRows": "CSV 文件中没有数据行。",
+    "importSuccess": "已从 CSV 导入 {{rows}} 行。"
   }
 }

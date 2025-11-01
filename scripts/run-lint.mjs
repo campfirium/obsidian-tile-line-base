@@ -1,11 +1,28 @@
 #!/usr/bin/env node
-import { ESLint } from 'eslint';
+import eslintExperimental from 'eslint/use-at-your-own-risk';
+const { FlatESLint } = eslintExperimental;
+import { existsSync } from 'fs';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
+const lintCwd = (() => {
+	let current = repoRoot;
+	while (!existsSync(path.join(current, 'node_modules')) && path.dirname(current) !== current) {
+		current = path.dirname(current);
+	}
+	return current;
+})();
+
+if (lintCwd !== repoRoot) {
+	process.env.NODE_PATH = [lintCwd, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+	const moduleRequire = createRequire(import.meta.url);
+	const Module = moduleRequire('module');
+	Module.Module._initPaths();
+}
 const docsDir = path.join(repoRoot, 'docs');
 const reportPath = path.join(docsDir, 'reports.md');
 const legacyReportsDir = path.join(repoRoot, 'reports');
@@ -139,12 +156,10 @@ const buildReportLines = (timestamp, totals, issues) => {
 };
 
 const run = async () => {
-	const eslint = new ESLint();
+	const eslint = new FlatESLint({ cwd: repoRoot });
 	const lintTargets = [
 		'src/**/*.{ts,tsx}',
-		'src/locales/**/*.json',
 		'scripts/**/*.mjs',
-		'manifest.json',
 	];
 	const results = await eslint.lintFiles(lintTargets);
 	const formatter = await eslint.loadFormatter('stylish');

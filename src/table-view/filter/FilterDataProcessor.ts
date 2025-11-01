@@ -1,9 +1,9 @@
 import type { FilterCondition, FilterOperator, FilterRule, SortRule } from '../../types/filterView';
 import type { RowData } from '../../grid/GridAdapter';
-import { tryParseDate, tryParseNumber } from './FilterValueParsers';
+import { tryParseDate, tryParseNumber, tryParseTime } from './FilterValueParsers';
 
 type NormalizedSortValue = {
-	type: 'empty' | 'number' | 'date' | 'string';
+	type: 'empty' | 'number' | 'date' | 'time' | 'string';
 	value: number | string;
 	rank: number;
 };
@@ -94,6 +94,10 @@ export class FilterDataProcessor {
 		if (numericComparison !== null) {
 			return numericComparison === 0;
 		}
+		const timeComparison = this.compareTimes(cell, target);
+		if (timeComparison !== null) {
+			return timeComparison === 0;
+		}
 		const dateComparison = this.compareDates(cell, target);
 		if (dateComparison !== null) {
 			return dateComparison === 0;
@@ -109,6 +113,10 @@ export class FilterDataProcessor {
 		const numericComparison = this.compareNumbers(cell, target);
 		if (numericComparison !== null) {
 			return predicate(numericComparison);
+		}
+		const timeComparison = this.compareTimes(cell, target);
+		if (timeComparison !== null) {
+			return predicate(timeComparison);
 		}
 		const dateComparison = this.compareDates(cell, target);
 		if (dateComparison !== null) {
@@ -141,6 +149,18 @@ export class FilterDataProcessor {
 		return leftDate > rightDate ? 1 : -1;
 	}
 
+	private static compareTimes(left: string, right: string): number | null {
+		const leftTime = tryParseTime(left);
+		const rightTime = tryParseTime(right);
+		if (leftTime === null || rightTime === null) {
+			return null;
+		}
+		if (leftTime === rightTime) {
+			return 0;
+		}
+		return leftTime > rightTime ? 1 : -1;
+	}
+
 	private static normalizeText(value: string): string {
 		return value.trim().toLowerCase();
 	}
@@ -161,7 +181,11 @@ export class FilterDataProcessor {
 		if (normalizedA.rank !== normalizedB.rank) {
 			return normalizedA.rank - normalizedB.rank;
 		}
-		if (normalizedA.type === 'number' || normalizedA.type === 'date') {
+		if (
+			normalizedA.type === 'number' ||
+			normalizedA.type === 'date' ||
+			normalizedA.type === 'time'
+		) {
 			return (normalizedA.value as number) - (normalizedB.value as number);
 		}
 		if (normalizedA.type === 'string') {
@@ -187,6 +211,10 @@ export class FilterDataProcessor {
 		const parsed = parseFloat(text);
 		if (!Number.isNaN(parsed) && String(parsed) === text.trim()) {
 			return { type: 'number', value: parsed, rank: 2 };
+		}
+		const asTime = tryParseTime(text);
+		if (asTime !== null) {
+			return { type: 'time', value: asTime, rank: 3 };
 		}
 		const asDate = tryParseDate(text);
 		if (asDate !== null) {

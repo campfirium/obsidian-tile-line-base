@@ -42,9 +42,6 @@ function createHiddenPicker(doc: Document): HTMLInputElement {
 	picker.type = 'date';
 	picker.tabIndex = -1;
 	picker.classList.add('tlb-date-editor-hidden-picker');
-	picker.style.position = 'absolute';
-	picker.style.opacity = '0';
-	picker.style.pointerEvents = 'none';
 	return picker;
 }
 
@@ -103,7 +100,6 @@ export function createDateCellEditor() {
 			this.wrapper.appendChild(this.textInput);
 			this.wrapper.appendChild(this.triggerButton);
 			this.wrapper.appendChild(this.hiddenPicker);
-			this.applyColorScheme();
 
 			this.textInput.addEventListener('blur', this.blurHandler);
 			this.textInput.addEventListener('keydown', this.keydownHandler);
@@ -146,7 +142,6 @@ export function createDateCellEditor() {
 		private openPicker(): void {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
 			this.hiddenPicker.value = valid && normalized !== null ? normalized : '';
-			this.applyColorScheme();
 			try {
 				if (typeof (this.hiddenPicker as any).showPicker === 'function') {
 					(this.hiddenPicker as any).showPicker();
@@ -223,17 +218,5 @@ export function createDateCellEditor() {
 			}
 		}
 
-		private applyColorScheme(): void {
-			if (!this.hiddenPicker) {
-				return;
-			}
-			const ownerDoc = this.wrapper?.ownerDocument || document;
-			const isDark = ownerDoc?.body?.classList.contains('theme-dark') ?? false;
-			try {
-				this.hiddenPicker.style.setProperty('color-scheme', isDark ? 'dark' : 'light');
-			} catch {
-				// Ignore if the browser does not support color-scheme.
-			}
-		}
 	};
 }

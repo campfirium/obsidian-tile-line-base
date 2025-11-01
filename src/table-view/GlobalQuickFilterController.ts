@@ -29,6 +29,8 @@ export class GlobalQuickFilterController {
 		const clearHitArea = clearIconSize + 12;
 
 		field.style.setProperty('--tlb-quick-filter-hit-area', `${searchHitArea}px`);
+		field.style.setProperty('--tlb-quick-filter-search-hit', `${searchHitArea}px`);
+		field.style.setProperty('--tlb-quick-filter-clear-hit', `${clearHitArea}px`);
 		field.style.setProperty('--tlb-quick-filter-icon-size', `${searchIconSize}px`);
 		field.style.setProperty('--tlb-quick-filter-clear-size', `${clearIconSize}px`);
 
@@ -36,7 +38,6 @@ export class GlobalQuickFilterController {
 		iconEl.setAttribute('aria-label', t('quickFilter.focusAriaLabel'));
 		iconEl.setAttribute('tabindex', '0');
 		setIcon(iconEl, 'search');
-		this.configureIconSize(iconEl, searchIconSize, searchHitArea);
 
 		const input = field.createEl('input', {
 			type: 'search',
@@ -54,7 +55,6 @@ export class GlobalQuickFilterController {
 		clearButton.setAttribute('aria-label', t('quickFilter.clearAriaLabel'));
 		clearButton.setAttribute('hidden', 'true');
 		setIcon(clearButton, 'x');
-		this.configureIconSize(clearButton, clearIconSize, clearHitArea);
 
                 const currentValue = globalQuickFilterManager.getValue();
                 input.value = currentValue;
@@ -187,33 +187,4 @@ export class GlobalQuickFilterController {
 		}
 	}
 
-	private configureIconSize(target: HTMLElement, size: number, hitArea: number, attempt = 0): void {
-		const area = Math.max(hitArea, size);
-		target.style.width = `${area}px`;
-		target.style.height = `${area}px`;
-		target.style.minWidth = `${area}px`;
-		target.style.minHeight = `${area}px`;
-
-		const svg = target.querySelector('svg');
-		if (!svg) {
-			if (attempt > 3) {
-				return;
-			}
-			if (typeof requestAnimationFrame === 'function') {
-				requestAnimationFrame(() => this.configureIconSize(target, size, area, attempt + 1));
-			} else {
-				window.setTimeout(() => this.configureIconSize(target, size, area, attempt + 1), 0);
-			}
-			return;
-		}
-		svg.setAttribute('width', `${size}`);
-		svg.setAttribute('height', `${size}`);
-		svg.style.width = `${size}px`;
-		svg.style.height = `${size}px`;
-		svg.style.minWidth = `${size}px`;
-		svg.style.minHeight = `${size}px`;
-		svg.style.maxWidth = `${size}px`;
-		svg.style.maxHeight = `${size}px`;
-		svg.style.strokeWidth = '1.75';
-	}
 }

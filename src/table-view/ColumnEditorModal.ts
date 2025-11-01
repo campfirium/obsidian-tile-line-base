@@ -1,4 +1,4 @@
-﻿import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Setting } from 'obsidian';
 import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
 import {
@@ -110,6 +110,7 @@ export class ColumnEditorModal extends Modal {
 		});
 
 		this.dateFormatSetting = new Setting(contentEl);
+		this.dateFormatSetting.settingEl.addClass('tlb-column-editor-section', 'tlb-column-editor-section--date');
 		this.dateFormatSetting.setName(t('columnEditorModal.dateFormatLabel'));
 		this.dateFormatSetting.setDesc(t('columnEditorModal.dateFormatDescription'));
 		this.dateFormatSetting.addDropdown((dropdown) => {
@@ -128,6 +129,7 @@ export class ColumnEditorModal extends Modal {
 		});
 
 		this.formulaSetting = new Setting(contentEl);
+		this.formulaSetting.settingEl.addClass('tlb-column-editor-section', 'tlb-column-editor-section--formula');
 		this.formulaSetting.setName(t('columnEditorModal.formulaLabel'));
 		this.formulaSetting.setDesc(t('columnEditorModal.formulaDescription'));
 		this.formulaSetting.controlEl.empty();
@@ -145,6 +147,7 @@ export class ColumnEditorModal extends Modal {
 		this.formulaInput = textarea;
 
 		this.formulaFormatSetting = new Setting(contentEl);
+		this.formulaFormatSetting.settingEl.addClass('tlb-column-editor-section', 'tlb-column-editor-section--formula-format');
 		this.formulaFormatSetting.setName(t('columnEditorModal.formulaFormatLabel'));
 		this.formulaFormatSetting.setDesc(t('columnEditorModal.formulaFormatDescription'));
 		this.formulaFormatSetting.addDropdown((dropdown) => {
@@ -171,8 +174,6 @@ export class ColumnEditorModal extends Modal {
 		}
 
 		this.errorEl = contentEl.createDiv({ cls: 'tlb-column-editor-error' });
-		this.errorEl.style.display = 'none';
-		this.errorEl.style.color = 'var(--text-error, #ff4d4f)';
 
 		const modalEl = this.modalEl;
 		if (modalEl) {
@@ -221,7 +222,7 @@ export class ColumnEditorModal extends Modal {
 			this.modalEl.removeEventListener('keydown', this.keydownHandler, true);
 			this.keydownHandler = undefined;
 		}
-		if (this.formulaSuggester) {
+		if (this.formulaSuggester != null) {
 			this.formulaSuggester.destroy();
 			this.formulaSuggester = undefined;
 		}
@@ -240,23 +241,21 @@ export class ColumnEditorModal extends Modal {
 
 	private updateFieldVisibility(): void {
 		const formulaHidden = this.type !== 'formula';
-		if (this.formulaSetting) {
-			const formulaEl = this.formulaSetting.settingEl as HTMLElement;
-			formulaEl.style.display = formulaHidden ? 'none' : '';
+		if (this.formulaSetting != null) {
+			this.formulaSetting.settingEl.classList.toggle('is-hidden', formulaHidden);
 		}
-		if (this.formulaInput) {
+		if (this.formulaInput != null) {
 			this.formulaInput.disabled = formulaHidden;
 		}
 		if (this.formulaSuggester) {
-			this.formulaSuggester.setEnabled(!formulaHidden);
+			void this.formulaSuggester.setEnabled(!formulaHidden);
 		}
-		if (this.formulaFormatSetting) {
-			const formatEl = this.formulaFormatSetting.settingEl as HTMLElement;
-			formatEl.style.display = formulaHidden ? 'none' : '';
+		if (this.formulaFormatSetting != null) {
+			this.formulaFormatSetting.settingEl.classList.toggle('is-hidden', formulaHidden);
 		}
-		if (this.dateFormatSetting) {
-			const dateEl = this.dateFormatSetting.settingEl as HTMLElement;
-			dateEl.style.display = this.type === 'date' ? '' : 'none';
+		if (this.dateFormatSetting != null) {
+			const showDate = this.type === 'date';
+			this.dateFormatSetting.settingEl.classList.toggle('is-hidden', !showDate);
 		}
 	}
 
@@ -265,10 +264,10 @@ export class ColumnEditorModal extends Modal {
 			return;
 		}
 		if (message && message.trim().length > 0) {
-			this.errorEl.style.display = '';
+			this.errorEl.classList.add('is-visible');
 			this.errorEl.setText(message);
 		} else {
-			this.errorEl.style.display = 'none';
+			this.errorEl.classList.remove('is-visible');
 			this.errorEl.empty();
 		}
 	}
@@ -328,3 +327,4 @@ export class ColumnEditorModal extends Modal {
 		this.close();
 	}
 }
+

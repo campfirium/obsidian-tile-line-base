@@ -11,7 +11,8 @@
     "undoTableHistory": "撤销上一次表格更改",
     "redoTableHistory": "重做表格更改",
     "openHelpDocument": "打开 TileLineBase 帮助文档",
-    "createTable": "新建 TileLineBase 表格笔记"
+    "createTable": "新建 TileLineBase 表格笔记",
+    "toggleTableView": "切换表格视图"
   },
   "settings": {
     "generalHeading": "常规",
@@ -171,7 +172,6 @@
     "copySelectionSuccess": "已复制选区",
     "migrateSelectionSuccess": "已将 {{count}} 行迁移到「{{fileName}}」",
     "migrateSelectionCopySuccess": "已将 {{count}} 行复制到「{{fileName}}」",
-    "migrateSelectionCopyMergeSuccess": "已将 {{count}} 行复制合并到「{{fileName}}」",
     "migrateSelectionMergeSuccess": "已将 {{count}} 行合并到「{{fileName}}」",
     "migrateSelectionFailed": "迁移选区失败",
     "migrateSelectionNoFile": "没有可迁移的活动文件",
@@ -365,7 +365,7 @@
     "activeGroupAriaLabel": "当前视图分组：{{name}}",
     "menuTooltip": "打开视图分组",
     "unnamedGroup": "未命名视图分组",
-    "defaultGroupName": "默认",
+    "defaultGroupName": "未分组",
     "emptyGroupLabel": "暂无保存的筛选视图",
     "buttonAriaLabel": "视图分组：{{name}}",
     "menuRename": "重命名视图分组",

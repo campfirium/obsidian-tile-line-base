@@ -4,10 +4,10 @@ import { getLogger } from '../../utils/logger';
 const logger = getLogger('grid:composition-proxy');
 
 /**
- * CompositionProxy - 常驻合成代理层
+ * CompositionProxy - 常驻合成代理�?
  *
- * 通过一个隐藏的 textarea 抢占焦点，让 IME 在正式编辑器初始化前就能完整接收按键。
- * 代理层会在文本确定（ASCII 兜底或 compositionend）后交给上层回写。
+ * 通过一个隐藏的 textarea 抢占焦点，让 IME 在正式编辑器初始化前就能完整接收按键�?
+ * 代理层会在文本确定（ASCII 兜底�?compositionend）后交给上层回写�?
  */
 
 export class CompositionProxy {
@@ -31,24 +31,6 @@ export class CompositionProxy {
 		el.className = 'tlb-ime-capture';
 		el.rows = 1;
 		el.cols = 1;
-
-		Object.assign(el.style, {
-			position: 'fixed',
-			zIndex: '2147483647',
-			color: 'transparent',
-			caretColor: 'transparent',
-			background: 'transparent',
-			outline: 'none',
-			pointerEvents: 'none',
-			margin: '0',
-			padding: '0',
-			resize: 'none',
-			overflow: 'hidden',
-			lineHeight: '1',
-			opacity: '0',
-			transition: 'opacity 120ms ease',
-			boxSizing: 'border-box'
-		} as CSSStyleDeclaration);
 
 		this.host = el;
 		this.host.dataset.visible = 'false';
@@ -120,8 +102,6 @@ export class CompositionProxy {
 		this.composing = false;
 		this.host.value = '';
 		this.host.dataset.visible = 'false';
-		this.host.style.left = '-9999px';
-		this.host.style.top = '-9999px';
 
 		const activeEl = this.ownerDocument.activeElement as HTMLElement | null;
 		if (activeEl === this.host) {
@@ -141,13 +121,11 @@ export class CompositionProxy {
 			const w = Math.max(8, rect.width);
 			const h = Math.max(16, rect.height);
 
-			Object.assign(this.host.style, {
-				left: `${Math.max(0, rect.left)}px`,
-				top: `${Math.max(0, rect.top)}px`,
-				width: `${w}px`,
-				height: `${h}px`,
-				lineHeight: `${h}px`,
-			});
+			this.host.style.setProperty('--tlb-ime-left', `${Math.max(0, rect.left)}px`);
+			this.host.style.setProperty('--tlb-ime-top', `${Math.max(0, rect.top)}px`);
+			this.host.style.setProperty('--tlb-ime-width', `${w}px`);
+			this.host.style.setProperty('--tlb-ime-height', `${h}px`);
+			this.host.style.setProperty('--tlb-ime-line-height', `${h}px`);
 
 			this.host.dataset.visible = 'true';
 
@@ -186,3 +164,4 @@ export class CompositionProxy {
 		}
 	}
 }
+

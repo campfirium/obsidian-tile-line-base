@@ -1,9 +1,9 @@
-import { createHash } from 'crypto';
-import { promises as fs } from 'fs';
-import { join } from 'path';
+import { normalizePath, type DataAdapter } from 'obsidian';
 
 const PATH_HASH_LENGTH = 12;
 const MAX_SLUG_LENGTH = 60;
+const HASH_OFFSET = 0x811c9dc5;
+const HASH_PRIME = 0x01000193;
 
 function sanitizeSlug(filePath: string): string {
 	const normalized = filePath.replace(/\\/g, '/');
@@ -24,8 +24,35 @@ function sanitizeSlug(filePath: string): string {
 	return joined.slice(-MAX_SLUG_LENGTH);
 }
 
+function hashPath(input: string): string {
+	let hashA = HASH_OFFSET;
+	let hashB = HASH_OFFSET;
+	for (let index = 0; index < input.length; index++) {
+		const code = input.charCodeAt(index);
+		hashA = Math.imul(hashA ^ code, HASH_PRIME) >>> 0;
+		hashB = Math.imul(hashB ^ ((code ^ index) & 0xff), HASH_PRIME) >>> 0;
+	}
+	const combined = hashA.toString(16).padStart(8, '0') + hashB.toString(16).padStart(8, '0');
+	return combined.slice(0, PATH_HASH_LENGTH);
+}
+
+function joinPath(base: string, ...segments: string[]): string {
+	const parts = [base, ...segments].filter((part) => part.length > 0);
+	return normalizePath(parts.join('/'));
+}
+
+function isNotFoundError(error: unknown): boolean {
+	return Boolean(
+		error &&
+			typeof error === 'object' &&
+			'code' in error &&
+			typeof (error as { code?: unknown }).code === 'string' &&
+			(error as { code: string }).code === 'ENOENT'
+	);
+}
+
 export function buildBackupFileName(filePath: string, entryId: string, extension: string): string {
-	const hash = createHash('sha1').update(filePath).digest('hex').slice(0, PATH_HASH_LENGTH);
+	const hash = hashPath(filePath);
 	const slug = sanitizeSlug(filePath);
 	return `${hash}-${slug}-${entryId}${extension}`;
 }
@@ -42,23 +69,26 @@ export function getLegacyPathSegments(filePath: string): string[] {
 }
 
 export function buildLegacyEntryPath(baseDir: string, segments: string[], entryId: string, extension: string): string {
-	return join(baseDir, ...segments, `${entryId}${extension}`);
+	return joinPath(baseDir, ...segments, `${entryId}${extension}`);
 }
 
-export async function removeLegacyDirectoriesIfEmpty(baseDir: string, segments: string[]): Promise<void> {
+export async function removeLegacyDirectoriesIfEmpty(
+	adapter: DataAdapter,
+	baseDir: string,
+	segments: string[]
+): Promise<void> {
 	for (let count = segments.length; count > 0; count--) {
-		const dirPath = join(baseDir, ...segments.slice(0, count));
+		const dirPath = joinPath(baseDir, ...segments.slice(0, count));
 		try {
-			const contents = await fs.readdir(dirPath);
-			if (contents.length > 0) {
+			const listing = await adapter.list(dirPath);
+			if (listing.files.length + listing.folders.length > 0) {
 				break;
 			}
-			await fs.rmdir(dirPath);
+			await adapter.rmdir(dirPath, false);
 		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-				continue;
+			if (!isNotFoundError(error)) {
+				break;
 			}
-			break;
 		}
 	}
 }

@@ -55,7 +55,7 @@ export class FormulaFieldSuggester {
 
 		this.dropdownEl = this.ownerDocument.createElement('div');
 		this.dropdownEl.className = 'tlb-formula-field-suggest';
-		this.dropdownEl.style.display = 'none';
+		
 		this.dropdownEl.setAttribute('role', 'listbox');
 		this.dropdownEl.addEventListener('mousedown', this.handleMouseDown);
 
@@ -280,8 +280,8 @@ export class FormulaFieldSuggester {
 			return;
 		}
 		this.isOpen = true;
-		this.dropdownEl.style.display = '';
-		this.dropdownEl.style.maxHeight = '';
+		this.dropdownEl.classList.add('is-visible');
+		this.dropdownEl.style.removeProperty('--tlb-suggest-max-height');
 		this.positionDropdown();
 	}
 
@@ -290,8 +290,11 @@ export class FormulaFieldSuggester {
 			return;
 		}
 		this.isOpen = false;
-		this.dropdownEl.style.display = 'none';
-		this.dropdownEl.style.maxHeight = '';
+		this.dropdownEl.classList.remove('is-visible');
+		this.dropdownEl.style.removeProperty('--tlb-suggest-max-height');
+		this.dropdownEl.style.removeProperty('--tlb-suggest-top');
+		this.dropdownEl.style.removeProperty('--tlb-suggest-left');
+		this.dropdownEl.style.removeProperty('--tlb-suggest-min-width');
 		this.matches = [];
 	}
 
@@ -322,7 +325,7 @@ export class FormulaFieldSuggester {
 		} else {
 			clampedHeight = Math.min(dropdownHeight || 220, 220);
 		}
-		this.dropdownEl.style.maxHeight = `${clampedHeight}px`;
+		this.dropdownEl.style.setProperty('--tlb-suggest-max-height', `${clampedHeight}px`);
 
 		const adjustedHeight = this.dropdownEl.offsetHeight || clampedHeight;
 		let left = inputRect.left;
@@ -340,9 +343,9 @@ export class FormulaFieldSuggester {
 			left = Math.max(left, margin);
 		}
 
-		this.dropdownEl.style.top = `${Math.max(top, margin)}px`;
-		this.dropdownEl.style.left = `${left}px`;
-		this.dropdownEl.style.minWidth = `${inputRect.width}px`;
+		this.dropdownEl.style.setProperty('--tlb-suggest-top', `${Math.max(top, margin)}px`);
+		this.dropdownEl.style.setProperty('--tlb-suggest-left', `${left}px`);
+		this.dropdownEl.style.setProperty('--tlb-suggest-min-width', `${inputRect.width}px`);
 	}
 
 	private compareMatch(a: string, b: string, partialLower: string): number {
@@ -356,3 +359,7 @@ export class FormulaFieldSuggester {
 		return aLower.localeCompare(bLower);
 	}
 }
+
+
+
+

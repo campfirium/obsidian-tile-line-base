@@ -45,7 +45,9 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 	}
 
 	private renderGeneralSection(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: t('settings.generalHeading') });
+		new Setting(containerEl)
+			.setName(t('settings.generalHeading'))
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(t('settings.hideRightSidebarLabel'))
@@ -59,7 +61,9 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 	}
 
 	private renderLoggingSection(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: t('settings.loggingHeading') });
+		new Setting(containerEl)
+			.setName(t('settings.loggingHeading'))
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(t('settings.loggingLevelLabel'))
@@ -89,7 +93,9 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 	}
 
 	private renderBackupSection(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: t('settings.backupHeading') });
+		new Setting(containerEl)
+			.setName(t('settings.backupHeading'))
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(t('settings.backupEnableLabel'))

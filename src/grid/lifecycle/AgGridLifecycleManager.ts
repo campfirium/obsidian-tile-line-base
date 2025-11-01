@@ -60,29 +60,37 @@ export class AgGridLifecycleManager {
 			rowData
 		};
 
+		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const originalOnGridReady = mergedOptions.onGridReady;
 		mergedOptions.onGridReady = (event: any) => {
 			this.gridApi = event.api;
 			this.columnApi = event.columnApi ?? null;
 			try {
-				originalOnGridReady?.(event);
+				originalOnGridReady?.call(event.api, event);
 			} finally {
 				this.flushReadyHandlers();
 			}
 		};
 
-		const wrapModelUpdated =
-			(handler?: (event: ModelUpdatedEvent | RowDataUpdatedEvent) => void) =>
-			(event: ModelUpdatedEvent | RowDataUpdatedEvent) => {
-				try {
-					handler?.(event);
-				} finally {
-					this.flushModelUpdatedHandlers();
-				}
-			};
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const originalOnModelUpdated = mergedOptions.onModelUpdated;
+		mergedOptions.onModelUpdated = (event: ModelUpdatedEvent) => {
+			try {
+				originalOnModelUpdated?.call(event.api, event);
+			} finally {
+				this.flushModelUpdatedHandlers();
+			}
+		};
 
-		mergedOptions.onModelUpdated = wrapModelUpdated(mergedOptions.onModelUpdated);
-		mergedOptions.onRowDataUpdated = wrapModelUpdated(mergedOptions.onRowDataUpdated);
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const originalOnRowDataUpdated = mergedOptions.onRowDataUpdated;
+		mergedOptions.onRowDataUpdated = (event: RowDataUpdatedEvent) => {
+			try {
+				originalOnRowDataUpdated?.call(event.api, event);
+			} finally {
+				this.flushModelUpdatedHandlers();
+			}
+		};
 
 		try {
 			this.gridApi = this.createGridImpl(container, mergedOptions);
@@ -244,3 +252,5 @@ export class AgGridLifecycleManager {
 		}
 	}
 }
+
+

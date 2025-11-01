@@ -1,15 +1,31 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { t } from '../i18n';
+import type { TranslationKey } from '../i18n';
+import type { LogLevelName } from '../utils/logger';
 
 type SidebarSettingHost = Plugin & {
 	isHideRightSidebarEnabled(): boolean;
 	setHideRightSidebarEnabled(value: boolean): Promise<void>;
+	getLoggingLevel(): LogLevelName;
+	setLoggingLevel(level: LogLevelName): Promise<void>;
 	isBackupEnabled(): boolean;
 	setBackupEnabled(value: boolean): Promise<void>;
 	getBackupCapacityLimit(): number;
 	setBackupCapacityLimit(value: number): Promise<void>;
-	openHelpDocument(): Promise<void>;
 };
+
+const LOG_LEVEL_OPTIONS: LogLevelName[] = ['error', 'warn', 'info', 'debug', 'trace'];
+const LOG_LEVEL_LABEL_KEYS: Record<LogLevelName, TranslationKey> = {
+	error: 'settings.loggingLevelOptionError',
+	warn: 'settings.loggingLevelOptionWarn',
+	info: 'settings.loggingLevelOptionInfo',
+	debug: 'settings.loggingLevelOptionDebug',
+	trace: 'settings.loggingLevelOptionTrace'
+};
+
+function isLogLevel(value: string): value is LogLevelName {
+	return (LOG_LEVEL_OPTIONS as readonly string[]).includes(value);
+}
 
 export class TileLineBaseSettingTab extends PluginSettingTab {
 	private readonly plugin: SidebarSettingHost;
@@ -23,6 +39,12 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		this.renderGeneralSection(containerEl);
+		this.renderLoggingSection(containerEl);
+		this.renderBackupSection(containerEl);
+	}
+
+	private renderGeneralSection(containerEl: HTMLElement): void {
 		containerEl.createEl('h2', { text: t('settings.generalHeading') });
 
 		new Setting(containerEl)
@@ -34,7 +56,39 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					await this.plugin.setHideRightSidebarEnabled(value);
 				});
 			});
+	}
 
+	private renderLoggingSection(containerEl: HTMLElement): void {
+		containerEl.createEl('h2', { text: t('settings.loggingHeading') });
+
+		new Setting(containerEl)
+			.setName(t('settings.loggingLevelLabel'))
+			.setDesc(t('settings.loggingLevelDesc'))
+			.addDropdown((dropdown) => {
+				for (const option of LOG_LEVEL_OPTIONS) {
+					dropdown.addOption(option, t(LOG_LEVEL_LABEL_KEYS[option]));
+				}
+
+				const current = this.plugin.getLoggingLevel();
+				if (isLogLevel(current)) {
+					dropdown.setValue(current);
+				}
+				dropdown.selectEl.setAttribute('aria-label', t('settings.loggingLevelLabel'));
+
+				dropdown.onChange(async (value) => {
+					if (!isLogLevel(value)) {
+						return;
+					}
+					await this.plugin.setLoggingLevel(value);
+					const latest = this.plugin.getLoggingLevel();
+					if (isLogLevel(latest) && dropdown.getValue() !== latest) {
+						dropdown.setValue(latest);
+					}
+				});
+			});
+	}
+
+	private renderBackupSection(containerEl: HTMLElement): void {
 		containerEl.createEl('h2', { text: t('settings.backupHeading') });
 
 		new Setting(containerEl)
@@ -58,11 +112,13 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 			text.inputEl.type = 'number';
 			text.inputEl.min = '1';
 			text.inputEl.max = '10240';
+			text.inputEl.setAttribute('aria-label', t('settings.backupCapacityLabel'));
 			text.onChange(async (raw) => {
-				if (!raw || raw.trim().length === 0) {
+				const trimmed = raw.trim();
+				if (trimmed.length === 0) {
 					return;
 				}
-				const parsed = Number(raw);
+				const parsed = Number(trimmed);
 				if (!Number.isFinite(parsed)) {
 					return;
 				}
@@ -73,24 +129,6 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				if (text.getValue() !== String(updated)) {
 					text.setValue(String(updated));
 				}
-			});
-		});
-
-		containerEl.createEl('h2', { text: t('settings.helpHeading') });
-
-		new Setting(containerEl)
-			.setName(t('settings.helpOpenLabel'))
-			.setDesc(t('settings.helpOpenDesc'))
-			.addButton((button) => {
-				button.setButtonText(t('settings.helpOpenButton'));
-				button.setCta();
-				button.onClick(async () => {
-					button.setDisabled(true);
-					try {
-						await this.plugin.openHelpDocument();
-					} finally {
-						button.setDisabled(false);
-					}
 				});
 			});
 	}

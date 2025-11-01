@@ -10,21 +10,26 @@
   "commands": {
     "undoTableHistory": "Undo last table change",
     "redoTableHistory": "Redo table change",
-    "openHelpDocument": "Open TileLineBase help document"
+    "openHelpDocument": "Open TileLineBase help document",
+    "createTable": "Create TileLineBase table note"
   },
   "settings": {
     "generalHeading": "General",
     "hideRightSidebarLabel": "Hide right sidebar in table view",
     "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever the TileLineBase table view is active. Other views remain unaffected.",
+    "loggingHeading": "Logging",
+    "loggingLevelLabel": "Global logging level",
+    "loggingLevelDesc": "Choose how much detail TileLineBase logs to the developer console. Higher levels help debugging but are noisier.",
+    "loggingLevelOptionError": "Errors only",
+    "loggingLevelOptionWarn": "Warnings and errors",
+    "loggingLevelOptionInfo": "Info, warnings, and errors",
+    "loggingLevelOptionDebug": "Debug, info, warnings, and errors",
+    "loggingLevelOptionTrace": "Trace (most verbose)",
     "backupHeading": "Backups",
     "backupEnableLabel": "Enable automatic backups",
     "backupEnableDesc": "Capture a snapshot before writing Markdown so you can roll back accidental changes.",
     "backupCapacityLabel": "Backup vault size limit (MB)",
-    "backupCapacityDesc": "When the total size exceeds this limit, the oldest snapshots are deleted. Default: 200 MB.",
-    "helpHeading": "Help & onboarding",
-    "helpOpenLabel": "Open TileLineBase help note",
-    "helpOpenDesc": "Creates or opens the onboarding note generated on first install.",
-    "helpOpenButton": "Open help note"
+    "backupCapacityDesc": "When the total size exceeds this limit, the oldest snapshots are deleted. Default: 200 MB."
   },
   "readingView": {
     "configBlockTitle": "TLB CONFIG BLOCK"

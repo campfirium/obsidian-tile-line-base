@@ -1,10 +1,10 @@
-import { Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
+import { TableCreationController } from './table-view/TableCreationController';
 import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
 import {
 	applyLoggingConfig,
 	getLogger,
-	getLoggingConfig,
 	installLoggerConsoleBridge,
 	setGlobalLogLevel,
 	subscribeLoggingConfig
@@ -25,7 +25,6 @@ import { ViewActionManager } from './plugin/ViewActionManager';
 import { OnboardingManager } from './plugin/OnboardingManager';
 
 const logger = getLogger('plugin:main');
-const VERBOSITY_SEQUENCE: LogLevelName[] = ['warn', 'info', 'debug', 'trace'];
 
 function snapshotLeaf(manager: WindowContextManager, leaf: WorkspaceLeaf | null | undefined): Record<string, unknown> | null {
 	if (!leaf) {
@@ -59,6 +58,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
 	private onboardingManager: OnboardingManager | null = null;
+	private commandTableCreationController: TableCreationController | null = null;
 
 	async onload() {
 		setPluginContext(this);
@@ -251,6 +251,19 @@ export default class TileLineBasePlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'tile-line-base-create-table',
+			name: t('commands.createTable'),
+			callback: () => {
+				const activeView = this.getActiveTableView();
+				if (activeView?.tableCreationController) {
+					activeView.tableCreationController.openCreationModal(null);
+					return;
+				}
+				this.getCommandTableCreationController().openCreationModal(null);
+			}
+		});
+
 		this.registerEvent(
 			this.app.workspace.on('window-open', (workspaceWindow: WorkspaceWindow, win: Window) => {
 				logger.debug('window-open', { window: this.windowContextManager.describeWindow(win) });
@@ -264,12 +277,6 @@ export default class TileLineBasePlugin extends Plugin {
 				this.windowContextManager.unregisterWindow(win);
 			})
 		);
-
-		this.addCommand({
-			id: 'cycle-logging-verbosity',
-			name: 'Cycle TileLineBase logging verbosity',
-			callback: () => this.cycleLoggingVerbosity()
-		});
 
 		this.addSettingTab(new TileLineBaseSettingTab(this.app, this));
 		if (this.editorConfigController) {
@@ -292,6 +299,7 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 
 		this.onboardingManager = null;
+		this.commandTableCreationController = null;
 
 		if (this.unsubscribeLogging) {
 			this.unsubscribeLogging();
@@ -413,6 +421,29 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 	}
 
+	getLoggingLevel(): LogLevelName {
+		return this.settingsService.getLoggingConfig().globalLevel;
+	}
+
+	async setLoggingLevel(level: LogLevelName): Promise<void> {
+		const current = this.settingsService.getLoggingConfig().globalLevel;
+		if (current === level) {
+			return;
+		}
+		const config = setGlobalLogLevel(level);
+		this.settings.logging = config;
+	}
+
+	private getCommandTableCreationController(): TableCreationController {
+		if (!this.commandTableCreationController) {
+			this.commandTableCreationController = new TableCreationController({
+				app: this.app,
+				getCurrentFile: () => this.app.workspace.getActiveFile() ?? null
+			});
+		}
+		return this.commandTableCreationController;
+	}
+
 	private getActiveTableView(): TableView | null {
 		const view = this.app.workspace.getActiveViewOfType(TableView);
 		return view ?? null;
@@ -425,14 +456,6 @@ export default class TileLineBasePlugin extends Plugin {
 	private async saveSettings(): Promise<void> {
 		await this.settingsService.persist();
 		this.settings = this.settingsService.getSettings();
-	}
-
-	private cycleLoggingVerbosity(): void {
-		const current = getLoggingConfig().globalLevel;
-		const index = VERBOSITY_SEQUENCE.indexOf(current);
-		const next = VERBOSITY_SEQUENCE[(index + 1) % VERBOSITY_SEQUENCE.length];
-		setGlobalLogLevel(next);
-		new Notice(`TileLineBase logging level: ${next.toUpperCase()}`);
 	}
 
 	private applyRightSidebarForLeaf(leaf: WorkspaceLeaf | null | undefined): void {

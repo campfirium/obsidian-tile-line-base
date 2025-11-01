@@ -3,8 +3,11 @@ import { compileFormula } from '../formula/FormulaEngine';
 import { t } from '../i18n';
 import {
 	getDateFormatOptions,
+	getTimeFormatOptions,
 	normalizeDateFormatPreset,
-	type DateFormatPreset
+	normalizeTimeFormatPreset,
+	type DateFormatPreset,
+	type TimeFormatPreset
 } from '../utils/datetime';
 import { FormulaFieldSuggester } from './FormulaFieldSuggester';
 import {
@@ -13,13 +16,14 @@ import {
 	type FormulaFormatPreset
 } from './formulaFormatPresets';
 
-export type ColumnFieldType = 'text' | 'date' | 'formula';
+export type ColumnFieldType = 'text' | 'date' | 'time' | 'formula';
 
 export interface ColumnEditorResult {
 	name: string;
 	type: ColumnFieldType;
 	formula: string;
 	dateFormat?: DateFormatPreset;
+	timeFormat?: TimeFormatPreset;
 	formulaFormatPreset?: FormulaFormatPreset;
 }
 
@@ -28,6 +32,7 @@ export interface ColumnEditorModalOptions {
 	initialType: ColumnFieldType;
 	initialFormula: string;
 	initialDateFormat?: DateFormatPreset;
+	initialTimeFormat?: TimeFormatPreset;
 	initialFormulaFormat?: FormulaFormatPreset;
 	validateName?: (name: string) => string | null;
 	triggerElement?: HTMLElement | null;
@@ -52,6 +57,8 @@ export class ColumnEditorModal extends Modal {
 	private formulaFormatPreset: FormulaFormatPreset;
 	private dateFormat: DateFormatPreset;
 	private dateFormatSetting!: Setting;
+	private timeFormat: TimeFormatPreset;
+	private timeFormatSetting!: Setting;
 
 	constructor(app: App, options: ColumnEditorModalOptions) {
 		super(app);
@@ -59,6 +66,7 @@ export class ColumnEditorModal extends Modal {
 		this.type = options.initialType;
 		this.nameValue = options.columnName;
 		this.dateFormat = normalizeDateFormatPreset(options.initialDateFormat ?? 'iso');
+		this.timeFormat = normalizeTimeFormatPreset(options.initialTimeFormat ?? 'hh_mm');
 		this.formulaFormatPreset = normalizeFormulaFormatPreset(options.initialFormulaFormat) ?? 'auto';
 	}
 
@@ -95,6 +103,7 @@ export class ColumnEditorModal extends Modal {
 		typeSetting.addDropdown((dropdown) => {
 			dropdown.addOption('text', t('columnEditorModal.typeTextOption'));
 			dropdown.addOption('date', t('columnEditorModal.typeDateOption'));
+			dropdown.addOption('time', t('columnEditorModal.typeTimeOption'));
 			dropdown.addOption('formula', t('columnEditorModal.typeFormulaOption'));
 			dropdown.setValue(this.type);
 			dropdown.onChange((value) => {
@@ -102,6 +111,8 @@ export class ColumnEditorModal extends Modal {
 					this.type = 'formula';
 				} else if (value === 'date') {
 					this.type = 'date';
+				} else if (value === 'time') {
+					this.type = 'time';
 				} else {
 					this.type = 'text';
 				}
@@ -125,6 +136,24 @@ export class ColumnEditorModal extends Modal {
 			dropdown.setValue(this.dateFormat);
 			dropdown.onChange((value) => {
 				this.dateFormat = normalizeDateFormatPreset(value);
+			});
+		});
+
+		this.timeFormatSetting = new Setting(contentEl);
+		this.timeFormatSetting.settingEl.addClass('tlb-column-editor-section', 'tlb-column-editor-section--time');
+		this.timeFormatSetting.setName(t('columnEditorModal.timeFormatLabel'));
+		this.timeFormatSetting.setDesc(t('columnEditorModal.timeFormatDescription'));
+		this.timeFormatSetting.addDropdown((dropdown) => {
+			const options = getTimeFormatOptions();
+			for (const option of options) {
+				dropdown.addOption(option.value, option.label);
+			}
+			if (!options.some((option) => option.value === this.timeFormat)) {
+				this.timeFormat = 'hh_mm';
+			}
+			dropdown.setValue(this.timeFormat);
+			dropdown.onChange((value) => {
+				this.timeFormat = normalizeTimeFormatPreset(value);
 			});
 		});
 
@@ -257,6 +286,10 @@ export class ColumnEditorModal extends Modal {
 			const showDate = this.type === 'date';
 			this.dateFormatSetting.settingEl.classList.toggle('is-hidden', !showDate);
 		}
+		if (this.timeFormatSetting != null) {
+			const showTime = this.type === 'time';
+			this.timeFormatSetting.settingEl.classList.toggle('is-hidden', !showTime);
+		}
 	}
 
 	private setError(message: string | null): void {
@@ -317,6 +350,14 @@ export class ColumnEditorModal extends Modal {
 		if (this.type === 'date') {
 			const preset = normalizeDateFormatPreset(this.dateFormat);
 			this.options.onSubmit({ name: trimmedName, type: 'date', formula: '', dateFormat: preset });
+			this.submitted = true;
+			this.close();
+			return;
+		}
+
+		if (this.type === 'time') {
+			const preset = normalizeTimeFormatPreset(this.timeFormat);
+			this.options.onSubmit({ name: trimmedName, type: 'time', formula: '', timeFormat: preset });
 			this.submitted = true;
 			this.close();
 			return;

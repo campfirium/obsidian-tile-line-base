@@ -1,4 +1,7 @@
+import { normalizeTimeInput } from '../../utils/datetime';
+
 const NUMERIC_PATTERN = /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i;
+const ISO_TIME_PATTERN = /^\d{2}:\d{2}:\d{2}$/;
 
 function coerceYear(value: number): number | null {
 	if (!Number.isFinite(value)) {
@@ -127,4 +130,32 @@ export function tryParseDate(value: unknown): number | null {
 	}
 
 	return null;
+}
+
+export function tryParseTime(value: unknown): number | null {
+	if (value instanceof Date) {
+		const hours = value.getHours();
+		const minutes = value.getMinutes();
+		const seconds = value.getSeconds();
+		return ((hours * 60 + minutes) * 60 + seconds) * 1000;
+	}
+	if (value == null) {
+		return null;
+	}
+	const text = String(value).trim();
+	if (text.length === 0) {
+		return null;
+	}
+	const normalized = normalizeTimeInput(text);
+	if (!ISO_TIME_PATTERN.test(normalized)) {
+		return null;
+	}
+	const [hourStr, minuteStr, secondStr] = normalized.split(':');
+	const hour = Number.parseInt(hourStr, 10);
+	const minute = Number.parseInt(minuteStr, 10);
+	const second = Number.parseInt(secondStr, 10);
+	if (!Number.isFinite(hour) || !Number.isFinite(minute) || !Number.isFinite(second)) {
+		return null;
+	}
+	return ((hour * 60 + minute) * 60 + second) * 1000;
 }

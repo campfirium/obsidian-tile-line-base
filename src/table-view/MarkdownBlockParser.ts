@@ -1,4 +1,4 @@
-import type { DateFormatPreset } from '../utils/datetime';
+import type { DateFormatPreset, TimeFormatPreset } from '../utils/datetime';
 import { parseColumnDefinition as parseColumnDefinitionLine } from './MarkdownColumnConfigParser';
 import type { FormulaFormatPreset } from './formulaFormatPresets';
 import {
@@ -12,7 +12,7 @@ import {
 	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
 
-export type ColumnFieldDisplayType = 'text' | 'date';
+export type ColumnFieldDisplayType = 'text' | 'date' | 'time';
 
 export interface ColumnConfig {
 	name: string;
@@ -22,6 +22,7 @@ export interface ColumnConfig {
 	hide?: boolean;
 	type?: ColumnFieldDisplayType;
 	dateFormat?: DateFormatPreset;
+	timeFormat?: TimeFormatPreset;
 	formulaFormat?: FormulaFormatPreset;
 }
 

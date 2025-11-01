@@ -1,9 +1,10 @@
 import type { ColumnConfig } from '../MarkdownBlockParser';
-import { normalizeDateFormatPreset } from '../../utils/datetime';
+import { normalizeDateFormatPreset, normalizeTimeFormatPreset } from '../../utils/datetime';
 import { getFormulaFormatPattern } from '../formulaFormatPresets';
 
 export function hasColumnConfigContent(config: ColumnConfig): boolean {
 	const preset = config.dateFormat ? normalizeDateFormatPreset(config.dateFormat) : null;
+	const timePreset = config.timeFormat ? normalizeTimeFormatPreset(config.timeFormat) : null;
 	return Boolean(
 		(config.width && config.width.trim().length > 0) ||
 		(config.unit && config.unit.trim().length > 0) ||
@@ -11,8 +12,10 @@ export function hasColumnConfigContent(config: ColumnConfig): boolean {
 		(config.formula && config.formula.trim().length > 0) ||
 		(config.formulaFormat && config.formulaFormat !== 'auto') ||
 		config.type === 'date' ||
+		config.type === 'time' ||
 		config.type === 'text' ||
-		(preset && preset !== 'iso')
+		(preset && preset !== 'iso') ||
+		(timePreset && timePreset !== 'hh_mm')
 	);
 }
 
@@ -36,6 +39,12 @@ export function serializeColumnConfig(config: ColumnConfig): string {
 		const preset = normalizeDateFormatPreset(config.dateFormat ?? null);
 		if (preset !== 'iso') {
 			segments.push(`dateFormat: ${preset}`);
+		}
+	} else if (config.type === 'time') {
+		segments.push('type: time');
+		const preset = normalizeTimeFormatPreset(config.timeFormat ?? null);
+		if (preset !== 'hh_mm') {
+			segments.push(`timeFormat: ${preset}`);
 		}
 	} else if (config.type === 'text') {
 		segments.push('type: text');

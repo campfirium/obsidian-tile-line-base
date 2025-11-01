@@ -1,11 +1,11 @@
-﻿import type { TableView } from '../TableView';
+import type { TableView } from '../TableView';
 import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterViewBar';
 import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
-import { openBackupRestoreModal } from './BackupRestoreModal';\r\nimport { exportTableToCsv, importCsvAsNewTable } from './TableCsvController';
+import { openBackupRestoreModal } from './BackupRestoreModal';
 import { getPluginContext } from '../pluginContext';
 
-export type FilterColumnKind = 'status' | 'date' | 'text';
+export type FilterColumnKind = 'status' | 'date' | 'time' | 'text';
 
 export interface FilterColumnOption {
 	name: string;
@@ -170,6 +170,14 @@ function createColumnOption(view: TableView, column: string, rows: RowData[]): F
 		return {
 			name: column,
 			kind: 'date',
+			allowNumericOperators: true
+		};
+	}
+
+	if (displayType === 'time') {
+		return {
+			name: column,
+			kind: 'time',
 			allowNumericOperators: true
 		};
 	}

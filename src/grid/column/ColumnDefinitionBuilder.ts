@@ -2,11 +2,12 @@ import { ColDef } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
+import { createTimeCellEditor } from '../editors/TimeCellEditor';
 import { COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
 import { IconHeaderComponent } from '../headers/IconHeaderComponent';
 import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
 import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
-import { formatDateForDisplay } from '../../utils/datetime';
+import { formatDateForDisplay, formatTimeForDisplay } from '../../utils/datetime';
 import { t } from '../../i18n';
 
 const INDEX_FIELD = '#';
@@ -118,10 +119,19 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 			(mergedColDef as any).tooltipValueGetter = (params: any) => formatDateForDisplay(params.value, format);
 		}
 		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-date-cell');
+	} else if ((column as any).editorType === 'time') {
+		const format = (column as any).timeFormat ?? 'hh_mm';
+		(mergedColDef as any).cellEditor = createTimeCellEditor();
+		(mergedColDef as any).valueFormatter = (params: any) => formatTimeForDisplay(params.value, format);
+		if (!mergedColDef.tooltipField && !mergedColDef.tooltipValueGetter) {
+			(mergedColDef as any).tooltipValueGetter = (params: any) => formatTimeForDisplay(params.value, format);
+		}
+		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-time-cell');
 	}
 
 	delete (mergedColDef as any).editorType;
 	delete (mergedColDef as any).dateFormat;
+	delete (mergedColDef as any).timeFormat;
 
 	if (typeof column.field === 'string' && column.field !== INDEX_FIELD && column.field !== STATUS_FIELD) {
 		mergedColDef.minWidth =

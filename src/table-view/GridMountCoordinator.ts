@@ -62,6 +62,9 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		} else if (columnType === 'date') {
 			baseColDef.editorType = 'date';
 			baseColDef.dateFormat = dataStore.getDateFormat(name);
+		} else if (columnType === 'time') {
+			baseColDef.editorType = 'time';
+			baseColDef.timeFormat = dataStore.getTimeFormat(name);
 		}
 
 		const storedWidth = columnLayoutStore.getWidth(name);

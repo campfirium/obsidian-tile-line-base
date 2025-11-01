@@ -260,7 +260,7 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	private renderValueInput(row: HTMLElement, condition: FilterCondition, option: FilterColumnOption): void {
-		const inputType = option.kind === 'date' ? 'date' : 'text';
+		const inputType = option.kind === 'date' ? 'date' : option.kind === 'time' ? 'time' : 'text';
 		const input = row.createEl('input', {
 			type: inputType,
 			cls: 'tlb-filter-input',
@@ -269,7 +269,15 @@ export class FilterViewEditorModal extends Modal {
 		const currentValue = typeof condition.value === 'string' ? condition.value : '';
 		input.value = currentValue;
 		condition.value = currentValue;
-		if (option.allowNumericOperators && option.kind !== 'status' && option.kind !== 'date') {
+		if (option.kind === 'time') {
+			input.step = '1';
+		}
+		if (
+			option.allowNumericOperators &&
+			option.kind !== 'status' &&
+			option.kind !== 'date' &&
+			option.kind !== 'time'
+		) {
 			input.setAttribute('inputmode', 'decimal');
 		}
 		input.addEventListener('input', () => {

@@ -21,6 +21,7 @@ import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
 import { t } from './i18n';
+import { applyEnvironmentLocale } from './i18n/localeEnvironment';
 import { ViewActionManager } from './plugin/ViewActionManager';
 import { OnboardingManager } from './plugin/OnboardingManager';
 
@@ -68,6 +69,12 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.editorConfigController = new EditorConfigBlockController(this.app);
 		await this.loadSettings();
+
+		const localeResult = applyEnvironmentLocale(this.app, this.settings);
+		logger.debug('Resolved active locale', {
+			resolvedLocale: localeResult.locale,
+			...localeResult.candidates
+		});
 
 		this.backupManager = new BackupManager({
 			plugin: this,

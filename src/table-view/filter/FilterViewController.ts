@@ -1,10 +1,16 @@
 import { App, Menu, Notice } from 'obsidian';
 import type { FilterViewDefinition, FilterRule, SortRule } from '../../types/filterView';
-import { FilterViewEditorModal, openFilterViewNameModal } from './FilterViewModals';
+import { FilterViewEditorModal, openFilterViewNameModal, type FilterViewEditorResult } from './FilterViewModals';
 import { FilterStateStore } from './FilterStateStore';
 import { t } from '../../i18n';
-import { getStatusDisplayLabel } from './statusDefaults';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
+import {
+	sanitizeIconId,
+	openDefaultViewMenu as showDefaultViewMenu,
+	promptEditDefaultView,
+	resetDefaultViewPreferences as clearDefaultViewPreferences
+} from './DefaultViewPreferences';
+import { ensureFilterViewsForFieldValues as autoEnsureFilterViews } from './FilterViewAutoGenerator';
 
 interface FilterViewControllerOptions {
 	app: App;
@@ -96,8 +102,8 @@ export class FilterViewController {
 			const modal = new FilterViewEditorModal(this.app, {
 				title: t('filterViewController.createModalTitle'),
 				columns: columnOptions,
-				onSubmit: (name, rule, sortRules) => {
-					this.saveFilterView(name, rule, sortRules);
+				onSubmit: (result) => {
+					this.saveFilterView(result);
 					resolve();
 				},
 				onCancel: () => resolve()
@@ -186,17 +192,19 @@ export class FilterViewController {
 				title: t('filterViewController.editModalTitle', { name: current.name }),
 				columns: columnOptions,
 				initialName: current.name,
+				initialIcon: current.icon ?? null,
 				initialRule: current.filterRule,
 				initialSortRules: current.sortRules,
-				onSubmit: (name, rule, sortRules) => {
+				onSubmit: (result) => {
 					this.stateStore.updateState((state) => {
 						const target = state.views.find((view) => view.id === viewId);
 						if (!target) {
 							return;
 						}
-						target.name = name;
-						target.filterRule = rule;
-						target.sortRules = this.stateStore.sanitizeSortRules(sortRules);
+						target.name = result.name;
+						target.filterRule = result.filterRule;
+						target.sortRules = this.stateStore.sanitizeSortRules(result.sortRules);
+						target.icon = sanitizeIconId(result.icon);
 					});
 					this.runStateEffects({ persist: true, apply: true });
 					resolve();
@@ -260,15 +268,22 @@ export class FilterViewController {
 				title: t('filterViewController.duplicateModalTitle', { name: sourceView.name }),
 				columns: columnOptions,
 				initialName: duplicatedName,
+				initialIcon: sourceView.icon ?? null,
 				initialRule,
 				initialSortRules,
-				onSubmit: (name, rule, sortRules) => {
+				onSubmit: (result) => {
 					let inserted = false;
-					const sanitizedSortRules: SortRule[] = this.stateStore.sanitizeSortRules(sortRules);
-					const clonedRule: FilterRule = {
-						combineMode: rule.combineMode,
-						conditions: rule.conditions.map((condition) => ({ ...condition }))
-					};
+					const sanitizedSortRules: SortRule[] = this.stateStore.sanitizeSortRules(result.sortRules);
+					const clonedRule: FilterRule | null = result.filterRule
+						? {
+							combineMode: result.filterRule.combineMode,
+							conditions: result.filterRule.conditions.map((condition) => ({ ...condition }))
+						}
+						: null;
+					if (!clonedRule) {
+						resolve();
+						return;
+					}
 
 					this.stateStore.updateState((state) => {
 						const sourceIndex = state.views.findIndex((view) => view.id === viewId);
@@ -277,11 +292,12 @@ export class FilterViewController {
 						}
 						const duplicatedView: FilterViewDefinition = {
 							id: this.generateFilterViewId(),
-							name,
+							name: result.name,
 							filterRule: clonedRule,
 							sortRules: sanitizedSortRules,
 							columnState: sourceColumnState,
-							quickFilter: sourceQuickFilter
+							quickFilter: sourceQuickFilter,
+						icon: sanitizeIconId(result.icon)
 						};
 						state.views.splice(sourceIndex + 1, 0, duplicatedView);
 						state.activeViewId = duplicatedView.id;
@@ -290,7 +306,7 @@ export class FilterViewController {
 
 					if (inserted) {
 						this.runStateEffects({ persist: true, apply: true });
-						new Notice(t('filterViewController.duplicateNotice', { name }));
+						new Notice(t('filterViewController.duplicateNotice', { name: result.name }));
 					}
 					resolve();
 				},
@@ -322,15 +338,19 @@ export class FilterViewController {
 		this.runStateEffects({ persist: true, apply: true });
 	}
 
-	private saveFilterView(name: string, rule: FilterRule, sortRules: SortRule[]): void {
-		const sanitizedSortRules = this.stateStore.sanitizeSortRules(sortRules);
+	private saveFilterView(result: FilterViewEditorResult): void {
+		if (!result.filterRule) {
+			return;
+		}
+		const sanitizedSortRules = this.stateStore.sanitizeSortRules(result.sortRules);
 		const newView: FilterViewDefinition = {
 			id: this.generateFilterViewId(),
-			name,
-			filterRule: rule,
+			name: result.name,
+			filterRule: result.filterRule,
 			sortRules: sanitizedSortRules,
 			columnState: null,
-			quickFilter: null
+			quickFilter: null,
+			icon: sanitizeIconId(result.icon)
 		};
 		this.stateStore.updateState((state) => {
 			state.views.push(newView);
@@ -338,6 +358,30 @@ export class FilterViewController {
 		});
 		this.tagGroupSupport?.onFilterViewCreated?.(newView);
 		this.runStateEffects({ persist: true, apply: true });
+	}
+
+	openDefaultViewMenu(anchor: HTMLElement, event?: MouseEvent): void {
+		showDefaultViewMenu({
+			app: this.app,
+			stateStore: this.stateStore,
+			anchor,
+			event,
+			onEdit: async () => {
+				await this.editDefaultView();
+			},
+			onReset: async () => {
+				if (clearDefaultViewPreferences(this.stateStore)) {
+					this.runStateEffects({ persist: true, apply: false });
+				}
+			}
+		});
+	}
+
+	async editDefaultView(): Promise<void> {
+		const changed = await promptEditDefaultView(this.app, this.stateStore);
+		if (changed) {
+			this.runStateEffects({ persist: true, apply: false });
+		}
 	}
 
 	private runStateEffects(options: StateChangeOptions): void {
@@ -355,152 +399,14 @@ export class FilterViewController {
 	}
 
 	ensureFilterViewsForFieldValues(field: string, values: string[]): FilterViewDefinition[] {
-		const trimmedField = field.trim();
-		if (!trimmedField) {
-			return [];
-		}
-		const uniqueValues: string[] = [];
-		const seen = new Set<string>();
-		for (const raw of values) {
-			const trimmed = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
-			if (!trimmed || seen.has(trimmed)) {
-				continue;
-			}
-			seen.add(trimmed);
-			uniqueValues.push(trimmed);
-		}
-		if (uniqueValues.length === 0) {
-			return [];
-		}
-
-		const createdIds: string[] = [];
-		let stateChanged = false;
-		this.stateStore.updateState((state) => {
-			const usedNames = new Set(
-				state.views
-					.map((view) => (typeof view.name === 'string' ? view.name.trim() : ''))
-					.filter((name) => name.length > 0)
-			);
-			for (const value of uniqueValues) {
-				const existing = state.views.find((view) => this.matchesFieldEqualsFilter(view, trimmedField, value));
-				if (existing) {
-					const expectedName = this.computeExpectedAutoName(trimmedField, value);
-					if (expectedName) {
-						const currentName = typeof existing.name === 'string' ? existing.name.trim() : '';
-						if (
-							currentName !== expectedName &&
-							(!currentName || currentName.toLowerCase() === expectedName.toLowerCase()) &&
-							!state.views.some(
-								(other) => other.id !== existing.id && (other.name ?? '').trim() === expectedName
-							)
-						) {
-							if (currentName) {
-								usedNames.delete(currentName);
-							}
-							existing.name = expectedName;
-							usedNames.add(expectedName.trim());
-							stateChanged = true;
-						}
-					}
-					createdIds.push(existing.id);
-					continue;
-				}
-				const name = this.composeAutoViewName(trimmedField, value, usedNames);
-				const definition: FilterViewDefinition = {
-					id: this.generateFilterViewId(),
-					name,
-					filterRule: {
-						combineMode: 'AND',
-						conditions: [
-							{
-								column: trimmedField,
-								operator: 'equals',
-								value
-							}
-						]
-					},
-					sortRules: [],
-					columnState: null,
-					quickFilter: null
-				};
-				state.views.push(definition);
-				createdIds.push(definition.id);
-				usedNames.add(definition.name.trim());
-				stateChanged = true;
-			}
+		const { resolved, stateChanged } = autoEnsureFilterViews({
+			stateStore: this.stateStore,
+			field,
+			values,
+			generateId: () => this.generateFilterViewId()
 		});
-
 		this.runStateEffects({ persist: stateChanged, apply: false });
-
-		const currentState = this.stateStore.getState();
-		const resolved: FilterViewDefinition[] = [];
-		for (const value of uniqueValues) {
-			const match = currentState.views.find((view) => this.matchesFieldEqualsFilter(view, trimmedField, value));
-			if (match) {
-				resolved.push(match);
-			}
-		}
 		return resolved;
-	}
-
-	private matchesFieldEqualsFilter(view: FilterViewDefinition, field: string, value: string): boolean {
-		if (!view.filterRule || view.filterRule.combineMode !== 'AND') {
-			return false;
-		}
-		const conditions = Array.isArray(view.filterRule.conditions) ? view.filterRule.conditions : [];
-		if (conditions.length !== 1) {
-			return false;
-		}
-		const condition = conditions[0];
-		const column = typeof condition.column === 'string' ? condition.column.trim().toLowerCase() : '';
-		if (column !== field.trim().toLowerCase()) {
-			return false;
-		}
-		if (condition.operator !== 'equals') {
-			return false;
-		}
-		const ruleValue =
-			typeof condition.value === 'string'
-				? condition.value.trim()
-				: String(condition.value ?? '').trim();
-		if (!ruleValue) {
-			return false;
-		}
-		return ruleValue.toLowerCase() === value.trim().toLowerCase();
-	}
-
-	private composeAutoViewName(field: string, value: string, usedNames: Set<string>): string {
-		let baseName = this.formatFieldValueForLabel(field, value).trim();
-		if (!baseName) {
-			baseName = t('tagGroups.emptyValueName', { field });
-		}
-		if (!baseName || baseName.trim().length === 0) {
-			baseName = field;
-		}
-		let candidate = baseName;
-		let index = 2;
-		while (usedNames.has(candidate.trim())) {
-			candidate = `${baseName} (${index})`;
-			index += 1;
-		}
-		return candidate;
-	}
-
-	private formatFieldValueForLabel(field: string, value: string): string {
-		const normalizedField = field.trim().toLowerCase();
-		if (normalizedField === 'status') {
-			return getStatusDisplayLabel(value);
-		}
-		return value;
-	}
-
-	private computeExpectedAutoName(field: string, value: string): string | null {
-		const normalizedField = field.trim().toLowerCase();
-		if (normalizedField === 'status') {
-			const label = getStatusDisplayLabel(value).trim();
-			return label.length > 0 ? label : null;
-		}
-		return null;
 	}
 
 	private generateFilterViewId(): string {

@@ -1,5 +1,11 @@
 import type { Plugin } from 'obsidian';
-import type { FileFilterViewState, FilterViewDefinition, FilterViewMetadata, SortRule } from '../types/filterView';
+import type {
+	FileFilterViewState,
+	FilterViewDefinition,
+	FilterViewMetadata,
+	SortRule,
+	DefaultFilterViewPreferences
+} from '../types/filterView';
 import type { FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
@@ -201,13 +207,15 @@ export class SettingsService {
 				return { column, direction };
 			})
 			.filter((rule: SortRule | null): rule is SortRule => rule !== null);
+		const sanitizedIcon = this.sanitizeIconId(source.icon);
 		return {
 			id: source.id,
 			name: source.name,
 			filterRule: source.filterRule != null ? this.deepClone(source.filterRule) : null,
 			sortRules,
 			columnState: source.columnState != null ? this.deepClone(source.columnState) : null,
-			quickFilter: source.quickFilter ?? null
+			quickFilter: source.quickFilter ?? null,
+			icon: sanitizedIcon
 		};
 	}
 
@@ -224,10 +232,15 @@ export class SettingsService {
 	}
 
 	private cloneFilterViewMetadata(metadata: FilterViewMetadata | null | undefined): FilterViewMetadata {
-		if (!metadata) {
-			return {};
+		const result: FilterViewMetadata = {};
+		if (metadata?.statusBaselineSeeded) {
+			result.statusBaselineSeeded = true;
 		}
-		return { ...metadata };
+		const defaultView = this.cloneDefaultViewPreferences(metadata?.defaultView);
+		if (defaultView) {
+			result.defaultView = defaultView;
+		}
+		return result;
 	}
 
 	getLoggingConfig(): LoggingConfig {
@@ -395,5 +408,29 @@ export class SettingsService {
 			completed,
 			helpFilePath
 		};
+	}
+
+	private sanitizeIconId(icon: unknown): string | null {
+		if (typeof icon !== 'string') {
+			return null;
+		}
+		const trimmed = icon.trim();
+		return trimmed.length > 0 ? trimmed : null;
+	}
+
+	private cloneDefaultViewPreferences(source: DefaultFilterViewPreferences | null | undefined): DefaultFilterViewPreferences | null {
+		if (!source) {
+			return null;
+		}
+		const result: DefaultFilterViewPreferences = {};
+		const name = typeof source.name === 'string' ? source.name.trim() : '';
+		if (name) {
+			result.name = name;
+		}
+		const icon = this.sanitizeIconId(source.icon);
+		if (icon) {
+			result.icon = icon;
+		}
+		return Object.keys(result).length > 0 ? result : null;
 	}
 }

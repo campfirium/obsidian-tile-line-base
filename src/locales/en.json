@@ -12,8 +12,20 @@
     "redoTableHistory": "Redo table change",
     "openHelpDocument": "Open TileLineBase help document",
     "createTable": "Create TileLineBase table note",
-    "toggleTableView": "Toggle table view",
-    "importCsvAsTable": "Import CSV as new table"
+    "importCsvAsTable": "Import CSV as new table",
+    "toggleTableView": "Toggle table view"
+  },
+  "csv": {
+    "errorNoFile": "Save the note before exporting; the current file could not be found.",
+    "exportFailure": "Failed to export CSV. Check the console for details.",
+    "exportSuccess": "Exported {{rows}} rows to CSV.",
+    "importFailure": "Failed to import the CSV file. Check the console for details.",
+    "defaultFileName": "Imported Table",
+    "createSuccess": "Created {{name}} with {{rows}} rows.",
+    "createFailure": "Failed to create a table from the CSV file.",
+    "importNoHeaders": "The CSV file is missing a header row.",
+    "importNoRows": "The CSV file does not contain any rows to import.",
+    "importSuccess": "Imported {{rows}} rows from CSV."
   },
   "settings": {
     "generalHeading": "General",
@@ -67,7 +79,6 @@
     "typeTextOption": "Text",
     "typeFormulaOption": "Formula",
     "typeDateOption": "Date",
-    "typeTimeOption": "Time",
     "formulaLabel": "Formula",
     "formulaDescription": "Reference a column with {field}; supports + - * / operators and \"text\" concatenation.",
     "formulaPlaceholder": "{points} + {cost}",
@@ -89,8 +100,6 @@
     "dateFormatIsoOption": "ISO (2024-01-31)",
     "dateFormatShortOption": "Short (e.g. 1/31/24)",
     "dateFormatLongOption": "Long (e.g. January 31, 2024)",
-    "timeFormatLabel": "Time display format",
-    "timeFormatDescription": "Choose how the time is shown in the grid.",
     "saveButton": "Save",
     "cancelButton": "Cancel",
     "nameEmptyError": "Column name cannot be empty",
@@ -109,12 +118,6 @@
     "dmyLong": "Day Month Year (31 January 2024)",
     "monthDay": "Month Day (Jan 31)",
     "chineseLong": "Chinese long form (2024骞?鏈?1鏃?"
-  },
-  "timeFormats": {
-    "hhMm": "24-hour (23:45)",
-    "hhMmSs": "24-hour with seconds (23:45:30)",
-    "hMmA": "12-hour (11:45 PM)",
-    "hMmSsA": "12-hour with seconds (11:45:30 PM)"
   },
   "columnInteraction": {
     "menuEdit": "Edit column",
@@ -204,24 +207,9 @@
     "textPlaceholder": "Enter value",
     "datePlaceholder": "Enter date (YYYY-MM-DD)",
     "dateHint": "Current display format: {{format}}",
-    "timePlaceholder": "Enter time (HH:mm or HH:mm:ss)",
-    "timeHint": "Current display format: {{format}}",
     "confirmButton": "Apply",
     "cancelButton": "Cancel",
-    "invalidDate": "Please enter a valid date in YYYY-MM-DD format",
-    "invalidTime": "Please enter a valid time in HH:mm or HH:mm:ss format"
-  },
-  "csv": {
-    "errorNoFile": "Please choose a CSV file first.",
-    "exportFailure": "Failed to export the table to CSV.",
-    "exportSuccess": "Exported {{rows}} row(s) to CSV.",
-    "importFailure": "Failed to import the CSV file.",
-    "defaultFileName": "Imported Table",
-    "createSuccess": "Created table \"{{name}}\" with {{rows}} row(s).",
-    "createFailure": "Failed to create a new table from CSV.",
-    "importNoHeaders": "The CSV file is missing a header row.",
-    "importNoRows": "The CSV file contains no data rows.",
-    "importSuccess": "Imported {{rows}} row(s) from CSV."
+    "invalidDate": "Please enter a valid date in YYYY-MM-DD format"
   },
   "copyTemplate": {
     "menuCopy": "Copy as Template",
@@ -290,7 +278,8 @@
     "settingsMenuAriaLabel": "Open table actions",
     "settingsMenuAutoWidthLabel": "Adjust column widths",
     "settingsMenuColumnLabel": "Column settings",
-    "settingsMenuHelpLabel": "Open help note"
+    "settingsMenuHelpLabel": "Open help note",
+    "unnamedViewLabel": "Unnamed view"
   },
   "backup": {
     "menuLabel": "Restore backup",
@@ -319,7 +308,10 @@
     "renamePlaceholder": "Enter new name",
     "duplicateNameSuffix": "copy",
     "duplicateNotice": "Duplicated view: {{name}}",
-    "duplicateModalTitle": "Duplicate view: {{name}}"
+    "duplicateModalTitle": "Duplicate view: {{name}}",
+    "menuEditDefault": "Edit default view",
+    "menuResetDefault": "Reset default view",
+    "editDefaultModalTitle": "Edit default view"
   },
   "filterViewModals": {
     "saveButton": "Save",
@@ -363,7 +355,19 @@
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
     "sortDirectionAsc": "Ascending (A 閿熸枻鎷?Z)",
-    "sortDirectionDesc": "Descending (Z 閿熸枻鎷?A)"
+    "sortDirectionDesc": "Descending (Z 閿熸枻鎷?A)",
+    "iconLabel": "Icon",
+    "iconDescription": "Pick a Lucide icon (for example: table, filter).",
+    "iconPlaceholder": "Pick a Lucide icon (e.g. table, filter)",
+    "iconPickerTooltip": "Browse icon list",
+    "iconPreviewInvalid": "No icon named \"{{icon}}\"",
+    "iconPreviewEmpty": "No icon selected",
+    "iconPickerPlaceholder": "Search icons...",
+    "iconMatchesEmpty": "No icons match your search.",
+    "iconMatchAriaLabel": "Use icon {{icon}}",
+    "iconNavPrev": "Previous icons",
+    "iconNavNext": "Next icons",
+    "iconStatusEmpty": "No icon selected"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",
@@ -372,10 +376,6 @@
   "dateCellEditor": {
     "openPickerLabel": "Open date picker",
     "invalidInput": "Please enter a valid date or pick one from the calendar."
-  },
-  "timeCellEditor": {
-    "openPickerLabel": "Open time picker",
-    "invalidInput": "Please enter a valid time in HH:mm or HH:mm:ss format."
   },
   "tagGroups": {
     "menuShowAll": "Show all filter views",
@@ -453,5 +453,3 @@
     "openHelpFailed": "TileLineBase could not open the help document."
   }
 }
-
-

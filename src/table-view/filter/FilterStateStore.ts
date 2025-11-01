@@ -1,6 +1,12 @@
 import { getPluginContext } from '../../pluginContext';
 import type { ColumnState } from 'ag-grid-community';
-import type { FileFilterViewState, FilterViewDefinition, SortRule, FilterViewMetadata } from '../../types/filterView';
+import type {
+	FileFilterViewState,
+	FilterViewDefinition,
+	SortRule,
+	FilterViewMetadata,
+	DefaultFilterViewPreferences
+} from '../../types/filterView';
 
 export class FilterStateStore {
 	private state: FileFilterViewState = { views: [], activeViewId: null, metadata: {} };
@@ -97,7 +103,8 @@ export class FilterStateStore {
 				? source.sortRules.map((rule) => ({ column: rule.column, direction: rule.direction === 'desc' ? 'desc' : 'asc' }))
 				: [],
 			columnState: source.columnState ? this.deepClone(source.columnState) : null,
-			quickFilter: source.quickFilter ?? null
+			quickFilter: source.quickFilter ?? null,
+			icon: this.sanitizeIconId(source.icon)
 		};
 	}
 
@@ -129,10 +136,15 @@ export class FilterStateStore {
 	}
 
 	private cloneMetadata(metadata: FilterViewMetadata | null | undefined): FilterViewMetadata {
-		if (!metadata) {
-			return {};
+		const result: FilterViewMetadata = {};
+		if (metadata?.statusBaselineSeeded) {
+			result.statusBaselineSeeded = true;
 		}
-		return { ...metadata };
+		const defaultView = this.cloneDefaultViewPreferences(metadata?.defaultView);
+		if (defaultView) {
+			result.defaultView = defaultView;
+		}
+		return result;
 	}
 
 	private deepClone<T>(value: T): T {
@@ -140,5 +152,29 @@ export class FilterStateStore {
 			return value;
 		}
 		return JSON.parse(JSON.stringify(value)) as T;
+	}
+
+	private sanitizeIconId(icon: unknown): string | null {
+		if (typeof icon !== 'string') {
+			return null;
+		}
+		const trimmed = icon.trim();
+		return trimmed.length > 0 ? trimmed : null;
+	}
+
+	private cloneDefaultViewPreferences(source: DefaultFilterViewPreferences | null | undefined): DefaultFilterViewPreferences | null {
+		if (!source) {
+			return null;
+		}
+		const result: DefaultFilterViewPreferences = {};
+		const name = typeof source.name === 'string' ? source.name.trim() : '';
+		if (name.length > 0) {
+			result.name = name;
+		}
+		const icon = this.sanitizeIconId(source.icon);
+		if (icon) {
+			result.icon = icon;
+		}
+		return Object.keys(result).length > 0 ? result : null;
 	}
 }

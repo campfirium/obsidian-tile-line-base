@@ -15,12 +15,12 @@ export class GridClipboardService {
 	private readonly debug: ClipboardOptions['debug'];
 
 	constructor(options: ClipboardOptions) {
-		this.getGridApi = options.getGridApi;
-		this.getFocusedDocument = options.getFocusedDocument;
-		this.getGridContext = options.getGridContext;
-		this.stopCellEditing = options.stopCellEditing;
-		this.translate = options.translate;
-		this.debug = options.debug;
+		this.getGridApi = () => options.getGridApi();
+		this.getFocusedDocument = () => options.getFocusedDocument();
+		this.getGridContext = () => options.getGridContext();
+		this.stopCellEditing = () => options.stopCellEditing();
+		this.translate = (...args) => options.translate(...args);
+		this.debug = (...args) => options.debug(...args);
 	}
 
 	handleCopyShortcut(event: KeyboardEventLike, cellEvent?: CellKeyDownEvent): void {
@@ -93,37 +93,12 @@ export class GridClipboardService {
 	private copyTextToClipboard(doc: Document, text: string): void {
 		const nav = doc.defaultView?.navigator;
 		if (nav?.clipboard?.writeText) {
-			nav.clipboard.writeText(text).catch(() => {
-				this.copyViaHiddenTextarea(doc, text);
+			nav.clipboard.writeText(text).catch((error) => {
+				logger.warn(this.translate('agGrid.copyFailed'), error);
 			});
 			return;
 		}
 
-		this.copyViaHiddenTextarea(doc, text);
-	}
-
-	private copyViaHiddenTextarea(doc: Document, text: string): void {
-		const textarea = doc.createElement('textarea');
-		textarea.value = text;
-		textarea.setAttribute('readonly', 'true');
-		Object.assign(textarea.style, {
-			position: 'fixed',
-			left: '-9999px',
-			top: '0',
-			width: '1px',
-			height: '1px',
-			opacity: '0'
-		});
-
-		doc.body.appendChild(textarea);
-		textarea.focus();
-		textarea.select();
-		try {
-			doc.execCommand('copy');
-		} catch (error) {
-			logger.warn(this.translate('agGrid.copyFailed'), error);
-		}
-		textarea.blur();
-		doc.body.removeChild(textarea);
+		logger.warn(this.translate('agGrid.copyFailed'));
 	}
 }

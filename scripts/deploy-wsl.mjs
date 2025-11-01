@@ -13,7 +13,7 @@ function isWSL() {
 	try {
 		const release = fs.readFileSync('/proc/sys/kernel/osrelease', 'utf-8');
 		return release.toLowerCase().includes('microsoft');
-	} catch (error) {
+	} catch {
 		return false;
 	}
 }

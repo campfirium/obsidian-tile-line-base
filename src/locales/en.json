@@ -10,8 +10,9 @@
   "commands": {
     "undoTableHistory": "Undo last table change",
     "redoTableHistory": "Redo table change",
-    "openHelpDocument": "Open TileLineBase help document",
-    "createTable": "Create TileLineBase table note"
+    "openHelpDocument": "Open table help document",
+    "createTable": "Create table note",
+    "toggleTableView": "Toggle table view"
   },
   "settings": {
     "generalHeading": "General",

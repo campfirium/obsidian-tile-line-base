@@ -75,7 +75,7 @@ export class ViewSwitchCoordinator {
 			return;
 		}
 
-		const activeLeaf = this.app.workspace.activeLeaf;
+		const activeLeaf = this.app.workspace.getMostRecentLeaf?.() ?? null;
 		if (!activeLeaf) {
 			logger.debug('maybeSwitchToTableView: no active leaf', { file: file.path });
 			return;
@@ -315,13 +315,7 @@ export class ViewSwitchCoordinator {
 			workspaceIsMain: workspace === this.app.workspace
 		});
 
-		const activeLeaf = workspace.activeLeaf;
-		if (activeLeaf && (!preferredWindow || this.windowContextManager.getLeafWindow(activeLeaf) === preferredWindow)) {
-			logger.debug('selectLeaf -> activeLeaf');
-			return activeLeaf;
-		}
-
-		const mostRecent = workspace.getMostRecentLeaf();
+		const mostRecent = workspace.getMostRecentLeaf?.() ?? null;
 		if (mostRecent && (!preferredWindow || this.windowContextManager.getLeafWindow(mostRecent) === preferredWindow)) {
 			logger.debug('selectLeaf -> mostRecent');
 			return mostRecent;
@@ -397,8 +391,11 @@ export class ViewSwitchCoordinator {
 			const view = leaf.view;
 			if (view instanceof TableView) {
 				leafFile = view.file;
-			} else if ((view as any)?.file instanceof TFile) {
-				leafFile = (view as any).file as TFile;
+			} else {
+				const possibleFile = (view as any)?.file;
+				if (possibleFile instanceof TFile) {
+					leafFile = possibleFile;
+				}
 			}
 
 			if (leafFile?.path === file.path) {

@@ -30,7 +30,7 @@ interface TablePersistenceDeps {
  * 统一管理 Markdown 与配置块的加载/保存，并提供去抖写入能力。
  */
 export class TablePersistenceService {
-	private saveTimeout: NodeJS.Timeout | null = null;
+	private saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(private readonly deps: TablePersistenceDeps) {}
 

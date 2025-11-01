@@ -26,11 +26,11 @@ interface PendingFocusRequest {
 }
 
 /**
- * 负责聚焦到指定行并在必要时重试，避免 TableView 内部维护定时器与状态�?
+ * 负责聚焦到指定行并在必要时重试，避免 TableView 内部维护定时器与状态�?
  */
 export class FocusManager {
 	private pendingRequest: PendingFocusRequest | null = null;
-	private retryTimer: NodeJS.Timeout | null = null;
+	private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(private readonly deps: FocusManagerDeps) {}
 

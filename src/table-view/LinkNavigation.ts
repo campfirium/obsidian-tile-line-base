@@ -32,7 +32,7 @@ export function handleCellLinkOpen(view: TableView, context: CellLinkClickContex
 
 	const sourcePath = view.file?.path ?? '';
 	try {
-		view.app.workspace.openLinkText(target, sourcePath, true);
+		void view.app.workspace.openLinkText(target, sourcePath, true);
 	} catch (error) {
 		logger.error('Failed to open internal link', {
 			error,

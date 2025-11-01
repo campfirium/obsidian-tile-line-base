@@ -4,7 +4,7 @@
  * ���ܣ�
  * - ��Ⱦ 6 ������״̬ͼ�꣨todo, done, inprogress, onhold, someday, canceled��
  * - ���������� todo ? done ֮���л�
- * - �Ҽ��������ʾȫ��״̬�Ĳ˵�
+ * - �Ҽ��������ʾȫ��״̬�Ĳ˵�?
  * - ֧�ֿɷ����ԣ�title, aria-label��
  */
 
@@ -41,7 +41,7 @@ export function normalizeStatus(value: any): TaskStatus {
 		return 'onhold';
 	}
 
-	// someday 的别名
+	// someday 的别�?
 	if (
 		normalized === 'someday' ||
 		normalized === 'later' ||
@@ -70,7 +70,7 @@ export function getStatusIcon(status: TaskStatus): string {
 		'inprogress': 'loader-circle',  // Use spinning loader to indicate work in progress
 		'onhold': 'pause-circle',   // ? ��ͣͼ��
 		'someday': 'circle-dashed',   // Use dashed circle to express deferred/undecided status
-		'canceled': 'x-square'      // ? ��ŷ���
+		'canceled': 'x-square'      // ? ��ŷ���?
 	};
 	return icons[status] || icons['todo'];
 }
@@ -128,13 +128,6 @@ export class StatusCellRenderer implements ICellRendererComp {
 		// ��������Ԫ��
 		this.eGui = doc.createElement('div');
 		this.eGui.className = 'tlb-status-cell';
-		this.eGui.style.display = 'flex';
-		this.eGui.style.alignItems = 'center';
-		this.eGui.style.justifyContent = 'center';
-		this.eGui.style.cursor = 'pointer';
-		this.eGui.style.userSelect = 'none';  // ��ֹ�ı�ѡ��
-		this.eGui.style.width = '100%';
-		this.eGui.style.height = '100%';
 		this.eGui.tabIndex = 0;
 		this.eGui.setAttribute('role', 'button');
 		this.eGui.setAttribute('aria-haspopup', 'menu');
@@ -181,7 +174,6 @@ export class StatusCellRenderer implements ICellRendererComp {
 				event.preventDefault();
 				event.stopPropagation();
 				const rect = this.eGui.getBoundingClientRect();
-				// ȡ��Ԫ��������Ϊ�˵���λ�㣬�����ڵ�
 				const anchor = {
 					clientX: rect.left + rect.width / 2,
 					clientY: rect.top + rect.height / 2,
@@ -194,33 +186,25 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * ��Ⱦͼ��Ϳɷ���������
+	 * ��Ⱦͼ��Ϳɷ���������?
 	 */
 	private renderIcon(): void {
 		const status = normalizeStatus(this.params.data?.status);
 		const iconId = getStatusIcon(status);
 		const label = getStatusLabel(status);
 
-		// ������ݣ�ʹ�� Obsidian �� Lucide ͼ��
+		// ������ݣ�ʹ��?Obsidian �� Lucide ͼ��
 		this.eGui.innerHTML = '';
 		setIcon(this.eGui, iconId);
 
-		// ��ӿɷ�����֧��
+		// ��ӿɷ�����֧��?
 		if (this.srLabelElement && this.srLabelElement.isConnected) {
 			this.srLabelElement.remove();
 		}
 		const doc = this.eGui.ownerDocument || document;
 		const srLabel = doc.createElement('span');
 		srLabel.textContent = label;
-		srLabel.style.position = 'absolute';
-		srLabel.style.width = '1px';
-		srLabel.style.height = '1px';
-		srLabel.style.padding = '0';
-		srLabel.style.margin = '-1px';
-		srLabel.style.overflow = 'hidden';
-		srLabel.style.clip = 'rect(0, 0, 0, 0)';
-		srLabel.style.whiteSpace = 'nowrap';
-		srLabel.style.border = '0';
+		srLabel.className = 'tlb-visually-hidden';
 		const srId =
 			this.params.node?.id != null
 				? `tlb-status-sr-${this.params.node.id}`
@@ -246,7 +230,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		} else if (currentStatus === 'done') {
 			newStatus = 'todo';
 		} else {
-			// inprogress, onhold, canceled �����ͳһ��Ϊ done
+			// inprogress, onhold, canceled �����ͳһ���?done
 			newStatus = 'done';
 		}
 
@@ -269,14 +253,6 @@ export class StatusCellRenderer implements ICellRendererComp {
 		menu.className = 'tlb-status-context-menu';
 		menu.setAttribute('role', 'menu');
 		menu.setAttribute('aria-label', t('statusCell.menuLabel'));
-		menu.style.position = 'fixed';
-		menu.style.zIndex = '10000';
-		menu.style.backgroundColor = 'var(--background-primary)';
-		menu.style.border = '1px solid var(--background-modifier-border)';
-		menu.style.borderRadius = '4px';
-		menu.style.padding = '4px 0';
-		menu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
-		menu.style.minWidth = '120px';
 
 		// �����˵���
 		this.contextMenuItems = [];
@@ -285,25 +261,18 @@ export class StatusCellRenderer implements ICellRendererComp {
 			const label = getStatusLabel(status);
 			const item = ownerDoc.createElement('div');
 			item.className = 'tlb-status-menu-item';
-			item.style.padding = '6px 12px';
-			item.style.cursor = 'pointer';
-			item.style.userSelect = 'none';
-			item.style.display = 'flex';
-			item.style.alignItems = 'center';
-			item.style.gap = '8px';
 			item.setAttribute('role', 'menuitemradio');
 			item.setAttribute('aria-label', label);
 			item.setAttribute('tabindex', '-1');
 
 			// ����ͼ������
 			const iconContainer = ownerDoc.createElement('span');
-			iconContainer.style.display = 'inline-flex';
-			iconContainer.style.width = '16px';
-			iconContainer.style.height = '16px';
+			iconContainer.className = 'tlb-status-menu-item__icon';
 			setIcon(iconContainer, getStatusIcon(status));
 
 			// �����ı���ǩ
 			const labelSpan = ownerDoc.createElement('span');
+			labelSpan.className = 'tlb-status-menu-item__label';
 			labelSpan.textContent = label;
 
 			// ��װ�˵���
@@ -312,22 +281,13 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 			// ��ǰ״̬����
 			if (status === currentStatus) {
-				item.style.opacity = '0.5';
-				item.style.cursor = 'default';
+				item.classList.add('is-active', 'is-disabled');
 				item.setAttribute('aria-checked', 'true');
 				item.setAttribute('aria-disabled', 'true');
 				this.contextMenuItems.push({ element: item, status, disabled: true });
 			} else {
 				item.setAttribute('aria-checked', 'false');
-				// ��ͣЧ��
-				item.addEventListener('mouseenter', () => {
-					item.style.backgroundColor = 'var(--background-modifier-hover)';
-				});
-				item.addEventListener('mouseleave', () => {
-					item.style.backgroundColor = '';
-				});
 
-				// ����л�״̬
 				item.addEventListener('click', (e) => {
 					e.stopPropagation();
 					this.changeStatus(status);
@@ -344,7 +304,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		const viewportWidth = defaultView.innerWidth;
 		const viewportHeight = defaultView.innerHeight;
 
-		// ��ʱ��ӵ� DOM �Ի�ȡ�ߴ�
+		// ��ʱ��ӵ�?DOM �Ի�ȡ�ߴ�
 		ownerDoc.body.appendChild(menu);
 		const menuRect = menu.getBoundingClientRect();
 
@@ -430,17 +390,17 @@ export class StatusCellRenderer implements ICellRendererComp {
 			this.focusMenuItem(focusIndex);
 		}
 
-		// ����ⲿ���ز˵�
+		// ����ⲿ���ز˵�?
 		this.documentClickHandler = (e: MouseEvent) => {
 			// �������ڲ˵��ڲ���������
 			if (this.contextMenu && this.contextMenu.contains(e.target as Node)) {
 				return;
 			}
-			// ����ⲿ���Ҽ������ز˵�
+			// ����ⲿ���Ҽ������ز˵�?
 			this.hideContextMenu();
 		};
 
-		// �ӳ���Ӽ����������⵱ǰ�Ҽ��¼���������
+		// �ӳ���Ӽ����������⵱ǰ�Ҽ��¼���������?
 		setTimeout(() => {
 			if (this.documentClickHandler) {
 				ownerDoc.addEventListener('click', this.documentClickHandler, { capture: true });
@@ -465,7 +425,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui?.setAttribute('aria-expanded', 'false');
 		this.menuKeydownHandler = undefined;
 
-		// �Ƴ� document �ĵ��������
+		// �Ƴ� document �ĵ��������?
 		if (this.documentClickHandler) {
 			const ownerDoc = this.eGui?.ownerDocument || document;
 			ownerDoc.removeEventListener('click', this.documentClickHandler);
@@ -534,7 +494,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 			return;
 		}
 
-		// ͨ���ص�֪ͨ TableView ����״̬���
+		// ͨ���ص�֪ͨ TableView ����״̬���?
 		if (this.params.context?.onStatusChange) {
 			this.params.context.onStatusChange(rowId, newStatus);
 		} else {
@@ -595,3 +555,5 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 	}
 }
+
+

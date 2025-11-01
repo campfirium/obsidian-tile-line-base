@@ -3,7 +3,6 @@ import { ESLint } from 'eslint';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
@@ -140,8 +139,14 @@ const buildReportLines = (timestamp, totals, issues) => {
 };
 
 const run = async () => {
-	const eslint = new ESLint({ extensions: ['.ts', '.tsx'] });
-	const results = await eslint.lintFiles(['src/**/*.{ts,tsx}']);
+	const eslint = new ESLint();
+	const lintTargets = [
+		'src/**/*.{ts,tsx}',
+		'src/locales/**/*.json',
+		'scripts/**/*.mjs',
+		'manifest.json',
+	];
+	const results = await eslint.lintFiles(lintTargets);
 	const formatter = await eslint.loadFormatter('stylish');
 	const formattedOutput = formatter.format(results);
 

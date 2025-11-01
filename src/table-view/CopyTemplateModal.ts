@@ -44,15 +44,9 @@ export class CopyTemplateModal extends Modal {
 		contentEl.createEl('p', { text: t('copyTemplate.modalDescription') });
 
 		const inputWrapper = contentEl.createDiv({ cls: 'tlb-copy-template-input-wrapper' });
-		inputWrapper.style.width = '100%';
 		this.textarea = ownerDoc.createElement('textarea');
 		this.textarea.className = 'tlb-copy-template-input';
 		this.textarea.rows = 10;
-		this.textarea.style.width = '100%';
-		this.textarea.style.boxSizing = 'border-box';
-		this.textarea.style.fontFamily = 'var(--font-monospace)';
-		this.textarea.style.lineHeight = '1.5';
-		this.textarea.style.minHeight = '220px';
 		this.textarea.placeholder = t('copyTemplate.templatePlaceholder');
 		this.textarea.value = this.templateValue;
 		this.textarea.addEventListener('input', () => {
@@ -139,3 +133,4 @@ export class CopyTemplateModal extends Modal {
 		this.returnFocusTarget = null;
 	}
 }
+

@@ -54,14 +54,8 @@ export class EnterKeyCoordinator {
 			focusedRowIndex: focusedCoords.rowIndex
 		});
 
-		const editingCells = typeof api.getEditingCells === 'function' ? api.getEditingCells() : [];
-		const activeEditingCell = editingCells.length > 0 ? editingCells[0] : undefined;
-		const focusedCell = api.getFocusedCell();
-
 		const effectiveRowIndex =
 			(rowIndex ?? undefined) ??
-			(activeEditingCell?.rowIndex ?? undefined) ??
-			(focusedCell?.rowIndex ?? undefined) ??
 			(focusedCoords.rowIndex ?? undefined) ??
 			null;
 
@@ -82,12 +76,7 @@ export class EnterKeyCoordinator {
 		}
 		this.pendingEnterAtLastRow = true;
 
-		const resolvedColId =
-			columnId ??
-			activeEditingCell?.column?.getColId?.() ??
-			focusedCell?.column.getColId() ??
-			focusedCoords.colId ??
-			null;
+		const resolvedColId = columnId ?? focusedCoords.colId ?? null;
 
 		const fallbackColId = (() => {
 			const gridApi = this.getGridApi();

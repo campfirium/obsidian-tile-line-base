@@ -1,6 +1,3 @@
-import { createHash } from 'crypto';
-import { promises as fs } from 'fs';
-import type { Stats } from 'fs';
 import type {
 	BackupCategory,
 	BackupDescriptor,
@@ -11,8 +8,8 @@ import type {
 
 export type { BackupDescriptor } from './backupTypes';
 
-import { join } from 'path';
-import { FileSystemAdapter, Plugin, TFile } from 'obsidian';
+import type { DataAdapter, Stat, TFile } from 'obsidian';
+import { Plugin, normalizePath } from 'obsidian';
 import { getLogger } from '../utils/logger';
 import type { BackupSettings } from './SettingsService';
 import {
@@ -22,6 +19,7 @@ import {
 	removeLegacyDirectoriesIfEmpty
 } from './backupPath';
 import { BUCKET_RULES, collectCandidates, resolveCategory, selectBucket } from './backupRetention';
+import { migrateLegacyEntry } from './backupMigration';
 
 const logger = getLogger('service:backup');
 
@@ -31,6 +29,16 @@ const BACKUP_EXTENSION = '.tlbkp';
 const INDEX_VERSION = 1;
 const LATEST_KEEP_COUNT = 3;
 const MAX_CAPACITY_MB = 10_240; // Avoid unbounded JSON size if user inputs huge value
+const FNV32_OFFSET_BASIS = 0x811c9dc5;
+const FNV32_PRIME = 0x01000193;
+
+interface SubtleCryptoLike {
+	digest: (algorithm: string, data: ArrayBuffer | Uint8Array) => Promise<ArrayBuffer>;
+}
+
+interface CryptoLike {
+	subtle?: SubtleCryptoLike;
+}
 
 interface BackupManagerOptions {
 	plugin: Plugin;
@@ -40,8 +48,11 @@ interface BackupManagerOptions {
 export class BackupManager {
 	private readonly plugin: Plugin;
 	private readonly getSettings: () => BackupSettings;
+	private readonly adapter: DataAdapter;
+	private readonly pluginDir: string;
 	private readonly backupsDir: string;
 	private readonly indexPath: string;
+	private readonly encoder = new TextEncoder();
 	private index: BackupIndex = { version: INDEX_VERSION, totalSize: 0, files: {} };
 	private queue: Promise<void> = Promise.resolve();
 	private initialized = false;
@@ -50,8 +61,10 @@ export class BackupManager {
 	constructor(options: BackupManagerOptions) {
 		this.plugin = options.plugin;
 		this.getSettings = options.getSettings;
-		this.backupsDir = join(this.getPluginDir(), BACKUP_DIR_NAME);
-		this.indexPath = join(this.backupsDir, INDEX_FILE_NAME);
+		this.adapter = this.plugin.app.vault.adapter;
+		this.pluginDir = this.getPluginDir();
+		this.backupsDir = normalizePath(`${this.pluginDir}/${BACKUP_DIR_NAME}`);
+		this.indexPath = normalizePath(`${this.backupsDir}/${INDEX_FILE_NAME}`);
 	}
 
 	async initialize(): Promise<void> {
@@ -63,7 +76,8 @@ export class BackupManager {
 				if (this.initialized) {
 					return;
 				}
-				await fs.mkdir(this.backupsDir, { recursive: true });
+				await this.ensureDirectory(this.pluginDir);
+				await this.ensureDirectory(this.backupsDir);
 				await this.loadIndex();
 				const reconciled = await this.reconcileIndexWithFilesystem();
 				if (reconciled) {
@@ -127,7 +141,7 @@ export class BackupManager {
 			const backupPath = this.getEntryPath(file.path, target);
 			let backupContent: string | null = null;
 			try {
-				backupContent = await fs.readFile(backupPath, 'utf8');
+				backupContent = await this.adapter.read(backupPath);
 			} catch (error) {
 				logger.error('Failed to read backup file', { path: backupPath, error });
 				throw error;
@@ -156,9 +170,9 @@ export class BackupManager {
 
 	private async createBackupUnsafe(filePath: string, content: string): Promise<boolean> {
 		const record = this.getOrCreateRecord(filePath);
-		const buffer = Buffer.from(content, 'utf8');
-		const size = buffer.byteLength;
-		const hash = this.computeHash(buffer);
+		const encoded = this.encoder.encode(content);
+		const size = encoded.byteLength;
+		const hash = await this.computeHash(encoded);
 		const latest = record.entries[0];
 		if (latest && latest.hash === hash) {
 			return false;
@@ -166,10 +180,9 @@ export class BackupManager {
 
 		const timestamp = Date.now();
 		const id = this.generateEntryId(record, timestamp);
-		const fileName = buildBackupFileName(filePath, id, BACKUP_EXTENSION);
-		const fullPath = join(this.backupsDir, fileName);
-		await fs.writeFile(fullPath, buffer);
 		const entry: StoredBackupEntry = { id, createdAt: timestamp, size, hash };
+		const entryPath = this.getEntryPath(filePath, entry);
+		await this.adapter.write(entryPath, content);
 		record.entries.unshift(entry);
 		record.totalSize += size;
 		this.index.totalSize += size;
@@ -267,18 +280,18 @@ export class BackupManager {
 
 		const entryPath = this.getEntryPath(filePath, entry);
 		try {
-			await fs.unlink(entryPath);
+			await this.adapter.remove(entryPath);
 		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+			if (!this.isNotFoundError(error)) {
 				logger.warn('Failed to remove backup entry', { entryPath, error });
 			} else {
 				const legacySegments = getLegacyPathSegments(filePath);
 				const legacyPath = buildLegacyEntryPath(this.backupsDir, legacySegments, entry.id, BACKUP_EXTENSION);
 				try {
-					await fs.unlink(legacyPath);
-					await removeLegacyDirectoriesIfEmpty(this.backupsDir, legacySegments);
+					await this.adapter.remove(legacyPath);
+					await removeLegacyDirectoriesIfEmpty(this.adapter, this.backupsDir, legacySegments);
 				} catch (legacyError) {
-					if ((legacyError as NodeJS.ErrnoException).code !== 'ENOENT') {
+					if (!this.isNotFoundError(legacyError)) {
 						logger.warn('Failed to remove legacy backup entry', { legacyPath, error: legacyError });
 					}
 				}
@@ -306,8 +319,36 @@ export class BackupManager {
 		return candidate;
 	}
 
-	private computeHash(buffer: Buffer): string {
-		return createHash('sha256').update(buffer).digest('hex');
+	private async computeHash(data: Uint8Array): Promise<string> {
+		const cryptoApi = (globalThis as { crypto?: CryptoLike }).crypto;
+		if (cryptoApi?.subtle) {
+			const digest = await cryptoApi.subtle.digest('SHA-256', data);
+			return this.arrayBufferToHex(digest);
+		}
+		return this.fallbackHash(data);
+	}
+
+	private arrayBufferToHex(buffer: ArrayBuffer): string {
+		const bytes = new Uint8Array(buffer);
+		let result = '';
+		for (let index = 0; index < bytes.length; index++) {
+			result += bytes[index].toString(16).padStart(2, '0');
+		}
+		return result;
+	}
+
+	private fallbackHash(data: Uint8Array): string {
+		let hashA = FNV32_OFFSET_BASIS;
+		let hashB = FNV32_OFFSET_BASIS;
+		for (let index = 0; index < data.length; index++) {
+			const value = data[index];
+			hashA = Math.imul(hashA ^ value, FNV32_PRIME) >>> 0;
+			hashB = Math.imul(hashB ^ ((value + index) & 0xff), FNV32_PRIME) >>> 0;
+		}
+		return (
+			hashA.toString(16).padStart(8, '0') +
+			hashB.toString(16).padStart(8, '0')
+		);
 	}
 
 	private getOrCreateRecord(filePath: string): FileBackupRecord {
@@ -321,23 +362,17 @@ export class BackupManager {
 	}
 
 	private getPluginDir(): string {
-		const adapter = this.plugin.app.vault.adapter;
-		if (adapter instanceof FileSystemAdapter) {
-			const basePath = adapter.getBasePath();
-			const configDir = this.plugin.app.vault.configDir ?? '.obsidian';
-			return join(basePath, configDir, 'plugins', this.plugin.manifest.id);
-		}
-		throw new Error('BackupManager requires a FileSystemAdapter');
+		return normalizePath(`${this.plugin.app.vault.configDir}/plugins/${this.plugin.manifest.id}`);
 	}
 
 	private getEntryPath(filePath: string, entry: StoredBackupEntry): string {
 		const fileName = buildBackupFileName(filePath, entry.id, BACKUP_EXTENSION);
-		return join(this.backupsDir, fileName);
+		return normalizePath(`${this.backupsDir}/${fileName}`);
 	}
 
 	private async loadIndex(): Promise<void> {
 		try {
-			const raw = await fs.readFile(this.indexPath, 'utf8');
+			const raw = await this.adapter.read(this.indexPath);
 			const parsed = JSON.parse(raw) as BackupIndex;
 			if (!parsed || typeof parsed !== 'object' || parsed.version !== INDEX_VERSION) {
 				logger.warn('Backup index version mismatch, resetting');
@@ -380,7 +415,7 @@ export class BackupManager {
 			}
 			this.index.totalSize = Object.values(this.index.files).reduce((sum, record) => sum + record.totalSize, 0);
 		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+			if (this.isNotFoundError(error)) {
 				this.index = { version: INDEX_VERSION, totalSize: 0, files: {} };
 				return;
 			}
@@ -398,61 +433,31 @@ export class BackupManager {
 			const legacySegments = getLegacyPathSegments(filePath);
 			for (const entry of record.entries) {
 				const entryPath = this.getEntryPath(filePath, entry);
-				let stat: Stats | null = null;
+				let stat: Stat | null = null;
 				try {
-					stat = await fs.stat(entryPath);
+					stat = await this.adapter.stat(entryPath);
 				} catch (error) {
-					if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-						const legacyPath = buildLegacyEntryPath(this.backupsDir, legacySegments, entry.id, BACKUP_EXTENSION);
-						try {
-							const legacyStat = await fs.stat(legacyPath);
-							if (legacyStat.isFile()) {
-								let migrated = false;
-								try {
-									await fs.rename(legacyPath, entryPath);
-									migrated = true;
-								} catch (renameError) {
-									logger.warn('Failed to migrate legacy backup entry via rename, attempting copy', {
-										legacyPath,
-										entryPath,
-										error: renameError
-									});
-									try {
-										const data = await fs.readFile(legacyPath);
-										await fs.writeFile(entryPath, data);
-										await fs.unlink(legacyPath).catch(() => undefined);
-										migrated = true;
-									} catch (copyError) {
-										logger.warn('Failed to migrate legacy backup entry via copy', {
-											legacyPath,
-											entryPath,
-											error: copyError
-										});
-									}
-								}
-								if (migrated) {
-									await removeLegacyDirectoriesIfEmpty(this.backupsDir, legacySegments);
-									try {
-										stat = await fs.stat(entryPath);
-									} catch (statError) {
-										logger.warn('Failed to stat migrated backup entry', { entryPath, error: statError });
-									}
-									mutated = true;
-								}
-							}
-						} catch (legacyError) {
-							if ((legacyError as NodeJS.ErrnoException).code !== 'ENOENT') {
-								logger.warn('Failed to stat legacy backup entry during reconcile', {
-									entryPath: legacyPath,
-									error: legacyError
-								});
-							}
-						}
-					} else {
+					if (!this.isNotFoundError(error)) {
 						logger.warn('Failed to stat backup entry during reconcile', { entryPath, error });
 					}
 				}
-				if (!stat || !stat.isFile()) {
+				if (!stat) {
+					const migratedStat = await migrateLegacyEntry({
+						adapter: this.adapter,
+						backupsDir: this.backupsDir,
+						entry,
+						entryPath,
+						legacySegments,
+						backupExtension: BACKUP_EXTENSION,
+						isNotFoundError: (error) => this.isNotFoundError(error),
+						logger
+					});
+					if (migratedStat) {
+						stat = migratedStat;
+						mutated = true;
+					}
+				}
+				if (!stat || stat.type !== 'file') {
 					mutated = true;
 					continue;
 				}
@@ -475,7 +480,38 @@ export class BackupManager {
 
 	private async persistIndex(): Promise<void> {
 		const payload = JSON.stringify(this.index, null, 2);
-		await fs.writeFile(this.indexPath, payload, 'utf8');
+		await this.adapter.write(this.indexPath, payload);
+	}
+
+	private async ensureDirectory(path: string): Promise<void> {
+		if (await this.adapter.exists(path)) {
+			return;
+		}
+		try {
+			await this.adapter.mkdir(path);
+		} catch (error) {
+			if (!this.isAlreadyExistsError(error)) {
+				throw error;
+			}
+		}
+	}
+
+	private isNotFoundError(error: unknown): boolean {
+		return this.getErrorCode(error) === 'ENOENT';
+	}
+
+	private isAlreadyExistsError(error: unknown): boolean {
+		return this.getErrorCode(error) === 'EEXIST';
+	}
+
+	private getErrorCode(error: unknown): string | null {
+		if (error && typeof error === 'object' && 'code' in error) {
+			const code = (error as { code?: unknown }).code;
+			if (typeof code === 'string') {
+				return code;
+			}
+		}
+		return null;
 	}
 
 	private formatTimestamp(timestamp: number): string {

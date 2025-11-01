@@ -10,8 +10,9 @@
   "commands": {
     "undoTableHistory": "撤销上次表格操作",
     "redoTableHistory": "重做表格操作",
-    "openHelpDocument": "打开 TileLineBase 帮助文档",
-    "createTable": "新建 TileLineBase 表格笔记"
+    "openHelpDocument": "打开表格帮助文档",
+    "createTable": "创建表格笔记",
+    "toggleTableView": "切换表格视图"
   },
   "settings": {
     "generalHeading": "常规",

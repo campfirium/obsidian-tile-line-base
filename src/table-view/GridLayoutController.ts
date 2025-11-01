@@ -16,8 +16,8 @@ type ResizeSource =
 export class GridLayoutController {
 	private container: HTMLElement | null = null;
 	private resizeObserver: ResizeObserver | null = null;
-	private resizeTimeout: NodeJS.Timeout | null = null;
-	private sizeCheckInterval: NodeJS.Timeout | null = null;
+	private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+	private sizeCheckInterval: ReturnType<typeof setInterval> | null = null;
 	private windowResizeHandler: (() => void) | null = null;
 	private visualViewportResizeHandler: (() => void) | null = null;
 	private visualViewportTarget: VisualViewport | null = null;
@@ -36,6 +36,9 @@ export class GridLayoutController {
 
 		this.detach();
 		this.container = container;
+		container.classList.add('tlb-grid-layout');
+		container.classList.remove('tlb-grid-layout--explicit-height');
+		container.style.removeProperty('--tlb-grid-layout-height');
 		this.updateContainerSize();
 		this.installObservers(container);
 		this.scheduleColumnResize('initial');
@@ -81,6 +84,11 @@ export class GridLayoutController {
 			cancelAnimationFrame(this.pendingSizeUpdateHandle);
 		}
 		this.pendingSizeUpdateHandle = null;
+
+		if (this.container) {
+			this.container.classList.remove('tlb-grid-layout', 'tlb-grid-layout--explicit-height');
+			this.container.style.removeProperty('--tlb-grid-layout-height');
+		}
 
 		this.lastContainerWidth = 0;
 		this.lastContainerHeight = 0;
@@ -186,10 +194,6 @@ export class GridLayoutController {
 			(container.closest('.tlb-table-view-content') as HTMLElement | null) ||
 			(container.parentElement as HTMLElement | null);
 
-		container.style.removeProperty('width');
-		container.style.maxWidth = '100%';
-		container.style.width = '100%';
-
 		let targetHeight = 0;
 		if (layoutHost) {
 			const parentRect = layoutHost.getBoundingClientRect();
@@ -206,17 +210,16 @@ export class GridLayoutController {
 		}
 
 		if (targetHeight > 0) {
-			const heightPx = `${targetHeight}px`;
-			if (container.style.height !== heightPx) {
-				container.style.height = heightPx;
-			}
+			container.style.setProperty('--tlb-grid-layout-height', targetHeight + 'px');
+			container.classList.add('tlb-grid-layout--explicit-height');
 		} else {
-			container.style.removeProperty('height');
-			container.style.height = '100%';
+			container.style.removeProperty('--tlb-grid-layout-height');
+			container.classList.remove('tlb-grid-layout--explicit-height');
 		}
 
 		this.pendingSizeUpdateHandle = null;
 	}
+
 
 	private scheduleColumnResize(source: ResizeSource): void {
 		if (this.resizeTimeout) {

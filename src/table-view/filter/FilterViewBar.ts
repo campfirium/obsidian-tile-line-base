@@ -63,7 +63,6 @@ export class FilterViewBar {
 		this.options.renderQuickFilter(this.searchEl);
 
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
-		this.actionsEl.style.flex = '0 0 auto';
 		const addButtonLabel = t('filterViewBar.addButtonAriaLabel');
 		this.addButtonEl = this.tabsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--add',
@@ -88,8 +87,6 @@ export class FilterViewBar {
 			this.openSettingsMenu();
 		};
 		this.settingsButtonEl.addEventListener('click', this.settingsMenuClickHandler);
-		this.settingsButtonEl.style.width = 'auto';
-		this.settingsButtonEl.style.minWidth = 'auto';
 
 		this.adjustWidthsHandler = () => {
 			this.options.callbacks.onAdjustColumnWidths();
@@ -303,3 +300,5 @@ export interface FilterViewBarTagGroupState {
 	visibleViewIds: Set<string> | null;
 	hasGroups: boolean;
 }
+
+

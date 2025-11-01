@@ -65,7 +65,7 @@ export class TableRefreshCoordinator {
 		});
 		plugin.registerEvent(vaultRef);
 		plugin.registerEvent(leafRef);
-		this.activeLeaf = app.workspace.activeLeaf ?? null;
+		this.activeLeaf = app.workspace.getMostRecentLeaf?.() ?? null;
 		this.initialized = true;
 	}
 
@@ -113,7 +113,7 @@ export class TableRefreshCoordinator {
 		TableRefreshCoordinator.coordinators.add(this);
 		this.isActive = TableRefreshCoordinator.activeLeaf
 			? TableRefreshCoordinator.activeLeaf === this.view.leaf
-			: this.view.leaf === (this.view.app.workspace.activeLeaf ?? null);
+			: this.view.leaf === (this.view.app.workspace.getMostRecentLeaf?.() ?? null);
 	}
 
 	setTrackedFile(file: TFile | null): void {

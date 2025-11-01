@@ -48,15 +48,7 @@ export class IconHeaderComponent implements IHeaderComp {
 		if (ariaLabel) {
 			const srLabel = doc.createElement('span');
 			srLabel.textContent = ariaLabel;
-			srLabel.style.position = 'absolute';
-			srLabel.style.width = '1px';
-			srLabel.style.height = '1px';
-			srLabel.style.padding = '0';
-			srLabel.style.margin = '-1px';
-			srLabel.style.overflow = 'hidden';
-			srLabel.style.clip = 'rect(0, 0, 0, 0)';
-			srLabel.style.whiteSpace = 'nowrap';
-			srLabel.style.border = '0';
+			srLabel.className = 'tlb-visually-hidden';
 			this.srLabelEl = srLabel;
 			this.eGui.appendChild(srLabel);
 		}

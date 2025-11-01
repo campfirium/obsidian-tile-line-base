@@ -349,8 +349,7 @@ export class FilterViewEditorModal extends Modal {
 				rule.direction = directionSelect.value === 'desc' ? 'desc' : 'asc';
 			});
 
-			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning' });
-			removeButton.style.marginLeft = 'auto';
+			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning tlb-filter-view-modal__remove' });
 			removeButton.addEventListener('click', () => {
 				this.sortRules.splice(index, 1);
 				this.renderSortRules();
@@ -516,3 +515,5 @@ export function openFilterViewNameModal(app: App, options: { title: string; plac
 		modal.open();
 	});
 }
+
+

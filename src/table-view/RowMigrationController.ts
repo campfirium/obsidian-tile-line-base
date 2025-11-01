@@ -116,9 +116,6 @@ export class RowMigrationController {
 
 	try {
 
-		const contextInfo = { target: targetFile.path, count: preparedBlocks.length };
-
-		console.error('[RowMigration] move-existing-start', contextInfo);
 
 		this.logger.warn('migrate:existing-start', {
 
@@ -142,8 +139,6 @@ export class RowMigrationController {
 		});
 
 		this.deps.rowInteraction.deleteRows(context.indexes);
-
-		console.error('[RowMigration] move-existing-complete', { target: targetFile.path, removed: context.indexes.length });
 
 			new Notice(
 
@@ -219,8 +214,6 @@ export class RowMigrationController {
 
 	try {
 
-		console.error('[RowMigration] copy-existing-start', { target: targetFile.path, count: preparedBlocks.length });
-
 		this.logger.warn('copy:existing-start', {
 
 			target: targetFile.path,
@@ -241,9 +234,6 @@ export class RowMigrationController {
 			reason: 'row-migration:copy-existing',
 			immediate: true
 		});
-
-
-		console.error('[RowMigration] copy-existing-complete', { target: targetFile.path, count: preparedBlocks.length });
 
 			new Notice(
 
@@ -361,7 +351,7 @@ export class RowMigrationController {
 
 				try {
 
-					await this.deps.app.vault.delete(newFile);
+					await this.deps.app.fileManager.trashFile(newFile);
 
 				} catch (cleanupError) {
 
@@ -855,8 +845,6 @@ export class RowMigrationController {
 
 	private async appendBlocksToExistingFile(targetFile: TFile, blockMarkdown: string): Promise<void> {
 
-		console.error('[RowMigration] append-existing-enter', { target: targetFile.path, length: blockMarkdown.length });
-
 		this.logger.warn('append-existing:enter', { target: targetFile.path, payloadLength: blockMarkdown.length });
 
 		const trimmedPayload = blockMarkdown.trim();
@@ -865,7 +853,7 @@ export class RowMigrationController {
 
 			this.logger.warn('append-existing:empty-payload', { target: targetFile.path });
 
-			console.warn('[RowMigration] append-existing-empty', targetFile.path);
+			this.logger.warn('[RowMigration] append-existing-empty', targetFile.path);
 
 			return;
 
@@ -875,7 +863,7 @@ export class RowMigrationController {
 
 		this.logger.warn('append-existing:read', { target: targetFile.path });
 
-		console.info('[RowMigration] append-existing-read', targetFile.path);
+		this.logger.info('[RowMigration] append-existing-read', targetFile.path);
 
 		const adapter = this.deps.app.vault.adapter;
 
@@ -922,8 +910,6 @@ export class RowMigrationController {
 			length: trimmedPayload.length
 
 		});
-
-		console.error('[RowMigration] append-existing-done', { target: targetFile.path, length: trimmedPayload.length });
 
 	}
 

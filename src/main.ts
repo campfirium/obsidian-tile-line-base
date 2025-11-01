@@ -178,8 +178,8 @@ export default class TileLineBasePlugin extends Plugin {
 		// Register file-menu handler once (avoid duplicate registration per window)
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu: Menu, file: TFile) => {
-				const activeLeaf = this.app.workspace.activeLeaf;
-				const activeWindow = this.windowContextManager.getLeafWindow(activeLeaf) ?? window;
+				const activeLeaf = this.getMostRecentLeaf();
+				const activeWindow = this.windowContextManager.getLeafWindow(activeLeaf ?? null) ?? window;
 				const context = this.windowContextManager.getWindowContext(activeWindow) ?? this.mainContext ?? { window, app: this.app };
 
 				logger.debug('file-menu event received');
@@ -189,9 +189,9 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.addCommand({
 			id: 'toggle-table-view',
-			name: 'Toggle TileLineBase table view',
+			name: t('commands.toggleTableView'),
 			checkCallback: (checking: boolean) => {
-				const activeLeaf = this.app.workspace.activeLeaf;
+				const activeLeaf = this.getMostRecentLeaf();
 				logger.debug('toggle-table-view command', {
 					checking,
 					activeLeaf: snapshotLeaf(this.windowContextManager, activeLeaf)
@@ -209,7 +209,7 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'tile-line-base-table-undo',
+			id: 'table-history-undo',
 			name: t('commands.undoTableHistory'),
 			checkCallback: (checking: boolean) => {
 				const view = this.getActiveTableView();
@@ -225,7 +225,7 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'tile-line-base-table-redo',
+			id: 'table-history-redo',
 			name: t('commands.redoTableHistory'),
 			checkCallback: (checking: boolean) => {
 				const view = this.getActiveTableView();
@@ -241,7 +241,7 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'tile-line-base-open-help',
+			id: 'table-open-help',
 			name: t('commands.openHelpDocument'),
 			callback: () => {
 				if (!this.onboardingManager) {
@@ -252,7 +252,7 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'tile-line-base-create-table',
+			id: 'table-open-creation-modal',
 			name: t('commands.createTable'),
 			callback: () => {
 				const activeView = this.getActiveTableView();
@@ -283,15 +283,14 @@ export default class TileLineBasePlugin extends Plugin {
 			this.editorConfigController.start(this);
 		}
 
-		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
+		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
 
-	async onunload() {
+	onunload(): void {
 		setPluginContext(null);
 		this.viewActionManager.clearInjectedActions();
-		logger.info('Plugin unload: detaching all table views');
+		logger.info('Plugin unload: cleaning up resources');
 		this.restoreRightSidebarIfNeeded();
-		this.app.workspace.detachLeavesOfType(TABLE_VIEW_TYPE);
 
 		if (this.editorConfigController) {
 			this.editorConfigController.dispose();
@@ -365,7 +364,7 @@ export default class TileLineBasePlugin extends Plugin {
 			return;
 		}
 		this.settings = this.settingsService.getSettings();
-		this.applyRightSidebarForLeaf(this.app.workspace.activeLeaf ?? null);
+		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
 
 	async toggleLeafView(leaf: WorkspaceLeaf): Promise<void> {
@@ -375,7 +374,7 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	async openFileInTableView(file: TFile): Promise<void> {
-		const activeLeaf = this.app.workspace.activeLeaf ?? null;
+		const activeLeaf = this.getMostRecentLeaf();
 		const preferredWindow = this.windowContextManager.getLeafWindow(activeLeaf ?? null);
 		const workspace = this.windowContextManager.getWorkspaceForLeaf(activeLeaf ?? null) ?? this.app.workspace;
 
@@ -449,13 +448,12 @@ export default class TileLineBasePlugin extends Plugin {
 		return view ?? null;
 	}
 
-	private async loadSettings(): Promise<void> {
-		this.settings = await this.settingsService.load();
-	}
-
-	private async saveSettings(): Promise<void> {
-		await this.settingsService.persist();
-		this.settings = this.settingsService.getSettings();
+	private getMostRecentLeaf(): WorkspaceLeaf | null {
+		const getLeaf = (this.app.workspace as any).getMostRecentLeaf;
+		if (typeof getLeaf === 'function') {
+			return getLeaf.call(this.app.workspace) ?? null;
+		}
+		return null;
 	}
 
 	private applyRightSidebarForLeaf(leaf: WorkspaceLeaf | null | undefined): void {
@@ -546,6 +544,11 @@ export default class TileLineBasePlugin extends Plugin {
 			return true;
 		}
 		return before !== after;
+	}
+
+	private async loadSettings(): Promise<void> {
+		const loaded = await this.settingsService.load();
+		this.settings = loaded;
 	}
 
 }

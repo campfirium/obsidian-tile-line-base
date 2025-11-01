@@ -133,9 +133,7 @@ export default class TileLineBasePlugin extends Plugin {
 			this.app.workspace.on('file-open', (openedFile) => {
 				logger.debug('file-open event received', { file: openedFile?.path ?? null });
 				if (openedFile instanceof TFile) {
-					window.setTimeout(() => {
-						void this.viewCoordinator.maybeSwitchToTableView(openedFile);
-					}, 0);
+					void this.viewCoordinator.maybeSwitchToTableView(openedFile);
 				}
 			})
 		);
@@ -160,14 +158,12 @@ export default class TileLineBasePlugin extends Plugin {
 					leaf: snapshotLeaf(this.windowContextManager, leaf ?? null)
 				});
 
-				window.setTimeout(() => {
-					const openContext = {
-						leaf: leaf ?? null,
-						preferredWindow: this.windowContextManager.getLeafWindow(leaf ?? null),
-						workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace
-					};
-					void this.viewCoordinator.openTableView(file, openContext);
-				}, 0);
+				const openContext = {
+					leaf: leaf ?? null,
+					preferredWindow: this.windowContextManager.getLeafWindow(leaf ?? null),
+					workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace
+				};
+				void this.viewCoordinator.openTableView(file, openContext);
 			})
 		);
 		this.registerEvent(

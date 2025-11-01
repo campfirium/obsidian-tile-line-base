@@ -20,9 +20,6 @@ function getOrCreateState(doc: Document): TooltipState {
 	const container = doc.createElement('div');
 	container.className = 'tlb-overflow-tooltip';
 	container.hidden = true;
-	container.style.position = 'fixed';
-	container.style.top = '0px';
-	container.style.left = '0px';
 	doc.body.appendChild(container);
 
 	state = {
@@ -43,9 +40,7 @@ function resolveWidth(columnWidth: number, view: Window): number {
 
 function applyWidth(container: HTMLElement, width: number): void {
 	const value = `${width}px`;
-	container.style.width = value;
-	container.style.minWidth = value;
-	container.style.maxWidth = value;
+	container.style.setProperty('--tlb-tooltip-width', value);
 }
 
 function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Window): void {
@@ -69,8 +64,8 @@ function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Wind
 		top = TOOLTIP_MARGIN;
 	}
 
-	container.style.top = `${Math.round(top)}px`;
-	container.style.left = `${Math.round(left)}px`;
+	container.style.setProperty('--tlb-tooltip-top', `${Math.round(top)}px`);
+	container.style.setProperty('--tlb-tooltip-left', `${Math.round(left)}px`);
 }
 
 interface TooltipWidthOptions {
@@ -94,7 +89,7 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 	state.currentTarget = target;
 	state.container.textContent = content;
 	state.container.hidden = false;
-	state.container.style.opacity = '0';
+	state.container.classList.remove('is-visible');
 	state.width = width;
 	applyWidth(state.container, width);
 
@@ -103,7 +98,7 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 			return;
 		}
 		positionTooltip(state.container, target.getBoundingClientRect(), view);
-		state.container.style.opacity = '1';
+		state.container.classList.add('is-visible');
 	});
 }
 
@@ -118,7 +113,7 @@ export function hideOverflowTooltip(target: HTMLElement): void {
 	state.hideTimer = view.setTimeout(() => {
 		state.container.hidden = true;
 		state.container.textContent = '';
-		state.container.style.opacity = '0';
+		state.container.classList.remove('is-visible');
 		state.currentTarget = null;
 		state.hideTimer = null;
 	}, 50);

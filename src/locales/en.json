@@ -77,8 +77,9 @@
     "namePlaceholder": "Enter column name",
     "typeLabel": "Column type",
     "typeTextOption": "Text",
-    "typeFormulaOption": "Formula",
     "typeDateOption": "Date",
+    "typeTimeOption": "Time",
+    "typeFormulaOption": "Formula",
     "formulaLabel": "Formula",
     "formulaDescription": "Reference a column with {field}; supports + - * / operators and \"text\" concatenation.",
     "formulaPlaceholder": "{points} + {cost}",
@@ -97,6 +98,8 @@
     "formulaFormatOptionPercentFixed2": "12.34%",
     "dateFormatLabel": "Date display format",
     "dateFormatDescription": "Choose how the date is shown in the grid.",
+    "timeFormatLabel": "Time display format",
+    "timeFormatDescription": "Choose how time values are shown in the grid.",
     "dateFormatIsoOption": "ISO (2024-01-31)",
     "dateFormatShortOption": "Short (e.g. 1/31/24)",
     "dateFormatLongOption": "Long (e.g. January 31, 2024)",
@@ -118,6 +121,12 @@
     "dmyLong": "Day Month Year (31 January 2024)",
     "monthDay": "Month Day (Jan 31)",
     "chineseLong": "Chinese long form (2024骞?鏈?1鏃?"
+  },
+  "timeFormats": {
+    "hhMm": "24-hour (14:30)",
+    "hhMmSs": "24-hour with seconds (14:30:00)",
+    "hMmA": "12-hour (2:30 PM)",
+    "hMmSsA": "12-hour with seconds (2:30:00 PM)"
   },
   "columnInteraction": {
     "menuEdit": "Edit column",
@@ -207,9 +216,16 @@
     "textPlaceholder": "Enter value",
     "datePlaceholder": "Enter date (YYYY-MM-DD)",
     "dateHint": "Current display format: {{format}}",
+    "timePlaceholder": "Enter time (HH:MM)",
+    "timeHint": "Current display format: {{format}}",
     "confirmButton": "Apply",
     "cancelButton": "Cancel",
-    "invalidDate": "Please enter a valid date in YYYY-MM-DD format"
+    "invalidDate": "Please enter a valid date in YYYY-MM-DD format",
+    "invalidTime": "Please enter a valid time."
+  },
+  "timeCellEditor": {
+    "openPickerLabel": "Open time picker",
+    "invalidInput": "Please enter a valid time."
   },
   "copyTemplate": {
     "menuCopy": "Copy as Template",

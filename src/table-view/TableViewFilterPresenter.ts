@@ -8,7 +8,7 @@ import { getPluginContext } from '../pluginContext';
 
 
 
-export type FilterColumnKind = 'status' | 'date' | 'text';
+export type FilterColumnKind = 'status' | 'date' | 'time' | 'text';
 
 
 
@@ -349,6 +349,20 @@ function createColumnOption(view: TableView, column: string, rows: RowData[]): F
 			name: column,
 
 			kind: 'date',
+
+			allowNumericOperators: true
+
+		};
+
+	}
+
+	if (displayType === 'time') {
+
+		return {
+
+			name: column,
+
+			kind: 'time',
 
 			allowNumericOperators: true
 

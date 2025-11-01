@@ -55,28 +55,21 @@ export function createTextCellEditor() {
 			}
 
 			this.eInput = doc.createElement('textarea');
-			this.eInput.classList.add('ag-cell-edit-input');
+			this.eInput.classList.add('ag-cell-edit-input', 'tlb-text-editor-input');
 			this.eInput.setAttribute('rows', '1');
-			this.eInput.style.width = '100%';
-			this.eInput.style.minHeight = '0';
-			this.eInput.style.boxSizing = 'border-box';
-			this.eInput.style.resize = 'none';
-			this.eInput.style.overflowY = 'hidden';
+			this.updateScrollableState(false);
+			this.eInput.classList.remove('tlb-text-editor-input--inline');
 
 			if (this.usePopup) {
 				const wrapper = doc.createElement('div');
 				wrapper.classList.add('tlb-text-editor-popup');
-				wrapper.style.position = 'fixed';
-				wrapper.style.left = '0px';
-				wrapper.style.top = '0px';
-				wrapper.style.pointerEvents = 'auto';
 				wrapper.appendChild(this.eInput);
 				this.wrapper = wrapper;
 				const win = doc.defaultView ?? window;
 				const initialWidth = resolvePopupWidth(this.columnWidth, win.innerWidth);
 				this.applyWrapperSize(this.minHeight, initialWidth);
 			} else {
-				this.eInput.style.height = '100%';
+				this.eInput.classList.add('tlb-text-editor-input--inline');
 				this.wrapper = this.eInput;
 			}
 
@@ -191,8 +184,8 @@ export function createTextCellEditor() {
 			const win = doc.defaultView ?? window;
 			const cellRect = this.params?.eGridCell?.getBoundingClientRect();
 
-			textarea.style.height = 'auto';
-			textarea.style.overflowY = 'hidden';
+			textarea.style.removeProperty('height');
+			this.updateScrollableState(false);
 
 			const scrollHeight = textarea.scrollHeight;
 			let targetHeight = Math.max(this.minHeight, scrollHeight);
@@ -204,7 +197,7 @@ export function createTextCellEditor() {
 				const limit = Math.max(this.minHeight, Math.min(viewportCap, Math.max(spaceBelow, spaceAbove)));
 				if (scrollHeight > limit) {
 					targetHeight = limit;
-					textarea.style.overflowY = 'auto';
+					this.updateScrollableState(true);
 				}
 			}
 
@@ -264,6 +257,13 @@ export function createTextCellEditor() {
 
 			this.wrapper.style.left = `${left}px`;
 			this.wrapper.style.top = `${top}px`;
+		}
+
+		private updateScrollableState(isScrollable: boolean): void {
+			if (!this.eInput) {
+				return;
+			}
+			this.eInput.classList.toggle('tlb-text-editor-input--scrollable', isScrollable);
 		}
 
 		private measureWrapperChrome(): void {

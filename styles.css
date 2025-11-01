@@ -1343,7 +1343,23 @@
 
 .tlb-text-editor-input {
   width: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  resize: none;
+  overflow-y: hidden;
+}
+
+.tlb-text-editor-input--inline {
   height: 100%;
+}
+
+.tlb-text-editor-input--scrollable {
+  overflow-y: auto;
+}
+
+.tlb-text-editor-popup {
+  position: fixed;
+  pointer-events: auto;
 }
 
 .tlb-date-editor-hidden-picker {
@@ -1385,8 +1401,9 @@
   position: fixed;
   top: var(--tlb-tooltip-top, 0);
   left: var(--tlb-tooltip-left, 0);
-  max-width: 480px;
-  min-width: 300px;
+  width: var(--tlb-tooltip-width, auto);
+  min-width: var(--tlb-tooltip-width, 300px);
+  max-width: var(--tlb-tooltip-width, 480px);
   padding: 18px 24px;
   border-radius: 8px;
   font-size: 16px;

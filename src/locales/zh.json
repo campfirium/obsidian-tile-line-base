@@ -10,21 +10,26 @@
   "commands": {
     "undoTableHistory": "撤销上次表格操作",
     "redoTableHistory": "重做表格操作",
-    "openHelpDocument": "打开 TileLineBase 帮助文档"
+    "openHelpDocument": "打开 TileLineBase 帮助文档",
+    "createTable": "新建 TileLineBase 表格笔记"
   },
   "settings": {
-    "generalHeading": "����",
-    "hideRightSidebarLabel": "�л�����ʱ�����Ҳ����",
-    "hideRightSidebarDesc": "���ú��ڽ��� TileLineBase ������ͼʱ�Զ��۵� Obsidian �Ҳ�������뿪������ͼʱ�ָ�ԭ״̬��",
+    "generalHeading": "常规",
+    "hideRightSidebarLabel": "表格视图时隐藏右侧边栏",
+    "hideRightSidebarDesc": "当 TileLineBase 表格视图激活时自动折叠 Obsidian 右侧边栏，其他视图保持原状。",
+    "loggingHeading": "日志",
+    "loggingLevelLabel": "全局日志级别",
+    "loggingLevelDesc": "选择 TileLineBase 输出到开发者控制台的详细程度。级别越高，日志越多。",
+    "loggingLevelOptionError": "仅错误",
+    "loggingLevelOptionWarn": "警告和错误",
+    "loggingLevelOptionInfo": "信息、警告和错误",
+    "loggingLevelOptionDebug": "调试、信息、警告和错误",
+    "loggingLevelOptionTrace": "跟踪（最详细）",
     "backupHeading": "备份",
     "backupEnableLabel": "启用自动备份",
     "backupEnableDesc": "在写入 Markdown 之前保存一份快照，便于撤回误操作。",
     "backupCapacityLabel": "备份容量上限（MB）",
-    "backupCapacityDesc": "超过上限时会删除最旧的快照，默认 200 MB。",
-    "helpHeading": "帮助与上手",
-    "helpOpenLabel": "打开 TileLineBase 帮助笔记",
-    "helpOpenDesc": "创建或打开首次安装时生成的上手文档。",
-    "helpOpenButton": "打开帮助笔记"
+    "backupCapacityDesc": "超过上限时会删除最旧的快照，默认 200 MB。"
   },
   "readingView": {
     "configBlockTitle": "TLB CONFIG BLOCK"

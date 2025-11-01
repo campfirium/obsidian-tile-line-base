@@ -370,7 +370,6 @@ export class SettingsService {
 			groups
 		};
 	}
-
 	private sanitizeBackupSettings(raw: Partial<BackupSettings> | undefined): BackupSettings {
 		const base = DEFAULT_SETTINGS.backups;
 		const enabled = typeof raw?.enabled === 'boolean' ? raw.enabled : base.enabled;

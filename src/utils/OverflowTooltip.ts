@@ -2,7 +2,12 @@ interface TooltipState {
 	container: HTMLElement;
 	currentTarget: HTMLElement | null;
 	hideTimer: number | null;
+	width: number;
 }
+
+const TOOLTIP_MIN_WIDTH = 420;
+const TOOLTIP_MARGIN = 10;
+const MIN_CELL_WIDTH = 160;
 
 const STATE_BY_DOCUMENT = new WeakMap<Document, TooltipState>();
 
@@ -15,6 +20,7 @@ function getOrCreateState(doc: Document): TooltipState {
 	const container = doc.createElement('div');
 	container.className = 'tlb-overflow-tooltip';
 	container.hidden = true;
+	container.style.position = 'fixed';
 	container.style.top = '0px';
 	container.style.left = '0px';
 	doc.body.appendChild(container);
@@ -22,39 +28,56 @@ function getOrCreateState(doc: Document): TooltipState {
 	state = {
 		container,
 		currentTarget: null,
-		hideTimer: null
+		hideTimer: null,
+		width: TOOLTIP_MIN_WIDTH
 	};
 	STATE_BY_DOCUMENT.set(doc, state);
 	return state;
 }
 
+function resolveWidth(columnWidth: number, view: Window): number {
+	const viewportLimit = Math.max(MIN_CELL_WIDTH, view.innerWidth - TOOLTIP_MARGIN * 2);
+	const desired = Math.max(TOOLTIP_MIN_WIDTH, columnWidth);
+	return Math.min(desired, viewportLimit);
+}
+
+function applyWidth(container: HTMLElement, width: number): void {
+	const value = `${width}px`;
+	container.style.width = value;
+	container.style.minWidth = value;
+	container.style.maxWidth = value;
+}
+
 function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Window): void {
-	const margin = 10;
 	const containerRect = container.getBoundingClientRect();
-	let top = targetRect.bottom + margin;
+	let top = targetRect.bottom + TOOLTIP_MARGIN;
 	let left = targetRect.left;
 
 	const viewportHeight = view.innerHeight;
 	const viewportWidth = view.innerWidth;
 
 	if (top + containerRect.height > viewportHeight) {
-		top = targetRect.top - containerRect.height - margin;
+		top = targetRect.top - containerRect.height - TOOLTIP_MARGIN;
 	}
-	if (left + containerRect.width > viewportWidth) {
-		left = viewportWidth - containerRect.width - margin;
+	if (left + containerRect.width > viewportWidth - TOOLTIP_MARGIN) {
+		left = viewportWidth - containerRect.width - TOOLTIP_MARGIN;
 	}
-	if (left < margin) {
-		left = margin;
+	if (left < TOOLTIP_MARGIN) {
+		left = TOOLTIP_MARGIN;
 	}
-	if (top < margin) {
-		top = margin;
+	if (top < TOOLTIP_MARGIN) {
+		top = TOOLTIP_MARGIN;
 	}
 
 	container.style.top = `${Math.round(top)}px`;
 	container.style.left = `${Math.round(left)}px`;
 }
 
-export function showOverflowTooltip(target: HTMLElement, content: string): void {
+interface TooltipWidthOptions {
+	columnWidth?: number;
+}
+
+export function showOverflowTooltip(target: HTMLElement, content: string, options?: TooltipWidthOptions): void {
 	const doc = target.ownerDocument ?? document;
 	const view = doc.defaultView ?? window;
 	const state = getOrCreateState(doc);
@@ -64,12 +87,17 @@ export function showOverflowTooltip(target: HTMLElement, content: string): void 
 		state.hideTimer = null;
 	}
 
+	const rect = target.getBoundingClientRect();
+	const columnWidth = Math.max(MIN_CELL_WIDTH, Math.round(options?.columnWidth ?? rect.width ?? target.clientWidth));
+	const width = resolveWidth(columnWidth, view);
+
 	state.currentTarget = target;
 	state.container.textContent = content;
 	state.container.hidden = false;
 	state.container.style.opacity = '0';
+	state.width = width;
+	applyWidth(state.container, width);
 
-	// 先渲染再定位以获取正确尺寸
 	view.requestAnimationFrame(() => {
 		if (state.currentTarget !== target) {
 			return;

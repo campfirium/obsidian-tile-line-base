@@ -1,32 +1,36 @@
 /**
- * TextCellEditor - 自定义文本编辑器
+ * TextCellEditor - custom AG Grid editor used together with the CompositionProxy.
  *
- * 配合 CompositionProxy（合成代理层）使用：
- * - 首字符由 CompositionProxy 捕获后写入
- * - 编辑器负责显示与后续编辑
- * - 不使用 params.eventKey 或 params.charPress（已废弃）
+ * Notes:
+ * - CompositionProxy captures and writes the first keystroke.
+ * - This editor renders the textarea and handles subsequent editing.
+ * - params.eventKey / params.charPress remain unused by design.
  *
- * 参考文档：
- * - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2.md
- * - docs/specs/251018 AG-Grid AG-Grid单元格编辑与输入法冲突尝试记录2分析.md
- *
- * 使用工厂函数以兼容 Obsidian pop-out 窗口（避免跨窗口原型链问题）
+ * Reference docs: docs/specs/251018 AG-Grid IME conflict investigation (parts 1 & 2).
+ * The factory wrapper protects against prototype issues in Obsidian pop-out windows.
  */
 
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
-import { COLUMN_MAX_WIDTH } from '../columnSizing';
 
 const MIN_POPUP_WIDTH = 420;
 const MIN_CELL_WIDTH = 160;
+const VIEWPORT_MARGIN = 8;
+
+function resolvePopupWidth(columnWidth: number, viewportWidth: number): number {
+	const viewportLimit = Math.max(MIN_CELL_WIDTH, viewportWidth - VIEWPORT_MARGIN * 2);
+	const desired = Math.max(MIN_POPUP_WIDTH, columnWidth);
+	return Math.min(desired, viewportLimit);
+}
 
 export function createTextCellEditor() {
 	return class implements ICellEditorComp {
-		private wrapper!: HTMLDivElement;
+		private wrapper!: HTMLElement;
 		private eInput!: HTMLTextAreaElement;
 		private params!: ICellEditorParams;
 		private initialValue = '';
 		private minHeight = 40;
-		private cellWidth = MIN_POPUP_WIDTH;
+		private columnWidth = MIN_CELL_WIDTH;
+		private usePopup = false;
 		private cleanupTasks: Array<() => void> = [];
 		private wrapperChrome = 0;
 		private repositionHandler: (() => void) | null = null;
@@ -35,37 +39,54 @@ export function createTextCellEditor() {
 			this.params = params;
 
 			const doc = params.eGridCell?.ownerDocument || document;
-			const wrapper = doc.createElement('div');
-			wrapper.classList.add('tlb-text-editor-popup');
-			wrapper.style.position = 'fixed';
-			wrapper.style.left = '0px';
-			wrapper.style.top = '0px';
-			wrapper.style.pointerEvents = 'auto';
-			this.wrapper = wrapper;
+			const cellRect = params.eGridCell?.getBoundingClientRect();
+			this.minHeight = Math.max(36, cellRect?.height ?? 36);
+			const rawWidth = Math.max(MIN_CELL_WIDTH, Math.round(cellRect?.width ?? MIN_CELL_WIDTH));
+			this.columnWidth = rawWidth;
 
-			const textarea = doc.createElement('textarea');
-			textarea.classList.add('ag-cell-edit-input');
-			textarea.setAttribute('rows', '1');
-			textarea.style.width = '100%';
-			textarea.style.minHeight = '0';
-			textarea.style.resize = 'none';
-			textarea.style.boxSizing = 'border-box';
-			textarea.style.overflowY = 'hidden';
-			this.eInput = textarea;
+			const anchor = this.findContentElement(params.eGridCell ?? null);
+			if (anchor) {
+				const overflowed =
+					Math.ceil(anchor.scrollWidth) > Math.floor(anchor.clientWidth + 1) ||
+					Math.ceil(anchor.scrollHeight) > Math.floor(anchor.clientHeight + 1);
+				this.usePopup = overflowed;
+			} else {
+				this.usePopup = false;
+			}
 
-			this.wrapper.appendChild(this.eInput);
+			this.eInput = doc.createElement('textarea');
+			this.eInput.classList.add('ag-cell-edit-input');
+			this.eInput.setAttribute('rows', '1');
+			this.eInput.style.width = '100%';
+			this.eInput.style.minHeight = '0';
+			this.eInput.style.boxSizing = 'border-box';
+			this.eInput.style.resize = 'none';
+			this.eInput.style.overflowY = 'hidden';
+
+			if (this.usePopup) {
+				const wrapper = doc.createElement('div');
+				wrapper.classList.add('tlb-text-editor-popup');
+				wrapper.style.position = 'fixed';
+				wrapper.style.left = '0px';
+				wrapper.style.top = '0px';
+				wrapper.style.pointerEvents = 'auto';
+				wrapper.appendChild(this.eInput);
+				this.wrapper = wrapper;
+				const win = doc.defaultView ?? window;
+				const initialWidth = resolvePopupWidth(this.columnWidth, win.innerWidth);
+				this.applyWrapperSize(this.minHeight, initialWidth);
+			} else {
+				this.eInput.style.height = '100%';
+				this.wrapper = this.eInput;
+			}
 
 			this.initialValue = String(params.value ?? '');
 			this.eInput.value = this.initialValue;
 
-			const cellRect = params.eGridCell?.getBoundingClientRect();
-			this.minHeight = Math.max(36, cellRect?.height ?? 36);
-			const measuredWidth = Math.max(MIN_CELL_WIDTH, cellRect?.width ?? MIN_CELL_WIDTH);
-			this.cellWidth = Math.max(MIN_POPUP_WIDTH, Math.min(COLUMN_MAX_WIDTH, Math.round(measuredWidth)));
-
-			this.applyWrapperSize(this.minHeight, this.cellWidth);
-
 			this.eInput.addEventListener('input', () => {
+				if (!this.usePopup) {
+					return;
+				}
 				this.adjustHeight();
 				this.positionPopup();
 			});
@@ -96,6 +117,10 @@ export function createTextCellEditor() {
 				this.eInput.select();
 			}
 
+			if (!this.usePopup) {
+				return;
+			}
+
 			this.measureWrapperChrome();
 			this.adjustHeight();
 			this.positionPopup();
@@ -117,6 +142,9 @@ export function createTextCellEditor() {
 			});
 
 			win.requestAnimationFrame(() => {
+				if (!this.usePopup) {
+					return;
+				}
 				this.measureWrapperChrome();
 				this.adjustHeight();
 				this.positionPopup();
@@ -136,30 +164,32 @@ export function createTextCellEditor() {
 		}
 
 		isPopup(): boolean {
-			return true;
+			return this.usePopup;
 		}
 
 		getPopupPosition(): 'over' | 'under' | undefined {
-			return 'over';
+			return this.usePopup ? 'over' : undefined;
 		}
 
-		private applyWrapperSize(minHeight: number, width: number): void {
-			this.wrapper.style.minHeight = `${minHeight}px`;
-			this.wrapper.style.height = `${minHeight}px`;
+		private applyWrapperSize(height: number, width: number): void {
+			if (!this.usePopup) {
+				return;
+			}
+			this.wrapper.style.minHeight = `${height}px`;
+			this.wrapper.style.height = `${height}px`;
 			this.wrapper.style.minWidth = `${width}px`;
 			this.wrapper.style.maxWidth = `${width}px`;
 			this.wrapper.style.width = `${width}px`;
 		}
 
 		private adjustHeight(): void {
-			const textarea = this.eInput;
-			if (!textarea) {
+			if (!this.usePopup) {
 				return;
 			}
+			const textarea = this.eInput;
 			const doc = textarea.ownerDocument ?? document;
 			const win = doc.defaultView ?? window;
 			const cellRect = this.params?.eGridCell?.getBoundingClientRect();
-			const chrome = this.wrapperChrome;
 
 			textarea.style.height = 'auto';
 			textarea.style.overflowY = 'hidden';
@@ -168,10 +198,9 @@ export function createTextCellEditor() {
 			let targetHeight = Math.max(this.minHeight, scrollHeight);
 
 			if (cellRect && win) {
-				const margin = 8;
-				const spaceBelow = Math.floor(win.innerHeight - cellRect.top - margin);
-				const spaceAbove = Math.floor(cellRect.bottom - margin);
-				const viewportCap = Math.floor(win.innerHeight - margin * 2);
+				const spaceBelow = Math.floor(win.innerHeight - cellRect.top - VIEWPORT_MARGIN);
+				const spaceAbove = Math.floor(cellRect.bottom - VIEWPORT_MARGIN);
+				const viewportCap = Math.floor(win.innerHeight - VIEWPORT_MARGIN * 2);
 				const limit = Math.max(this.minHeight, Math.min(viewportCap, Math.max(spaceBelow, spaceAbove)));
 				if (scrollHeight > limit) {
 					targetHeight = limit;
@@ -180,7 +209,7 @@ export function createTextCellEditor() {
 			}
 
 			textarea.style.height = `${targetHeight}px`;
-			const wrapperHeight = targetHeight + chrome;
+			const wrapperHeight = targetHeight + this.wrapperChrome;
 			this.wrapper.style.height = `${wrapperHeight}px`;
 			if (wrapperHeight > this.minHeight) {
 				this.wrapper.style.minHeight = `${wrapperHeight}px`;
@@ -188,39 +217,49 @@ export function createTextCellEditor() {
 		}
 
 		private positionPopup(): void {
+			if (!this.usePopup) {
+				return;
+			}
+
 			const cellRect = this.params?.eGridCell?.getBoundingClientRect();
 			if (!cellRect) {
 				return;
 			}
+
 			const doc = this.wrapper.ownerDocument ?? document;
 			const win = doc.defaultView ?? window;
-			const margin = 8;
-
-			const wrapperWidth = this.wrapper.offsetWidth || this.cellWidth;
-			const wrapperHeight = this.wrapper.offsetHeight || this.minHeight + this.wrapperChrome;
 			const viewportWidth = win.innerWidth;
 			const viewportHeight = win.innerHeight;
+
+			const desiredWidth = resolvePopupWidth(this.columnWidth, viewportWidth);
+
+			if (Math.abs((this.wrapper.offsetWidth || 0) - desiredWidth) > 0.5) {
+				this.applyWrapperSize(this.wrapper.offsetHeight || this.minHeight, desiredWidth);
+			}
+
+			const wrapperWidth = this.wrapper.offsetWidth || desiredWidth;
+			const wrapperHeight = this.wrapper.offsetHeight || this.minHeight + this.wrapperChrome;
 
 			let left = Math.round(cellRect.left);
 			let top = Math.round(cellRect.top);
 
-			if (left + wrapperWidth > viewportWidth - margin) {
-				left = Math.max(margin, viewportWidth - wrapperWidth - margin);
+			if (left + wrapperWidth > viewportWidth - VIEWPORT_MARGIN) {
+				left = Math.max(VIEWPORT_MARGIN, viewportWidth - wrapperWidth - VIEWPORT_MARGIN);
 			}
-			if (left < margin) {
-				left = margin;
+			if (left < VIEWPORT_MARGIN) {
+				left = VIEWPORT_MARGIN;
 			}
 
 			const spaceBelow = viewportHeight - cellRect.bottom;
-			if (top + wrapperHeight + margin > viewportHeight && spaceBelow < wrapperHeight) {
+			if (top + wrapperHeight + VIEWPORT_MARGIN > viewportHeight && spaceBelow < wrapperHeight) {
 				const candidateTop = Math.round(cellRect.bottom - wrapperHeight);
-				top = Math.max(margin, candidateTop);
+				top = Math.max(VIEWPORT_MARGIN, candidateTop);
 			}
-			if (top + wrapperHeight > viewportHeight - margin) {
-				top = Math.max(margin, viewportHeight - wrapperHeight - margin);
+			if (top + wrapperHeight > viewportHeight - VIEWPORT_MARGIN) {
+				top = Math.max(VIEWPORT_MARGIN, viewportHeight - wrapperHeight - VIEWPORT_MARGIN);
 			}
-			if (top < margin) {
-				top = margin;
+			if (top < VIEWPORT_MARGIN) {
+				top = VIEWPORT_MARGIN;
 			}
 
 			this.wrapper.style.left = `${left}px`;
@@ -228,6 +267,10 @@ export function createTextCellEditor() {
 		}
 
 		private measureWrapperChrome(): void {
+			if (!this.usePopup) {
+				this.wrapperChrome = 0;
+				return;
+			}
 			const doc = this.wrapper.ownerDocument ?? document;
 			const win = doc.defaultView ?? window;
 			const styles = win.getComputedStyle(this.wrapper);
@@ -244,5 +287,17 @@ export function createTextCellEditor() {
 				parseLength(styles.borderTopWidth) +
 				parseLength(styles.borderBottomWidth);
 		}
+
+		private findContentElement(cell: HTMLElement | null): HTMLElement | null {
+			if (!cell) {
+				return null;
+			}
+			return (
+				cell.querySelector<HTMLElement>('.tlb-link-cell__text') ??
+				cell.querySelector<HTMLElement>('.ag-cell-value') ??
+				null
+			);
+		}
+
 	};
 }

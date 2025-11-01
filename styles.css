@@ -1,4 +1,13 @@
-﻿/* TileLineBase 插件样式 */
+﻿/* TileLineBase styles */
+
+:root {
+	--tlb-popup-border-color: color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.55)) 100%, transparent);
+}
+
+.theme-dark {
+	--tlb-popup-border-color: color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.7)) 100%, transparent);
+}
+
 
 .tile-line-base-view {
   padding: 10px;
@@ -163,7 +172,7 @@
 }
 
 .theme-dark .tlb-ime-capture {
-  border-color: color-mix(in srgb, var(--interactive-accent, #8ea8ff) 55%, transparent);
+  border-color: color-mix(in srgb, var(--interactive-accent, #8ea8ff) 65%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #8ea8ff) 35%, transparent);
 }
 
@@ -820,7 +829,7 @@
   line-height: 1.5;
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--interactive-accent, #6aa5ff) 60%, transparent);
+  border: 2px solid color-mix(in srgb, var(--interactive-accent, #6aa5ff) 60%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 30%, transparent);
   box-sizing: border-box;
   background-color: transparent;
@@ -851,57 +860,57 @@
 }
 
 .tlb-text-editor-popup {
-  display: flex;
-  width: 100%;
-  min-width: 420px;
-  background: var(--background-primary, #ffffff);
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--interactive-accent, #6aa5ff) 60%, transparent);
-  box-shadow: 0 8px 24px color-mix(in srgb, rgba(36, 54, 87, 0.32) 55%, transparent);
-  box-sizing: border-box;
-  overflow: visible;
-  pointer-events: auto;
-  padding: 0;
+	display: flex;
+	width: 100%;
+	min-width: 420px;
+	background: var(--background-primary, #ffffff);
+	border-radius: 8px;
+	border: 2px solid var(--tlb-popup-border-color);
+	box-shadow: 0 12px 32px rgba(20, 24, 28, 0.35);
+	box-sizing: border-box;
+	overflow: visible;
+	pointer-events: auto;
+	padding: 0;
 }
 
 .theme-dark .tlb-text-editor-popup {
-  background: var(--background-secondary, #1f1f1f);
-  border-color: color-mix(in srgb, var(--interactive-accent, #8ea8ff) 55%, transparent);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+	background: var(--background-secondary, #1f1f1f);
+	border-color: var(--tlb-popup-border-color);
+	box-shadow: 0 18px 38px rgba(0, 0, 0, 0.6);
 }
 
 .tlb-text-editor-popup:focus-within {
-  box-shadow:
-    0 8px 24px color-mix(in srgb, rgba(36, 54, 87, 0.32) 55%, transparent),
-    0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
+	box-shadow:
+		0 12px 32px rgba(20, 24, 28, 0.35),
+		0 0 0 2px color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.55)) 75%, transparent);
 }
 
 .theme-dark .tlb-text-editor-popup:focus-within {
-  box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.65),
-    0 0 0 2px color-mix(in srgb, var(--interactive-accent, #8ea8ff) 40%, transparent);
+	box-shadow:
+		0 18px 38px rgba(0, 0, 0, 0.6),
+		0 0 0 2px color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.7)) 70%, transparent);
 }
 
 .tlb-text-editor-popup .ag-cell-edit-input {
-  display: block;
-  width: 100%;
-  min-height: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: calc(var(--ag-font-size, 13px) + 2px);
-  line-height: 2;
-  padding: 10px 12px;
-  resize: none;
-  color: color-mix(in srgb, var(--text-normal, #2e3338) 85%, var(--text-muted, #7a7f87) 15%);
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  box-sizing: border-box;
+	display: block;
+	width: 100%;
+	min-height: 100%;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-size: calc(var(--ag-font-size, 13px) + 2px);
+	line-height: 2;
+	padding: 10px 12px;
+	resize: none;
+	color: color-mix(in srgb, var(--text-normal, #2e3338) 85%, var(--text-muted, #7a7f87) 15%);
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	box-sizing: border-box;
 }
 
 .theme-dark .tlb-text-editor-popup .ag-cell-edit-input {
-  color: color-mix(in srgb, var(--text-normal, #dadada) 90%, var(--text-muted, #9aa0ab) 10%);
+	color: color-mix(in srgb, var(--text-normal, #dadada) 90%, var(--text-muted, #9aa0ab) 10%);
 }
 
 .theme-dark .ag-theme-alpine-dark .ag-cell-inline-editing .ag-cell-edit-input {
@@ -1063,52 +1072,54 @@
 
 /* Tooltip restyle: limit width and align with AG Grid theme */
 .tlb-grid-popup-root .ag-tooltip {
-  max-width: 480px;
-  min-width: 300px;
-  padding: 24px 32px;
-  border-radius: 8px;
-  font-size: 18px;
-  line-height: 1.6;
-  font-family: inherit;
-  white-space: normal;
-  word-break: break-word;
-  background: color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary, #f2f2f2) 10%);
-  color: var(--text-normal);
-  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+	max-width: none;
+	min-width: 420px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: calc(var(--ag-font-size, 13px) + 2px);
+	line-height: 2;
+	font-family: inherit;
+	white-space: normal;
+	word-break: break-word;
+	background: var(--background-primary, #ffffff);
+	color: color-mix(in srgb, var(--text-normal, #2e3338) 80%, var(--text-muted, #7a7f87) 20%);
+	border: 2px solid var(--tlb-popup-border-color);
+	box-shadow: 0 12px 32px rgba(20, 24, 28, 0.35);
 }
 
 .theme-dark .tlb-grid-popup-root .ag-tooltip {
-  background: color-mix(in srgb, var(--background-secondary, #151515) 86%, var(--background-primary) 14%);
-  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+	background: var(--background-secondary, #1f1f1f);
+	color: color-mix(in srgb, var(--text-normal, #dadada) 85%, var(--text-muted, #9aa0ab) 15%);
+	border-color: var(--tlb-popup-border-color);
+	box-shadow: 0 18px 38px rgba(0, 0, 0, 0.6);
 }
 
 .tlb-overflow-tooltip {
-  position: fixed;
-  max-width: 480px;
-  min-width: 300px;
-  padding: 18px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  line-height: 1.5;
-  font-family: inherit;
-  white-space: normal;
-  word-break: break-word;
-  background: color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary, #f2f2f2) 10%);
-  color: var(--text-normal);
-  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-  pointer-events: none;
-  transition: opacity 80ms ease-out;
-  opacity: 0;
-  z-index: 9999;
+	position: fixed;
+	max-width: none;
+	min-width: 420px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: calc(var(--ag-font-size, 13px) + 2px);
+	line-height: 2;
+	font-family: inherit;
+	white-space: normal;
+	word-break: break-word;
+	background: var(--background-primary, #ffffff);
+	color: color-mix(in srgb, var(--text-normal, #2e3338) 80%, var(--text-muted, #7a7f87) 20%);
+	border: 2px solid var(--tlb-popup-border-color);
+	box-shadow: 0 12px 32px rgba(20, 24, 28, 0.35);
+	pointer-events: none;
+	transition: opacity 80ms ease-out;
+	opacity: 0;
+	z-index: 9999;
 }
 
 .theme-dark .tlb-overflow-tooltip {
-  background: color-mix(in srgb, var(--background-secondary, #151515) 86%, var(--background-primary) 14%);
-  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+	background: var(--background-secondary, #1f1f1f);
+	color: color-mix(in srgb, var(--text-normal, #dadada) 85%, var(--text-muted, #9aa0ab) 15%);
+	border-color: var(--tlb-popup-border-color);
+	box-shadow: 0 18px 38px rgba(0, 0, 0, 0.6);
 }
 
 /* Editing view config block handling */

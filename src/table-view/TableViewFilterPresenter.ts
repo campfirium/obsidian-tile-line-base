@@ -36,8 +36,17 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			onOpenTagGroupMenu: (button) => {
 				view.tagGroupController?.openTagGroupMenu(button);
 			},
+			onOpenTableCreation: (button) => {
+				view.tableCreationController.openCreationModal(button);
+			},
 			onOpenColumnSettings: (button) => {
 				view.columnInteractionController.openColumnSettingsMenu(button);
+			},
+			onAdjustColumnWidths: () => {
+				const adapter = view.gridAdapter;
+				if (adapter && typeof adapter.fillColumnsToMinimumWidth === 'function') {
+					adapter.fillColumnsToMinimumWidth();
+				}
 			},
 			onOpenBackupRestore: () => {
 				void openBackupRestoreModal(view);

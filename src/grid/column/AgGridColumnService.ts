@@ -122,6 +122,23 @@ export class AgGridColumnService {
 		}
 	}
 
+	fillColumnsToMinimumWidth(): void {
+		const gridApi = this.gridApi;
+		if (!gridApi) {
+			return;
+		}
+		const columns = gridApi.getAllDisplayedColumns() || [];
+		if (columns.length === 0) {
+			return;
+		}
+		const updated = this.columnLayoutManager.fillToMinimumWidth(gridApi, columns, { overrideManual: true });
+		if (updated.length > 0) {
+			gridApi.refreshHeader();
+			gridApi.refreshCells({ force: true });
+			this.handleAutoSizedColumns(updated);
+		}
+	}
+
 	handleColumnResized(event: ColumnResizedEvent): void {
 		if (!event.finished || !event.column) {
 			return;

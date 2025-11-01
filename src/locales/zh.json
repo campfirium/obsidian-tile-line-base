@@ -13,14 +13,14 @@
     "openHelpDocument": "打开 TileLineBase 帮助文档"
   },
   "settings": {
-    "generalHeading": "通用",
-    "hideRightSidebarLabel": "表格视图时隐藏右侧边栏",
-    "hideRightSidebarDesc": "当 TileLineBase 表格视图激活时折叠 Obsidian 右侧边栏，其他视图保持不变。",
+    "generalHeading": "����",
+    "hideRightSidebarLabel": "�л�����ʱ�����Ҳ����",
+    "hideRightSidebarDesc": "���ú��ڽ��� TileLineBase ������ͼʱ�Զ��۵� Obsidian �Ҳ�������뿪������ͼʱ�ָ�ԭ״̬��",
     "backupHeading": "备份",
     "backupEnableLabel": "启用自动备份",
     "backupEnableDesc": "在写入 Markdown 之前保存一份快照，便于撤回误操作。",
     "backupCapacityLabel": "备份容量上限（MB）",
-    "backupCapacityDesc": "超过上限时会删除最旧的快照，默认值为 200 MB。",
+    "backupCapacityDesc": "超过上限时会删除最旧的快照，默认 200 MB。",
     "helpHeading": "帮助与上手",
     "helpOpenLabel": "打开 TileLineBase 帮助笔记",
     "helpOpenDesc": "创建或打开首次安装时生成的上手文档。",
@@ -203,7 +203,7 @@
   },
   "tableDataStore": {
     "newRowPrefix": "����Ŀ",
-    "newColumnName": "����",
+    "newColumnName": "Field",
     "formulaSelfReference": "��ʽ��������������",
     "formulaParseFailed": "��ʽ����ʧ�ܣ�{{error}}",
     "formulaDisabled": "��ʽ����ͣ�ã��������� {{limit}}��",
@@ -232,6 +232,7 @@
     "tagGroupButtonLabel": "View group",
     "addButtonAriaLabel": "新建过滤视图",
     "settingsMenuAriaLabel": "打开表格操作",
+    "settingsMenuAutoWidthLabel": "调整列宽",
     "settingsMenuColumnLabel": "列设置",
     "settingsMenuHelpLabel": "打开帮助笔记"
   },
@@ -345,12 +346,6 @@
     "openInternal": "在新标签页打开笔记：{{target}}",
     "openExternal": "打开链接：{{target}}"
   },
-  "onboarding": {
-    "helpFileName": "TileLineBase 新手上手",
-    "helpFileContent": "## TileLineBase 模板\nFeature: 第 0 步：了解表格\nDescription: 首行就是列模板，下面的示例行告诉你能看到哪些字段。\n\n## TileLineBase 打开\nFeature: 第 1 步：打开表格\nDescription: 在笔记上右键或通过命令面板切换到 TileLineBase 表格视图。\n\n## TileLineBase 列说明\nFeature: 第 2 步：读懂标题\nDescription: 第一个二级标题定义列名，后续的二级标题都会变成一行数据。\n\n## TileLineBase 填写\nFeature: 第 3 步：填写内容\nDescription: 点击单元格开始输入，按 Enter 完成，内容会自动同步回笔记。\n\n## TileLineBase 粘贴\nFeature: 第 4 步：粘贴表格\nDescription: 从 Excel 或其他表格复制行后直接粘贴，数据会按列对齐。\n\n## TileLineBase 筛选\nFeature: 第 5 步：筛选排序\nDescription: 利用表头图标添加筛选和排序，并保存为命名视图，方便反复使用。\n\n## TileLineBase 分组\nFeature: 第 6 步：整理视图\nDescription: 把常用视图拉到同一个分组，让团队成员一眼找到需要的视角。\n\n## TileLineBase 导出\nFeature: 第 7 步：变成新笔记\nDescription: 选中几行就能导出或推广成独立笔记，系统会自动写入回链。\n\n## TileLineBase 快捷\nFeature: 第 8 步：随时复习\nDescription: 给表格视图设置快捷键，把这份帮助笔记固定到侧边栏，需要时快速查看。\n",
-    "createHelpFailed": "TileLineBase 创建帮助文档失败，请查看控制台日志。",
-    "openHelpFailed": "TileLineBase 无法打开帮助文档。"
-  },
   "backup": {
     "menuLabel": "�ָ�����",
     "modalTitle": "{{file}} �ı���",
@@ -390,5 +385,32 @@
     "partialNotice": "�Ѵ��� {{success}} ���ʼǣ�{{failed}} ��ʧ�ܡ�",
     "failureNotice": "�ʼǴ���ʧ�ܡ�",
     "noteNameFallback": "�����ıʼ�"
+  },
+  "tableCreation": {
+    "menuLabel": "新建表格",
+    "modalTitle": "新建表格",
+    "nameLabel": "表格名称",
+    "nameDesc": "用于主字段的默认值。",
+    "namePlaceholder": "新建表格",
+    "nameRequired": "请输入表格名称。",
+    "rowsLabel": "行数",
+    "rowsDesc": "创建的行数（{{min}}-{{max}}）。",
+    "rowsOutOfRange": "行数必须在 {{min}} 到 {{max}} 之间。",
+    "columnsLabel": "列数",
+    "columnsDesc": "包含主字段和状态列在内的总列数（{{min}}-{{max}}）。",
+    "columnsOutOfRange": "列数必须在 {{min}} 到 {{max}} 之间。",
+    "createButton": "创建",
+    "cancelButton": "取消",
+    "successNotice": "已创建表格：{{name}}",
+    "failureNotice": "新建表格失败。",
+    "defaultTableName": "新建表格",
+    "primaryFieldName": "任务",
+    "fieldBaseName": "Field"
+  },
+  "onboarding": {
+    "helpFileName": "TileLineBase 新手上手",
+    "helpFileContent": "## TileLineBase 模板\nFeature: 第 0 步：了解表格\nDescription: 首行就是列模板，下面的示例行告诉你能看到哪些字段。\n\n## TileLineBase 打开\nFeature: 第 1 步：打开表格\nDescription: 在笔记上右键或通过命令面板切换到 TileLineBase 表格视图。\n\n## TileLineBase 列说明\nFeature: 第 2 步：读懂标题\nDescription: 第一个二级标题定义列名，后续的二级标题都会变成一行数据。\n\n## TileLineBase 填写\nFeature: 第 3 步：填写内容\nDescription: 点击单元格开始输入，按 Enter 完成，内容会自动同步回笔记。\n\n## TileLineBase 粘贴\nFeature: 第 4 步：粘贴表格\nDescription: 从 Excel 或其他表格复制行后直接粘贴，数据会按列对齐。\n\n## TileLineBase 筛选\nFeature: 第 5 步：筛选排序\nDescription: 利用表头图标添加筛选和排序，并保存为命名视图，方便反复使用。\n\n## TileLineBase 分组\nFeature: 第 6 步：整理视图\nDescription: 把常用视图拉到同一个分组，让团队成员一眼找到需要的视角。\n\n## TileLineBase 导出\nFeature: 第 7 步：变成新笔记\nDescription: 选中几行就能导出或推广成独立笔记，系统会自动写入回链。\n\n## TileLineBase 快捷\nFeature: 第 8 步：随时复习\nDescription: 给表格视图设置快捷键，把这份帮助笔记固定到侧边栏，需要时快速查看。\n",
+    "createHelpFailed": "TileLineBase 创建帮助文档失败，请查看控制台日志。",
+    "openHelpFailed": "TileLineBase 无法打开帮助文档。"
   }
 }

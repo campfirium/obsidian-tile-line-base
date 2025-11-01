@@ -232,6 +232,10 @@ export class AgGridAdapter implements GridAdapter {
 		this.columnService.resizeColumns();
 	}
 
+	fillColumnsToMinimumWidth(): void {
+		this.columnService.fillColumnsToMinimumWidth();
+	}
+
 	startEditingFocusedCell(): void {
 		this.selection.startEditingFocusedCell();
 	}

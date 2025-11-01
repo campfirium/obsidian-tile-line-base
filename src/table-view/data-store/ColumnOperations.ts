@@ -272,21 +272,56 @@ export function renameColumn(
 	return true;
 }
 
+function splitTrailingNumber(value: string): { root: string; index: number | null } {
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return { root: '', index: null };
+	}
+	const match = trimmed.match(/^(.*?)(?:\s+(\d+))$/);
+	if (!match) {
+		return { root: trimmed, index: null };
+	}
+	const root = match[1].trim();
+	const index = Number(match[2]);
+	if (!Number.isFinite(index)) {
+		return { root: trimmed, index: null };
+	}
+	return { root: root.length > 0 ? root : trimmed, index };
+}
+
 export function generateUniqueColumnName(schema: Schema | null, base: string, fallback: string): string {
 	const fallbackName = fallback.trim();
-	const normalizedBase = base.trim().length > 0 ? base.trim() : fallbackName;
+	const preferredBase = base.trim().length > 0 ? base.trim() : fallbackName;
+	const { root, index } = splitTrailingNumber(preferredBase);
+	const effectiveRoot = root.length > 0 ? root : fallbackName || 'Field';
+	const shouldForceSequence = preferredBase === fallbackName;
+
 	if (!schema) {
-		return normalizedBase;
+		if (shouldForceSequence || index !== null) {
+			const start = shouldForceSequence ? 1 : (index ?? 1);
+			return `${effectiveRoot} ${start}`;
+		}
+		return preferredBase;
 	}
+
 	const existing = new Set(schema.columnNames);
-	if (!existing.has(normalizedBase)) {
-		return normalizedBase;
+	if (!shouldForceSequence && index === null && !existing.has(preferredBase)) {
+		return preferredBase;
 	}
-	let counter = 2;
-	let candidate = `${normalizedBase} ${counter}`;
+
+	let counter: number;
+	if (shouldForceSequence) {
+		counter = 1;
+	} else if (index !== null) {
+		counter = index + 1;
+	} else {
+		counter = 2;
+	}
+
+	let candidate = `${effectiveRoot} ${counter}`;
 	while (existing.has(candidate)) {
-		counter++;
-		candidate = `${normalizedBase} ${counter}`;
+		counter += 1;
+		candidate = `${effectiveRoot} ${counter}`;
 	}
 	return candidate;
 }

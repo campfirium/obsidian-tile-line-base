@@ -1,7 +1,6 @@
 ﻿{
   "tableView": {
-    "displayName": "TileLineBase Table",
-    "titleWithFile": "{{name}} (Table View)"
+    "displayName": "TileLineBase Table"
   },
   "viewControls": {
     "openTableView": "Switch to TileLineBase table view",

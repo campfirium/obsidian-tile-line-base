@@ -167,7 +167,7 @@
   width: var(--tlb-ime-width, 0);
   height: var(--tlb-ime-height, 0);
   line-height: var(--tlb-ime-line-height, 1);
-  z-index: 2147483647;
+  z-index: var(--tlb-ime-layer, 9000);
   color: transparent;
   caret-color: transparent;
   background: transparent;
@@ -179,19 +179,19 @@
   overflow: hidden;
   box-sizing: border-box;
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 25%, transparent);
+  border: 1px solid transparent;
+  box-shadow: none;
   opacity: 0;
   transition: opacity 120ms ease;
 }
 
 .theme-dark .tlb-ime-capture {
-  border-color: color-mix(in srgb, var(--interactive-accent, #8ea8ff) 55%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #8ea8ff) 35%, transparent);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .tlb-ime-capture[data-visible="true"] {
-  opacity: 1;
+  opacity: 0;
 }
 
 .tlb-filter-view-bar {

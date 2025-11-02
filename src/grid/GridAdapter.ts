@@ -91,7 +91,7 @@ export interface GridAdapter {
 	 * 监听表头编辑事件
 	 * @param callback - 表头编辑事件回调函数
 	 */
-	onHeaderEdit(callback: (event: HeaderEditEvent) => void): void;
+	onHeaderEdit?(callback: (event: HeaderEditEvent) => void): void;
 
 	/**
 	 * 监听列表头的右键菜单事件

@@ -1,5 +1,5 @@
 {
-  "compilerOptions": {
+ "compilerOptions": {
     "baseUrl": ".",
     "inlineSourceMap": true,
     "inlineSources": true,
@@ -13,6 +13,8 @@
     "importHelpers": true,
     "isolatedModules": true,
     "strictNullChecks": true,
+	"noUnusedLocals": true,
+	"noUnusedParameters": true,
     "lib": [
       "DOM",
       "ES5",

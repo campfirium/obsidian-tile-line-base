@@ -937,54 +937,6 @@ export class RowMigrationController {
 
 
 
-	private getKnownTableFiles(currentFile: TFile): TFile[] {
-
-		const plugin = getPluginContext();
-
-		const cacheManager = plugin?.cacheManager ?? null;
-
-		if (!plugin || !cacheManager) {
-
-			return [];
-
-		}
-
-
-
-		const paths = cacheManager.listFilePaths();
-
-		const vault = this.deps.app.vault;
-
-		const files: TFile[] = [];
-
-		for (const path of paths) {
-
-			if (!path || path === currentFile.path) {
-
-				continue;
-
-			}
-
-			const file = vault.getAbstractFileByPath(path);
-
-			if (file instanceof TFile) {
-
-				files.push(file);
-
-			}
-
-		}
-
-
-
-		files.sort((a, b) => a.basename.localeCompare(b.basename, undefined, { sensitivity: 'base' }));
-
-		return files;
-
-	}
-
-
-
 	private promptForTargetFile(currentFile: TFile, candidates: TFile[]): Promise<TFile | null> {
 
 		return new Promise((resolve) => {

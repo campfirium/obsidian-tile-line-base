@@ -11,14 +11,7 @@ import {
 	GridApi,
 	ModuleRegistry
 } from 'ag-grid-community';
-import {
-	CellEditEvent,
-	ColumnDef,
-	GridAdapter,
-	HeaderEditEvent,
-	RowData,
-	SortModelEntry
-} from './GridAdapter';
+import { CellEditEvent, ColumnDef, GridAdapter, HeaderEditEvent, RowData, SortModelEntry } from './GridAdapter';
 import { t } from '../i18n';
 import { AgGridColumnService } from './column/AgGridColumnService';
 import { AgGridInteractionController } from './interactions/AgGridInteractionController';
@@ -34,7 +27,6 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 export class AgGridAdapter implements GridAdapter {
 	private cellEditCallback?: (event: CellEditEvent) => void;
-	private headerEditCallback?: (event: HeaderEditEvent) => void;
 	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
 	private gridContext?: GridInteractionContext;
@@ -166,6 +158,9 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	setSideBarVisible(visible: boolean): void {
+		if (this.sideBarVisible === visible) {
+			return;
+		}
 		this.sideBarVisible = visible;
 		this.lifecycle.runWhenReady(() => {
 			this.sideBar.setVisible(visible);
@@ -193,8 +188,8 @@ export class AgGridAdapter implements GridAdapter {
 		this.cellEditCallback = callback;
 	}
 
-	onHeaderEdit(callback: (event: HeaderEditEvent) => void): void {
-		this.headerEditCallback = callback;
+	onHeaderEdit(_callback: (event: HeaderEditEvent) => void): void {
+		// Header editing is not yet supported by the AG Grid adapter.
 	}
 
 	onColumnHeaderContextMenu(
@@ -213,7 +208,6 @@ export class AgGridAdapter implements GridAdapter {
 		this.interaction.destroy();
 		this.interaction.setContainer(null);
 		this.cellEditCallback = undefined;
-		this.headerEditCallback = undefined;
 		this.enterAtLastRowCallback = undefined;
 		this.columnHeaderContextMenuCallback = undefined;
 		this.gridContext = undefined;

@@ -33,7 +33,6 @@ export function createTextCellEditor() {
 		private usePopup = false;
 		private cleanupTasks: Array<() => void> = [];
 		private wrapperChrome = 0;
-		private repositionHandler: (() => void) | null = null;
 
 		init(params: ICellEditorParams): void {
 			this.params = params;
@@ -125,13 +124,11 @@ export function createTextCellEditor() {
 				this.adjustHeight();
 				this.positionPopup();
 			};
-			this.repositionHandler = handler;
 			win.addEventListener('resize', handler);
 			win.addEventListener('scroll', handler, true);
 			this.cleanupTasks.push(() => {
 				win.removeEventListener('resize', handler);
 				win.removeEventListener('scroll', handler, true);
-				this.repositionHandler = null;
 			});
 
 			win.requestAnimationFrame(() => {
@@ -153,7 +150,6 @@ export function createTextCellEditor() {
 				cleanup();
 			}
 			this.cleanupTasks = [];
-			this.repositionHandler = null;
 		}
 
 		isPopup(): boolean {

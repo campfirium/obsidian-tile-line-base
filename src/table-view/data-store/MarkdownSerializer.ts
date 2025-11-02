@@ -19,7 +19,7 @@ function buildHiddenFieldSet(schema: Schema, hiddenFields: Set<string>): Set<str
 	return result;
 }
 
-function collectCollapsedEntries(schema: Schema, block: H2Block, hiddenFields: Set<string>): CollapsedFieldEntry[] {
+function collectCollapsedEntries(block: H2Block, hiddenFields: Set<string>): CollapsedFieldEntry[] {
 	const entries: CollapsedFieldEntry[] = [];
 	const seen = new Set<string>();
 	const pushEntry = (name: string, value: string, isSystem: boolean) => {
@@ -98,7 +98,7 @@ function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: S
 
 function serializeBlock(schema: Schema, block: H2Block, hiddenFields: Set<string>, isSchemaBlock: boolean): string[] {
 	const lines = serializeVisibleColumns(schema, block, hiddenFields, isSchemaBlock);
-	const collapsedEntries = collectCollapsedEntries(schema, block, hiddenFields);
+	const collapsedEntries = collectCollapsedEntries(block, hiddenFields);
 	block.collapsedFields = collapsedEntries.map((entry) => ({ ...entry }));
 
 	const calloutLines = buildCollapsedCallout(collapsedEntries);

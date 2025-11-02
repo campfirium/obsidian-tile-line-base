@@ -1,4 +1,4 @@
-import { App, Notice, Plugin, TAbstractFile, TFile, TFolder, WorkspaceLeaf, normalizePath } from 'obsidian';
+import { App, Notice, TAbstractFile, TFile, TFolder, WorkspaceLeaf, normalizePath } from 'obsidian';
 import type { SettingsService } from '../services/SettingsService';
 import type { ViewSwitchCoordinator } from './ViewSwitchCoordinator';
 import { t } from '../i18n';
@@ -6,7 +6,6 @@ import { getLogger } from '../utils/logger';
 
 interface OnboardingManagerDeps {
 	app: App;
-	plugin: Plugin;
 	settingsService: SettingsService;
 	viewSwitch: ViewSwitchCoordinator;
 }
@@ -14,13 +13,11 @@ interface OnboardingManagerDeps {
 export class OnboardingManager {
 	private readonly logger = getLogger('plugin:onboarding');
 	private readonly app: App;
-	private readonly plugin: Plugin;
 	private readonly settingsService: SettingsService;
 	private readonly viewSwitch: ViewSwitchCoordinator;
 
 	constructor(deps: OnboardingManagerDeps) {
 		this.app = deps.app;
-		this.plugin = deps.plugin;
 		this.settingsService = deps.settingsService;
 		this.viewSwitch = deps.viewSwitch;
 	}

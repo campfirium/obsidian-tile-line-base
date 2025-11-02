@@ -188,17 +188,26 @@ export class TableView extends ItemView {
 		if (!leafElement) {
 			return;
 		}
+		const displayText = this.getDisplayText();
+
 		const titleEl = leafElement.querySelector<HTMLElement>(".view-header-title");
-		if (!titleEl) {
-			return;
+		if (titleEl && titleEl.textContent !== displayText) {
+			titleEl.textContent = displayText;
 		}
-		const label = this.file?.basename
-			? t("tableView.titleWithFile", { name: this.file.basename })
-			: t("tableView.displayName");
-		if (titleEl.textContent !== label) {
-			titleEl.textContent = label;
+		if (titleEl) {
+			titleEl.setAttribute("aria-label", displayText);
+			titleEl.setAttribute("title", displayText);
 		}
-		titleEl.setAttribute("aria-label", label);
-		titleEl.setAttribute("title", label);
+
+		const tabElement = leafElement.closest(".workspace-tab");
+		const tabTitleEl = tabElement?.querySelector<HTMLElement>(".workspace-tab-header-inner-title");
+		if (tabTitleEl && tabTitleEl.textContent !== displayText) {
+			tabTitleEl.textContent = displayText;
+		}
+		if (tabTitleEl) {
+			tabTitleEl.setAttribute("aria-label", displayText);
+			tabTitleEl.setAttribute("title", displayText);
+		}
 	}
+
 }

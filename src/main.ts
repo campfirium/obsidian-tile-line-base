@@ -96,7 +96,7 @@ export default class TileLineBasePlugin extends Plugin {
 		installLoggerConsoleBridge();
 
 		// Initialise cache manager
-		this.cacheManager = new FileCacheManager(this);
+		this.cacheManager = new FileCacheManager(this.settingsService);
 		await this.cacheManager.load();
 
 		logger.info('Plugin onload start');

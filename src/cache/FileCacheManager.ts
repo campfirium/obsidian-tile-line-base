@@ -1,39 +1,40 @@
-import type TileLineBasePlugin from '../main';
 import type { ConfigCacheEntry, TlbConfigBlock } from '../types/config';
+import type { SettingsService } from '../services/SettingsService';
 import { getLogger } from '../utils/logger';
 
 const logger = getLogger('cache:file');
 
 /**
- * æ–‡ä»¶é…ç½®ç¼“å­˜ç®¡ç†å™¨
- * ä½¿ç”¨æ’ä»¶ data.json å­˜å‚¨ç¼“å­˜ï¼Œé¿å…æ‰‹åŠ¨ç®¡ç†æ–‡ä»¶è·¯å¾„
+ * ÎÄ¼şÅäÖÃ»º´æ¹ÜÀíÆ÷
+ * Ê¹ÓÃ²å¼ş data.json ´æ´¢»º´æ£¬±ÜÃâÊÖ¶¯¹ÜÀíÎÄ¼şÂ·¾¶
  */
 export class FileCacheManager {
-	private plugin: TileLineBasePlugin;
+	private settingsService: SettingsService;
 	private cache: Record<string, ConfigCacheEntry> = {};
 
-	constructor(plugin: TileLineBasePlugin) {
-		this.plugin = plugin;
+	constructor(settingsService: SettingsService) {
+		this.settingsService = settingsService;
 	}
 
 	/**
-	 * ä»æ’ä»¶ settings åŠ è½½ç¼“å­˜
+	 * ´Ó²å¼ş settings ¼ÓÔØ»º´æ
 	 */
 	async load(): Promise<void> {
-		// ç¼“å­˜å·²ç»åœ¨ plugin.settings.configCache ä¸­
-		this.cache = (this.plugin as any).settings.configCache ?? {};
+		// »º´æÒÑ¾­ÔÚ settingsService ÖĞ»º´æ
+		const cache = this.settingsService.getConfigCache();
+		this.cache = { ...cache };
 	}
 
 	/**
-	 * ä¿å­˜ç¼“å­˜åˆ°æ’ä»¶ settings
+	 * ±£´æ»º´æµ½²å¼ş settings
 	 */
 	private async save(): Promise<void> {
-		(this.plugin as any).settings.configCache = this.cache;
-		await (this.plugin as any).saveSettings();
+		this.settingsService.setConfigCache(this.cache);
+		await this.settingsService.persist();
 	}
 
 	/**
-	 * è·å–ç¼“å­˜
+	 * »ñÈ¡»º´æ
 	 */
 	getCache(fileId: string): TlbConfigBlock | null {
 		const cached = this.cache[fileId];
@@ -42,7 +43,7 @@ export class FileCacheManager {
 	}
 
 	/**
-	 * è·å–ç¼“å­˜çš„ç‰ˆæœ¬å·
+	 * »ñÈ¡»º´æµÄ°æ±¾ºÅ
 	 */
 	getCachedVersion(fileId: string): number | null {
 		const cached = this.cache[fileId];
@@ -50,7 +51,7 @@ export class FileCacheManager {
 	}
 
 	/**
-	 * è®¾ç½®ç¼“å­˜
+	 * ÉèÖÃ»º´æ
 	 */
 	setCache(fileId: string, filePath: string, version: number, config: TlbConfigBlock): void {
 		this.cache[fileId] = {
@@ -58,14 +59,14 @@ export class FileCacheManager {
 			version,
 			config
 		};
-		// å¼‚æ­¥ä¿å­˜
+		// Òì²½±£´æ
 		this.save().catch((error) => {
 			logger.error('Failed to save config cache', error);
 		});
 	}
 
 	/**
-	 * ä½¿ç¼“å­˜å¤±æ•ˆ
+	 * Ê¹»º´æÊ§Ğ§
 	 */
 	invalidateCache(fileId: string): void {
 		delete this.cache[fileId];
@@ -75,7 +76,7 @@ export class FileCacheManager {
 	}
 
 	/**
-	 * æ¸…ç†æ‰€æœ‰ç¼“å­˜
+	 * ÇåÀíËùÓĞ»º´æ
 	 */
 	clearAll(): void {
 		this.cache = {};

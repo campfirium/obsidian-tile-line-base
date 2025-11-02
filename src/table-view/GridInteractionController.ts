@@ -30,7 +30,6 @@ export class GridInteractionController {
 	private contextMenu: Menu | null = null;
 	private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
 	private documentClickHandler: (() => void) | null = null;
-	private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 	private documentKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 	private readonly cellClipboard: GridCellClipboardController;
 	private readonly history: TableHistoryManager;
@@ -91,7 +90,6 @@ export class GridInteractionController {
 
 		this.contextMenuHandler = null;
 		this.documentClickHandler = null;
-		this.keydownHandler = null;
 		this.documentKeydownHandler = null;
 		this.container = null;
 		this.hideContextMenu();

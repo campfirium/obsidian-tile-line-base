@@ -4,7 +4,6 @@ type EventTargetElement = HTMLElement & { closest(selector: string): HTMLElement
 
 export class OverflowTooltipController {
 	private container: HTMLElement | null = null;
-	private currentCell: HTMLElement | null = null;
 	private currentAnchor: HTMLElement | null = null;
 
 	private readonly pointerEnterHandler = (event: Event) => {
@@ -101,7 +100,6 @@ export class OverflowTooltipController {
 		if (!this.isOverflowing(anchor)) {
 			return;
 		}
-		this.currentCell = cell;
 		this.currentAnchor = anchor;
 		const columnWidth = cell.getBoundingClientRect().width;
 		showOverflowTooltip(anchor, text, { columnWidth });
@@ -141,6 +139,5 @@ export class OverflowTooltipController {
 			hideOverflowTooltip(this.currentAnchor);
 		}
 		this.currentAnchor = null;
-		this.currentCell = null;
 	}
 }

@@ -39,7 +39,6 @@ export class FilterViewEditorModal extends Modal {
 	private readonly allowFilterEditing: boolean;
 	private readonly allowSortEditing: boolean;
 	private conditionsContainer: HTMLElement | null = null;
-	private combineModeSelect!: HTMLSelectElement;
 	private conditions: FilterCondition[] = [];
 	private combineMode: 'AND' | 'OR' = 'AND';
 	private sortContainer: HTMLElement | null = null;
@@ -128,7 +127,6 @@ export class FilterViewEditorModal extends Modal {
 				dropdown.onChange((value) => {
 					this.combineMode = value as 'AND' | 'OR';
 				});
-				this.combineModeSelect = dropdown.selectEl;
 			});
 
 			contentEl.createEl('h3', { text: t('filterViewModals.conditionsHeading') });

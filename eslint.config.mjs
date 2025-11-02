@@ -4,6 +4,7 @@ import tsEslintPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
 import jsoncParser from 'jsonc-eslint-parser';
+import importPlugin from 'eslint-plugin-import';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,12 +119,20 @@ export default [
 		files: ['**/*.ts', '**/*.tsx'],
 		plugins: {
 			'@typescript-eslint': tsEslintPlugin,
+			import: importPlugin,
 		},
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {
 				project: './tsconfig.json',
 				tsconfigRootDir: __dirname,
+			},
+		},
+		settings: {
+			'import/resolver': {
+				typescript: {
+					project: path.resolve(__dirname, './tsconfig.json'),
+				},
 			},
 		},
 		rules: {
@@ -139,6 +148,7 @@ export default [
 			'@typescript-eslint/no-unnecessary-type-assertion': 'off',
 			'@typescript-eslint/no-redundant-type-constituents': 'off',
 			'@typescript-eslint/require-await': 'off',
+			'import/no-unused-modules': ['error', { unusedExports: true }],
 		},
 	},
 	{

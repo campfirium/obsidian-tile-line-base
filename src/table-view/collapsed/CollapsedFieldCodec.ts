@@ -1,17 +1,11 @@
-﻿export interface CollapsedFieldEntry {
+export interface CollapsedFieldEntry {
 	name: string;
 	value: string;
 	isSystem?: boolean;
 }
 
-export interface CollapsedFieldPayload {
-	version: number;
-	fields: CollapsedFieldEntry[];
-}
-
-export const COLLAPSED_SUMMARY_LABEL = 'Collapsed fields';
-export const COLLAPSED_LINE_KEY = 'collapsed';
-export const COLLAPSED_CALLOUT_TYPE = '[!tlb-collapsed]';
+const COLLAPSED_SUMMARY_LABEL = 'Collapsed fields';
+const COLLAPSED_CALLOUT_TYPE = '[!tlb-collapsed]';
 export const COLLAPSED_COMMENT_KEY = 'tlb.collapsed';
 
 const COLLAPSED_LINE_PATTERN = /^collapsed\s*[:\uFF1A]\s*(.*)$/i;
@@ -87,86 +81,19 @@ export function mergeCollapsedEntries(target: { data: Record<string, string>; co
 	target.collapsedFields = Array.from(unique.values());
 }
 
-export function buildCollapsedDataLine(entries: CollapsedFieldEntry[]): string | null {
-	if (!entries || entries.length === 0) {
-		return null;
-	}
-	const parts: string[] = [];
-	for (const entry of entries) {
-		const encoded = encodeCollapsedValue(entry.value);
-		parts.push(`${entry.name}::${encoded}`);
-	}
-	return `${COLLAPSED_LINE_KEY}: ${parts.join(' ')}`;
-}
-
 export function buildCollapsedCallout(entries: CollapsedFieldEntry[]): string[] {
 	if (!entries || entries.length === 0) {
 		return [];
 	}
 	const payloadObj: Record<string, unknown> = {};
 	for (const entry of entries) {
-		const value = entry.value;
-		payloadObj[entry.name] = value;
+		payloadObj[entry.name] = entry.value;
 	}
 	const payload = JSON.stringify(payloadObj);
 	return [
 		`> ${COLLAPSED_CALLOUT_TYPE}- ${COLLAPSED_SUMMARY_LABEL}`,
 		`<!-- ${COLLAPSED_COMMENT_KEY}: ${payload} -->`
 	];
-}
-
-export function buildCollapsedSummary(entries: CollapsedFieldEntry[]): string {
-	if (!entries || entries.length === 0) {
-		return COLLAPSED_SUMMARY_LABEL;
-	}
-	const userEntries = entries.filter((entry) => !entry.isSystem);
-	const summarySource = userEntries.length > 0 ? userEntries : entries;
-	const first = summarySource[0];
-	const preview = formatPreviewValue(first.value);
-	let summary = `${COLLAPSED_SUMMARY_LABEL}: {${first.name}::${preview}}`;
-	if (summarySource.length > 1) {
-		summary += ', ...';
-	}
-	return summary;
-}
-
-export function parseLegacySummaryLine(_line: string): CollapsedFieldEntry[] {
-	return [];
-}
-
-export function parseLegacyBlock(_lines: string[], _startIndex: number): { entries: CollapsedFieldEntry[]; endIndex: number } | null {
-	return null;
-}
-
-export function isLegacyBlockStart(_line: string): boolean {
-	return false;
-}
-
-export function parseLegacyLabel(_line: string): string | null {
-	return null;
-}
-
-export function splitLegacySummaryLine(line: string): { visible: string; payload: CollapsedFieldPayload | null } {
-	const match = line.match(COMMENT_PATTERN);
-	if (!match) {
-		return { visible: line.trim(), payload: null };
-	}
-	const payload = parseCollapsedPayload(match[1]);
-	const visible = line.replace(COMMENT_PATTERN, '').trim();
-	return { visible, payload: payload.length > 0 ? { version: Date.now(), fields: payload } : null };
-}
-
-export function extractCollapsedPayload(commentSource: string): CollapsedFieldPayload | null {
-	const fields = parseCollapsedPayload(commentSource);
-	return fields.length > 0 ? { version: Date.now(), fields } : null;
-}
-
-export function encodeCollapsedValue(value: string): string {
-	return value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
-}
-
-export function decodeCollapsedValue(value: string): string {
-	return value.replace(/\\t/g, '\t').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
 }
 
 function parseCollapsedBody(body: string): CollapsedFieldEntry[] {
@@ -196,7 +123,6 @@ function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 			return [];
 		}
 
-		// Legacy array format: { version, fields: [{ name, value, isSystem }] }
 		if ((parsed as any).fields && Array.isArray((parsed as any).fields)) {
 			const legacyFields = (parsed as any).fields as Array<Record<string, unknown>>;
 			const results: CollapsedFieldEntry[] = [];
@@ -206,8 +132,7 @@ function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 					continue;
 				}
 				const value = normalizeValue(field.value);
-				const isSystem =
-					field.isSystem === true || SYSTEM_COLLAPSED_FIELD_SET.has(name);
+				const isSystem = field.isSystem === true || SYSTEM_COLLAPSED_FIELD_SET.has(name);
 				results.push({
 					name,
 					value,
@@ -248,11 +173,7 @@ function normalizeValue(value: unknown): string {
 	}
 }
 
-function formatPreviewValue(value: string): string {
-	const normalized = value.replace(/\s+/g, ' ').trim();
-	if (normalized.length <= 40) {
-		return normalized;
-	}
-	return `${normalized.slice(0, 37)}...`;
+function decodeCollapsedValue(value: string): string {
+	return value.replace(/\\t/g, '\t').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
 }
 

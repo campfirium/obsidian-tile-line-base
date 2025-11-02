@@ -124,7 +124,6 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.onboardingManager = new OnboardingManager({
 			app: this.app,
-			plugin: this,
 			settingsService: this.settingsService,
 			viewSwitch: this.viewCoordinator
 		});

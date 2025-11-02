@@ -38,7 +38,6 @@ export class TagGroupController {
 	private readonly isStatusBaselineSeeded: () => boolean;
 	private readonly markStatusBaselineSeeded: () => void;
 	private readonly defaultGroupId: string;
-	private ensuringStatusViews = false;
 
 	constructor(options: TagGroupControllerOptions) {
 		this.app = options.app;

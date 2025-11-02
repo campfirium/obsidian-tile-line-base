@@ -17,11 +17,9 @@ export interface IconHeaderParams extends IHeaderParams {
 export class IconHeaderComponent implements IHeaderComp {
 	private eGui!: HTMLDivElement;
 	private iconEl!: HTMLDivElement;
-	private params!: IconHeaderParams;
 	private srLabelEl: HTMLSpanElement | null = null;
 
 	init(params: IconHeaderParams): void {
-		this.params = params;
 		const doc = params.eGridHeader?.ownerDocument || document;
 
 		this.eGui = doc.createElement('div');

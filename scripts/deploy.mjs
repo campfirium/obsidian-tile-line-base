@@ -10,7 +10,7 @@ const ROOT_FILES = [
 
 function ensureDistExists() {
 	if (!fs.existsSync(DIST_DIR)) {
-		console.log(`❌ 未找到 dist 目录: ${DIST_DIR}`);
+		console.log(`⚠️ 未找到 dist 目录: ${DIST_DIR}`);
 		console.log("💡 请先运行 npm run build 后再尝试部署。");
 		process.exit(1);
 	}
@@ -23,7 +23,7 @@ function assertNotSymlink(targetPath) {
 
 	const stats = fs.lstatSync(targetPath);
 	if (stats.isSymbolicLink()) {
-		console.log("❌ 检测到部署目录是符号链接。");
+		console.log("⚠️ 检测到部署目录是符号链接。");
 		console.log(`   位置: ${targetPath}`);
 		console.log("💡 请删除该符号链接并创建真实目录后再执行部署。");
 		process.exit(1);

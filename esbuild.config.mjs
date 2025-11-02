@@ -1,7 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
-import { copyFile, mkdir } from "fs/promises";
+import { copyFile, mkdir, rm } from "fs/promises";
 import path from "path";
 
 const banner =
@@ -12,10 +12,24 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === 'production');
+const distDir = path.resolve(process.cwd(), 'dist');
 
 const staticAssets = [
 	{ src: 'styles.css', dest: path.join('dist', 'styles.css') }
 ];
+
+const cleanDistPlugin = {
+	name: 'clean-dist',
+	setup(build) {
+		build.onStart(async () => {
+			if (!prod) {
+				return;
+			}
+
+			await rm(distDir, { recursive: true, force: true }).catch(() => {});
+		});
+	}
+};
 
 async function copyStaticAssets() {
 	await Promise.all(staticAssets.map(async ({ src, dest }) => {
@@ -63,12 +77,14 @@ const context = await esbuild.context({
 		'@lezer/lr',
 		...builtins],
 	format: 'cjs',
-	target: 'es2018',
+	target: 'es2020',
 	logLevel: "info",
+	minify: prod,
+	legalComments: prod ? 'none' : 'eof',
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
 	outfile: 'dist/main.js',
-	plugins: [copyStaticPlugin],
+	plugins: [cleanDistPlugin, copyStaticPlugin],
 });
 
 if (prod) {

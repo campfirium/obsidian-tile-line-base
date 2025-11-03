@@ -115,17 +115,11 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		const format = (column as any).dateFormat ?? 'iso';
 		(mergedColDef as any).cellEditor = createDateCellEditor();
 		(mergedColDef as any).valueFormatter = (params: any) => formatDateForDisplay(params.value, format);
-		if (!mergedColDef.tooltipField && !mergedColDef.tooltipValueGetter) {
-			(mergedColDef as any).tooltipValueGetter = (params: any) => formatDateForDisplay(params.value, format);
-		}
 		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-date-cell');
 	} else if ((column as any).editorType === 'time') {
 		const format = (column as any).timeFormat ?? 'hh_mm';
 		(mergedColDef as any).cellEditor = createTimeCellEditor();
 		(mergedColDef as any).valueFormatter = (params: any) => formatTimeForDisplay(params.value, format);
-		if (!mergedColDef.tooltipField && !mergedColDef.tooltipValueGetter) {
-			(mergedColDef as any).tooltipValueGetter = (params: any) => formatTimeForDisplay(params.value, format);
-		}
 		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-time-cell');
 	}
 

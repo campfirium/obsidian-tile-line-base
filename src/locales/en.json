@@ -1,4 +1,4 @@
-﻿{
+{
   "tableView": {
     "displayName": "TileLineBase Table"
   },
@@ -116,18 +116,19 @@
     "ymdDot": "Year.Month.Day (2024.01.31)",
     "mdySlash": "Month/Day/Year (01/31/2024)",
     "dmySlash": "Day/Month/Year (31/01/2024)",
-    "short": "Locale short (e.g. 1/31/24)",
-    "long": "Locale long (e.g. January 31, 2024)",
-    "mdyLong": "Month Day, Year (January 31, 2024)",
-    "dmyLong": "Day Month Year (31 January 2024)",
-    "monthDay": "Month Day (Jan 31)",
-    "chineseLong": "Chinese long form (2024骞?鏈?1鏃?"
+    "localizedShort": "Localized short (e.g. {{example}})",
+    "localizedLong": "Localized long (e.g. {{example}})",
+    "localizedMonthDay": "Localized month & day (e.g. {{example}})",
+    "englishShort": "English short (e.g. {{example}})",
+    "englishLong": "English long (e.g. {{example}})"
   },
   "timeFormats": {
-    "hhMm": "24-hour (14:30)",
-    "hhMmSs": "24-hour with seconds (14:30:00)",
-    "hMmA": "12-hour (2:30 PM)",
-    "hMmSsA": "12-hour with seconds (2:30:00 PM)"
+    "hhMm": "24-hour ({{example}})",
+    "hhMmSs": "24-hour with seconds ({{example}})",
+    "hMmA": "Localized 12-hour (e.g. {{example}})",
+    "hMmSsA": "Localized 12-hour with seconds (e.g. {{example}})",
+    "enHMmA": "English 12-hour ({{example}})",
+    "enHMmSsA": "English 12-hour with seconds ({{example}})"
   },
   "columnInteraction": {
     "menuEdit": "Edit column",

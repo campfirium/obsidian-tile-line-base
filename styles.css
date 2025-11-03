@@ -1732,3 +1732,54 @@
 .tlb-filter-view-icon-header-row .tlb-filter-view-icon-search-field {
   flex: 1 1 auto;
 }
+.tlb-time-editor {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	height: 100%;
+	padding: 0 4px;
+	border-radius: 6px;
+	box-sizing: border-box;
+	background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary) 8%);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 70%, transparent);
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.theme-dark .tlb-time-editor {
+	background: color-mix(in srgb, var(--background-secondary, #202020) 90%, var(--background-primary, #161616) 10%);
+	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+}
+
+.tlb-time-editor:focus-within {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 28%, transparent);
+}
+
+.tlb-time-editor.is-invalid {
+	border-color: color-mix(in srgb, var(--color-red, #d93c3c) 85%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red, #d93c3c) 32%, transparent);
+}
+
+.theme-dark .tlb-time-editor.is-invalid {
+	border-color: color-mix(in srgb, var(--color-red, #ff6b6b) 75%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red, #ff6b6b) 28%, transparent);
+}
+
+.tlb-time-editor-input {
+	width: 100%;
+	min-width: 0;
+	height: 100%;
+	border: none;
+	background: transparent;
+	padding: 0;
+	color: inherit;
+	font: inherit;
+}
+
+.tlb-time-editor-input:focus {
+	outline: none;
+}
+
+.tlb-time-editor-input--invalid {
+	color: var(--text-error, var(--color-red, #d93c3c));
+}

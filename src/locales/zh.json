@@ -117,18 +117,19 @@
     "ymdDot": "年.月.日（2024.01.31）",
     "mdySlash": "月/日/年（01/31/2024）",
     "dmySlash": "日/月/年（31/01/2024）",
-    "short": "系统短格式（如 1/31/24）",
-    "long": "系统长格式（如 2024 年 1 月 31 日）",
-    "mdyLong": "月 日, 年（January 31, 2024）",
-    "dmyLong": "日 月 年（31 January 2024）",
-    "monthDay": "月 日（Jan 31）",
-    "chineseLong": "中文长格式（2024 年 1 月 31 日）"
+    "localizedShort": "本地化短格式（例如 {{example}}）",
+    "localizedLong": "本地化长格式（例如 {{example}}）",
+    "localizedMonthDay": "本地化月日格式（例如 {{example}}）",
+    "englishShort": "英文短格式（例如 {{example}}）",
+    "englishLong": "英文长格式（例如 {{example}}）"
   },
   "timeFormats": {
-    "hhMm": "24小时制（23:45）",
-    "hhMmSs": "24小时制含秒（23:45:30）",
-    "hMmA": "12小时制（11:45 PM）",
-    "hMmSsA": "12小时制含秒（11:45:30 PM）"
+    "hhMm": "24 小时制（{{example}}）",
+    "hhMmSs": "24 小时制（含秒，{{example}}）",
+    "hMmA": "本地化 12 小时制（例如 {{example}}）",
+    "hMmSsA": "本地化 12 小时制（含秒，例如 {{example}}）",
+    "enHMmA": "英文 12 小时制（{{example}}）",
+    "enHMmSsA": "英文 12 小时制（含秒，{{example}}）"
   },
   "columnInteraction": {
     "menuEdit": "编辑列",

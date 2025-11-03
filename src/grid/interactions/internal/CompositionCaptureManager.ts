@@ -147,7 +147,8 @@ export class CompositionCaptureManager {
 					err === 'destroyed' ||
 					err === 'destroy' ||
 					err === 'focus-move' ||
-					err === 'scroll'
+					err === 'scroll' ||
+					err === 'resize'
 				) {
 					return;
 				}

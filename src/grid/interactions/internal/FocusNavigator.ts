@@ -75,6 +75,18 @@ export class FocusNavigator {
 			return;
 		}
 
+		const colDef =
+			typeof focusedCell.column.getColDef === 'function'
+				? focusedCell.column.getColDef()
+				: null;
+		if (colDef && colDef.editable === false) {
+			this.debug('navigator:handleDeleteKey:nonEditable', {
+				rowIndex: focusedCell.rowIndex,
+				colId: field
+			});
+			return;
+		}
+
 		const rowNode = gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
 		if (!rowNode) return;
 

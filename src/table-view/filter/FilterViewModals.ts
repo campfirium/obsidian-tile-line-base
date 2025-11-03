@@ -22,6 +22,8 @@ export interface FilterViewEditorModalOptions {
 	initialSortRules?: SortRule[] | null;
 	allowFilterEditing?: boolean;
 	allowSortEditing?: boolean;
+	minConditionCount?: number;
+	renderAdditionalControls?: (container: HTMLElement) => void;
 	onSubmit: (result: FilterViewEditorResult) => void;
 	onCancel: () => void;
 }
@@ -38,6 +40,8 @@ export class FilterViewEditorModal extends Modal {
 	private iconOptions: string[] = [];
 	private readonly allowFilterEditing: boolean;
 	private readonly allowSortEditing: boolean;
+	private readonly minimumConditionCount: number;
+	private readonly additionalControlsRenderer: ((container: HTMLElement) => void) | null;
 	private conditionsContainer: HTMLElement | null = null;
 	private conditions: FilterCondition[] = [];
 	private combineMode: 'AND' | 'OR' = 'AND';
@@ -50,6 +54,14 @@ export class FilterViewEditorModal extends Modal {
 		this.options = options;
 		this.allowFilterEditing = options.allowFilterEditing !== false;
 		this.allowSortEditing = options.allowSortEditing !== false;
+		const minConditionsOption =
+			typeof options.minConditionCount === 'number' ? Math.floor(options.minConditionCount) : null;
+		this.minimumConditionCount = Math.max(
+			0,
+			minConditionsOption !== null ? minConditionsOption : this.allowFilterEditing ? 1 : 0
+		);
+		this.additionalControlsRenderer =
+			typeof options.renderAdditionalControls === 'function' ? options.renderAdditionalControls : null;
 		this.iconValue = this.sanitizeIconId(options.initialIcon);
 		this.iconSelectionId = this.iconValue ? this.resolveCanonicalIconId(this.iconValue) : null;
 		if (this.iconSelectionId) {
@@ -116,6 +128,14 @@ export class FilterViewEditorModal extends Modal {
 		this.iconMatchesEl = iconSetting.controlEl.createDiv({ cls: 'tlb-filter-view-icon-matches' });
 
 		this.renderIconMatches(this.iconInputEl.value);
+
+		if (this.additionalControlsRenderer) {
+			const extraContainer = contentEl.createDiv({ cls: 'tlb-filter-editor-extra' });
+			this.additionalControlsRenderer(extraContainer);
+			if (!extraContainer.hasChildNodes()) {
+				extraContainer.remove();
+			}
+		}
 
 		if (this.allowFilterEditing) {
 			const modeSetting = new Setting(contentEl);
@@ -667,13 +687,15 @@ export class FilterViewEditorModal extends Modal {
 		}
 		let filterRule: FilterRule | null = null;
 		if (this.allowFilterEditing) {
-			if (this.conditions.length === 0) {
+			if (this.conditions.length < this.minimumConditionCount) {
 				return;
 			}
-			filterRule = {
-				conditions: this.conditions.map((condition) => ({ ...condition })),
-				combineMode: this.combineMode
-			};
+			if (this.conditions.length > 0) {
+				filterRule = {
+					conditions: this.conditions.map((condition) => ({ ...condition })),
+					combineMode: this.combineMode
+				};
+			}
 		}
 
 		const sortRules = this.allowSortEditing ? this.sortRules.map((rule) => ({ ...rule })) : [];

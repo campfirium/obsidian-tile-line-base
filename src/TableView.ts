@@ -11,7 +11,7 @@ import type { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import type { FilterViewController } from "./table-view/filter/FilterViewController";
 import { TagGroupStore } from "./table-view/filter/tag-group/TagGroupStore";
 import { TagGroupController } from "./table-view/filter/tag-group/TagGroupController";
-import type { FileFilterViewState } from "./types/filterView";
+import type { FileFilterViewState, FilterRule } from "./types/filterView";
 import type { FileTagGroupState } from "./types/tagGroup";
 import { TableDataStore } from "./table-view/TableDataStore";
 import type { TableConfigManager } from "./table-view/TableConfigManager";
@@ -36,6 +36,10 @@ import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
 import type { KanbanViewController } from "./table-view/kanban/KanbanViewController";
 import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager";
+import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
+import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
+import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
+import type { KanbanBoardState } from "./types/kanban";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -88,6 +92,13 @@ export class TableView extends ItemView {
 	public kanbanLaneField: string | null = null;
 	public kanbanSortField: string | null = "看板排序";
 	public kanbanPreferencesLoaded = false;
+	public kanbanToolbar: KanbanToolbar | null = null;
+	public activeKanbanBoardId: string | null = null;
+	public activeKanbanBoardFilter: FilterRule | null = null;
+	public kanbanBoardStore = new KanbanBoardStore(null);
+	public kanbanBoardController!: KanbanBoardController;
+	public kanbanBoardsLoaded = false;
+	public pendingKanbanBoardState: KanbanBoardState | null = null;
 	private kanbanManager!: KanbanViewModeManager;
 
 	constructor(leaf: WorkspaceLeaf) {
@@ -111,6 +122,7 @@ export class TableView extends ItemView {
 			if (file instanceof TFile) {
 				this.file = file;
 				this.refreshCoordinator.setTrackedFile(file);
+				this.kanbanBoardsLoaded = false;
 				await this.render();
 			} else {
 				this.refreshCoordinator.setTrackedFile(null);
@@ -126,6 +138,10 @@ export class TableView extends ItemView {
 	}
 
 	async render(): Promise<void> {
+		if (this.kanbanBoardController) {
+			this.kanbanBoardController.ensureInitialized();
+			this.kanbanBoardsLoaded = true;
+		}
 		const snapshot = this.refreshCoordinator ? this.refreshCoordinator.captureViewSnapshot() : null;
 		await renderTableView(this);
 
@@ -159,6 +175,16 @@ export class TableView extends ItemView {
 			this.kanbanController.destroy();
 			this.kanbanController = null;
 		}
+		if (this.kanbanToolbar) {
+			this.kanbanToolbar.destroy();
+			this.kanbanToolbar = null;
+		}
+		this.activeKanbanBoardId = null;
+		this.kanbanBoardStore.reset();
+		if (this.kanbanBoardController) {
+			this.kanbanBoardController.reset();
+		}
+		this.kanbanBoardsLoaded = false;
 		await handleOnClose(this);
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();

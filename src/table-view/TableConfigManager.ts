@@ -2,6 +2,7 @@ import type { App, TFile } from 'obsidian';
 import { getPluginContext } from '../pluginContext';
 import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
+import type { KanbanBoardState } from '../types/kanban';
 import { getLogger } from '../utils/logger';
 import {
 	buildConfigCalloutBlock,
@@ -23,6 +24,7 @@ export interface TableConfigData {
 		laneField: string;
 		sortField?: string | null;
 	};
+	kanbanBoards?: KanbanBoardState | null;
 }
 
 interface ParsedConfigBlock {
@@ -101,6 +103,9 @@ export class TableConfigManager {
 		if (data.kanban) {
 			payload.kanban = data.kanban;
 		}
+		if (data.kanbanBoards && data.kanbanBoards.boards.length > 0) {
+			payload.kanbanBoards = data.kanbanBoards;
+		}
 
 		const configBlock = buildConfigCalloutBlock(fileId, version, payload);
 		const content = await this.app.vault.read(file);
@@ -121,7 +126,8 @@ export class TableConfigManager {
 				copyTemplate: data.copyTemplate ?? undefined,
 				columnConfigs: data.columnConfigs ?? [],
 				viewPreference: data.viewPreference ?? 'table',
-				kanban: data.kanban ?? undefined
+				kanban: data.kanban ?? undefined,
+				kanbanBoards: data.kanbanBoards ?? undefined
 			});
 		}
 
@@ -131,6 +137,9 @@ export class TableConfigManager {
 			}
 			if (data.tagGroups) {
 				await plugin.saveTagGroupsForFile(file.path, data.tagGroups);
+			}
+			if (data.kanbanBoards) {
+				await plugin.saveKanbanBoardsForFile(file.path, data.kanbanBoards);
 			}
 			if (data.columnWidths) {
 				for (const [field, width] of Object.entries(data.columnWidths)) {

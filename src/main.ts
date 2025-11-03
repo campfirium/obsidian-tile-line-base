@@ -13,6 +13,7 @@ import {
 import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
 import type { FileTagGroupState } from './types/tagGroup';
+import type { KanbanBoardState } from './types/kanban';
 import { FileCacheManager } from './cache/FileCacheManager';
 import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './services/SettingsService';
 import { BackupManager } from './services/BackupManager';
@@ -367,11 +368,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async saveFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<void> {
 		const sanitized = await this.settingsService.saveFilterViewsForFile(filePath, state);
-		logger.debug('saveFilterViewsForFile', {
-			filePath,
-			viewCount: sanitized.views.length,
-			activeView: sanitized.activeViewId
-		});
+		logger.debug('saveFilterViewsForFile', { filePath, viewCount: sanitized.views.length, activeView: sanitized.activeViewId });
 	}
 
 	getTagGroupsForFile(filePath: string): FileTagGroupState {
@@ -380,11 +377,16 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<void> {
 		const sanitized = await this.settingsService.saveTagGroupsForFile(filePath, state);
-		logger.debug('saveTagGroupsForFile', {
-			filePath,
-			groupCount: sanitized.groups.length,
-			activeGroup: sanitized.activeGroupId
-		});
+		logger.debug('saveTagGroupsForFile', { filePath, groupCount: sanitized.groups.length, activeGroup: sanitized.activeGroupId });
+	}
+
+	getKanbanBoardsForFile(filePath: string): KanbanBoardState {
+		return this.settingsService.getKanbanBoardsForFile(filePath);
+	}
+
+	async saveKanbanBoardsForFile(filePath: string, state: KanbanBoardState): Promise<void> {
+		const sanitized = await this.settingsService.saveKanbanBoardsForFile(filePath, state);
+		logger.debug('saveKanbanBoardsForFile', { filePath, boardCount: sanitized.boards.length, activeBoard: sanitized.activeBoardId });
 	}
 
 	isHideRightSidebarEnabled(): boolean {

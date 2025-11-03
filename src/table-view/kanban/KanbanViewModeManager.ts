@@ -8,6 +8,7 @@ type ViewMode = 'table' | 'kanban';
 export class KanbanViewModeManager {
 	private readonly actionId = 'toggle-kanban-view';
 	private toggleButton: HTMLElement | null = null;
+	private toggleIconEl: HTMLElement | SVGElement | null = null;
 	private isSwitching = false;
 
 	constructor(private readonly view: TableView) {}
@@ -24,15 +25,12 @@ export class KanbanViewModeManager {
 			await this.setActiveViewMode(targetMode);
 		});
 		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
-		setIcon(iconEl, 'layout-kanban');
-		const svg = iconEl?.querySelector?.('svg');
-		if (!svg) {
-			setIcon(iconEl, 'layout-grid');
-		}
+		this.toggleButton = button;
+		this.toggleIconEl = iconEl ?? null;
+		this.applyToggleIcon();
 		button.setAttribute('data-tlb-action', this.actionId);
 		button.setAttribute('aria-label', label);
 		button.setAttribute('title', label);
-		this.toggleButton = button;
 	}
 
 	detachToggle(): void {
@@ -40,6 +38,7 @@ export class KanbanViewModeManager {
 			this.toggleButton.remove();
 			this.toggleButton = null;
 		}
+		this.toggleIconEl = null;
 	}
 
 	updateToggleButton(): void {
@@ -49,6 +48,7 @@ export class KanbanViewModeManager {
 		const label = this.getToggleLabel();
 		this.toggleButton.setAttribute('aria-label', label);
 		this.toggleButton.setAttribute('title', label);
+		this.applyToggleIcon();
 	}
 
 	async setActiveViewMode(mode: ViewMode): Promise<void> {
@@ -105,6 +105,26 @@ export class KanbanViewModeManager {
 		return this.view.activeViewMode === 'kanban'
 			? t('kanbanView.actions.switchToTable')
 			: t('kanbanView.actions.switchToKanban');
+	}
+
+	private applyToggleIcon(): void {
+		const iconEl = this.toggleIconEl;
+		if (!iconEl) {
+			return;
+		}
+		const target = iconEl as HTMLElement;
+
+		const iconCandidates =
+			this.view.activeViewMode === 'kanban'
+				? ['tilelinebase-table', 'table', 'layout-grid']
+				: ['layout-kanban', 'layout-grid'];
+
+		for (const iconId of iconCandidates) {
+			setIcon(target, iconId);
+			if (target.querySelector?.('svg')) {
+				break;
+			}
+		}
 	}
 
 	private hasValidLaneField(): boolean {

@@ -89,6 +89,7 @@ export class KanbanViewModeManager {
 			const configured = await this.promptForLaneField();
 			if (configured) {
 				this.ensureSortField();
+				this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 				return 'kanban';
 			}
 			this.view.activeViewMode = 'table';
@@ -98,6 +99,7 @@ export class KanbanViewModeManager {
 		}
 
 		const created = this.ensureSortField();
+		this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 		return created ? 'kanban' : null;
 	}
 

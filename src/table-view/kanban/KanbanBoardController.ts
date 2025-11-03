@@ -20,6 +20,7 @@ export class KanbanBoardController {
 	private readonly store: KanbanBoardStore;
 	private loadedFilePath: string | null = null;
 	private repairingLaneField = false;
+		private autoCreateInProgress = false;
 
 	constructor(options: KanbanBoardControllerOptions) {
 		this.app = options.app;
@@ -186,6 +187,10 @@ export class KanbanBoardController {
 
 		await this.store.persist();
 		this.applyBoardContext(activeBoard, { persist: true, rerender: true });
+		if (nextState.boards.length === 0) {
+			this.handleEmptyBoards();
+			return;
+		}
 		this.refreshToolbar();
 	}
 
@@ -252,6 +257,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.kanbanBoardsLoaded = false;
 		this.repairingLaneField = false;
+		this.autoCreateInProgress = false;
 	}
 
 	private applyBoardContext(
@@ -289,6 +295,40 @@ export class KanbanBoardController {
 		this.view.kanbanLaneField = null;
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
+		this.maybeTriggerAutoCreate();
+	}
+
+	ensureBoardForActiveKanbanView(): void {
+		this.maybeTriggerAutoCreate();
+	}
+
+	private maybeTriggerAutoCreate(): void {
+		if (this.view.activeViewMode !== 'kanban') {
+			return;
+		}
+		if (this.autoCreateInProgress) {
+			return;
+		}
+		const state = this.store.getState();
+		if (state.boards.length > 0) {
+			return;
+		}
+		const schema = this.view.schema;
+		if (!schema || !Array.isArray(schema.columnNames) || schema.columnNames.length === 0) {
+			return;
+		}
+		if (this.getLaneFieldCandidates().length === 0) {
+			return;
+		}
+
+		this.autoCreateInProgress = true;
+		void this.createBoard()
+			.catch(() => {
+				// noop
+			})
+			.finally(() => {
+				this.autoCreateInProgress = false;
+			});
 	}
 
 	private isLaneFieldAvailable(field: string): boolean {
@@ -393,25 +433,26 @@ export class KanbanBoardController {
 	}
 
 	private toChineseNumeral(value: number): string {
-		const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+		const digits = ['\u96f6', '\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d', '\u4e03', '\u516b', '\u4e5d'];
 		if (!Number.isFinite(value) || value <= 0) {
 			return String(value);
 		}
 		if (value <= 9) {
 			return digits[value];
 		}
+		const ten = '\u5341';
 		if (value === 10) {
-			return '十';
+			return ten;
 		}
 		if (value < 20) {
 			const units = value % 10;
-			return `十${units === 0 ? '' : digits[units]}`;
+			return ten + (units === 0 ? '' : digits[units]);
 		}
 		if (value < 100) {
 			const tens = Math.floor(value / 10);
 			const units = value % 10;
-			const tensLabel = tens === 1 ? '十' : `${digits[tens]}十`;
-			return units === 0 ? tensLabel : `${tensLabel}${digits[units]}`;
+			const tensLabel = tens === 1 ? ten : digits[tens] + ten;
+			return units === 0 ? tensLabel : tensLabel + digits[units];
 		}
 		return String(value);
 	}

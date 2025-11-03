@@ -8,6 +8,12 @@ import {
 	formatFormulaNumber,
 	type FormulaFormatPreset
 } from '../formulaFormatPresets';
+import {
+	formatDateForDisplay,
+	formatTimeForDisplay,
+	normalizeDateFormatPreset,
+	normalizeTimeFormatPreset
+} from '../../utils/datetime';
 
 export interface FormulaState {
 	columns: Map<string, CompiledFormula>;
@@ -15,6 +21,7 @@ export interface FormulaState {
 	columnOrder: string[];
 	limitNoticeIssued: boolean;
 	formats: Map<string, FormulaFormatPreset>;
+	displayFormatters: Map<string, (value: unknown) => string>;
 }
 
 export function createFormulaState(): FormulaState {
@@ -23,7 +30,8 @@ export function createFormulaState(): FormulaState {
 		compileErrors: new Map<string, string>(),
 		columnOrder: [],
 		limitNoticeIssued: false,
-		formats: new Map<string, FormulaFormatPreset>()
+		formats: new Map<string, FormulaFormatPreset>(),
+		displayFormatters: new Map<string, (value: unknown) => string>()
 	};
 }
 
@@ -37,6 +45,7 @@ export function prepareFormulaColumns(
 	state.columnOrder = [];
 	state.limitNoticeIssued = false;
 	state.formats.clear();
+	state.displayFormatters.clear();
 
 	if (!columnConfigs) {
 		if (schema) {
@@ -47,6 +56,21 @@ export function prepareFormulaColumns(
 
 	if (schema) {
 		schema.columnConfigs = columnConfigs;
+	}
+
+	const configsSource = schema?.columnConfigs ?? columnConfigs ?? [];
+	for (const config of configsSource) {
+		if (config.type === 'date') {
+			const preset = normalizeDateFormatPreset(config.dateFormat ?? null);
+			state.displayFormatters.set(config.name, (value: unknown) =>
+				formatDateForDisplay(value, preset)
+			);
+		} else if (config.type === 'time') {
+			const preset = normalizeTimeFormatPreset(config.timeFormat ?? null);
+			state.displayFormatters.set(config.name, (value: unknown) =>
+				formatTimeForDisplay(value, preset)
+			);
+		}
 	}
 
 	for (const config of columnConfigs) {
@@ -101,7 +125,9 @@ export function applyFormulaResults(
 		if (!compiled) {
 			continue;
 		}
-		const { value, error, kind, numericValue } = evaluateFormula(compiled, row);
+		const { value, error, kind, numericValue } = evaluateFormula(compiled, row, (field) =>
+			resolveFormulaContextValue(state, row, field)
+		);
 		if (error) {
 			row[columnName] = options.errorValue;
 			row[tooltipField] = t('tableDataStore.formulaError', { error });
@@ -142,4 +168,17 @@ export function shouldNotifyFormulaLimit(
 	}
 	state.limitNoticeIssued = true;
 	return true;
+}
+
+function resolveFormulaContextValue(state: FormulaState, row: RowData, field: string): unknown {
+	const formatter = state.displayFormatters.get(field);
+	const rawValue = row[field];
+	if (!formatter) {
+		return rawValue;
+	}
+	try {
+		return formatter(rawValue);
+	} catch {
+		return rawValue;
+	}
 }

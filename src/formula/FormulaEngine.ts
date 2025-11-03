@@ -97,11 +97,15 @@ export function compileFormula(rawFormula: string): CompiledFormula {
 	};
 }
 
-export function evaluateFormula(compiled: CompiledFormula, context: Record<string, unknown>): FormulaEvaluationResult {
+export function evaluateFormula(
+	compiled: CompiledFormula,
+	context: Record<string, unknown>,
+	resolveField?: (fieldName: string) => unknown
+): FormulaEvaluationResult {
 	if (compiled.rpn.length === 1) {
 		const soleToken = compiled.rpn[0];
 		if (soleToken.type === 'field') {
-			const raw = context[soleToken.value];
+			const raw = resolveField ? resolveField(soleToken.value) : context[soleToken.value];
 			if (raw === null || raw === undefined) {
 				return { value: '', error: null, kind: 'string' };
 			}
@@ -121,7 +125,7 @@ export function evaluateFormula(compiled: CompiledFormula, context: Record<strin
 	}
 
 	try {
-		const result = evaluateRpn(compiled.rpn, context);
+		const result = evaluateRpn(compiled.rpn, context, resolveField);
 		if (result.kind === 'number') {
 			if (!Number.isFinite(result.value)) {
 				return {
@@ -327,7 +331,11 @@ function toReversePolish(tokens: Token[]): { rpn: RpnToken[]; dependencies: Set<
 	return { rpn: output, dependencies };
 }
 
-function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): FormulaResultValue {
+function evaluateRpn(
+	tokens: RpnToken[],
+	context: Record<string, unknown>,
+	resolveField?: (fieldName: string) => unknown
+): FormulaResultValue {
 	const stack: FormulaStackValue[] = [];
 
 	for (const token of tokens) {
@@ -336,7 +344,7 @@ function evaluateRpn(tokens: RpnToken[], context: Record<string, unknown>): Form
 				stack.push({ kind: 'number', value: token.value });
 				break;
 			case 'field': {
-				const raw = context[token.value];
+				const raw = resolveField ? resolveField(token.value) : context[token.value];
 				stack.push({ kind: 'field', raw });
 				break;
 			}

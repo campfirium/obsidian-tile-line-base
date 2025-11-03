@@ -75,6 +75,9 @@ export class FocusNavigator {
 			return;
 		}
 
+		const rowNode = gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
+		if (!rowNode) return;
+
 		const colDef =
 			typeof focusedCell.column.getColDef === 'function'
 				? focusedCell.column.getColDef()
@@ -87,13 +90,30 @@ export class FocusNavigator {
 			return;
 		}
 
-		const rowNode = gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
-		if (!rowNode) return;
-
 		const data = rowNode.data as RowData | undefined;
 		if (!data) return;
 
+		if (colDef && typeof colDef.editable === 'function') {
+			const editableResult = colDef.editable({
+				api: gridApi,
+				column: focusedCell.column,
+				colDef,
+				context: (gridApi as any)?.context,
+				data,
+				node: rowNode,
+				value: data[field]
+			} as any);
+			if (!editableResult) {
+				this.debug('navigator:handleDeleteKey:nonEditableFn', {
+					rowIndex: focusedCell.rowIndex,
+					colId: field
+				});
+				return;
+			}
+		}
+
 		const oldValue = String(data[field] ?? '');
+
 		if (oldValue.length === 0) {
 			return;
 		}

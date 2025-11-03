@@ -1,5 +1,6 @@
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
+import { FilterDataProcessor } from '../filter/FilterDataProcessor';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
@@ -58,7 +59,7 @@ export class KanbanViewController {
 		this.enableDrag = options.enableDrag;
 		this.dragAvailable = this.enableDrag;
 
-		this.visibleRows = this.view.filterOrchestrator.getVisibleRows();
+		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getVisibleRows());
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
 		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
@@ -81,7 +82,7 @@ export class KanbanViewController {
 
 	private registerListeners(): void {
 		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener((rows) => {
-			this.visibleRows = rows;
+			this.visibleRows = this.applyBoardFilter(rows);
 			if (!this.isApplyingMutation) {
 				this.renderBoard();
 			}
@@ -90,6 +91,19 @@ export class KanbanViewController {
 			this.quickFilterValue = value ?? '';
 			this.renderBoard();
 		});
+	}
+
+
+	private applyBoardFilter(rows: RowData[]): RowData[] {
+		const rule = this.view.activeKanbanBoardFilter;
+		if (!rule) {
+			return rows;
+		}
+		try {
+			return FilterDataProcessor.applyFilterRule(rows, rule);
+		} catch {
+			return rows;
+		}
 	}
 
 	private renderBoard(): void {
@@ -190,33 +204,9 @@ export class KanbanViewController {
 		});
 	}
 
-	private renderMessage(state: KanbanBoardState): void {
+	private renderMessage(_state: KanbanBoardState): void {
 		this.messageEl.empty();
-		const filterActive = this.quickFilterValue.trim().length > 0;
-		if (filterActive) {
-			const countLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
-			countLabel.setText(
-				t('kanbanView.filteredCountLabel', {
-					count: String(state.totalCards)
-				})
-			);
-		} else {
-			const totalLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
-			totalLabel.setText(
-				t('kanbanView.totalCountLabel', {
-					count: String(state.totalCards)
-				})
-			);
-			if (this.dragAvailable) {
-				const hint = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
-				hint.setText(t('kanbanView.dragHint'));
-			}
-		}
-
-		if (this.enableDrag && !this.dragAvailable) {
-			const dragWarning = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
-			dragWarning.setText(t('kanbanView.dragUnavailable'));
-		}
+		this.messageEl.toggleAttribute('hidden', true);
 	}
 
 	private renderEmptyState(): void {

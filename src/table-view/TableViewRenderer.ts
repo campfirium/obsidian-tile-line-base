@@ -10,6 +10,7 @@ import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
+import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 
 const logger = getLogger('table-view:renderer');
 
@@ -63,6 +64,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	const content = await view.app.vault.read(view.file);
 	const configBlock = await view.persistenceService.loadConfig();
+
+	view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
 
 	if (configBlock) {
 		if (configBlock.filterViews) {
@@ -146,18 +149,29 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	view.filterOrchestrator.refresh();
 	view.initialColumnState = null;
+	const primaryField = view.schema.columnNames[0] ?? null;
+
 	if (view.filterViewBar) {
 		view.filterViewBar.destroy();
 		view.filterViewBar = null;
 	}
-
-	renderFilterViewControls(view, container);
-
-	const primaryField = view.schema.columnNames[0] ?? null;
+	if (view.kanbanToolbar) {
+		view.kanbanToolbar.destroy();
+		view.kanbanToolbar = null;
+	}
 
 	if (view.activeViewMode === 'kanban') {
+		renderKanbanToolbar(view, container);
 		container.classList.add('tlb-kanban-mode');
 		container.classList.remove('tlb-has-grid');
+		const boardCount = view.kanbanBoardController?.getBoards().length ?? 0;
+		if (boardCount === 0) {
+			container.createDiv({
+				cls: 'tlb-kanban-empty',
+				text: t('kanbanView.toolbar.noBoardsPlaceholder')
+			});
+			return;
+		}
 		if (!view.kanbanLaneField) {
 			container.createDiv({
 				cls: 'tlb-kanban-warning',
@@ -177,6 +191,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.filterOrchestrator.applyActiveView();
 		return;
 	}
+
+	renderFilterViewControls(view, container);
 
 	container.classList.add('tlb-has-grid');
 

@@ -7,6 +7,7 @@ import type {
 	DefaultFilterViewPreferences
 } from '../types/filterView';
 import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
+import type { KanbanBoardState } from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -28,6 +29,7 @@ export interface TileLineBaseSettings {
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
+	kanbanBoards: Record<string, KanbanBoardState>;
 	configCache: Record<string, ConfigCacheEntry>;
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
@@ -40,6 +42,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	columnLayouts: {},
 	filterViews: {},
 	tagGroups: {},
+	kanbanBoards: {},
 	configCache: {},
 	hideRightSidebar: false,
 	logging: {
@@ -71,6 +74,7 @@ export class SettingsService {
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.tagGroups = { ...DEFAULT_SETTINGS.tagGroups, ...(merged.tagGroups ?? {}) };
+		merged.kanbanBoards = { ...DEFAULT_SETTINGS.kanbanBoards, ...(merged.kanbanBoards ?? {}) };
 		merged.configCache = { ...DEFAULT_SETTINGS.configCache, ...(merged.configCache ?? {}) };
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
@@ -182,6 +186,18 @@ export class SettingsService {
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
 		const sanitized = this.cloneTagGroupState(state);
 		this.settings.tagGroups[filePath] = sanitized;
+		await this.persist();
+		return sanitized;
+	}
+
+	getKanbanBoardsForFile(filePath: string): KanbanBoardState {
+		const stored = this.settings.kanbanBoards[filePath];
+		return this.cloneKanbanBoardState(stored ?? null);
+	}
+
+	async saveKanbanBoardsForFile(filePath: string, state: KanbanBoardState): Promise<KanbanBoardState> {
+		const sanitized = this.cloneKanbanBoardState(state);
+		this.settings.kanbanBoards[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
 	}
@@ -386,6 +402,44 @@ export class SettingsService {
 			metadata
 		};
 	}
+
+	private cloneKanbanBoardState(source: KanbanBoardState | null | undefined): KanbanBoardState {
+		const boards: KanbanBoardState['boards'] = [];
+		const seenIds = new Set<string>();
+		if (source?.boards) {
+			for (const raw of source.boards) {
+				if (!raw || typeof raw.id !== 'string') {
+					continue;
+				}
+				const id = raw.id.trim();
+				if (!id || seenIds.has(id)) {
+					continue;
+				}
+				const rawName = typeof raw.name === 'string' ? raw.name.trim() : '';
+				const icon = this.sanitizeIconId(raw.icon);
+				const laneField = typeof raw.laneField === 'string' ? raw.laneField.trim() : '';
+				const filterRule = raw.filterRule ? this.deepClone(raw.filterRule) : null;
+				boards.push({
+					id,
+					name: rawName.length > 0 ? rawName : id,
+					icon,
+					laneField: laneField.length > 0 ? laneField : '',
+					filterRule
+				});
+				seenIds.add(id);
+			}
+		}
+		let activeBoardId: string | null =
+			typeof source?.activeBoardId === 'string' ? source.activeBoardId.trim() : null;
+		if (!activeBoardId || !seenIds.has(activeBoardId)) {
+			activeBoardId = boards[0]?.id ?? null;
+		}
+		return {
+			boards,
+			activeBoardId
+		};
+	}
+
 	private cloneTagGroupMetadata(source: FileTagGroupMetadata | null | undefined): FileTagGroupMetadata {
 		if (!source) {
 			return {};

@@ -26,6 +26,7 @@ import { getPluginContext } from '../pluginContext';
 import { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { TableCreationController } from './TableCreationController';
+import { KanbanBoardController } from './kanban/KanbanBoardController';
 
 const logger = getLogger('table-view:setup');
 
@@ -51,6 +52,7 @@ export function initializeTableView(view: TableView): void {
 			laneField: view.kanbanLaneField,
 			sortField: view.kanbanSortField
 		}),
+		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)
 	});
 	view.columnInteractionController = new ColumnInteractionController({
@@ -107,6 +109,11 @@ export function initializeTableView(view: TableView): void {
 	view.tableCreationController = new TableCreationController({
 		app: view.app,
 		getCurrentFile: () => view.file
+	});
+	view.kanbanBoardController = new KanbanBoardController({
+		app: view.app,
+		view,
+		store: view.kanbanBoardStore
 	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
 		getGridAdapter: () => view.gridAdapter

@@ -36,6 +36,14 @@
       "cancelLabel": "取消",
       "schemaUnavailable": "请先加载表格后再选择看板列。",
       "noColumns": "当前没有可用列用于看板泳道。"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "默认看板", "unnamedBoardLabel": "未命名看板",
+      "addBoardButtonAriaLabel": "新建看板", "createBoardTitle": "新建看板",
+      "editBoardTitle": "编辑看板", "editBoardLabel": "编辑看板",
+      "deleteBoardLabel": "删除看板", "deleteBoardConfirm": "确认删除“{{name}}”吗？卡片仍可在其他看板中查看。",
+      "cannotDeleteLastBoard": "至少保留一个看板。", "newBoardPlaceholder": "看板",
+      "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本"
     }
   },
   "commands": {

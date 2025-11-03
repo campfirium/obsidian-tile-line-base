@@ -1971,3 +1971,8 @@
 .tlb-kanban-empty__label {
 	font-size: var(--font-ui-small);
 }
+
+.tlb-kanban-toolbar .tlb-kanban-toolbar__boards {
+	display: contents;
+}
+

@@ -9,6 +9,7 @@ import type { FilterStateStore } from './filter/FilterStateStore';
 import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
+import type { KanbanBoardState } from '../types/kanban';
 
 const logger = getLogger('table-view:persistence');
 
@@ -25,6 +26,7 @@ interface TablePersistenceDeps {
 	getBackupManager: () => BackupManager | null;
 	getViewPreference: () => 'table' | 'kanban';
 	getKanbanConfig: () => { laneField: string | null; sortField: string | null } | null;
+	getKanbanBoards?: () => KanbanBoardState | null;
 	markSelfMutation?: (file: TFile) => void;
 }
 
@@ -100,6 +102,11 @@ export class TablePersistenceService {
 		const kanbanConfig = this.deps.getKanbanConfig?.();
 		const laneField = kanbanConfig?.laneField ?? null;
 		const sortField = kanbanConfig?.sortField ?? null;
+		const kanbanBoards = this.deps.getKanbanBoards?.() ?? null;
+		const hasKanbanBoards =
+			kanbanBoards != null &&
+			Array.isArray(kanbanBoards.boards) &&
+			kanbanBoards.boards.length > 0;
 
 		return {
 			filterViews: this.deps.getFilterViewState(),
@@ -114,7 +121,8 @@ export class TablePersistenceService {
 							laneField,
 							sortField: sortField && sortField.trim().length > 0 ? sortField : undefined
 						}
-					: undefined
+					: undefined,
+			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined
 		};
 	}
 

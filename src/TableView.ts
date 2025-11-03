@@ -85,6 +85,8 @@ export class TableView extends ItemView {
 	private markdownToggleButton: HTMLElement | null = null;
 	public activeViewMode: 'table' | 'kanban' = 'table';
 	public kanbanController: KanbanViewController | null = null;
+	public kanbanLaneField: string | null = null;
+	public kanbanSortField: string | null = "看板排序";
 	public kanbanPreferencesLoaded = false;
 	private kanbanManager!: KanbanViewModeManager;
 

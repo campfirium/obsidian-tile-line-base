@@ -1,10 +1,11 @@
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
 import { KanbanViewController } from './KanbanViewController';
-import { resolveKanbanLaneSources } from './KanbanLaneResolver';
 
 interface RenderKanbanViewOptions {
 	primaryField: string | null;
+	laneField: string;
+	sortField: string | null;
 }
 
 export function renderKanbanView(
@@ -21,20 +22,36 @@ export function renderKanbanView(
 		return;
 	}
 
-	const columnNames = Array.isArray(schema.columnNames) ? schema.columnNames : [];
+	const columnNames = schema.columnNames ?? [];
+	const laneField = options.laneField;
+	const sortField = options.sortField;
+
+	const hasLaneField = columnNames.includes(laneField);
+
+	if (!hasLaneField) {
+		container.createDiv({
+			cls: 'tlb-kanban-warning',
+			text: t('kanbanView.missingLaneField', { field: laneField })
+		});
+		return;
+	}
+	if (sortField && !columnNames.includes(sortField)) {
+		container.createDiv({
+			cls: 'tlb-kanban-warning',
+			text: t('kanbanView.missingSortField', { field: sortField })
+		});
+		return;
+	}
+
 	const wrapper = container.createDiv({ cls: 'tlb-kanban-wrapper' });
-
-	const controls = wrapper.createDiv({ cls: 'tlb-kanban-controls' });
-	view.globalQuickFilterController.render(controls);
-
-	const boardHost = wrapper.createDiv({ cls: 'tlb-kanban-board-host' });
-	const lanes = resolveKanbanLaneSources(view);
-
 	view.kanbanController = new KanbanViewController({
 		view,
-		container: boardHost,
-		lanes,
+		container: wrapper,
+		laneField,
+		sortField,
+		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,
-		displayFields: columnNames
+		displayFields: columnNames,
+		enableDrag: true
 	});
 }

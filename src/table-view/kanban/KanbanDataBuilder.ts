@@ -1,6 +1,4 @@
-import { FilterDataProcessor } from '../filter/FilterDataProcessor';
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
-import type { KanbanLaneSource } from './KanbanLaneResolver';
 
 export interface KanbanCardField {
 	name: string;
@@ -30,7 +28,9 @@ export interface KanbanBoardState {
 
 interface BuildKanbanBoardStateParams {
 	rows: RowData[];
-	lanes: KanbanLaneSource[];
+	laneField: string;
+	sortField: string | null;
+	fallbackLane: string;
 	primaryField: string | null;
 	displayFields: string[];
 	quickFilter: string;
@@ -38,104 +38,118 @@ interface BuildKanbanBoardStateParams {
 }
 
 export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): KanbanBoardState {
-	const { rows, lanes: laneSources, primaryField, displayFields, quickFilter, resolveRowIndex } = params;
+	const {
+		rows,
+		laneField,
+		sortField,
+		fallbackLane,
+		primaryField,
+		displayFields,
+		quickFilter,
+		resolveRowIndex
+	} = params;
 
-	const normalizedQuickFilter = normalizeText(quickFilter);
-	const resultLanes: KanbanLane[] = [];
+	const normalizedQuickFilter = quickFilter.trim().toLowerCase();
+	const hasQuickFilter = normalizedQuickFilter.length > 0;
+	const laneMap = new Map<string, KanbanLane>();
+	const laneNameToId = new Map<string, string>();
+	const usedLaneIds = new Set<string>();
 	let totalCards = 0;
 
-	for (const laneSource of laneSources) {
-		const laneRows = filterRowsForLane(rows, laneSource);
-		const filteredRows = applyQuickFilters(
-			laneRows,
-			displayFields,
-			normalizedQuickFilter,
-			normalizeText(laneSource.quickFilter ?? '')
-		);
-		const sortedRows = FilterDataProcessor.sortRowData(filteredRows, laneSource.sortRules ?? []);
+	for (const row of rows) {
+		const rowIndex = resolveRowIndex(row);
+		if (rowIndex == null || rowIndex < 0) {
+			continue;
+		}
 
-		const cards: KanbanCard[] = [];
-		sortedRows.forEach((row, index) => {
-			const rowIndex = resolveRowIndex(row);
-			if (rowIndex == null || rowIndex < 0) {
-				return;
+		if (hasQuickFilter && !matchesQuickFilter(row, displayFields, laneField, normalizedQuickFilter)) {
+			continue;
+		}
+
+		const laneName = normalizeString(row[laneField]) || fallbackLane;
+		const laneId = resolveLaneId(laneName, laneNameToId, usedLaneIds, laneMap.size);
+
+		let lane = laneMap.get(laneId);
+		if (!lane) {
+			lane = {
+				id: laneId,
+				name: laneName,
+				cards: []
+			};
+			laneMap.set(laneId, lane);
+		}
+
+		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
+		const numericSort = sortRaw.length > 0 ? Number(sortRaw) : Number.NaN;
+		const sortOrder = Number.isFinite(numericSort) ? numericSort : lane.cards.length + 1;
+		const title = primaryField ? normalizeString(row[primaryField]) : '';
+		const fields = buildCardFields(row, displayFields, laneField, sortField, primaryField);
+
+		lane.cards.push({
+			id: buildCardId(row, rowIndex),
+			rowIndex,
+			title,
+			sortOrder,
+			fields,
+			rawLane: laneName,
+			row
+		});
+		totalCards += 1;
+	}
+
+	const lanes: KanbanLane[] = [];
+	for (const lane of laneMap.values()) {
+		lane.cards.sort((a, b) => {
+			if (a.sortOrder === b.sortOrder) {
+				return a.rowIndex - b.rowIndex;
 			}
-
-			cards.push({
-				id: buildCardId(row, rowIndex),
-				rowIndex,
-				title: primaryField ? normalizeString(row[primaryField]) : '',
-				sortOrder: index + 1,
-				fields: buildCardFields(row, displayFields, primaryField),
-				rawLane: laneSource.name,
-				row
-			});
+			return a.sortOrder - b.sortOrder;
 		});
-
-		totalCards += cards.length;
-		resultLanes.push({
-			id: laneSource.id,
-			name: laneSource.name,
-			cards
-		});
+		lanes.push(lane);
 	}
 
 	return {
-		lanes: resultLanes,
+		lanes,
 		totalCards
 	};
 }
 
-function filterRowsForLane(rows: RowData[], lane: KanbanLaneSource): RowData[] {
-	if (!lane.filterRule) {
-		return [...rows];
-	}
-	return FilterDataProcessor.applyFilterRule(rows, lane.filterRule);
-}
-
-function applyQuickFilters(
-	rows: RowData[],
+function matchesQuickFilter(
+	row: RowData,
 	displayFields: string[],
-	globalQuickFilter: string,
-	laneQuickFilter: string
-): RowData[] {
-	if (!globalQuickFilter && !laneQuickFilter) {
-		return [...rows];
-	}
-	return rows.filter((row) => {
-		if (globalQuickFilter && !matchesQuickFilter(row, displayFields, globalQuickFilter)) {
-			return false;
-		}
-		if (laneQuickFilter && !matchesQuickFilter(row, displayFields, laneQuickFilter)) {
-			return false;
-		}
-		return true;
-	});
-}
-
-function matchesQuickFilter(row: RowData, displayFields: string[], needle: string): boolean {
-	if (!needle) {
+	laneField: string,
+	needle: string
+): boolean {
+	if (needle.length === 0) {
 		return true;
 	}
-	const searchFields = new Set<string>(displayFields);
+	const searchFields = new Set<string>([...displayFields, laneField]);
 	for (const field of searchFields) {
 		const value = normalizeString(row[field]);
-		if (value && value.toLowerCase().includes(needle)) {
+		if (value && value.includes(needle)) {
 			return true;
 		}
 	}
 	const rowIdValue = normalizeString(row[ROW_ID_FIELD]);
-	return rowIdValue.toLowerCase().includes(needle);
+	return rowIdValue.includes(needle);
 }
 
 function buildCardFields(
 	row: RowData,
 	displayFields: string[],
+	laneField: string,
+	sortField: string | null,
 	primaryField: string | null
 ): KanbanCardField[] {
 	const fields: KanbanCardField[] = [];
 	for (const field of displayFields) {
-		if (!field || field === ROW_ID_FIELD || field === '#' || (primaryField && field === primaryField)) {
+		if (
+			field === laneField ||
+			(sortField && field === sortField) ||
+			field === ROW_ID_FIELD ||
+			field === '#' ||
+			(primaryField && field === primaryField)
+		) {
 			continue;
 		}
 		const value = normalizeString(row[field]);
@@ -147,6 +161,43 @@ function buildCardFields(
 	return fields;
 }
 
+function resolveLaneId(
+	name: string,
+	existing: Map<string, string>,
+	used: Set<string>,
+	index: number
+): string {
+	const normalized = slugify(name);
+	if (!existing.has(name)) {
+		let candidate = normalized || `lane-${index}`;
+		let counter = 1;
+		while (used.has(candidate)) {
+			candidate = `${candidate}-${counter++}`;
+		}
+		existing.set(name, candidate);
+		used.add(candidate);
+		return candidate;
+	}
+	const resolved = existing.get(name);
+	if (resolved) {
+		return resolved;
+	}
+	let fallback = normalized || `lane-${index}`;
+	let counter = 1;
+	while (used.has(fallback)) {
+		fallback = `${fallback}-${counter++}`;
+	}
+	existing.set(name, fallback);
+	used.add(fallback);
+	return fallback;
+}
+
+function slugify(value: string): string {
+	const normalized = normalizeString(value).replace(/[^a-z0-9]+/g, '-');
+	const trimmed = normalized.replace(/^-+|-+$/g, '');
+	return trimmed.toLowerCase();
+}
+
 function normalizeString(input: unknown): string {
 	if (typeof input === 'string') {
 		return input.trim();
@@ -155,10 +206,6 @@ function normalizeString(input: unknown): string {
 		return '';
 	}
 	return String(input).trim();
-}
-
-function normalizeText(value: string): string {
-	return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
 function buildCardId(row: RowData, rowIndex: number): string {

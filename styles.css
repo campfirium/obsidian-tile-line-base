@@ -1795,18 +1795,11 @@
 	min-height: 4rem;
 }
 
-.tlb-kanban-controls {
+.tlb-kanban-field-modal__footer {
 	display: flex;
 	justify-content: flex-end;
-	padding: var(--size-4-2) 0;
-}
-
-.tlb-kanban-controls .tlb-filter-view-search {
-	width: min(24rem, 100%);
-}
-
-.tlb-kanban-board-host {
-	width: 100%;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-2);
 }
 
 .tlb-kanban-board {
@@ -1895,7 +1888,11 @@
 	border-radius: var(--radius-s);
 	padding: 0.55rem 0.75rem;
 	box-shadow: var(--shadow-s);
-	cursor: default;
+	cursor: grab;
+}
+
+.tlb-kanban-card:active {
+	cursor: grabbing;
 }
 
 .tlb-kanban-card__title {
@@ -1944,6 +1941,15 @@
 	color: var(--text-muted);
 }
 
+.tlb-kanban-card--ghost {
+	opacity: 0.6;
+	border-style: dashed;
+}
+
+.tlb-kanban-card--dragging {
+	box-shadow: var(--shadow-l);
+}
+
 .tlb-kanban-empty {
 	display: flex;
 	flex-direction: column;
@@ -1964,9 +1970,4 @@
 
 .tlb-kanban-empty__label {
 	font-size: var(--font-ui-small);
-}
-
-.tlb-kanban-empty__hint {
-	font-size: var(--font-ui-smaller);
-	color: var(--text-muted);
 }

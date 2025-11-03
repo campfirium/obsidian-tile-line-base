@@ -8,21 +8,33 @@
   },
   "kanbanView": {
     "schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
+    "missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
+    "missingSortField": "Kanban view needs the \"{{field}}\" column to keep card ordering.",
+    "unassignedLaneLabel": "Unassigned",
     "filteredCountLabel": "{{count}} cards match the current filters",
     "totalCountLabel": "{{count}} cards",
+    "dragHint": "Drag cards to reorder within a lane or move them across lanes.",
+    "dragUnavailable": "Drag interactions are disabled because the required module failed to load. Refresh the note or reinstall the plugin to restore kanban drag-and-drop.",
     "emptyState": "No cards yet. Add rows from the table view to populate this board.",
     "emptyStateFiltered": "No cards match the current filters.",
     "laneCountLabel": "{{count}} cards in this lane",
-    "emptyLanePlaceholder": "No cards in this lane",
+    "emptyLanePlaceholder": "Drop cards here",
     "untitledCardFallback": "Untitled card",
     "moreFieldsLabel": "+{{count}} more",
-    "noLaneSources": "No filter view group lanes are available.",
-    "configureLaneHint": "Switch back to the table view and assign filter views to a group to populate this board.",
-    "laneSourceRequired": "Add at least one filter view to the active group before opening the kanban board.",
+    "laneNotConfigured": "Choose a kanban column from the toolbar to start using the board.",
     "actions": {
       "openFromMarkdown": "Open TileLineBase kanban view",
       "switchToKanban": "Switch to kanban view",
       "switchToTable": "Switch to table view"
+    },
+    "fieldModal": {
+      "title": "Select kanban column",
+      "description": "Pick the column whose values should form the lanes in the kanban board.",
+      "laneFieldLabel": "Kanban column",
+      "confirmLabel": "Use column",
+      "cancelLabel": "Cancel",
+      "schemaUnavailable": "Load the table first before choosing a kanban column.",
+      "noColumns": "No available columns to use as kanban lanes."
     }
   },
   "commands": {

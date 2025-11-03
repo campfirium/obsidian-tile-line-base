@@ -1,7 +1,7 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../../i18n';
+import { KanbanFieldModal } from './KanbanFieldModal';
 import type { TableView } from '../../TableView';
-import { hasKanbanLaneSources } from './KanbanLaneResolver';
 
 type ViewMode = 'table' | 'kanban';
 
@@ -60,12 +60,13 @@ export class KanbanViewModeManager {
 			return;
 		}
 
-		if (mode === 'kanban') {
-			const ready = this.ensureLaneSources();
+		if (mode === 'kanban' && this.view.schema) {
+			const ready = this.hasValidLaneField() || await this.promptForLaneField();
 			if (!ready) {
 				this.updateToggleButton();
 				return;
 			}
+			this.ensureSortField();
 		}
 
 		this.isSwitching = true;
@@ -80,19 +81,24 @@ export class KanbanViewModeManager {
 	}
 
 	async handleAfterRender(): Promise<ViewMode | null> {
-		if (this.view.activeViewMode !== 'kanban') {
+		if (this.view.activeViewMode !== 'kanban' || !this.view.schema) {
 			return null;
 		}
 
-		if (!hasKanbanLaneSources(this.view)) {
-			new Notice(t('kanbanView.laneSourceRequired'));
+		if (!this.hasValidLaneField()) {
+			const configured = await this.promptForLaneField();
+			if (configured) {
+				this.ensureSortField();
+				return 'kanban';
+			}
 			this.view.activeViewMode = 'table';
 			this.updateToggleButton();
 			void this.view.persistenceService?.saveConfig();
 			return 'table';
 		}
 
-		return null;
+		const created = this.ensureSortField();
+		return created ? 'kanban' : null;
 	}
 
 	private getToggleLabel(): string {
@@ -101,7 +107,6 @@ export class KanbanViewModeManager {
 			: t('kanbanView.actions.switchToKanban');
 	}
 
-<<<<<<< HEAD
 	private applyToggleIcon(): void {
 		const iconEl = this.toggleIconEl;
 		if (!iconEl) {
@@ -199,13 +204,8 @@ export class KanbanViewModeManager {
 		if (created) {
 			this.view.kanbanSortField = created;
 			this.view.persistenceService?.scheduleSave();
-=======
-	private ensureLaneSources(): boolean {
-		if (hasKanbanLaneSources(this.view)) {
->>>>>>> feat/T0140-kanban-conversion
 			return true;
 		}
-		new Notice(t('kanbanView.laneSourceRequired'));
 		return false;
 	}
 }

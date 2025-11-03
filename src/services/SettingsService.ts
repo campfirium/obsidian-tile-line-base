@@ -7,7 +7,8 @@ import type {
 	DefaultFilterViewPreferences
 } from '../types/filterView';
 import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
-import type { KanbanBoardState } from '../types/kanban';
+import type { KanbanBoardState, KanbanCardContentConfig } from '../types/kanban';
+import { DEFAULT_KANBAN_CARD_CONTENT } from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -419,12 +420,14 @@ export class SettingsService {
 				const icon = this.sanitizeIconId(raw.icon);
 				const laneField = typeof raw.laneField === 'string' ? raw.laneField.trim() : '';
 				const filterRule = raw.filterRule ? this.deepClone(raw.filterRule) : null;
+				const content = this.cloneKanbanContent(raw.content);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
-					filterRule
+					filterRule,
+					content
 				});
 				seenIds.add(id);
 			}
@@ -437,6 +440,22 @@ export class SettingsService {
 		return {
 			boards,
 			activeBoardId
+		};
+	}
+
+	private cloneKanbanContent(source: KanbanCardContentConfig | null | undefined): KanbanCardContentConfig {
+		const base = DEFAULT_KANBAN_CARD_CONTENT;
+		const parseTemplate = (value: unknown): string => {
+			if (typeof value !== 'string') {
+				return '';
+			}
+			return value.replace(/\r\n/g, '\n').replace(/\{\{\s*/g, '{').replace(/\s*\}\}/g, '}');
+		};
+		return {
+			titleTemplate: parseTemplate(source?.titleTemplate) || base.titleTemplate,
+			bodyTemplate: parseTemplate(source?.bodyTemplate) || base.bodyTemplate,
+			tagsTemplate: parseTemplate(source?.tagsTemplate) || base.tagsTemplate,
+			showBody: typeof source?.showBody === 'boolean' ? source.showBody : base.showBody
 		};
 	}
 

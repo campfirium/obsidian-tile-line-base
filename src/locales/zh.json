@@ -44,7 +44,8 @@
       "deleteBoardLabel": "删除看板", "deleteBoardConfirm": "确认删除“{{name}}”吗？卡片仍可在其他看板中查看。",
       "cannotDeleteLastBoard": "至少保留一个看板。", "newBoardPlaceholder": "看板",
       "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本"
-    }
+    },
+    "content": { "sectionTitle": "卡片内容", "titleLabel": "标题", "titlePlaceholder": "使用 {字段} 占位符展示列值", "bodyLabel": "正文", "bodyPlaceholder": "支持多行，可插入 {字段} 占位符。", "tagsLabel": "标签", "tagsPlaceholder": "使用 {字段} 占位符并以空格分隔。", "insertFieldButton": "插入字段", "showBodyToggle": "在卡片上显示正文", "showBodyToggleDesc": "关闭后正文将隐藏，并以悬浮提示的方式显示。", "noFieldOption": "暂无可用字段" }
   },
   "commands": {
     "undoTableHistory": "撤销上一次表格更改",

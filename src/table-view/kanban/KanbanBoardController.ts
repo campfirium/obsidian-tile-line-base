@@ -1,13 +1,15 @@
+/* eslint-disable max-lines */
 import { App, Menu, Notice, Modal, Setting } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
-import type { KanbanBoardDefinition } from '../../types/kanban';
+import type { KanbanBoardDefinition, KanbanCardContentConfig } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import type { FilterRule } from '../../types/filterView';
 import { FilterViewEditorModal } from '../filter/FilterViewModals';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
 import { getAvailableColumns } from '../TableViewFilterPresenter';
-
+import { toRuntimeContent } from './KanbanCardContent';
+import { cloneContentConfig, renderContentSettingsEditor, resolveInitialContent } from './KanbanContentEditor';
 interface KanbanBoardControllerOptions {
 	app: App;
 	view: TableView;
@@ -87,7 +89,8 @@ export class KanbanBoardController {
 			defaultName: this.suggestNewBoardName(),
 			defaultIcon: 'layout-kanban',
 			initialFilter: null,
-			initialLaneField: this.view.kanbanLaneField ?? null
+			initialLaneField: this.view.kanbanLaneField ?? null,
+			initialContent: null
 		});
 		if (!editor) {
 			return;
@@ -98,6 +101,7 @@ export class KanbanBoardController {
 			icon: editor.icon,
 			laneField: editor.laneField,
 			filterRule: editor.filterRule,
+			content: editor.content,
 			setActive: true
 		});
 		await this.store.persist();
@@ -111,7 +115,8 @@ export class KanbanBoardController {
 			defaultName: board.name,
 			defaultIcon: board.icon ?? null,
 			initialFilter: board.filterRule ?? null,
-			initialLaneField: board.laneField
+			initialLaneField: board.laneField,
+			initialContent: board.content ?? null
 		});
 		if (!editor) {
 			return;
@@ -121,7 +126,8 @@ export class KanbanBoardController {
 			name: editor.name,
 			icon: editor.icon,
 			laneField: editor.laneField,
-			filterRule: editor.filterRule
+			filterRule: editor.filterRule,
+			content: editor.content
 		});
 		if (!updated) {
 			return;
@@ -143,7 +149,8 @@ export class KanbanBoardController {
 			defaultName: duplicatedName,
 			defaultIcon: board.icon ?? null,
 			initialFilter: board.filterRule ?? null,
-			initialLaneField: board.laneField
+			initialLaneField: board.laneField,
+			initialContent: board.content ?? null
 		});
 		if (!editor) {
 			return;
@@ -154,6 +161,7 @@ export class KanbanBoardController {
 			icon: editor.icon,
 			laneField: editor.laneField,
 			filterRule: editor.filterRule,
+			content: editor.content,
 			setActive: true
 		});
 		await this.store.persist();
@@ -251,6 +259,7 @@ export class KanbanBoardController {
 		this.store.reset();
 		this.view.activeKanbanBoardFilter = null;
 		this.view.kanbanBoardsLoaded = false;
+		this.view.kanbanContentConfig = null;
 		this.repairingLaneField = false;
 	}
 
@@ -268,9 +277,15 @@ export class KanbanBoardController {
 			}
 			this.view.activeKanbanBoardFilter = board.filterRule ?? null;
 			this.view.activeKanbanBoardId = board.id;
+			const runtimeContent = toRuntimeContent(board.content ?? null, {
+				availableFields: this.getContentFieldCandidates(),
+				laneField: this.view.kanbanLaneField ?? null
+			});
+			this.view.kanbanContentConfig = runtimeContent;
 		} else {
 			this.view.activeKanbanBoardFilter = null;
 			this.view.activeKanbanBoardId = null;
+			this.view.kanbanContentConfig = null;
 		}
 
 		if (options?.persist !== false) {
@@ -287,9 +302,47 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
+		this.view.kanbanContentConfig = null;
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
 	}
+
+
+
+
+
+	private getContentFieldCandidates(): string[] {
+		const result: string[] = [];
+		const seen = new Set<string>();
+		const pushField = (value: string | null | undefined) => {
+			if (!value || typeof value !== 'string') {
+				return;
+			}
+			const trimmed = value.trim();
+			if (!trimmed || seen.has(trimmed)) {
+				return;
+			}
+			seen.add(trimmed);
+			result.push(trimmed);
+		};
+		for (const option of this.getFilterColumnOptions()) {
+			pushField(option.name);
+		}
+		if (this.view.hiddenSortableFields instanceof Set) {
+			for (const hidden of this.view.hiddenSortableFields) {
+				pushField(hidden);
+			}
+		}
+		return result;
+	}
+
+
+
+
+
+
+
+
 
 	private isLaneFieldAvailable(field: string): boolean {
 		const candidates = this.getLaneFieldCandidates();
@@ -308,7 +361,8 @@ export class KanbanBoardController {
 				defaultName: board.name,
 				defaultIcon: board.icon ?? null,
 				initialFilter: board.filterRule ?? null,
-				initialLaneField: null
+				initialLaneField: null,
+				initialContent: board.content ?? null
 			});
 			if (!editor) {
 				return;
@@ -317,7 +371,8 @@ export class KanbanBoardController {
 				name: editor.name,
 				icon: editor.icon,
 				laneField: editor.laneField,
-				filterRule: editor.filterRule
+				filterRule: editor.filterRule,
+				content: editor.content
 			});
 			if (!updated) {
 				return;
@@ -393,7 +448,7 @@ export class KanbanBoardController {
 	}
 
 	private toChineseNumeral(value: number): string {
-		const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+		const digits = ['\u96f6', '\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d', '\u4e03', '\u516b', '\u4e5d'];
 		if (!Number.isFinite(value) || value <= 0) {
 			return String(value);
 		}
@@ -401,16 +456,16 @@ export class KanbanBoardController {
 			return digits[value];
 		}
 		if (value === 10) {
-			return '十';
+			return '\u5341';
 		}
 		if (value < 20) {
 			const units = value % 10;
-			return `十${units === 0 ? '' : digits[units]}`;
+			return `\u5341${units === 0 ? '' : digits[units]}`;
 		}
 		if (value < 100) {
 			const tens = Math.floor(value / 10);
 			const units = value % 10;
-			const tensLabel = tens === 1 ? '十' : `${digits[tens]}十`;
+			const tensLabel = tens === 1 ? '\u5341' : `${digits[tens]}\u5341`;
 			return units === 0 ? tensLabel : `${tensLabel}${digits[units]}`;
 		}
 		return String(value);
@@ -422,7 +477,14 @@ export class KanbanBoardController {
 		defaultIcon: string | null;
 		initialFilter: FilterRule | null;
 		initialLaneField: string | null;
-	}): Promise<{ name: string; icon: string | null; laneField: string; filterRule: FilterRule | null } | null> {
+		initialContent: KanbanCardContentConfig | null;
+	}): Promise<{
+		name: string;
+		icon: string | null;
+		laneField: string;
+		filterRule: FilterRule | null;
+		content: KanbanCardContentConfig;
+	} | null> {
 		const columns = this.getFilterColumnOptions();
 		if (columns.length === 0) {
 			new Notice(t('filterViewController.noColumns'));
@@ -438,6 +500,27 @@ export class KanbanBoardController {
 		let selectedLane = options.initialLaneField && laneOptions.includes(options.initialLaneField)
 			? options.initialLaneField
 			: laneOptions[0];
+		const baseFields = this.getContentFieldCandidates();
+		const getFields = () => {
+			const seen = new Set<string>();
+			for (const field of baseFields) {
+				if (typeof field === 'string') {
+					const trimmed = field.trim();
+					if (trimmed) {
+						seen.add(trimmed);
+					}
+				}
+			}
+			if (typeof selectedLane === 'string') {
+				const trimmed = selectedLane.trim();
+				if (trimmed) {
+					seen.add(trimmed);
+				}
+			}
+			return Array.from(seen);
+		};
+		let contentSettings = resolveInitialContent(options.initialContent, getFields(), selectedLane);
+		let contentIsPristine = true;
 
 		return new Promise((resolve) => {
 			const modal = new FilterViewEditorModal(this.app, {
@@ -450,6 +533,7 @@ export class KanbanBoardController {
 				allowSortEditing: false,
 				minConditionCount: 0,
 				renderAdditionalControls: (container) => {
+					let editorHandle: { update: (value: KanbanCardContentConfig) => void; refresh: () => void } | null = null;
 					const setting = new Setting(container);
 					setting.setName(t('kanbanView.toolbar.laneFieldLabel'));
 					setting.addDropdown((dropdown) => {
@@ -459,7 +543,24 @@ export class KanbanBoardController {
 						dropdown.setValue(selectedLane);
 						dropdown.onChange((value) => {
 							selectedLane = value;
+							if (contentIsPristine) {
+								const refreshed = resolveInitialContent(options.initialContent, getFields(), selectedLane);
+								contentSettings = refreshed;
+								editorHandle?.update(refreshed);
+							}
+							editorHandle?.refresh();
 						});
+					});
+					editorHandle = renderContentSettingsEditor({
+						container,
+						getFields,
+						initialContent: contentSettings,
+						onChange: (next) => {
+							contentSettings = cloneContentConfig(next);
+						},
+						onDirty: () => {
+							contentIsPristine = false;
+						}
 					});
 				},
 				onSubmit: (result) => {
@@ -473,7 +574,8 @@ export class KanbanBoardController {
 						name: trimmed,
 						icon: result.icon ?? null,
 						laneField: laneField.length > 0 ? laneField : laneOptions[0],
-						filterRule: result.filterRule ?? null
+						filterRule: result.filterRule ?? null,
+						content: cloneContentConfig(contentSettings)
 					});
 				},
 				onCancel: () => resolve(null)

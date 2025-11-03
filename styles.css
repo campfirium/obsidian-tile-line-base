@@ -1932,6 +1932,29 @@
 	color: var(--text-faint);
 }
 
+.tlb-kanban-card__body {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+.tlb-kanban-card__tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.tlb-kanban-card__tag {
+	padding: 0.1rem 0.45rem;
+	border-radius: var(--radius-s);
+	background-color: var(--background-modifier-form-field);
+	color: var(--text-muted);
+	line-height: 1.4;
+}
+
 .tlb-kanban-warning {
 	padding: var(--size-4-2) var(--size-4-3);
 	margin: var(--size-4-2) 0;
@@ -1976,3 +1999,72 @@
 	display: contents;
 }
 
+.tlb-kanban-content-settings {
+	margin-top: var(--size-4-3);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+}
+
+.tlb-kanban-content-settings__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+}
+
+.tlb-kanban-content-settings__title {
+	font-weight: 600;
+	color: var(--text-normal);
+	margin: 0;
+}
+
+.tlb-kanban-content-settings__group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2);
+}
+
+.tlb-kanban-content-settings__group-header {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+}
+
+.tlb-kanban-content-settings__label {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.tlb-kanban-content-settings__insert-button {
+	font-size: var(--font-ui-smaller);
+	padding: 0.2rem 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-primary-alt, var(--background-primary));
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.tlb-kanban-content-settings__insert-button:hover {
+	background-color: var(--background-modifier-form-field);
+}
+
+.tlb-kanban-content-settings__input {
+	width: 100%;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 0.4rem 0.6rem;
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+	background-color: var(--background-primary);
+}
+
+.tlb-kanban-content-settings__input--multiline {
+	resize: vertical;
+}
+
+.tlb-kanban-content-settings__insert-button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}

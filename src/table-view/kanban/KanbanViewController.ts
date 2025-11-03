@@ -1,5 +1,6 @@
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
+import type { KanbanRuntimeCardContent } from '../../types/kanban';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
@@ -16,7 +17,7 @@ interface KanbanViewControllerOptions {
 	sortField: string | null;
 	fallbackLaneName: string;
 	primaryField: string | null;
-	displayFields: string[];
+	content: KanbanRuntimeCardContent;
 	enableDrag: boolean;
 }
 
@@ -31,7 +32,7 @@ export class KanbanViewController {
 	private readonly sortField: string | null;
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
-	private readonly displayFields: string[];
+	private readonly content: KanbanRuntimeCardContent;
 	private readonly enableDrag: boolean;
 
 	private readonly rootEl: HTMLElement;
@@ -55,11 +56,11 @@ export class KanbanViewController {
 		this.sortField = options.sortField;
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
-		this.displayFields = options.displayFields;
+		this.content = options.content;
 		this.enableDrag = options.enableDrag;
 		this.dragAvailable = this.enableDrag;
 
-		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getVisibleRows());
+		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
 		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
@@ -81,8 +82,8 @@ export class KanbanViewController {
 	}
 
 	private registerListeners(): void {
-		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener((rows) => {
-			this.visibleRows = this.applyBoardFilter(rows);
+		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener(() => {
+			this.recomputeVisibleRows();
 			if (!this.isApplyingMutation) {
 				this.renderBoard();
 			}
@@ -93,6 +94,9 @@ export class KanbanViewController {
 		});
 	}
 
+	private recomputeVisibleRows(): void {
+		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getAllRows());
+	}
 
 	private applyBoardFilter(rows: RowData[]): RowData[] {
 		const rule = this.view.activeKanbanBoardFilter;
@@ -198,7 +202,7 @@ export class KanbanViewController {
 			sortField: this.sortField,
 			fallbackLane: this.fallbackLaneName,
 			primaryField: this.primaryField,
-			displayFields: this.displayFields,
+			content: this.content,
 			quickFilter: this.quickFilterValue,
 			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row)
 		});
@@ -293,25 +297,39 @@ export class KanbanViewController {
 		});
 		cardEl.setAttribute('tabindex', '0');
 
-		const title = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
+		const titleEl = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
 		const trimmedTitle = card.title.trim();
-		title.setText(trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback'));
+		const titleText = trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback');
+		titleEl.setText(titleText);
 
-		if (card.fields.length > 0) {
-			const fieldsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__fields' });
-			for (const field of card.fields.slice(0, 6)) {
-				const fieldRow = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field' });
-				const nameEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-name' });
-				nameEl.setText(field.name);
-				const valueEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-value' });
-				valueEl.setText(field.value);
+		const ariaSegments: string[] = [titleText];
+		const bodyText = card.body.trim();
+		if (bodyText.length > 0) {
+			if (this.content.showBody) {
+				const bodyEl = cardEl.createDiv({ cls: 'tlb-kanban-card__body' });
+				bodyEl.setText(bodyText);
+			} else {
+				const tooltip = (titleText + (bodyText.length > 0 ? '\n' + bodyText : '')).trim();
+				cardEl.setAttribute('title', tooltip);
 			}
-			if (card.fields.length > 6) {
-				const more = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field-more' });
-				more.setText(t('kanbanView.moreFieldsLabel', { count: String(card.fields.length - 6) }));
+			ariaSegments.push(bodyText);
+		}
+
+		if (card.tags.length > 0) {
+			const tagsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__tags' });
+			for (const tag of card.tags) {
+				const trimmedTag = tag.trim();
+				if (!trimmedTag) {
+					continue;
+				}
+				ariaSegments.push(trimmedTag);
+				tagsEl.createSpan({ cls: 'tlb-kanban-card__tag', text: trimmedTag });
 			}
 		}
+
+		cardEl.setAttribute('aria-label', ariaSegments.join(' ? '));
 	}
+
 
 	private handleDragEnd(event: SortableEvent): void {
 		if (!this.dragAvailable) {

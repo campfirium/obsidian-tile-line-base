@@ -43,7 +43,8 @@
       "deleteBoardLabel": "Delete board", "deleteBoardConfirm": "Delete \"{{name}}\"? Cards remain available from other boards.",
       "cannotDeleteLastBoard": "Keep at least one board.", "newBoardPlaceholder": "Kanban board",
       "deleteBoardConfirmAction": "Delete", "laneFieldMissingNotice": "The kanban board no longer has a valid lane column. Pick a new column to continue.", "noBoardsPlaceholder": "No kanban boards yet. Use the + button to create one.", "laneFieldLabel": "Kanban column", "duplicateBoardLabel": "Duplicate board", "duplicateBoardTitle": "Duplicate board: {{name}}", "duplicateBoardNotice": "Duplicated board: {{name}}", "duplicateNameSuffix": "copy"
-    }
+    },
+    "content": { "sectionTitle": "Card content", "titleLabel": "Title", "titlePlaceholder": "Use {Field} placeholders to show column values", "bodyLabel": "Description", "bodyPlaceholder": "Supports multiple lines. Use {Field} to insert values.", "tagsLabel": "Tags", "tagsPlaceholder": "Use {Field} placeholders separated by spaces.", "insertFieldButton": "Insert field", "showBodyToggle": "Show description on card", "showBodyToggleDesc": "Turn off to hide the description and show it in a tooltip instead.", "noFieldOption": "No available fields" }
   },
   "commands": {
     "undoTableHistory": "Undo last table change",

@@ -1,13 +1,14 @@
 import { getPluginContext } from '../../pluginContext';
 import type { FilterRule } from '../../types/filterView';
-import type { KanbanBoardDefinition, KanbanBoardState } from '../../types/kanban';
-import { DEFAULT_KANBAN_BOARD_STATE } from '../../types/kanban';
+import type { KanbanBoardDefinition, KanbanBoardState, KanbanCardContentConfig } from '../../types/kanban';
+import { DEFAULT_KANBAN_BOARD_STATE, DEFAULT_KANBAN_CARD_CONTENT } from '../../types/kanban';
 
 export interface CreateBoardOptions {
 	name: string;
 	icon: string | null;
 	laneField: string;
 	filterRule: FilterRule | null;
+	content: KanbanCardContentConfig;
 	setActive?: boolean;
 }
 
@@ -16,6 +17,7 @@ export interface UpdateBoardOptions {
 	icon?: string | null;
 	laneField?: string | null;
 	filterRule?: FilterRule | null;
+	content?: KanbanCardContentConfig | null;
 }
 
 export class KanbanBoardStore {
@@ -85,7 +87,8 @@ export class KanbanBoardStore {
 			name: this.sanitizeName(options.name),
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
-			filterRule: this.cloneFilterRule(options.filterRule)
+			filterRule: this.cloneFilterRule(options.filterRule),
+			content: this.cloneContent(options.content)
 		};
 		this.state.boards.push(board);
 		if (options.setActive !== false) {
@@ -113,6 +116,9 @@ export class KanbanBoardStore {
 		}
 		if (updates.filterRule !== undefined) {
 			target.filterRule = this.cloneFilterRule(updates.filterRule);
+		}
+		if (updates.content !== undefined) {
+			target.content = this.cloneContent(updates.content);
 		}
 		return { ...target };
 	}
@@ -179,7 +185,8 @@ export class KanbanBoardStore {
 						name: this.sanitizeName(board.name),
 						icon: this.sanitizeIcon(board.icon),
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
-						filterRule: this.cloneFilterRule(board.filterRule ?? null)
+						filterRule: this.cloneFilterRule(board.filterRule ?? null),
+						content: this.cloneContent(board.content ?? null)
 					}))
 			: [];
 		return {
@@ -197,5 +204,21 @@ export class KanbanBoardStore {
 		} catch {
 			return null;
 		}
+	}
+
+	private cloneContent(content: KanbanCardContentConfig | null | undefined): KanbanCardContentConfig {
+		const base = DEFAULT_KANBAN_CARD_CONTENT;
+		const normalize = (value: unknown): string => {
+			if (typeof value !== 'string') {
+				return '';
+			}
+			return value.replace(/\r\n/g, '\n').replace(/\{\{\s*/g, '{').replace(/\s*\}\}/g, '}');
+		};
+		return {
+			titleTemplate: normalize(content?.titleTemplate) || base.titleTemplate,
+			bodyTemplate: normalize(content?.bodyTemplate) || base.bodyTemplate,
+			tagsTemplate: normalize(content?.tagsTemplate) || base.tagsTemplate,
+			showBody: typeof content?.showBody === 'boolean' ? content.showBody : base.showBody
+		};
 	}
 }

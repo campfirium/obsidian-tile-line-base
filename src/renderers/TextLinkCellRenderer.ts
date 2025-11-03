@@ -24,7 +24,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 
 		this.textEl = doc.createElement('span');
 		this.textEl.className = 'tlb-link-cell__text';
-		this.textEl.textContent = this.getDisplayValue(params.value);
+		this.textEl.textContent = this.getDisplayValue(params);
 		this.eGui.appendChild(this.textEl);
 
 		this.renderLinkButton();
@@ -36,7 +36,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 
 	refresh(params: ICellRendererParams): boolean {
 		this.params = params;
-		this.textEl.textContent = this.getDisplayValue(params.value);
+		this.textEl.textContent = this.getDisplayValue(params);
 		this.renderLinkButton();
 		return true;
 	}
@@ -159,11 +159,19 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 	}
 
 	private getRawValue(): string {
-		const value =	this.params.value;
+		const value = this.params.value;
 		return typeof value === 'string' ? value : value != null ? String(value) : '';
 	}
 
-	private getDisplayValue(value: unknown): string {
+	private getDisplayValue(params: ICellRendererParams): string {
+		const formatted = params.valueFormatted;
+		if (typeof formatted === 'string') {
+			return formatted;
+		}
+		if (formatted != null) {
+			return String(formatted);
+		}
+		const value = params.value;
 		if (typeof value === 'string') {
 			return value;
 		}

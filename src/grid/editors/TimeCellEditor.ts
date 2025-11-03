@@ -1,5 +1,5 @@
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
-import { Notice, setIcon } from 'obsidian';
+import { Notice } from 'obsidian';
 
 import { normalizeTimeInput } from '../../utils/datetime';
 import { t } from '../../i18n';
@@ -18,60 +18,26 @@ function createTextInput(doc: Document, value: string): HTMLInputElement {
 	return input;
 }
 
-function injectClockGlyph(button: HTMLButtonElement): void {
-	button.innerHTML =
-		'<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
-}
-
-function createTriggerButton(doc: Document): HTMLButtonElement {
-	const button = doc.createElement('button');
-	button.type = 'button';
-	button.classList.add('tlb-time-editor-button');
-	button.setAttribute('aria-label', t('timeCellEditor.openPickerLabel'));
-	setIcon(button, 'clock');
-	queueMicrotask(() => {
-		if (!button.firstElementChild) {
-			injectClockGlyph(button);
-		}
-	});
-	return button;
-}
-
-function createHiddenPicker(doc: Document): HTMLInputElement {
-	const picker = doc.createElement('input');
-	picker.type = 'time';
-	picker.tabIndex = -1;
-	picker.classList.add('tlb-time-editor-hidden-picker');
-	picker.step = '1';
-	return picker;
-}
-
 export function createTimeCellEditor() {
 	return class implements ICellEditorComp {
 		private wrapper!: HTMLDivElement;
 		private textInput!: HTMLInputElement;
-		private triggerButton!: HTMLButtonElement;
-		private hiddenPicker!: HTMLInputElement;
 		private params!: ICellEditorParams;
 		private initialValue = '';
 		private lastValidValue = '';
 		private invalidNotice: Notice | null = null;
 		private readonly isoPattern = /^\d{2}:\d{2}:\d{2}$/;
+		private isInvalid = false;
 
 		private blurHandler = () => {
 			this.applyNormalizedInput();
 		};
 
-		private pickerChangeHandler = (event: Event) => {
-			const target = event.target as HTMLInputElement | null;
-			const value = target?.value ?? '';
-			this.handlePickerSelection(value);
-		};
-
-		private triggerClickHandler = (event: MouseEvent) => {
-			event.preventDefault();
-			event.stopPropagation();
-			this.openPicker();
+		private inputHandler = () => {
+			if (this.isInvalid) {
+				this.clearInvalidState();
+				this.dismissNotice();
+			}
 		};
 
 		private keydownHandler = (event: KeyboardEvent) => {
@@ -95,17 +61,11 @@ export function createTimeCellEditor() {
 
 			this.wrapper = createWrapper(doc);
 			this.textInput = createTextInput(doc, this.initialValue);
-			this.triggerButton = createTriggerButton(doc);
-			this.hiddenPicker = createHiddenPicker(doc);
-
 			this.wrapper.appendChild(this.textInput);
-			this.wrapper.appendChild(this.triggerButton);
-			this.wrapper.appendChild(this.hiddenPicker);
 
 			this.textInput.addEventListener('blur', this.blurHandler);
+			this.textInput.addEventListener('input', this.inputHandler);
 			this.textInput.addEventListener('keydown', this.keydownHandler);
-			this.triggerButton.addEventListener('click', this.triggerClickHandler);
-			this.hiddenPicker.addEventListener('change', this.pickerChangeHandler);
 		}
 
 		getGui(): HTMLElement {
@@ -130,9 +90,9 @@ export function createTimeCellEditor() {
 
 		destroy(): void {
 			this.textInput.removeEventListener('blur', this.blurHandler);
+			this.textInput.removeEventListener('input', this.inputHandler);
 			this.textInput.removeEventListener('keydown', this.keydownHandler);
-			this.triggerButton.removeEventListener('click', this.triggerClickHandler);
-			this.hiddenPicker.removeEventListener('change', this.pickerChangeHandler);
+			this.clearInvalidState();
 			this.dismissNotice();
 		}
 
@@ -140,40 +100,15 @@ export function createTimeCellEditor() {
 			return false;
 		}
 
-		private openPicker(): void {
-			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
-			this.hiddenPicker.value = valid && normalized !== null ? normalized : '';
-			try {
-				if (typeof (this.hiddenPicker as any).showPicker === 'function') {
-					(this.hiddenPicker as any).showPicker();
-				} else {
-					this.hiddenPicker.focus();
-					this.hiddenPicker.click();
-				}
-			} catch {
-				this.hiddenPicker.focus();
-			}
-		}
-
-		private handlePickerSelection(rawValue: string): void {
-			const { normalized, valid } = this.prepareNormalizedValue(rawValue);
-			if (valid && normalized !== null) {
-				this.textInput.value = normalized;
-				this.lastValidValue = normalized;
-				this.dismissNotice();
-				this.params.stopEditing(false);
-			} else {
-				this.textInput.focus({ preventScroll: true });
-				this.handleInvalidInput();
-			}
-		}
-
 		private applyNormalizedInput(): string | null {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
 			if (!valid) {
-				this.handleInvalidInput();
+				this.markInvalid();
+				this.showNotice();
 				return null;
 			}
+			this.clearInvalidState();
+			this.dismissNotice();
 			if (normalized === null) {
 				return '';
 			}
@@ -181,7 +116,6 @@ export function createTimeCellEditor() {
 				this.textInput.value = normalized;
 			}
 			this.lastValidValue = normalized;
-			this.dismissNotice();
 			return normalized;
 		}
 
@@ -206,7 +140,27 @@ export function createTimeCellEditor() {
 			return this.isoPattern.test(normalized) ? normalized : '';
 		}
 
-		private handleInvalidInput(): void {
+		private markInvalid(): void {
+			if (this.isInvalid) {
+				return;
+			}
+			this.isInvalid = true;
+			this.wrapper.classList.add('is-invalid');
+			this.textInput.classList.add('tlb-time-editor-input--invalid');
+			this.textInput.setAttribute('aria-invalid', 'true');
+		}
+
+		private clearInvalidState(): void {
+			if (!this.isInvalid) {
+				return;
+			}
+			this.isInvalid = false;
+			this.wrapper.classList.remove('is-invalid');
+			this.textInput.classList.remove('tlb-time-editor-input--invalid');
+			this.textInput.removeAttribute('aria-invalid');
+		}
+
+		private showNotice(): void {
 			if (!this.invalidNotice) {
 				this.invalidNotice = new Notice(t('timeCellEditor.invalidInput'), 2000);
 			}

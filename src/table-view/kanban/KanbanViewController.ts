@@ -1,9 +1,12 @@
-import Sortable, { type SortableEvent } from 'sortablejs';
+import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
+
+type SortableStatic = typeof import('sortablejs');
+type SortableInstance = ReturnType<SortableStatic['create']>;
 
 interface KanbanViewControllerOptions {
 	view: TableView;
@@ -38,8 +41,12 @@ export class KanbanViewController {
 	private quickFilterValue = '';
 	private unsubscribeFilter: (() => void) | null = null;
 	private unsubscribeQuickFilter: (() => void) | null = null;
-	private sortables = new Map<string, Sortable>();
+	private sortables = new Map<string, SortableInstance>();
 	private isApplyingMutation = false;
+	private dragAvailable: boolean;
+	private sortableClass: SortableStatic | null = null;
+	private sortableLoadAttempted = false;
+	private sortableLoadPromise: Promise<SortableStatic | null> | null = null;
 
 	constructor(options: KanbanViewControllerOptions) {
 		this.view = options.view;
@@ -49,6 +56,7 @@ export class KanbanViewController {
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
+		this.dragAvailable = this.enableDrag;
 
 		this.visibleRows = this.view.filterOrchestrator.getVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
@@ -58,6 +66,7 @@ export class KanbanViewController {
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
 
 		this.registerListeners();
+		this.ensureSortableLoaded();
 		this.renderBoard();
 	}
 
@@ -84,9 +93,10 @@ export class KanbanViewController {
 	}
 
 	private renderBoard(): void {
-		if (!this.boardEl) {
+		if (!this.boardEl || !this.boardEl.isConnected) {
 			return;
 		}
+		this.ensureSortableLoaded();
 		this.destroySortables();
 		this.boardEl.empty();
 		this.boardEl?.setAttribute('aria-busy', 'true');
@@ -106,6 +116,67 @@ export class KanbanViewController {
 		this.boardEl?.removeAttribute('aria-busy');
 	}
 
+	private ensureSortableLoaded(): void {
+		if (
+			!this.enableDrag ||
+			this.sortableClass ||
+			this.sortableLoadPromise ||
+			this.sortableLoadAttempted
+		) {
+			return;
+		}
+		this.sortableLoadAttempted = true;
+		this.sortableLoadPromise = this.loadSortable()
+			.then((sortable) => {
+				this.sortableClass = sortable;
+				if (!this.sortableClass) {
+					this.dragAvailable = false;
+				}
+				this.sortableLoadPromise = null;
+				if (this.boardEl && this.boardEl.isConnected) {
+					this.renderBoard();
+				}
+				return this.sortableClass;
+			});
+	}
+
+	private async loadSortable(): Promise<SortableStatic | null> {
+		try {
+			const module = (await import('sortablejs')) as unknown;
+			const sortable = this.normalizeSortable(module);
+			if (sortable) {
+				return sortable;
+			}
+		} catch (error) {
+			console.warn(
+				'[TileLineBase] Failed to load sortablejs for kanban drag interactions.',
+				error
+			);
+		}
+		return null;
+	}
+
+	private normalizeSortable(candidate: unknown): SortableStatic | null {
+		if (typeof candidate === 'function') {
+			const sortable = candidate as SortableStatic;
+			if (typeof sortable.create === 'function') {
+				return sortable;
+			}
+		}
+		if (
+			candidate &&
+			typeof candidate === 'object' &&
+			'default' in candidate &&
+			typeof (candidate as { default: unknown }).default === 'function'
+		) {
+			const sortable = (candidate as { default: unknown }).default as SortableStatic;
+			if (sortable && typeof sortable.create === 'function') {
+				return sortable;
+			}
+		}
+		return null;
+	}
+
 	private buildState(): KanbanBoardState {
 		return buildKanbanBoardState({
 			rows: this.visibleRows,
@@ -121,23 +192,31 @@ export class KanbanViewController {
 
 	private renderMessage(state: KanbanBoardState): void {
 		this.messageEl.empty();
-		if (this.quickFilterValue.trim().length > 0) {
+		const filterActive = this.quickFilterValue.trim().length > 0;
+		if (filterActive) {
 			const countLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
 			countLabel.setText(
 				t('kanbanView.filteredCountLabel', {
 					count: String(state.totalCards)
 				})
 			);
-			return;
+		} else {
+			const totalLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
+			totalLabel.setText(
+				t('kanbanView.totalCountLabel', {
+					count: String(state.totalCards)
+				})
+			);
+			if (this.dragAvailable) {
+				const hint = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
+				hint.setText(t('kanbanView.dragHint'));
+			}
 		}
-		const totalLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
-		totalLabel.setText(
-			t('kanbanView.totalCountLabel', {
-				count: String(state.totalCards)
-			})
-		);
-		const hint = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
-		hint.setText(t('kanbanView.dragHint'));
+
+		if (this.enableDrag && !this.dragAvailable) {
+			const dragWarning = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
+			dragWarning.setText(t('kanbanView.dragUnavailable'));
+		}
 	}
 
 	private renderEmptyState(): void {
@@ -194,8 +273,8 @@ export class KanbanViewController {
 			this.renderCard(cardsContainer, card);
 		}
 
-		if (this.enableDrag) {
-			const sortable = Sortable.create(cardsContainer, {
+		if (this.dragAvailable && this.sortableClass) {
+			const sortable = this.sortableClass.create(cardsContainer, {
 				group: 'tlb-kanban-board',
 				animation: 160,
 				ghostClass: 'tlb-kanban-card--ghost',
@@ -245,7 +324,7 @@ export class KanbanViewController {
 	}
 
 	private handleDragEnd(event: SortableEvent): void {
-		if (!this.enableDrag) {
+		if (!this.dragAvailable) {
 			return;
 		}
 		const itemEl = event.item as HTMLElement | null;

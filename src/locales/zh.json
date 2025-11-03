@@ -15,6 +15,7 @@
     "filteredCountLabel": "共有 {{count}} 张卡片符合当前筛选",
     "totalCountLabel": "共有 {{count}} 张卡片",
     "dragHint": "可拖拽卡片以重新排序或移动到其他泳道。",
+    "dragUnavailable": "拖拽模块加载失败，已临时禁用拖拽功能。刷新笔记或重新安装插件后重试。",
     "emptyState": "还没有卡片，可在表格视图中新增行。",
     "emptyStateFiltered": "没有卡片符合当前筛选条件。",
     "laneCountLabel": "本泳道共有 {{count}} 张卡片",

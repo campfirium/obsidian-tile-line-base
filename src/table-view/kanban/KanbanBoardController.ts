@@ -1,12 +1,24 @@
-import { App, Menu, Notice, Modal, Setting } from 'obsidian';
+import { App, Menu, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
-import type { KanbanBoardDefinition } from '../../types/kanban';
+import type { KanbanBoardDefinition, KanbanSortDirection } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import type { FilterRule } from '../../types/filterView';
-import { FilterViewEditorModal } from '../filter/FilterViewModals';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
 import { getAvailableColumns } from '../TableViewFilterPresenter';
+import {
+	DEFAULT_KANBAN_LANE_WIDTH,
+	sanitizeKanbanLaneWidth
+} from './kanbanWidth';
+import {
+	DEFAULT_KANBAN_SORT_DIRECTION,
+	DEFAULT_KANBAN_SORT_FIELD
+} from '../../types/kanban';
+import {
+	confirmKanbanBoardDeletion,
+	openKanbanBoardEditor,
+	type KanbanBoardEditorResult
+} from './KanbanBoardModals';
 
 interface KanbanBoardControllerOptions {
 	app: App;
@@ -20,6 +32,7 @@ export class KanbanBoardController {
 	private readonly store: KanbanBoardStore;
 	private loadedFilePath: string | null = null;
 	private repairingLaneField = false;
+	private autoCreateInProgress = false;
 
 	constructor(options: KanbanBoardControllerOptions) {
 		this.app = options.app;
@@ -82,12 +95,16 @@ export class KanbanBoardController {
 	}
 
 	async createBoard(): Promise<void> {
-		const editor = await this.openBoardModal({
+		const editor = await this.openBoardEditor({
 			title: t('kanbanView.toolbar.createBoardTitle'),
 			defaultName: this.suggestNewBoardName(),
 			defaultIcon: 'layout-kanban',
 			initialFilter: null,
-			initialLaneField: this.view.kanbanLaneField ?? null
+			initialLaneField: this.view.kanbanLaneField ?? null,
+			initialLaneWidth: this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
+			initialSortField: this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+			initialSortDirection: this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+			sortFieldOptions: this.getSortFieldOptions()
 		});
 		if (!editor) {
 			return;
@@ -98,6 +115,9 @@ export class KanbanBoardController {
 			icon: editor.icon,
 			laneField: editor.laneField,
 			filterRule: editor.filterRule,
+			laneWidth: editor.laneWidth,
+			sortField: editor.sortField,
+			sortDirection: editor.sortDirection,
 			setActive: true
 		});
 		await this.store.persist();
@@ -106,12 +126,17 @@ export class KanbanBoardController {
 	}
 
 	async editBoard(board: KanbanBoardDefinition): Promise<void> {
-		const editor = await this.openBoardModal({
+		const editor = await this.openBoardEditor({
 			title: t('kanbanView.toolbar.editBoardTitle'),
 			defaultName: board.name,
 			defaultIcon: board.icon ?? null,
 			initialFilter: board.filterRule ?? null,
-			initialLaneField: board.laneField
+			initialLaneField: board.laneField,
+			initialLaneWidth: board.laneWidth ?? null,
+			initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+			initialSortDirection:
+				board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+			sortFieldOptions: this.getSortFieldOptions()
 		});
 		if (!editor) {
 			return;
@@ -121,7 +146,10 @@ export class KanbanBoardController {
 			name: editor.name,
 			icon: editor.icon,
 			laneField: editor.laneField,
-			filterRule: editor.filterRule
+			filterRule: editor.filterRule,
+			laneWidth: editor.laneWidth,
+			sortField: editor.sortField,
+			sortDirection: editor.sortDirection
 		});
 		if (!updated) {
 			return;
@@ -136,14 +164,19 @@ export class KanbanBoardController {
 
 	async duplicateBoard(board: KanbanBoardDefinition): Promise<void> {
 		const duplicatedName = `${board.name} ${t('kanbanView.toolbar.duplicateNameSuffix')}`.trim();
-		const editor = await this.openBoardModal({
+		const editor = await this.openBoardEditor({
 			title: t('kanbanView.toolbar.duplicateBoardTitle', {
 				name: board.name || t('kanbanView.toolbar.unnamedBoardLabel')
 			}),
 			defaultName: duplicatedName,
 			defaultIcon: board.icon ?? null,
 			initialFilter: board.filterRule ?? null,
-			initialLaneField: board.laneField
+			initialLaneField: board.laneField,
+			initialLaneWidth: board.laneWidth ?? null,
+			initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+			initialSortDirection:
+				board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+			sortFieldOptions: this.getSortFieldOptions()
 		});
 		if (!editor) {
 			return;
@@ -154,6 +187,9 @@ export class KanbanBoardController {
 			icon: editor.icon,
 			laneField: editor.laneField,
 			filterRule: editor.filterRule,
+			laneWidth: editor.laneWidth,
+			sortField: editor.sortField,
+			sortDirection: editor.sortDirection,
 			setActive: true
 		});
 		await this.store.persist();
@@ -169,7 +205,10 @@ export class KanbanBoardController {
 			return;
 		}
 
-		const confirmed = await this.confirmBoardDeletion(board.name || t('kanbanView.toolbar.unnamedBoardLabel'));
+		const confirmed = await confirmKanbanBoardDeletion(
+			this.app,
+			board.name || t('kanbanView.toolbar.unnamedBoardLabel')
+		);
 		if (!confirmed) {
 			return;
 		}
@@ -186,6 +225,10 @@ export class KanbanBoardController {
 
 		await this.store.persist();
 		this.applyBoardContext(activeBoard, { persist: true, rerender: true });
+		if (nextState.boards.length === 0) {
+			this.handleEmptyBoards();
+			return;
+		}
 		this.refreshToolbar();
 	}
 
@@ -251,7 +294,9 @@ export class KanbanBoardController {
 		this.store.reset();
 		this.view.activeKanbanBoardFilter = null;
 		this.view.kanbanBoardsLoaded = false;
+		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 		this.repairingLaneField = false;
+		this.autoCreateInProgress = false;
 	}
 
 	private applyBoardContext(
@@ -268,9 +313,23 @@ export class KanbanBoardController {
 			}
 			this.view.activeKanbanBoardFilter = board.filterRule ?? null;
 			this.view.activeKanbanBoardId = board.id;
+			this.view.kanbanLaneWidth = sanitizeKanbanLaneWidth(
+				board.laneWidth ?? null,
+				this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH
+			);
+			const sortField = typeof board.sortField === 'string' ? board.sortField.trim() : '';
+			this.view.kanbanSortField =
+				sortField.length > 0 ? sortField : DEFAULT_KANBAN_SORT_FIELD;
+			this.view.kanbanSortDirection =
+				board.sortDirection === 'asc' || board.sortDirection === 'desc'
+					? (board.sortDirection as KanbanSortDirection)
+					: DEFAULT_KANBAN_SORT_DIRECTION;
 		} else {
 			this.view.activeKanbanBoardFilter = null;
 			this.view.activeKanbanBoardId = null;
+			this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+			this.view.kanbanSortField = DEFAULT_KANBAN_SORT_FIELD;
+			this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		}
 
 		if (options?.persist !== false) {
@@ -287,8 +346,45 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
+		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.view.kanbanSortField = DEFAULT_KANBAN_SORT_FIELD;
+		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
+		this.maybeTriggerAutoCreate();
+	}
+
+	ensureBoardForActiveKanbanView(): void {
+		this.maybeTriggerAutoCreate();
+	}
+
+	private maybeTriggerAutoCreate(): void {
+		if (this.view.activeViewMode !== 'kanban') {
+			return;
+		}
+		if (this.autoCreateInProgress) {
+			return;
+		}
+		const state = this.store.getState();
+		if (state.boards.length > 0) {
+			return;
+		}
+		const schema = this.view.schema;
+		if (!schema || !Array.isArray(schema.columnNames) || schema.columnNames.length === 0) {
+			return;
+		}
+		if (this.getLaneFieldCandidates().length === 0) {
+			return;
+		}
+
+		this.autoCreateInProgress = true;
+		void this.createBoard()
+			.catch(() => {
+				// noop
+			})
+			.finally(() => {
+				this.autoCreateInProgress = false;
+			});
 	}
 
 	private isLaneFieldAvailable(field: string): boolean {
@@ -303,12 +399,17 @@ export class KanbanBoardController {
 		this.repairingLaneField = true;
 		try {
 			new Notice(t('kanbanView.toolbar.laneFieldMissingNotice'));
-			const editor = await this.openBoardModal({
+			const editor = await this.openBoardEditor({
 				title: t('kanbanView.toolbar.editBoardTitle'),
 				defaultName: board.name,
 				defaultIcon: board.icon ?? null,
 				initialFilter: board.filterRule ?? null,
-				initialLaneField: null
+				initialLaneField: null,
+				initialLaneWidth: board.laneWidth ?? null,
+				initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+				initialSortDirection:
+					board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+				sortFieldOptions: this.getSortFieldOptions()
 			});
 			if (!editor) {
 				return;
@@ -317,7 +418,10 @@ export class KanbanBoardController {
 				name: editor.name,
 				icon: editor.icon,
 				laneField: editor.laneField,
-				filterRule: editor.filterRule
+				filterRule: editor.filterRule,
+				laneWidth: editor.laneWidth,
+				sortField: editor.sortField,
+				sortDirection: editor.sortDirection
 			});
 			if (!updated) {
 				return;
@@ -346,6 +450,27 @@ export class KanbanBoardController {
 		});
 	}
 
+	private getSortFieldOptions(): string[] {
+		const columns = getAvailableColumns(this.view);
+		const ordered: string[] = [];
+		const seen = new Set<string>();
+		const push = (value: string | null | undefined) => {
+			if (!value) {
+				return;
+			}
+			if (seen.has(value)) {
+				return;
+			}
+			seen.add(value);
+			ordered.push(value);
+		};
+		for (const column of columns) {
+			push(column);
+		}
+		push(DEFAULT_KANBAN_SORT_FIELD);
+		return ordered;
+	}
+
 	private getFilterColumnOptions(): FilterColumnOption[] {
 		const columns = getAvailableColumns(this.view);
 		return columns.map((name) => ({
@@ -353,17 +478,6 @@ export class KanbanBoardController {
 			kind: 'text',
 			allowNumericOperators: true
 		}));
-	}
-
-	private async confirmBoardDeletion(boardName: string): Promise<boolean> {
-		return new Promise((resolve) => {
-			const modal = new KanbanBoardConfirmModal(this.app, {
-				message: t('kanbanView.toolbar.deleteBoardConfirm', { name: boardName }),
-				onConfirm: () => resolve(true),
-				onCancel: () => resolve(false)
-			});
-			modal.open();
-		});
 	}
 
 	private suggestNewBoardName(): string {
@@ -393,129 +507,54 @@ export class KanbanBoardController {
 	}
 
 	private toChineseNumeral(value: number): string {
-		const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+		const digits = ['\u96f6', '\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d', '\u4e03', '\u516b', '\u4e5d'];
 		if (!Number.isFinite(value) || value <= 0) {
 			return String(value);
 		}
 		if (value <= 9) {
 			return digits[value];
 		}
+		const ten = '\u5341';
 		if (value === 10) {
-			return '十';
+			return ten;
 		}
 		if (value < 20) {
 			const units = value % 10;
-			return `十${units === 0 ? '' : digits[units]}`;
+			return ten + (units === 0 ? '' : digits[units]);
 		}
 		if (value < 100) {
 			const tens = Math.floor(value / 10);
 			const units = value % 10;
-			const tensLabel = tens === 1 ? '十' : `${digits[tens]}十`;
-			return units === 0 ? tensLabel : `${tensLabel}${digits[units]}`;
+			const tensLabel = tens === 1 ? ten : digits[tens] + ten;
+			return units === 0 ? tensLabel : tensLabel + digits[units];
 		}
 		return String(value);
 	}
 
-	private async openBoardModal(options: {
+	private async openBoardEditor(options: {
 		title: string;
 		defaultName: string;
 		defaultIcon: string | null;
 		initialFilter: FilterRule | null;
 		initialLaneField: string | null;
-	}): Promise<{ name: string; icon: string | null; laneField: string; filterRule: FilterRule | null } | null> {
-		const columns = this.getFilterColumnOptions();
-		if (columns.length === 0) {
-			new Notice(t('filterViewController.noColumns'));
-			return null;
-		}
-
-		const laneOptions = this.getLaneFieldCandidates();
-		if (laneOptions.length === 0) {
-			new Notice(t('kanbanView.fieldModal.noColumns'));
-			return null;
-		}
-
-		let selectedLane = options.initialLaneField && laneOptions.includes(options.initialLaneField)
-			? options.initialLaneField
-			: laneOptions[0];
-
-		return new Promise((resolve) => {
-			const modal = new FilterViewEditorModal(this.app, {
-				title: options.title,
-				columns,
-				initialName: options.defaultName,
-				initialIcon: options.defaultIcon,
-				initialRule: options.initialFilter,
-				allowFilterEditing: true,
-				allowSortEditing: false,
-				minConditionCount: 0,
-				renderAdditionalControls: (container) => {
-					const setting = new Setting(container);
-					setting.setName(t('kanbanView.toolbar.laneFieldLabel'));
-					setting.addDropdown((dropdown) => {
-						for (const option of laneOptions) {
-							dropdown.addOption(option, option);
-						}
-						dropdown.setValue(selectedLane);
-						dropdown.onChange((value) => {
-							selectedLane = value;
-						});
-					});
-				},
-				onSubmit: (result) => {
-					const trimmed = result.name?.trim();
-					if (!trimmed) {
-						resolve(null);
-						return;
-					}
-					const laneField = typeof selectedLane === 'string' ? selectedLane.trim() : '';
-					resolve({
-						name: trimmed,
-						icon: result.icon ?? null,
-						laneField: laneField.length > 0 ? laneField : laneOptions[0],
-						filterRule: result.filterRule ?? null
-					});
-				},
-				onCancel: () => resolve(null)
-			});
-			modal.open();
+		initialLaneWidth: number | null;
+		initialSortField: string | null;
+		initialSortDirection: KanbanSortDirection | null;
+		sortFieldOptions: string[];
+	}): Promise<KanbanBoardEditorResult | null> {
+		return openKanbanBoardEditor({
+			app: this.app,
+			title: options.title,
+			defaultName: options.defaultName,
+			defaultIcon: options.defaultIcon,
+			initialFilter: options.initialFilter,
+			initialLaneField: options.initialLaneField,
+			initialLaneWidth: options.initialLaneWidth,
+			columns: this.getFilterColumnOptions(),
+			laneOptions: this.getLaneFieldCandidates(),
+			initialSortField: options.initialSortField,
+			initialSortDirection: options.initialSortDirection,
+			sortFieldOptions: options.sortFieldOptions
 		});
-	}
-}
-
-class KanbanBoardConfirmModal extends Modal {
-	constructor(
-		app: App,
-		private readonly options: { message: string; onConfirm: () => void; onCancel: () => void }
-	) {
-		super(app);
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass('tlb-kanban-confirm-modal');
-		contentEl.createEl('p', { text: this.options.message });
-
-		const controls = new Setting(contentEl);
-		controls.addButton((button) => {
-			button.setButtonText(t('kanbanView.toolbar.deleteBoardConfirmAction'));
-			button.setCta();
-			button.onClick(() => {
-				this.close();
-				this.options.onConfirm();
-			});
-		});
-		controls.addButton((button) => {
-			button.setButtonText(t('filterViewModals.cancelButton'));
-			button.onClick(() => {
-				this.close();
-				this.options.onCancel();
-			});
-		});
-	}
-
-	onClose(): void {
-		this.contentEl.empty();
 	}
 }

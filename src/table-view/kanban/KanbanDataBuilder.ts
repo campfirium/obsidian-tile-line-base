@@ -1,4 +1,5 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
+import type { KanbanSortDirection } from '../../types/kanban';
 
 export interface KanbanCardField {
 	name: string;
@@ -10,6 +11,8 @@ export interface KanbanCard {
 	rowIndex: number;
 	title: string;
 	sortOrder: number;
+	sortValue: number | null;
+	sortText: string | null;
 	fields: KanbanCardField[];
 	rawLane: string;
 	row: RowData;
@@ -30,6 +33,7 @@ interface BuildKanbanBoardStateParams {
 	rows: RowData[];
 	laneField: string;
 	sortField: string | null;
+	sortDirection: KanbanSortDirection;
 	fallbackLane: string;
 	primaryField: string | null;
 	displayFields: string[];
@@ -42,6 +46,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		rows,
 		laneField,
 		sortField,
+		sortDirection,
 		fallbackLane,
 		primaryField,
 		displayFields,
@@ -80,8 +85,8 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		}
 
 		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
-		const numericSort = sortRaw.length > 0 ? Number(sortRaw) : Number.NaN;
-		const sortOrder = Number.isFinite(numericSort) ? numericSort : lane.cards.length + 1;
+		const sortMeta = parseSortMetadata(sortRaw);
+		const sortOrder = sortMeta.numeric ?? lane.cards.length + 1;
 		const title = primaryField ? normalizeString(row[primaryField]) : '';
 		const fields = buildCardFields(row, displayFields, laneField, sortField, primaryField);
 
@@ -90,6 +95,8 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			rowIndex,
 			title,
 			sortOrder,
+			sortValue: sortMeta.numeric,
+			sortText: sortMeta.text,
 			fields,
 			rawLane: laneName,
 			row
@@ -98,12 +105,32 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	}
 
 	const lanes: KanbanLane[] = [];
+	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
 	for (const lane of laneMap.values()) {
 		lane.cards.sort((a, b) => {
-			if (a.sortOrder === b.sortOrder) {
-				return a.rowIndex - b.rowIndex;
+			if (a.sortValue != null && b.sortValue != null && a.sortValue !== b.sortValue) {
+				return a.sortValue < b.sortValue ? -1 * directionMultiplier : 1 * directionMultiplier;
 			}
-			return a.sortOrder - b.sortOrder;
+			if (a.sortValue != null && b.sortValue == null) {
+				return -1;
+			}
+			if (a.sortValue == null && b.sortValue != null) {
+				return 1;
+			}
+			if (a.sortText && b.sortText) {
+				const cmp = a.sortText.localeCompare(b.sortText);
+				if (cmp !== 0) {
+					return cmp * directionMultiplier;
+				}
+			} else if (a.sortText && !b.sortText) {
+				return -1;
+			} else if (!a.sortText && b.sortText) {
+				return 1;
+			}
+			if (a.sortOrder !== b.sortOrder) {
+				return a.sortOrder - b.sortOrder;
+			}
+			return a.rowIndex - b.rowIndex;
 		});
 		lanes.push(lane);
 	}
@@ -159,6 +186,21 @@ function buildCardFields(
 		fields.push({ name: field, value });
 	}
 	return fields;
+}
+
+function parseSortMetadata(raw: string): { numeric: number | null; text: string | null } {
+	if (!raw) {
+		return { numeric: null, text: null };
+	}
+	const numeric = Number(raw);
+	if (Number.isFinite(numeric)) {
+		return { numeric, text: null };
+	}
+	const timestamp = Date.parse(raw);
+	if (Number.isFinite(timestamp)) {
+		return { numeric: timestamp, text: null };
+	}
+	return { numeric: null, text: raw.toLowerCase() };
 }
 
 function resolveLaneId(

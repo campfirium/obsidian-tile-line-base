@@ -5,6 +5,8 @@ import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
+import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
+import type { KanbanSortDirection } from '../../types/kanban';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -14,25 +16,31 @@ interface KanbanViewControllerOptions {
 	container: HTMLElement;
 	laneField: string;
 	sortField: string | null;
+	sortDirection: KanbanSortDirection;
 	fallbackLaneName: string;
 	primaryField: string | null;
 	displayFields: string[];
 	enableDrag: boolean;
+	laneWidth: number;
+	allowManualSort: boolean;
 }
 
 interface RowUpdate {
 	lane?: string;
-	sort?: string;
+	sortOrder?: string;
 }
 
 export class KanbanViewController {
 	private readonly view: TableView;
 	private readonly laneField: string;
 	private readonly sortField: string | null;
+	private readonly sortDirection: KanbanSortDirection;
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
+	private readonly laneWidth: number;
+	private readonly allowManualSort: boolean;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
@@ -53,10 +61,13 @@ export class KanbanViewController {
 		this.view = options.view;
 		this.laneField = options.laneField;
 		this.sortField = options.sortField;
+		this.sortDirection = options.sortDirection;
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
+		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth, DEFAULT_KANBAN_LANE_WIDTH);
+		this.allowManualSort = options.allowManualSort;
 		this.dragAvailable = this.enableDrag;
 
 		this.recomputeVisibleRows();
@@ -65,6 +76,7 @@ export class KanbanViewController {
 		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
+		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
 		this.registerListeners();
 		this.ensureSortableLoaded();
@@ -199,6 +211,7 @@ export class KanbanViewController {
 			rows: this.visibleRows,
 			laneField: this.laneField,
 			sortField: this.sortField,
+			sortDirection: this.sortDirection,
 			fallbackLane: this.fallbackLaneName,
 			primaryField: this.primaryField,
 			displayFields: this.displayFields,
@@ -269,6 +282,7 @@ export class KanbanViewController {
 		if (this.dragAvailable && this.sortableClass) {
 			const sortable = this.sortableClass.create(cardsContainer, {
 				group: 'tlb-kanban-board',
+				sort: this.allowManualSort,
 				animation: 160,
 				ghostClass: 'tlb-kanban-card--ghost',
 				dragClass: 'tlb-kanban-card--dragging',
@@ -357,8 +371,8 @@ export class KanbanViewController {
 					return;
 				}
 				const record = updates.get(blockIndex) ?? {};
-				if (this.sortField) {
-					record.sort = String(index + 1);
+				if (this.allowManualSort && this.sortField) {
+					record.sortOrder = String(index + 1);
 				}
 				if (laneEl === targetEl && blockIndex === rowIndex) {
 					record.lane = laneName;
@@ -377,8 +391,10 @@ export class KanbanViewController {
 			if (typeof change.lane === 'string') {
 				fields.push(this.laneField);
 			}
-			if (this.sortField && typeof change.sort === 'string') {
-				fields.push(this.sortField);
+			if (this.sortField) {
+				if (this.allowManualSort && typeof change.sortOrder === 'string') {
+					fields.push(this.sortField);
+				}
 			}
 			if (fields.length > 0) {
 				targets.push({ index: rowIndex, fields });
@@ -401,8 +417,10 @@ export class KanbanViewController {
 					if (typeof change.lane === 'string') {
 						block.data[this.laneField] = change.lane;
 					}
-					if (this.sortField && typeof change.sort === 'string') {
-						block.data[this.sortField] = change.sort;
+					if (this.sortField) {
+						if (this.allowManualSort && typeof change.sortOrder === 'string') {
+							block.data[this.sortField] = change.sortOrder;
+						}
 					}
 				}
 			},

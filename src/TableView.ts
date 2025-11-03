@@ -39,7 +39,9 @@ import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
-import type { KanbanBoardState } from "./types/kanban";
+import type { KanbanBoardState, KanbanSortDirection } from "./types/kanban";
+import { DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from "./types/kanban";
+import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -90,7 +92,9 @@ export class TableView extends ItemView {
 	public activeViewMode: 'table' | 'kanban' = 'table';
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null;
-	public kanbanSortField: string | null = "看板排序";
+	public kanbanLaneWidth: number = DEFAULT_KANBAN_LANE_WIDTH;
+	public kanbanSortField: string = DEFAULT_KANBAN_SORT_FIELD;
+	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	public kanbanPreferencesLoaded = false;
 	public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null;
@@ -123,6 +127,9 @@ export class TableView extends ItemView {
 				this.file = file;
 				this.refreshCoordinator.setTrackedFile(file);
 				this.kanbanBoardsLoaded = false;
+				this.kanbanSortField = DEFAULT_KANBAN_SORT_FIELD;
+				this.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+				this.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 				await this.render();
 			} else {
 				this.refreshCoordinator.setTrackedFile(null);

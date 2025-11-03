@@ -35,6 +35,11 @@ interface StateChangeOptions {
 	render?: boolean;
 }
 
+export interface CloneFilterViewOptions {
+	name?: string | null;
+	icon?: string | null;
+}
+
 export class FilterViewController {
 	private readonly app: App;
 	private readonly stateStore: FilterStateStore;
@@ -314,6 +319,57 @@ export class FilterViewController {
 			});
 			modal.open();
 		});
+	}
+
+	cloneFilterView(viewId: string, options?: CloneFilterViewOptions): FilterViewDefinition | null {
+		const sourceView = this.stateStore.getState().views.find((view) => view.id === viewId);
+		if (!sourceView) {
+			return null;
+		}
+
+		const clonedRule: FilterRule | null = sourceView.filterRule
+			? {
+					combineMode: sourceView.filterRule.combineMode,
+					conditions: sourceView.filterRule.conditions.map((condition) => ({ ...condition }))
+				}
+			: null;
+		const clonedSortRules: SortRule[] = Array.isArray(sourceView.sortRules)
+			? sourceView.sortRules.map((rule) => ({ column: rule.column, direction: rule.direction === 'desc' ? 'desc' : 'asc' }))
+			: [];
+		const clonedColumnState = this.stateStore.cloneColumnState(sourceView.columnState);
+		const clonedQuickFilter = sourceView.quickFilter ?? null;
+		const requestedName = typeof options?.name === 'string' ? options.name.trim() : '';
+		const resolvedName =
+			requestedName.length > 0
+				? requestedName
+				: typeof sourceView.name === 'string' && sourceView.name.trim().length > 0
+					? sourceView.name.trim()
+					: sourceView.id;
+		const resolvedIcon = options?.icon !== undefined ? options.icon : sourceView.icon ?? null;
+
+		const clonedView: FilterViewDefinition = {
+			id: this.generateFilterViewId(),
+			name: resolvedName,
+			filterRule: clonedRule,
+			sortRules: clonedSortRules,
+			columnState: clonedColumnState,
+			quickFilter: clonedQuickFilter,
+			icon: sanitizeIconId(resolvedIcon)
+		};
+
+		this.stateStore.updateState((state) => {
+			const sourceIndex = state.views.findIndex((view) => view.id === viewId);
+			if (sourceIndex === -1) {
+				state.views.push(clonedView);
+			} else {
+				state.views.splice(sourceIndex + 1, 0, clonedView);
+			}
+		});
+
+		this.tagGroupSupport?.onFilterViewCreated?.(clonedView);
+		this.runStateEffects({ persist: true, apply: false });
+
+		return clonedView;
 	}
 
 	deleteFilterView(viewId: string): void {

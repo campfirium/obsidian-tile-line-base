@@ -9,6 +9,11 @@ import { STATUS_BASELINE_VALUES } from '../statusDefaults';
 import { ensureStatusBaseline } from './statusBaselineManager';
 import { renderTagGroupMenuItem } from './TagGroupMenuRenderer';
 
+interface CloneFilterViewOptions {
+	name?: string;
+	icon?: string | null;
+}
+
 interface TagGroupControllerOptions {
 	app: App;
 	store: TagGroupStore;
@@ -21,6 +26,7 @@ interface TagGroupControllerOptions {
 	persist: () => Promise<void> | void;
 	isStatusBaselineSeeded: () => boolean;
 	markStatusBaselineSeeded: () => void;
+	cloneFilterView: (view: FilterViewDefinition, options?: CloneFilterViewOptions) => FilterViewDefinition | null;
 }
 
 const MAX_FIELD_GROUP_ITEMS = 20;
@@ -37,7 +43,9 @@ export class TagGroupController {
 	private readonly persist: () => Promise<void> | void;
 	private readonly isStatusBaselineSeeded: () => boolean;
 	private readonly markStatusBaselineSeeded: () => void;
+	private readonly cloneFilterView: (view: FilterViewDefinition, options?: CloneFilterViewOptions) => FilterViewDefinition | null;
 	private readonly defaultGroupId: string;
+	private pendingCloneTargetId: string | null = null;
 
 	constructor(options: TagGroupControllerOptions) {
 		this.app = options.app;
@@ -51,6 +59,7 @@ export class TagGroupController {
 		this.persist = options.persist;
 		this.isStatusBaselineSeeded = options.isStatusBaselineSeeded;
 		this.markStatusBaselineSeeded = options.markStatusBaselineSeeded;
+		this.cloneFilterView = options.cloneFilterView;
 		this.defaultGroupId = this.store.getDefaultGroupId();
 	}
 
@@ -161,47 +170,38 @@ export class TagGroupController {
 		this.syncWithAvailableViews();
 		const menu = new Menu();
 		const state = this.store.getState();
-		const groups = state.groups.filter((group) => group.id !== this.defaultGroupId);
-
-		if (groups.length === 0) {
+		const groups = state.groups;
+		let renderedGroup = false;
+		for (const group of groups) {
 			menu.addItem((item) => {
+				const title = group.id === this.defaultGroupId
+					? this.getGroupDisplayName(group)
+					: group.name || this.getGroupFallbackName(group);
 				item
-					.setTitle(t('tagGroups.menuCreateAndAdd'))
-					.setIcon('plus-circle')
-					.onClick(async () => {
-						const group = await this.handleCreateGroup({ activate: false, showNotice: false, mode: 'manual' });
-						if (group) {
-							this.addViewToGroup(group, view);
-						}
+					.setTitle(title)
+					.setIcon('bookmark-plus')
+					.onClick(() => {
+						this.addViewToGroup(group, view);
 					});
 			});
-		} else {
-			for (const group of groups) {
-				menu.addItem((item) => {
-					const hasView = group.viewIds.includes(view.id);
-					item
-						.setTitle(group.name || this.getGroupFallbackName(group))
-						.setIcon(hasView ? 'check' : 'bookmark-plus')
-						.setDisabled(hasView)
-						.onClick(() => {
-							this.addViewToGroup(group, view);
-						});
-				});
-			}
-
-			menu.addSeparator();
-			menu.addItem((item) => {
-				item
-					.setTitle(t('tagGroups.menuCreateAndAdd'))
-					.setIcon('plus-circle')
-					.onClick(async () => {
-						const group = await this.handleCreateGroup({ activate: false, showNotice: false, mode: 'manual' });
-						if (group) {
-							this.addViewToGroup(group, view);
-						}
-					});
-			});
+			renderedGroup = true;
 		}
+
+		if (renderedGroup) {
+			menu.addSeparator();
+		}
+
+		menu.addItem((item) => {
+			item
+				.setTitle(t('tagGroups.menuCreateAndAdd'))
+				.setIcon('plus-circle')
+				.onClick(async () => {
+					const group = await this.handleCreateGroup({ activate: false, showNotice: false, mode: 'manual' });
+					if (group) {
+						this.addViewToGroup(group, view);
+					}
+				});
+		});
 
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });
 	}
@@ -214,6 +214,26 @@ export class TagGroupController {
 	}
 
 	handleFilterViewCreated(view: FilterViewDefinition): void {
+		if (this.pendingCloneTargetId) {
+			const targetGroupId = this.pendingCloneTargetId;
+			let addedToTarget = false;
+			this.store.updateState((state) => {
+				const target = state.groups.find((entry) => entry.id === targetGroupId);
+				if (!target) {
+					return;
+				}
+				if (!target.viewIds.includes(view.id)) {
+					target.viewIds.push(view.id);
+					addedToTarget = true;
+				}
+			});
+			this.pendingCloneTargetId = null;
+			if (addedToTarget) {
+				void this.persistAndRender();
+			}
+			return;
+		}
+
 		const state = this.store.getState();
 		const activeGroupId = state.activeGroupId ?? this.defaultGroupId;
 		if (!activeGroupId || activeGroupId === this.defaultGroupId) {
@@ -419,19 +439,55 @@ export class TagGroupController {
 	}
 
 	private addViewToGroup(group: TagGroupDefinition, view: FilterViewDefinition): void {
-		this.store.updateState((state) => {
-			const target = state.groups.find((entry) => entry.id === group.id);
-			if (!target) {
-				return;
+		const cloned = this.cloneViewForGroup(view, group);
+		if (!cloned) {
+			return;
+		}
+		const displayName = group.name || this.getGroupFallbackName(group);
+		const viewLabel = this.getViewDisplayName(cloned) || this.getViewDisplayName(view);
+		new Notice(t('tagGroups.addViewSuccess', { view: viewLabel, group: displayName }));
+	}
+
+	private cloneViewForGroup(view: FilterViewDefinition, group: TagGroupDefinition): FilterViewDefinition | null {
+		const cloneName = this.resolveCloneName(view);
+		this.pendingCloneTargetId = group.id;
+		let cloned: FilterViewDefinition | null = null;
+		try {
+			cloned = this.cloneFilterView(view, { name: cloneName, icon: view.icon ?? null });
+		} finally {
+			if (this.pendingCloneTargetId === group.id) {
+				this.pendingCloneTargetId = null;
 			}
-			if (!target.viewIds.includes(view.id)) {
-				target.viewIds.push(view.id);
-			}
-		});
-		const updatedGroup = this.store.getState().groups.find((entry) => entry.id === group.id) ?? group;
-		const displayName = updatedGroup.name || this.getGroupFallbackName(updatedGroup);
-		new Notice(t('tagGroups.addViewSuccess', { view: view.name, group: displayName }));
-		void this.persistAndRender();
+		}
+		return cloned;
+	}
+
+	private resolveCloneName(view: FilterViewDefinition): string {
+		const baseName = this.getViewDisplayName(view);
+		const existingNames = new Set(
+			this.getFilterViewState()
+				.views.map((entry) => (entry.name ?? '').trim().toLowerCase())
+				.filter((name) => name.length > 0)
+		);
+		const baseKey = baseName.trim().toLowerCase();
+		if (baseKey.length > 0) {
+			existingNames.delete(baseKey);
+		}
+		let candidate = baseName;
+		let suffix = 2;
+		while (existingNames.has(candidate.trim().toLowerCase())) {
+			candidate = `${baseName} (${suffix})`;
+			suffix += 1;
+		}
+		return candidate;
+	}
+
+	private getViewDisplayName(view: FilterViewDefinition): string {
+		const name = typeof view.name === 'string' ? view.name.trim() : '';
+		if (name.length > 0) {
+			return name;
+		}
+		return typeof view.id === 'string' && view.id.trim().length > 0 ? view.id.trim() : t('filterViewBar.allTabLabel');
 	}
 
 	private getBaselineValuesForField(field: string): string[] | null {

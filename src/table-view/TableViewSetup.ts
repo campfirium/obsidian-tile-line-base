@@ -179,7 +179,8 @@ export function initializeTableView(view: TableView): void {
 		},
 		persist: () => persistTagGroups(view),
 		isStatusBaselineSeeded: () => view.filterStateStore.isStatusBaselineSeeded(),
-		markStatusBaselineSeeded: () => view.filterStateStore.markStatusBaselineSeeded()
+		markStatusBaselineSeeded: () => view.filterStateStore.markStatusBaselineSeeded(),
+		cloneFilterView: (filterView, options) => view.filterViewController.cloneFilterView(filterView.id, options)
 	});
 
 	logger.info(t('tableViewSetup.constructorComplete'));

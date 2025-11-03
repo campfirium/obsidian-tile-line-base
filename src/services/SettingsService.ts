@@ -6,7 +6,7 @@ import type {
 	SortRule,
 	DefaultFilterViewPreferences
 } from '../types/filterView';
-import type { FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
+import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -340,7 +340,7 @@ export class SettingsService {
 
 	private cloneTagGroupState(source: FileTagGroupState | null): FileTagGroupState {
 		if (!source) {
-			return { activeGroupId: null, groups: [] };
+			return { activeGroupId: null, groups: [], metadata: {} };
 		}
 		const seenIds = new Set<string>();
 		const groups: TagGroupDefinition[] = [];
@@ -377,11 +377,23 @@ export class SettingsService {
 		}
 
 		const activeGroupId = groups.some((group) => group.id === source.activeGroupId) ? source.activeGroupId : null;
+		const metadata = this.cloneTagGroupMetadata(source.metadata);
 
 		return {
 			activeGroupId,
-			groups
+			groups,
+			metadata
 		};
+	}
+	private cloneTagGroupMetadata(source: FileTagGroupMetadata | null | undefined): FileTagGroupMetadata {
+		if (!source) {
+			return {};
+		}
+		const metadata: FileTagGroupMetadata = {};
+		if (source.defaultSeeded) {
+			metadata.defaultSeeded = true;
+		}
+		return metadata;
 	}
 	private sanitizeBackupSettings(raw: Partial<BackupSettings> | undefined): BackupSettings {
 		const base = DEFAULT_SETTINGS.backups;

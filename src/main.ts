@@ -18,32 +18,16 @@ import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './servi
 import { BackupManager } from './services/BackupManager';
 import { WindowContextManager } from './plugin/WindowContextManager';
 import type { WindowContext } from './plugin/WindowContextManager';
+import { registerKanbanViewCommand } from './plugin/commands/registerKanbanViewCommand';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
 import { t } from './i18n';
 import { ViewActionManager } from './plugin/ViewActionManager';
 import { OnboardingManager } from './plugin/OnboardingManager';
+import { snapshotLeaf } from './plugin/utils/snapshotLeaf';
 
 const logger = getLogger('plugin:main');
-
-function snapshotLeaf(manager: WindowContextManager, leaf: WorkspaceLeaf | null | undefined): Record<string, unknown> | null {
-	if (!leaf) {
-		return null;
-	}
-	let type: string | undefined;
-	try {
-		type = leaf.getViewState().type;
-	} catch {
-		type = undefined;
-	}
-	const leafWindow = manager.getLeafWindow(leaf);
-	return {
-		id: (leaf as any).id ?? undefined,
-		type,
-		window: manager.describeWindow(leafWindow)
-	};
-}
 
 export default class TileLineBasePlugin extends Plugin {
 	private windowContextManager!: WindowContextManager;
@@ -205,6 +189,24 @@ export default class TileLineBasePlugin extends Plugin {
 					void this.toggleLeafView(activeLeaf);
 				}
 				return true;
+			}
+		});
+		registerKanbanViewCommand({
+			addCommand: (config) => { this.addCommand(config); },
+			getActiveTableView: () => this.getActiveTableView(),
+			getActiveContext: () => ({
+				leaf: this.getMostRecentLeaf(),
+				activeFile: this.app.workspace.getActiveFile()
+			}),
+			openKanbanView: (file, leaf) => {
+				const preferredWindow = this.windowContextManager.getLeafWindow(leaf ?? null);
+				const workspace = this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace;
+				return this.viewCoordinator.openTableView(file, {
+					leaf: leaf ?? undefined,
+					preferredWindow,
+					workspace,
+					mode: 'kanban'
+				});
 			}
 		});
 

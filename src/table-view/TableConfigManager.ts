@@ -17,8 +17,12 @@ export interface TableConfigData {
 	tagGroups?: FileTagGroupState | null;
 	columnWidths?: Record<string, number>;
 	columnConfigs?: string[] | null;
-	viewPreference?: 'table';
+	viewPreference?: 'table' | 'kanban';
 	copyTemplate?: string | null;
+	kanban?: {
+		laneField: string;
+		sortField?: string | null;
+	};
 }
 
 interface ParsedConfigBlock {
@@ -94,6 +98,9 @@ export class TableConfigManager {
 		if (data.viewPreference) {
 			payload.viewPreference = data.viewPreference;
 		}
+		if (data.kanban) {
+			payload.kanban = data.kanban;
+		}
 
 		const configBlock = buildConfigCalloutBlock(fileId, version, payload);
 		const content = await this.app.vault.read(file);
@@ -113,7 +120,8 @@ export class TableConfigManager {
 				columnWidths: data.columnWidths ?? {},
 				copyTemplate: data.copyTemplate ?? undefined,
 				columnConfigs: data.columnConfigs ?? [],
-				viewPreference: data.viewPreference ?? 'table'
+				viewPreference: data.viewPreference ?? 'table',
+				kanban: data.kanban ?? undefined
 			});
 		}
 

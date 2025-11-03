@@ -34,6 +34,8 @@ import { getPluginContext } from "./pluginContext";
 import type { ParagraphPromotionController } from "./table-view/paragraph/ParagraphPromotionController";
 import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
+import type { KanbanViewController } from "./table-view/kanban/KanbanViewController";
+import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -81,10 +83,17 @@ export class TableView extends ItemView {
 	public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
 	public initialColumnState: ColumnState[] | null = null;
 	private markdownToggleButton: HTMLElement | null = null;
+	public activeViewMode: 'table' | 'kanban' = 'table';
+	public kanbanController: KanbanViewController | null = null;
+	public kanbanLaneField: string | null = null;
+	public kanbanSortField: string | null = "看板排序";
+	public kanbanPreferencesLoaded = false;
+	private kanbanManager!: KanbanViewModeManager;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		initializeTableView(this);
+		this.kanbanManager = new KanbanViewModeManager(this);
 	}
 
 	getViewType(): string {
@@ -119,19 +128,36 @@ export class TableView extends ItemView {
 	async render(): Promise<void> {
 		const snapshot = this.refreshCoordinator ? this.refreshCoordinator.captureViewSnapshot() : null;
 		await renderTableView(this);
+
+		const rerenderMode = await this.kanbanManager.handleAfterRender();
+		if (rerenderMode) {
+			await renderTableView(this);
+			if (rerenderMode === 'kanban') {
+				await this.kanbanManager.handleAfterRender();
+			}
+		}
+
 		if (this.refreshCoordinator) {
 			await this.refreshCoordinator.finalizeRender(snapshot);
 		}
+		this.kanbanManager.updateToggleButton();
 	}
 
 	async onOpen(): Promise<void> {
 		this.ensureMarkdownToggle();
+		this.kanbanManager.ensureToggle();
+		this.kanbanManager.updateToggleButton();
 	}
 
 	async onClose(): Promise<void> {
 		if (this.markdownToggleButton) {
 			this.markdownToggleButton.remove();
 			this.markdownToggleButton = null;
+		}
+		this.kanbanManager.detachToggle();
+		if (this.kanbanController) {
+			this.kanbanController.destroy();
+			this.kanbanController = null;
 		}
 		await handleOnClose(this);
 		if (this.refreshCoordinator) {
@@ -144,6 +170,15 @@ export class TableView extends ItemView {
 		if (!plugin) {
 			return;
 		}
+		const isKanban = this.activeViewMode === "kanban";
+		menu.addItem((item) => {
+			item
+				.setTitle(isKanban ? t("kanbanView.actions.switchToTable") : t("kanbanView.actions.switchToKanban"))
+				.setIcon(isKanban ? "table" : "layout-kanban")
+				.onClick(() => {
+					void this.setActiveViewMode(isKanban ? "table" : "kanban");
+				});
+		});
 		menu.addItem((item) => {
 			item
 				.setTitle(t("commands.openHelpDocument"))
@@ -178,6 +213,11 @@ export class TableView extends ItemView {
 		button.setAttribute("aria-label", label);
 		button.setAttribute("title", label);
 		this.markdownToggleButton = button;
+	}
+
+
+	public async setActiveViewMode(mode: 'table' | 'kanban'): Promise<void> {
+		await this.kanbanManager.setActiveViewMode(mode);
 	}
 
 }

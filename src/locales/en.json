@@ -6,6 +6,36 @@
     "openTableView": "Switch to TileLineBase table view",
     "openMarkdownView": "Switch back to Markdown editor"
   },
+  "kanbanView": {
+    "schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
+    "missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
+    "missingSortField": "Kanban view needs the \"{{field}}\" column to keep card ordering.",
+    "unassignedLaneLabel": "Unassigned",
+    "filteredCountLabel": "{{count}} cards match the current filters",
+    "totalCountLabel": "{{count}} cards",
+    "dragHint": "Drag cards to reorder within a lane or move them across lanes.",
+    "emptyState": "No cards yet. Add rows from the table view to populate this board.",
+    "emptyStateFiltered": "No cards match the current filters.",
+    "laneCountLabel": "{{count}} cards in this lane",
+    "emptyLanePlaceholder": "Drop cards here",
+    "untitledCardFallback": "Untitled card",
+    "moreFieldsLabel": "+{{count}} more",
+    "laneNotConfigured": "Choose a kanban column from the toolbar to start using the board.",
+    "actions": {
+      "openFromMarkdown": "Open TileLineBase kanban view",
+      "switchToKanban": "Switch to kanban view",
+      "switchToTable": "Switch to table view"
+    },
+    "fieldModal": {
+      "title": "Select kanban column",
+      "description": "Pick the column whose values should form the lanes in the kanban board.",
+      "laneFieldLabel": "Kanban column",
+      "confirmLabel": "Use column",
+      "cancelLabel": "Cancel",
+      "schemaUnavailable": "Load the table first before choosing a kanban column.",
+      "noColumns": "No available columns to use as kanban lanes."
+    }
+  },
   "commands": {
     "undoTableHistory": "Undo last table change",
     "redoTableHistory": "Redo table change",
@@ -14,7 +44,8 @@
     "exportCsv": "Export current table as CSV",
     "importCsv": "Import CSV into current table",
     "importCsvAsTable": "Import CSV as new table",
-    "toggleTableView": "Toggle table view"
+    "toggleTableView": "Toggle table view",
+    "openKanbanView": "Open TileLineBase kanban view"
   },
   "csv": {
     "errorNoFile": "Save the note before exporting; the current file could not be found.",

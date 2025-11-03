@@ -9,6 +9,7 @@ import { handleCellLinkOpen } from './LinkNavigation';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
+import { renderKanbanView } from './kanban/renderKanbanView';
 
 const logger = getLogger('table-view:renderer');
 
@@ -23,6 +24,17 @@ export async function renderTableView(view: TableView): Promise<void> {
 	container.empty();
 	container.classList.add('tlb-table-view-content');
 	container.classList.remove('tlb-has-grid');
+	container.classList.remove('tlb-kanban-mode');
+
+	if (view.gridAdapter) {
+		view.gridController.destroy();
+		view.gridAdapter = null;
+		view.tableContainer = null;
+	}
+	if (view.kanbanController) {
+		view.kanbanController.destroy();
+		view.kanbanController = null;
+	}
 
 	const ownerDoc = container.ownerDocument;
 	const ownerWindow = ownerDoc?.defaultView ?? null;
@@ -66,6 +78,21 @@ export async function renderTableView(view: TableView): Promise<void> {
 			const loadedTemplate = configBlock.copyTemplate.replace(/\r\n/g, '\n');
 			view.copyTemplate = loadedTemplate.trim().length > 0 ? loadedTemplate : null;
 		}
+	}
+
+	if (!view.kanbanPreferencesLoaded) {
+		const preference = configBlock?.viewPreference;
+		if (preference === 'kanban' || preference === 'table') {
+			view.activeViewMode = preference;
+		}
+		const kanbanConfig = configBlock?.kanban;
+		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
+			view.kanbanLaneField = kanbanConfig.laneField;
+			if (typeof kanbanConfig.sortField === 'string') {
+				view.kanbanSortField = kanbanConfig.sortField;
+			}
+		}
+		view.kanbanPreferencesLoaded = true;
 	}
 
 	view.filterViewState = view.filterStateStore.getState();
@@ -126,9 +153,33 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	renderFilterViewControls(view, container);
 
+	const primaryField = view.schema.columnNames[0] ?? null;
+
+	if (view.activeViewMode === 'kanban') {
+		container.classList.add('tlb-kanban-mode');
+		container.classList.remove('tlb-has-grid');
+		if (!view.kanbanLaneField) {
+			container.createDiv({
+				cls: 'tlb-kanban-warning',
+				text: t('kanbanView.laneNotConfigured')
+			});
+			return;
+		}
+		const sortField =
+			view.kanbanSortField && view.schema.columnNames.includes(view.kanbanSortField)
+				? view.kanbanSortField
+				: null;
+		renderKanbanView(view, container, {
+			primaryField,
+			laneField: view.kanbanLaneField,
+			sortField
+		});
+		view.filterOrchestrator.applyActiveView();
+		return;
+	}
+
 	container.classList.add('tlb-has-grid');
 
-	const primaryField = view.schema.columnNames[0] ?? null;
 	const columns = [
 		{
 			field: '#',

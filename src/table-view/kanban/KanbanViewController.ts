@@ -59,7 +59,7 @@ export class KanbanViewController {
 		this.enableDrag = options.enableDrag;
 		this.dragAvailable = this.enableDrag;
 
-		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getVisibleRows());
+		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
 		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
@@ -81,8 +81,8 @@ export class KanbanViewController {
 	}
 
 	private registerListeners(): void {
-		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener((rows) => {
-			this.visibleRows = this.applyBoardFilter(rows);
+		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener(() => {
+			this.recomputeVisibleRows();
 			if (!this.isApplyingMutation) {
 				this.renderBoard();
 			}
@@ -93,6 +93,9 @@ export class KanbanViewController {
 		});
 	}
 
+	private recomputeVisibleRows(): void {
+		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getAllRows());
+	}
 
 	private applyBoardFilter(rows: RowData[]): RowData[] {
 		const rule = this.view.activeKanbanBoardFilter;

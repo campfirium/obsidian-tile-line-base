@@ -1,6 +1,7 @@
 import { getPluginContext } from '../../../pluginContext';
 import type { FileFilterViewState, FilterViewDefinition } from '../../../types/filterView';
-import type { FileTagGroupState, TagGroupDefinition } from '../../../types/tagGroup';
+import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../../../types/tagGroup';
+import { STATUS_BASELINE_VALUES } from '../statusDefaults';
 
 export const DEFAULT_TAG_GROUP_ID = '__tlb_tag_group_default__';
 export const STATUS_TAG_GROUP_ID = '__tlb_tag_group_status__';
@@ -166,33 +167,38 @@ export class TagGroupStore {
 	syncWithFilterViews(filterState: FileFilterViewState, defaultGroupName: string): void {
 		this.setDefaultGroupLabel(defaultGroupName);
 		const views = Array.isArray(filterState.views) ? filterState.views : [];
-		const orderedIds = this.collectViewIds(views);
-		const idSet = new Set<string>(orderedIds);
+		const idSet = new Set<string>(this.collectViewIds(views));
 
 		this.updateState((state) => {
+			const metadata = this.ensureMetadata(state);
 			const defaultGroup = this.ensureDefaultGroup(state, defaultGroupName);
 			defaultGroup.name = this.resolveGroupName(defaultGroup.name, defaultGroupName);
 
 			this.ensureStatusGroup(state, this.fallbackStatusName);
 
-			const assignedIds = new Set<string>();
 			const normalizedGroups: TagGroupDefinition[] = [];
-			for (const group of state.groups) {
+			for (const group of [...state.groups]) {
 				if (group.id === DEFAULT_TAG_GROUP_ID) {
 					continue;
 				}
-				const nextIds = group.viewIds.filter((id) => idSet.has(id));
-				for (const viewId of nextIds) {
-					assignedIds.add(viewId);
-				}
+				const fallbackName = group.id === STATUS_TAG_GROUP_ID ? this.fallbackStatusName : group.id;
+				const sanitizedIds = this.normalizeViewIds(group.viewIds, idSet);
 				normalizedGroups.push({
 					id: group.id,
-					name: this.resolveGroupName(group.name, group.id),
-					viewIds: nextIds
+					name: this.resolveGroupName(group.name, fallbackName),
+					viewIds: sanitizedIds
 				});
 			}
 
-			defaultGroup.viewIds = orderedIds.filter((id) => !assignedIds.has(id));
+			let defaultIds = this.normalizeViewIds(defaultGroup.viewIds, idSet);
+			if (!metadata.defaultSeeded && defaultIds.length > 0) {
+				metadata.defaultSeeded = true;
+			}
+			if (!metadata.defaultSeeded) {
+				defaultIds = this.seedDefaultGroupViewIds(defaultIds, filterState, idSet, metadata);
+			}
+
+			defaultGroup.viewIds = defaultIds;
 
 			state.groups = this.normalizeGroupOrder([defaultGroup, ...normalizedGroups]);
 
@@ -242,6 +248,26 @@ export class TagGroupStore {
 		return ids;
 	}
 
+	private normalizeViewIds(source: string[] | null | undefined, validIds: Set<string>): string[] {
+		const normalized: string[] = [];
+		const seen = new Set<string>();
+		if (!Array.isArray(source)) {
+			return normalized;
+		}
+		for (const raw of source) {
+			if (typeof raw !== 'string') {
+				continue;
+			}
+			const trimmed = raw.trim();
+			if (!trimmed || seen.has(trimmed) || !validIds.has(trimmed)) {
+				continue;
+			}
+			seen.add(trimmed);
+			normalized.push(trimmed);
+		}
+		return normalized;
+	}
+
 	private ensureDefaultGroup(state: FileTagGroupState, name: string): TagGroupDefinition {
 		let group = state.groups.find((entry) => entry.id === DEFAULT_TAG_GROUP_ID);
 		if (!group) {
@@ -271,6 +297,7 @@ export class TagGroupStore {
 	}
 
 	getDefaultGroup(): TagGroupDefinition {
+		this.ensureMetadata(this.state);
 		const existing = this.state.groups.find((group) => group.id === DEFAULT_TAG_GROUP_ID);
 		if (existing) {
 			return existing;
@@ -311,10 +338,28 @@ export class TagGroupStore {
 			? source?.activeGroupId ?? DEFAULT_TAG_GROUP_ID
 			: DEFAULT_TAG_GROUP_ID;
 
+		const metadata = this.cloneMetadata(source?.metadata);
+
 		return {
 			activeGroupId,
-			groups: this.normalizeGroupOrder(groups)
+			groups: this.normalizeGroupOrder(groups),
+			metadata
 		};
+	}
+
+	private cloneMetadata(source: FileTagGroupMetadata | null | undefined): FileTagGroupMetadata {
+		const metadata: FileTagGroupMetadata = {};
+		if (source?.defaultSeeded) {
+			metadata.defaultSeeded = true;
+		}
+		return metadata;
+	}
+
+	private ensureMetadata(state: FileTagGroupState): FileTagGroupMetadata {
+		if (!state.metadata) {
+			state.metadata = {};
+		}
+		return state.metadata;
 	}
 
 	private injectSystemGroups(groups: TagGroupDefinition[]): void {
@@ -403,8 +448,81 @@ export class TagGroupStore {
 					name: this.fallbackStatusName,
 					viewIds: []
 				}
-			]
+			],
+			metadata: {}
 		};
+	}
+
+	private seedDefaultGroupViewIds(
+		current: string[],
+		filterState: FileFilterViewState,
+		idSet: Set<string>,
+		metadata: FileTagGroupMetadata
+	): string[] {
+		const baselineIds = this.collectStatusBaselineViewIds(filterState, idSet);
+		if (baselineIds.length === 0) {
+			return current;
+		}
+		const seen = new Set<string>();
+		const seeded: string[] = [];
+		for (const id of baselineIds) {
+			if (!seen.has(id) && idSet.has(id)) {
+				seen.add(id);
+				seeded.push(id);
+			}
+		}
+		for (const id of current) {
+			if (!seen.has(id) && idSet.has(id)) {
+				seen.add(id);
+				seeded.push(id);
+			}
+		}
+		if (seeded.length > 0) {
+			metadata.defaultSeeded = true;
+		}
+		return seeded;
+	}
+
+	private collectStatusBaselineViewIds(filterState: FileFilterViewState, idSet: Set<string>): string[] {
+		const result: string[] = [];
+		const seen = new Set<string>();
+		const views = Array.isArray(filterState.views) ? filterState.views : [];
+		for (const value of STATUS_BASELINE_VALUES) {
+			const match = views.find((view) => this.matchesFieldEqualsFilter(view, 'status', value));
+			const id = match && typeof match.id === 'string' ? match.id.trim() : '';
+			if (!id || seen.has(id) || !idSet.has(id)) {
+				continue;
+			}
+			seen.add(id);
+			result.push(id);
+		}
+		return result;
+	}
+
+	private matchesFieldEqualsFilter(view: FilterViewDefinition, field: string, value: string): boolean {
+		if (!view?.filterRule || view.filterRule.combineMode !== 'AND') {
+			return false;
+		}
+		const conditions = Array.isArray(view.filterRule.conditions) ? view.filterRule.conditions : [];
+		if (conditions.length !== 1) {
+			return false;
+		}
+		const condition = conditions[0];
+		const column = typeof condition.column === 'string' ? condition.column.trim().toLowerCase() : '';
+		if (column !== field.trim().toLowerCase()) {
+			return false;
+		}
+		if (condition.operator !== 'equals') {
+			return false;
+		}
+		const rawValue =
+			typeof condition.value === 'string'
+				? condition.value.trim().toLowerCase()
+				: String(condition.value ?? '').trim().toLowerCase();
+		if (!rawValue) {
+			return false;
+		}
+		return rawValue === value.trim().toLowerCase();
 	}
 
 }

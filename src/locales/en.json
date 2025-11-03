@@ -421,7 +421,7 @@
     "menuRename": "Rename view group",
     "menuDelete": "Delete view group",
     "deleteNotice": "Deleted view group: {{name}}",
-    "deleteDefaultBlocked": "The ungrouped view group cannot be deleted",
+    "deleteDefaultBlocked": "The default view group cannot be deleted",
     "createModalTitle": "Create view group",
     "createModeLabel": "View group contents",
     "createModeManual": "Empty view group",

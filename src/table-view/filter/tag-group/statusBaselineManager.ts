@@ -13,9 +13,6 @@ interface StatusBaselineContext {
 export function ensureStatusBaseline(context: StatusBaselineContext): FileFilterViewState {
 	const baselineField = 'status';
 	const baselineValues = Array.from(STATUS_BASELINE_VALUES);
-	if (context.isStatusBaselineSeeded()) {
-		return context.filterState;
-	}
 	if (!hasColumn(context.getAvailableColumns(), baselineField)) {
 		return context.filterState;
 	}
@@ -25,7 +22,9 @@ export function ensureStatusBaseline(context: StatusBaselineContext): FileFilter
 		requiresViewNameNormalization(context.filterState, baselineField, value)
 	);
 	if (!needsSeed && !needsNormalize) {
-		context.markStatusBaselineSeeded();
+		if (!context.isStatusBaselineSeeded()) {
+			context.markStatusBaselineSeeded();
+		}
 		return context.filterState;
 	}
 

@@ -7,6 +7,36 @@
     "openTableView": "切换到 TileLineBase 表格视图",
     "openMarkdownView": "切换回 Markdown 编辑器"
   },
+  "kanbanView": {
+    "schemaUnavailable": "看板视图需要有效的表结构，请重新加载后再试。",
+    "missingLaneField": "看板视图需要“{{field}}”列，请在表格视图中新增该字段或切换回表格。",
+    "missingSortField": "看板视图需要“{{field}}”列以保存卡片排序。",
+    "unassignedLaneLabel": "未分组",
+    "filteredCountLabel": "共有 {{count}} 张卡片符合当前筛选",
+    "totalCountLabel": "共有 {{count}} 张卡片",
+    "dragHint": "可拖拽卡片以重新排序或移动到其他泳道。",
+    "emptyState": "还没有卡片，可在表格视图中新增行。",
+    "emptyStateFiltered": "没有卡片符合当前筛选条件。",
+    "laneCountLabel": "本泳道共有 {{count}} 张卡片",
+    "emptyLanePlaceholder": "拖拽卡片到此处",
+    "untitledCardFallback": "未命名卡片",
+    "moreFieldsLabel": "+{{count}} 项",
+    "laneNotConfigured": "请先通过工具栏选择看板列，才能使用看板视图。",
+    "actions": {
+      "openFromMarkdown": "打开 TileLineBase 看板视图",
+      "switchToKanban": "切换到看板视图",
+      "switchToTable": "切换回表格视图"
+    },
+    "fieldModal": {
+      "title": "选择看板列",
+      "description": "请选择要作为泳道的列，列中的不同值会生成不同泳道。",
+      "laneFieldLabel": "看板列",
+      "confirmLabel": "使用此列",
+      "cancelLabel": "取消",
+      "schemaUnavailable": "请先加载表格后再选择看板列。",
+      "noColumns": "当前没有可用列用于看板泳道。"
+    }
+  },
   "commands": {
     "undoTableHistory": "撤销上一次表格更改",
     "redoTableHistory": "重做表格更改",
@@ -15,7 +45,8 @@
     "exportCsv": "导出当前表格为 CSV",
     "importCsv": "将 CSV 导入当前表格",
     "toggleTableView": "切换表格视图",
-    "importCsvAsTable": "导入 CSV 并创建新表格"
+    "importCsvAsTable": "导入 CSV 并创建新表格",
+    "openKanbanView": "打开 TileLineBase 看板视图"
   },
   "csv": {
     "errorNoFile": "请先保存当前笔记或选择有效的 CSV 文件后再试。",

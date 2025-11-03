@@ -23,6 +23,8 @@ interface TablePersistenceDeps {
 	getTagGroupState: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
+	getViewPreference: () => 'table' | 'kanban';
+	getKanbanConfig: () => { laneField: string | null; sortField: string | null } | null;
 	markSelfMutation?: (file: TFile) => void;
 }
 
@@ -94,13 +96,25 @@ export class TablePersistenceService {
 				?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
 				?.map((config) => this.deps.dataStore.serializeColumnConfig(config)) ?? [];
 
+		const viewPreference = this.deps.getViewPreference?.() ?? 'table';
+		const kanbanConfig = this.deps.getKanbanConfig?.();
+		const laneField = kanbanConfig?.laneField ?? null;
+		const sortField = kanbanConfig?.sortField ?? null;
+
 		return {
 			filterViews: this.deps.getFilterViewState(),
 			tagGroups: this.deps.getTagGroupState(),
 			columnWidths: this.deps.columnLayoutStore.exportPreferences(),
 			columnConfigs,
-			viewPreference: 'table',
-			copyTemplate: this.deps.getCopyTemplate()
+			viewPreference,
+			copyTemplate: this.deps.getCopyTemplate(),
+			kanban:
+				laneField && laneField.trim().length > 0
+					? {
+							laneField,
+							sortField: sortField && sortField.trim().length > 0 ? sortField : undefined
+						}
+					: undefined
 		};
 	}
 

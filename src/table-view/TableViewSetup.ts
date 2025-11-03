@@ -46,6 +46,11 @@ export function initializeTableView(view: TableView): void {
 		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null,
 		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null,
+		getViewPreference: () => view.activeViewMode,
+		getKanbanConfig: () => ({
+			laneField: view.kanbanLaneField,
+			sortField: view.kanbanSortField
+		}),
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)
 	});
 	view.columnInteractionController = new ColumnInteractionController({

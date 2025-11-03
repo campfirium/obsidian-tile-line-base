@@ -24,7 +24,7 @@ export interface OnboardingState {
 }
 
 export interface TileLineBaseSettings {
-	fileViewPrefs: Record<string, 'markdown' | 'table'>;
+	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
@@ -115,10 +115,11 @@ export class SettingsService {
 	}
 
 	shouldAutoOpen(filePath: string): boolean {
-		return this.settings.fileViewPrefs[filePath] === 'table';
+		const pref = this.settings.fileViewPrefs[filePath];
+		return pref === 'table' || pref === 'kanban';
 	}
 
-	async setFileViewPreference(filePath: string, view: 'markdown' | 'table'): Promise<boolean> {
+	async setFileViewPreference(filePath: string, view: 'markdown' | 'table' | 'kanban'): Promise<boolean> {
 		const current = this.settings.fileViewPrefs[filePath];
 		if (current === view) {
 			return false;

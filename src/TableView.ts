@@ -103,7 +103,6 @@ export class TableView extends ItemView {
 				this.file = file;
 				this.refreshCoordinator.setTrackedFile(file);
 				await this.render();
-				this.updateViewHeaderTitle();
 			} else {
 				this.refreshCoordinator.setTrackedFile(null);
 			}
@@ -123,11 +122,9 @@ export class TableView extends ItemView {
 		if (this.refreshCoordinator) {
 			await this.refreshCoordinator.finalizeRender(snapshot);
 		}
-		this.updateViewHeaderTitle();
 	}
 
 	async onOpen(): Promise<void> {
-		this.updateViewHeaderTitle();
 		this.ensureMarkdownToggle();
 	}
 
@@ -181,33 +178,6 @@ export class TableView extends ItemView {
 		button.setAttribute("aria-label", label);
 		button.setAttribute("title", label);
 		this.markdownToggleButton = button;
-	}
-
-	private updateViewHeaderTitle(): void {
-		const leafElement = this.containerEl.closest(".workspace-leaf");
-		if (!leafElement) {
-			return;
-		}
-		const displayText = this.getDisplayText();
-
-		const titleEl = leafElement.querySelector<HTMLElement>(".view-header-title");
-		if (titleEl && titleEl.textContent !== displayText) {
-			titleEl.textContent = displayText;
-		}
-		if (titleEl) {
-			titleEl.setAttribute("aria-label", displayText);
-			titleEl.setAttribute("title", displayText);
-		}
-
-		const tabElement = leafElement.closest(".workspace-tab");
-		const tabTitleEl = tabElement?.querySelector<HTMLElement>(".workspace-tab-header-inner-title");
-		if (tabTitleEl && tabTitleEl.textContent !== displayText) {
-			tabTitleEl.textContent = displayText;
-		}
-		if (tabTitleEl) {
-			tabTitleEl.setAttribute("aria-label", displayText);
-			tabTitleEl.setAttribute("title", displayText);
-		}
 	}
 
 }

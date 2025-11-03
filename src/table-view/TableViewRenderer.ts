@@ -186,7 +186,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 		renderKanbanView(view, container, {
 			primaryField,
 			laneField: view.kanbanLaneField,
-			sortField
+			sortField,
+			laneWidth: view.kanbanLaneWidth
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;

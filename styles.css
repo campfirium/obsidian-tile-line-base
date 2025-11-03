@@ -1832,8 +1832,10 @@
 .tlb-kanban-lane {
 	display: flex;
 	flex-direction: column;
-	min-width: 18rem;
-	max-width: 20rem;
+	flex: 0 0 var(--tlb-kanban-lane-width, 18rem);
+	min-width: var(--tlb-kanban-lane-width, 18rem);
+	max-width: var(--tlb-kanban-lane-width, 18rem);
+	width: var(--tlb-kanban-lane-width, 18rem);
 	background-color: var(--background-secondary);
 	border-radius: var(--radius-m);
 	box-shadow: var(--shadow-s);

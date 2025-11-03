@@ -6,6 +6,7 @@ interface RenderKanbanViewOptions {
 	primaryField: string | null;
 	laneField: string;
 	sortField: string | null;
+	laneWidth: number;
 }
 
 export function renderKanbanView(
@@ -52,6 +53,7 @@ export function renderKanbanView(
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,
 		displayFields: columnNames,
-		enableDrag: true
+		enableDrag: true,
+		laneWidth: options.laneWidth
 	});
 }

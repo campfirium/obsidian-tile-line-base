@@ -2,6 +2,7 @@ import { getPluginContext } from '../../pluginContext';
 import type { FilterRule } from '../../types/filterView';
 import type { KanbanBoardDefinition, KanbanBoardState } from '../../types/kanban';
 import { DEFAULT_KANBAN_BOARD_STATE } from '../../types/kanban';
+import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 
 export interface CreateBoardOptions {
 	name: string;
@@ -9,6 +10,7 @@ export interface CreateBoardOptions {
 	laneField: string;
 	filterRule: FilterRule | null;
 	setActive?: boolean;
+	laneWidth?: number | null;
 }
 
 export interface UpdateBoardOptions {
@@ -16,6 +18,7 @@ export interface UpdateBoardOptions {
 	icon?: string | null;
 	laneField?: string | null;
 	filterRule?: FilterRule | null;
+	laneWidth?: number | null;
 }
 
 export class KanbanBoardStore {
@@ -85,7 +88,8 @@ export class KanbanBoardStore {
 			name: this.sanitizeName(options.name),
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
-			filterRule: this.cloneFilterRule(options.filterRule)
+			filterRule: this.cloneFilterRule(options.filterRule),
+			laneWidth: this.sanitizeLaneWidth(options.laneWidth)
 		};
 		this.state.boards.push(board);
 		if (options.setActive !== false) {
@@ -113,6 +117,9 @@ export class KanbanBoardStore {
 		}
 		if (updates.filterRule !== undefined) {
 			target.filterRule = this.cloneFilterRule(updates.filterRule);
+		}
+		if (updates.laneWidth !== undefined) {
+			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
 		}
 		return { ...target };
 	}
@@ -179,13 +186,18 @@ export class KanbanBoardStore {
 						name: this.sanitizeName(board.name),
 						icon: this.sanitizeIcon(board.icon),
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
-						filterRule: this.cloneFilterRule(board.filterRule ?? null)
+						filterRule: this.cloneFilterRule(board.filterRule ?? null),
+						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null)
 					}))
 			: [];
 		return {
 			boards,
 			activeBoardId: typeof state.activeBoardId === 'string' ? state.activeBoardId : null
 		};
+	}
+
+	private sanitizeLaneWidth(width: number | string | null | undefined): number {
+		return sanitizeKanbanLaneWidth(width ?? DEFAULT_KANBAN_LANE_WIDTH);
 	}
 
 	private cloneFilterRule(rule: FilterRule | null | undefined): FilterRule | null {

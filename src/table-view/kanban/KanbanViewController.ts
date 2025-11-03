@@ -5,6 +5,7 @@ import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
+import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -18,6 +19,7 @@ interface KanbanViewControllerOptions {
 	primaryField: string | null;
 	displayFields: string[];
 	enableDrag: boolean;
+	laneWidth: number;
 }
 
 interface RowUpdate {
@@ -33,6 +35,7 @@ export class KanbanViewController {
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
+	private readonly laneWidth: number;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
@@ -57,6 +60,7 @@ export class KanbanViewController {
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
+		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth, DEFAULT_KANBAN_LANE_WIDTH);
 		this.dragAvailable = this.enableDrag;
 
 		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getVisibleRows());
@@ -65,6 +69,7 @@ export class KanbanViewController {
 		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
+		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
 		this.registerListeners();
 		this.ensureSortableLoaded();

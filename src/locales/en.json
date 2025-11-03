@@ -42,7 +42,7 @@
       "editBoardTitle": "Edit kanban board", "editBoardLabel": "Edit board",
       "deleteBoardLabel": "Delete board", "deleteBoardConfirm": "Delete \"{{name}}\"? Cards remain available from other boards.",
       "cannotDeleteLastBoard": "Keep at least one board.", "newBoardPlaceholder": "Kanban board",
-      "deleteBoardConfirmAction": "Delete", "laneFieldMissingNotice": "The kanban board no longer has a valid lane column. Pick a new column to continue.", "noBoardsPlaceholder": "No kanban boards yet. Use the + button to create one.", "laneFieldLabel": "Kanban column", "duplicateBoardLabel": "Duplicate board", "duplicateBoardTitle": "Duplicate board: {{name}}", "duplicateBoardNotice": "Duplicated board: {{name}}", "duplicateNameSuffix": "copy"
+      "deleteBoardConfirmAction": "Delete", "laneFieldMissingNotice": "The kanban board no longer has a valid lane column. Pick a new column to continue.", "noBoardsPlaceholder": "No kanban boards yet. Use the + button to create one.", "laneFieldLabel": "Kanban column", "duplicateBoardLabel": "Duplicate board", "duplicateBoardTitle": "Duplicate board: {{name}}", "duplicateBoardNotice": "Duplicated board: {{name}}", "duplicateNameSuffix": "copy", "laneWidthLabel": "Lane width (rem)", "laneWidthDescription": "Enter a value between {{min}} and {{max}} rem to control the column width."
     }
   },
   "commands": {

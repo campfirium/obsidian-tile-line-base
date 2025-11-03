@@ -6,6 +6,7 @@ export interface KanbanBoardDefinition {
 	icon?: string | null;
 	laneField: string;
 	filterRule?: FilterRule | null;
+	laneWidth?: number | null;
 }
 
 export interface KanbanBoardState {

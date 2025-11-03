@@ -38,6 +38,7 @@ import type { KanbanViewController } from "./table-view/kanban/KanbanViewControl
 import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager";
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
+import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
 import type { KanbanBoardState } from "./types/kanban";
 
@@ -91,6 +92,7 @@ export class TableView extends ItemView {
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null;
 	public kanbanSortField: string | null = "看板排序";
+	public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 	public kanbanPreferencesLoaded = false;
 	public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null;
@@ -123,6 +125,7 @@ export class TableView extends ItemView {
 				this.file = file;
 				this.refreshCoordinator.setTrackedFile(file);
 				this.kanbanBoardsLoaded = false;
+				this.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 				await this.render();
 			} else {
 				this.refreshCoordinator.setTrackedFile(null);
@@ -185,6 +188,7 @@ export class TableView extends ItemView {
 			this.kanbanBoardController.reset();
 		}
 		this.kanbanBoardsLoaded = false;
+		this.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 		await handleOnClose(this);
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();

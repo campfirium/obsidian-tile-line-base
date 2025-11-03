@@ -1,16 +1,14 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
-
-export interface KanbanCardField {
-	name: string;
-	value: string;
-}
+import type { KanbanRuntimeCardContent } from '../../types/kanban';
+import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
 
 export interface KanbanCard {
 	id: string;
 	rowIndex: number;
 	title: string;
+	body: string;
+	tags: string[];
 	sortOrder: number;
-	fields: KanbanCardField[];
 	rawLane: string;
 	row: RowData;
 }
@@ -32,7 +30,7 @@ interface BuildKanbanBoardStateParams {
 	sortField: string | null;
 	fallbackLane: string;
 	primaryField: string | null;
-	displayFields: string[];
+	content: KanbanRuntimeCardContent;
 	quickFilter: string;
 	resolveRowIndex: (row: RowData) => number | null;
 }
@@ -44,7 +42,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		sortField,
 		fallbackLane,
 		primaryField,
-		displayFields,
+		content,
 		quickFilter,
 		resolveRowIndex
 	} = params;
@@ -62,11 +60,21 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			continue;
 		}
 
-		if (hasQuickFilter && !matchesQuickFilter(row, displayFields, laneField, normalizedQuickFilter)) {
+		const laneName = normalizeString(row[laneField]) || fallbackLane;
+
+		const title = renderTitle(content.titleTemplate, row, primaryField);
+		const body = renderBody(content.bodyTemplate, row);
+		const tags = renderTags(content.tagsTemplate, row);
+
+		if (hasQuickFilter && !matchesQuickFilter(row, { title, body, tags }, {
+			laneField,
+			primaryField,
+			content,
+			needle: normalizedQuickFilter
+		})) {
 			continue;
 		}
 
-		const laneName = normalizeString(row[laneField]) || fallbackLane;
 		const laneId = resolveLaneId(laneName, laneNameToId, usedLaneIds, laneMap.size);
 
 		let lane = laneMap.get(laneId);
@@ -82,15 +90,14 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
 		const numericSort = sortRaw.length > 0 ? Number(sortRaw) : Number.NaN;
 		const sortOrder = Number.isFinite(numericSort) ? numericSort : lane.cards.length + 1;
-		const title = primaryField ? normalizeString(row[primaryField]) : '';
-		const fields = buildCardFields(row, displayFields, laneField, sortField, primaryField);
 
 		lane.cards.push({
 			id: buildCardId(row, rowIndex),
 			rowIndex,
 			title,
+			body,
+			tags,
 			sortOrder,
-			fields,
 			rawLane: laneName,
 			row
 		});
@@ -114,51 +121,44 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	};
 }
 
+interface CardTextSegments {
+	title: string;
+	body: string;
+	tags: string[];
+}
+
 function matchesQuickFilter(
 	row: RowData,
-	displayFields: string[],
-	laneField: string,
-	needle: string
+	segments: CardTextSegments,
+	options: { laneField: string; primaryField: string | null; content: KanbanRuntimeCardContent; needle: string }
 ): boolean {
-	if (needle.length === 0) {
+	const { laneField, primaryField, content, needle } = options;
+	if (!needle) {
 		return true;
 	}
-	const searchFields = new Set<string>([...displayFields, laneField]);
+	if (segments.title.toLowerCase().includes(needle)) {
+		return true;
+	}
+	if (segments.body.toLowerCase().includes(needle)) {
+		return true;
+	}
+	for (const tag of segments.tags) {
+		if (tag.toLowerCase().includes(needle)) {
+			return true;
+		}
+	}
+	const searchFields = new Set<string>([...content.referencedFields, laneField]);
+	if (primaryField) {
+		searchFields.add(primaryField);
+	}
 	for (const field of searchFields) {
 		const value = normalizeString(row[field]);
-		if (value && value.includes(needle)) {
+		if (value && value.toLowerCase().includes(needle)) {
 			return true;
 		}
 	}
 	const rowIdValue = normalizeString(row[ROW_ID_FIELD]);
-	return rowIdValue.includes(needle);
-}
-
-function buildCardFields(
-	row: RowData,
-	displayFields: string[],
-	laneField: string,
-	sortField: string | null,
-	primaryField: string | null
-): KanbanCardField[] {
-	const fields: KanbanCardField[] = [];
-	for (const field of displayFields) {
-		if (
-			field === laneField ||
-			(sortField && field === sortField) ||
-			field === ROW_ID_FIELD ||
-			field === '#' ||
-			(primaryField && field === primaryField)
-		) {
-			continue;
-		}
-		const value = normalizeString(row[field]);
-		if (value.length === 0) {
-			continue;
-		}
-		fields.push({ name: field, value });
-	}
-	return fields;
+	return rowIdValue.toLowerCase().includes(needle);
 }
 
 function resolveLaneId(

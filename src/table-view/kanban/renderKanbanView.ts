@@ -1,6 +1,7 @@
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
 import { KanbanViewController } from './KanbanViewController';
+import { toRuntimeContent } from './KanbanCardContent';
 
 interface RenderKanbanViewOptions {
 	primaryField: string | null;
@@ -44,6 +45,11 @@ export function renderKanbanView(
 		return;
 	}
 
+	const runtimeContent = view.kanbanContentConfig ?? toRuntimeContent(null, {
+		availableFields: columnNames,
+		laneField
+	});
+
 	const wrapper = container.createDiv({ cls: 'tlb-kanban-wrapper' });
 	view.kanbanController = new KanbanViewController({
 		view,
@@ -52,7 +58,7 @@ export function renderKanbanView(
 		sortField,
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,
-		displayFields: columnNames,
+		content: runtimeContent,
 		enableDrag: true,
 		laneWidth: options.laneWidth
 	});

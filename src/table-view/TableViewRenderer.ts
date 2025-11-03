@@ -85,13 +85,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 		if (preference === 'kanban' || preference === 'table') {
 			view.activeViewMode = preference;
 		}
-		const kanbanConfig = configBlock?.kanban;
-		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
-			view.kanbanLaneField = kanbanConfig.laneField;
-			if (typeof kanbanConfig.sortField === 'string') {
-				view.kanbanSortField = kanbanConfig.sortField;
-			}
-		}
 		view.kanbanPreferencesLoaded = true;
 	}
 
@@ -151,28 +144,19 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.filterViewBar = null;
 	}
 
-	renderFilterViewControls(view, container);
+	if (view.activeViewMode === 'table') {
+		renderFilterViewControls(view, container);
+	} else {
+		view.globalQuickFilterController.cleanup();
+	}
 
 	const primaryField = view.schema.columnNames[0] ?? null;
 
 	if (view.activeViewMode === 'kanban') {
 		container.classList.add('tlb-kanban-mode');
 		container.classList.remove('tlb-has-grid');
-		if (!view.kanbanLaneField) {
-			container.createDiv({
-				cls: 'tlb-kanban-warning',
-				text: t('kanbanView.laneNotConfigured')
-			});
-			return;
-		}
-		const sortField =
-			view.kanbanSortField && view.schema.columnNames.includes(view.kanbanSortField)
-				? view.kanbanSortField
-				: null;
 		renderKanbanView(view, container, {
-			primaryField,
-			laneField: view.kanbanLaneField,
-			sortField
+			primaryField
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;

@@ -1,64 +1,45 @@
-import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
 import type { TableView } from '../../TableView';
-import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
-import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
-
-type SortableStatic = typeof import('sortablejs');
-type SortableInstance = ReturnType<SortableStatic['create']>;
+import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
+import {
+	buildKanbanBoardState,
+	type KanbanBoardState,
+	type KanbanCard,
+	type KanbanLane
+} from './KanbanDataBuilder';
+import type { KanbanLaneSource } from './KanbanLaneResolver';
 
 interface KanbanViewControllerOptions {
 	view: TableView;
 	container: HTMLElement;
-	laneField: string;
-	sortField: string | null;
-	fallbackLaneName: string;
+	lanes: KanbanLaneSource[];
 	primaryField: string | null;
 	displayFields: string[];
-	enableDrag: boolean;
-}
-
-interface RowUpdate {
-	lane?: string;
-	sort?: string;
 }
 
 export class KanbanViewController {
 	private readonly view: TableView;
-	private readonly laneField: string;
-	private readonly sortField: string | null;
-	private readonly fallbackLaneName: string;
+	private readonly lanes: KanbanLaneSource[];
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
-	private readonly enableDrag: boolean;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
 	private boardEl: HTMLElement | null = null;
 
-	private visibleRows: RowData[] = [];
+	private allRows: RowData[] = [];
 	private quickFilterValue = '';
 	private unsubscribeFilter: (() => void) | null = null;
 	private unsubscribeQuickFilter: (() => void) | null = null;
-	private sortables = new Map<string, SortableInstance>();
-	private isApplyingMutation = false;
-	private dragAvailable: boolean;
-	private sortableClass: SortableStatic | null = null;
-	private sortableLoadAttempted = false;
-	private sortableLoadPromise: Promise<SortableStatic | null> | null = null;
 
 	constructor(options: KanbanViewControllerOptions) {
 		this.view = options.view;
-		this.laneField = options.laneField;
-		this.sortField = options.sortField;
-		this.fallbackLaneName = options.fallbackLaneName;
+		this.lanes = options.lanes;
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
-		this.enableDrag = options.enableDrag;
-		this.dragAvailable = this.enableDrag;
 
-		this.visibleRows = this.view.filterOrchestrator.getVisibleRows();
+		this.allRows = this.view.filterOrchestrator.getAllRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
 		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
@@ -66,7 +47,6 @@ export class KanbanViewController {
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
 
 		this.registerListeners();
-		this.ensureSortableLoaded();
 		this.renderBoard();
 	}
 
@@ -75,16 +55,13 @@ export class KanbanViewController {
 		this.unsubscribeFilter = null;
 		this.unsubscribeQuickFilter?.();
 		this.unsubscribeQuickFilter = null;
-		this.destroySortables();
 		this.rootEl.empty();
 	}
 
 	private registerListeners(): void {
-		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener((rows) => {
-			this.visibleRows = rows;
-			if (!this.isApplyingMutation) {
-				this.renderBoard();
-			}
+		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener(() => {
+			this.allRows = this.view.filterOrchestrator.getAllRows();
+			this.renderBoard();
 		});
 		this.unsubscribeQuickFilter = globalQuickFilterManager.subscribe((value) => {
 			this.quickFilterValue = value ?? '';
@@ -96,93 +73,35 @@ export class KanbanViewController {
 		if (!this.boardEl || !this.boardEl.isConnected) {
 			return;
 		}
-		this.ensureSortableLoaded();
-		this.destroySortables();
+
 		this.boardEl.empty();
-		this.boardEl?.setAttribute('aria-busy', 'true');
+		this.boardEl.setAttribute('aria-busy', 'true');
+
+		if (this.lanes.length === 0) {
+			this.renderNoLaneState();
+			this.boardEl.removeAttribute('aria-busy');
+			return;
+		}
 
 		const state = this.buildState();
 		this.renderMessage(state);
 
 		if (state.totalCards === 0) {
 			this.renderEmptyState();
-			this.boardEl?.removeAttribute('aria-busy');
+			this.boardEl.removeAttribute('aria-busy');
 			return;
 		}
 
 		for (const lane of state.lanes) {
 			this.renderLane(lane);
 		}
-		this.boardEl?.removeAttribute('aria-busy');
-	}
-
-	private ensureSortableLoaded(): void {
-		if (
-			!this.enableDrag ||
-			this.sortableClass ||
-			this.sortableLoadPromise ||
-			this.sortableLoadAttempted
-		) {
-			return;
-		}
-		this.sortableLoadAttempted = true;
-		this.sortableLoadPromise = this.loadSortable()
-			.then((sortable) => {
-				this.sortableClass = sortable;
-				if (!this.sortableClass) {
-					this.dragAvailable = false;
-				}
-				this.sortableLoadPromise = null;
-				if (this.boardEl && this.boardEl.isConnected) {
-					this.renderBoard();
-				}
-				return this.sortableClass;
-			});
-	}
-
-	private async loadSortable(): Promise<SortableStatic | null> {
-		try {
-			const module = (await import('sortablejs')) as unknown;
-			const sortable = this.normalizeSortable(module);
-			if (sortable) {
-				return sortable;
-			}
-		} catch (error) {
-			console.warn(
-				'[TileLineBase] Failed to load sortablejs for kanban drag interactions.',
-				error
-			);
-		}
-		return null;
-	}
-
-	private normalizeSortable(candidate: unknown): SortableStatic | null {
-		if (typeof candidate === 'function') {
-			const sortable = candidate as SortableStatic;
-			if (typeof sortable.create === 'function') {
-				return sortable;
-			}
-		}
-		if (
-			candidate &&
-			typeof candidate === 'object' &&
-			'default' in candidate &&
-			typeof (candidate as { default: unknown }).default === 'function'
-		) {
-			const sortable = (candidate as { default: unknown }).default as SortableStatic;
-			if (sortable && typeof sortable.create === 'function') {
-				return sortable;
-			}
-		}
-		return null;
+		this.boardEl.removeAttribute('aria-busy');
 	}
 
 	private buildState(): KanbanBoardState {
 		return buildKanbanBoardState({
-			rows: this.visibleRows,
-			laneField: this.laneField,
-			sortField: this.sortField,
-			fallbackLane: this.fallbackLaneName,
+			rows: this.allRows,
+			lanes: this.lanes,
 			primaryField: this.primaryField,
 			displayFields: this.displayFields,
 			quickFilter: this.quickFilterValue,
@@ -193,29 +112,20 @@ export class KanbanViewController {
 	private renderMessage(state: KanbanBoardState): void {
 		this.messageEl.empty();
 		const filterActive = this.quickFilterValue.trim().length > 0;
+
+		const countLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
 		if (filterActive) {
-			const countLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
 			countLabel.setText(
 				t('kanbanView.filteredCountLabel', {
 					count: String(state.totalCards)
 				})
 			);
 		} else {
-			const totalLabel = this.messageEl.createSpan({ cls: 'tlb-kanban-message__count' });
-			totalLabel.setText(
+			countLabel.setText(
 				t('kanbanView.totalCountLabel', {
 					count: String(state.totalCards)
 				})
 			);
-			if (this.dragAvailable) {
-				const hint = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
-				hint.setText(t('kanbanView.dragHint'));
-			}
-		}
-
-		if (this.enableDrag && !this.dragAvailable) {
-			const dragWarning = this.messageEl.createSpan({ cls: 'tlb-kanban-message__hint' });
-			dragWarning.setText(t('kanbanView.dragUnavailable'));
 		}
 	}
 
@@ -267,32 +177,15 @@ export class KanbanViewController {
 		if (lane.cards.length === 0) {
 			const placeholder = cardsContainer.createDiv({ cls: 'tlb-kanban-lane__placeholder' });
 			placeholder.setText(t('kanbanView.emptyLanePlaceholder'));
+			return;
 		}
 
 		for (const card of lane.cards) {
 			this.renderCard(cardsContainer, card);
 		}
-
-		if (this.dragAvailable && this.sortableClass) {
-			const sortable = this.sortableClass.create(cardsContainer, {
-				group: 'tlb-kanban-board',
-				animation: 160,
-				ghostClass: 'tlb-kanban-card--ghost',
-				dragClass: 'tlb-kanban-card--dragging',
-				handle: '.tlb-kanban-card',
-				draggable: '.tlb-kanban-card',
-				dataIdAttr: 'data-row-index',
-				fallbackOnBody: true,
-				forceFallback: false,
-				onEnd: (event: SortableEvent) => {
-					this.handleDragEnd(event);
-				}
-			});
-			this.sortables.set(lane.id, sortable);
-		}
 	}
 
-	private renderCard(container: HTMLElement, card: KanbanLane['cards'][number]): void {
+	private renderCard(container: HTMLElement, card: KanbanCard): void {
 		const cardEl = container.createDiv({
 			cls: 'tlb-kanban-card',
 			attr: {
@@ -323,119 +216,18 @@ export class KanbanViewController {
 		}
 	}
 
-	private handleDragEnd(event: SortableEvent): void {
-		if (!this.dragAvailable) {
+	private renderNoLaneState(): void {
+		if (!this.boardEl) {
 			return;
 		}
-		const itemEl = event.item as HTMLElement | null;
-		const targetEl = event.to as HTMLElement | null;
-		if (!itemEl || !targetEl) {
-			this.renderBoard();
-			return;
-		}
-		const rowIndex = parseInt(itemEl.dataset.rowIndex ?? '', 10);
-		if (!Number.isInteger(rowIndex)) {
-			this.renderBoard();
-			return;
-		}
+		this.messageEl.empty();
 
-		const targetLaneName = targetEl.dataset.laneName ?? this.fallbackLaneName;
-		itemEl.dataset.laneName = targetLaneName;
-
-		const updates = new Map<number, RowUpdate>();
-		const processed = new Set<HTMLElement>();
-		const lanesToProcess: HTMLElement[] = [];
-		lanesToProcess.push(targetEl);
-		const fromEl = event.from as HTMLElement | null;
-		if (fromEl && fromEl !== targetEl) {
-			lanesToProcess.push(fromEl);
-		}
-
-		for (const laneEl of lanesToProcess) {
-			if (!laneEl || processed.has(laneEl)) {
-				continue;
-			}
-			processed.add(laneEl);
-			const laneName = laneEl.dataset.laneName ?? this.fallbackLaneName;
-			const cardEls = Array.from(laneEl.querySelectorAll<HTMLElement>('.tlb-kanban-card'));
-			cardEls.forEach((cardEl, index) => {
-				const blockIndex = parseInt(cardEl.dataset.rowIndex ?? '', 10);
-				if (!Number.isInteger(blockIndex)) {
-					return;
-				}
-				const record = updates.get(blockIndex) ?? {};
-				if (this.sortField) {
-					record.sort = String(index + 1);
-				}
-				if (laneEl === targetEl && blockIndex === rowIndex) {
-					record.lane = laneName;
-				}
-				updates.set(blockIndex, record);
-			});
-		}
-
-		this.applyUpdates(updates, rowIndex);
-	}
-
-	private applyUpdates(updates: Map<number, RowUpdate>, focusRowIndex: number): void {
-		const targets = [];
-		for (const [rowIndex, change] of updates.entries()) {
-			const fields: string[] = [];
-			if (typeof change.lane === 'string') {
-				fields.push(this.laneField);
-			}
-			if (this.sortField && typeof change.sort === 'string') {
-				fields.push(this.sortField);
-			}
-			if (fields.length > 0) {
-				targets.push({ index: rowIndex, fields });
-			}
-		}
-		if (targets.length === 0) {
-			this.renderBoard();
-			return;
-		}
-
-		this.isApplyingMutation = true;
-		const recorded = this.view.historyManager.captureCellChanges(
-			targets,
-			() => {
-				for (const [rowIndex, change] of updates.entries()) {
-					const block = this.view.blocks[rowIndex];
-					if (!block) {
-						continue;
-					}
-					if (typeof change.lane === 'string') {
-						block.data[this.laneField] = change.lane;
-					}
-					if (this.sortField && typeof change.sort === 'string') {
-						block.data[this.sortField] = change.sort;
-					}
-				}
-			},
-			() => ({
-				undo: { rowIndex: focusRowIndex, field: this.laneField },
-				redo: { rowIndex: focusRowIndex, field: this.laneField }
-			})
-		);
-		this.isApplyingMutation = false;
-
-		if (!recorded) {
-			this.renderBoard();
-		}
-	}
-
-	private destroySortables(): void {
-		if (this.sortables.size === 0) {
-			return;
-		}
-		for (const sortable of this.sortables.values()) {
-			try {
-				sortable.destroy();
-			} catch {
-				// noop
-			}
-		}
-		this.sortables.clear();
+		const info = this.boardEl.createDiv({ cls: 'tlb-kanban-empty' });
+		const icon = info.createSpan({ cls: 'tlb-kanban-empty__icon' });
+		icon.setText('🗂️');
+		const label = info.createSpan({ cls: 'tlb-kanban-empty__label' });
+		label.setText(t('kanbanView.noLaneSources'));
+		const hint = info.createSpan({ cls: 'tlb-kanban-empty__hint' });
+		hint.setText(t('kanbanView.configureLaneHint'));
 	}
 }

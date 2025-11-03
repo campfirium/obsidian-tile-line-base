@@ -1,7 +1,7 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../../i18n';
-import { KanbanFieldModal } from './KanbanFieldModal';
 import type { TableView } from '../../TableView';
+import { hasKanbanLaneSources } from './KanbanLaneResolver';
 
 type ViewMode = 'table' | 'kanban';
 
@@ -60,13 +60,12 @@ export class KanbanViewModeManager {
 			return;
 		}
 
-		if (mode === 'kanban' && this.view.schema) {
-			const ready = this.hasValidLaneField() || await this.promptForLaneField();
+		if (mode === 'kanban') {
+			const ready = this.ensureLaneSources();
 			if (!ready) {
 				this.updateToggleButton();
 				return;
 			}
-			this.ensureSortField();
 		}
 
 		this.isSwitching = true;
@@ -81,24 +80,19 @@ export class KanbanViewModeManager {
 	}
 
 	async handleAfterRender(): Promise<ViewMode | null> {
-		if (this.view.activeViewMode !== 'kanban' || !this.view.schema) {
+		if (this.view.activeViewMode !== 'kanban') {
 			return null;
 		}
 
-		if (!this.hasValidLaneField()) {
-			const configured = await this.promptForLaneField();
-			if (configured) {
-				this.ensureSortField();
-				return 'kanban';
-			}
+		if (!hasKanbanLaneSources(this.view)) {
+			new Notice(t('kanbanView.laneSourceRequired'));
 			this.view.activeViewMode = 'table';
 			this.updateToggleButton();
 			void this.view.persistenceService?.saveConfig();
 			return 'table';
 		}
 
-		const created = this.ensureSortField();
-		return created ? 'kanban' : null;
+		return null;
 	}
 
 	private getToggleLabel(): string {
@@ -107,85 +101,11 @@ export class KanbanViewModeManager {
 			: t('kanbanView.actions.switchToKanban');
 	}
 
-	private hasValidLaneField(): boolean {
-		const schema = this.view.schema;
-		if (!schema || !Array.isArray(schema.columnNames)) {
-			return false;
-		}
-		const laneField = this.view.kanbanLaneField;
-		return typeof laneField === 'string' && schema.columnNames.includes(laneField);
-	}
-
-	private async promptForLaneField(): Promise<boolean> {
-		const schema = this.view.schema;
-		if (!schema || !Array.isArray(schema.columnNames)) {
-			new Notice(t('kanbanView.fieldModal.schemaUnavailable'));
-			return false;
-		}
-
-		const columns = schema.columnNames.filter((name) => {
-			if (!name || typeof name !== 'string') {
-				return false;
-			}
-			const trimmed = name.trim();
-			if (trimmed.length === 0) {
-				return false;
-			}
-			if (trimmed === '#' || trimmed === '__tlb_row_id') {
-				return false;
-			}
-			return true;
-		});
-
-		if (columns.length === 0) {
-			new Notice(t('kanbanView.fieldModal.noColumns'));
-			return false;
-		}
-
-		const selected = await new Promise<string | null>((resolve) => {
-			const modal = new KanbanFieldModal(this.view.app, {
-				columns,
-				initial: this.view.kanbanLaneField,
-				onSubmit: (field) => resolve(field),
-				onCancel: () => resolve(null)
-			});
-			modal.open();
-		});
-
-		if (!selected) {
-			return false;
-		}
-
-		this.view.kanbanLaneField = selected;
-		this.updateToggleButton();
-		void this.view.persistenceService?.saveConfig();
-		return true;
-	}
-
-	private ensureSortField(): boolean {
-		const schema = this.view.schema;
-		if (!schema || !Array.isArray(schema.columnNames) || schema.columnNames.length === 0) {
-			return false;
-		}
-
-		const desiredName = this.view.kanbanSortField ?? '看板排序';
-		if (schema.columnNames.includes(desiredName)) {
-			this.view.kanbanSortField = desiredName;
-			return false;
-		}
-
-		const referenceField =
-			this.view.kanbanLaneField ?? schema.columnNames[schema.columnNames.length - 1] ?? null;
-		if (!referenceField) {
-			return false;
-		}
-
-		const created = this.view.dataStore.insertColumnAfter(referenceField, desiredName);
-		if (created) {
-			this.view.kanbanSortField = created;
-			this.view.persistenceService?.scheduleSave();
+	private ensureLaneSources(): boolean {
+		if (hasKanbanLaneSources(this.view)) {
 			return true;
 		}
+		new Notice(t('kanbanView.laneSourceRequired'));
 		return false;
 	}
 }

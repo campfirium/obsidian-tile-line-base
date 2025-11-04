@@ -38,10 +38,10 @@ import type { KanbanViewController } from "./table-view/kanban/KanbanViewControl
 import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager";
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
-import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
-import type { KanbanBoardState, KanbanSortDirection } from "./types/kanban";
-import { DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from "./types/kanban";
 import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
+import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
+import type { KanbanBoardState, KanbanRuntimeCardContent, KanbanSortDirection } from "./types/kanban";
+import { DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from "./types/kanban";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -92,9 +92,9 @@ export class TableView extends ItemView {
 	public activeViewMode: 'table' | 'kanban' = 'table';
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null;
-	public kanbanLaneWidth: number = DEFAULT_KANBAN_LANE_WIDTH;
 	public kanbanSortField: string = DEFAULT_KANBAN_SORT_FIELD;
 	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+	public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 	public kanbanPreferencesLoaded = false;
 	public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null;
@@ -102,6 +102,7 @@ export class TableView extends ItemView {
 	public kanbanBoardStore = new KanbanBoardStore(null);
 	public kanbanBoardController!: KanbanBoardController;
 	public kanbanBoardsLoaded = false;
+	public kanbanContentConfig: KanbanRuntimeCardContent | null = null;
 	public pendingKanbanBoardState: KanbanBoardState | null = null;
 	private kanbanManager!: KanbanViewModeManager;
 
@@ -130,6 +131,7 @@ export class TableView extends ItemView {
 				this.kanbanSortField = DEFAULT_KANBAN_SORT_FIELD;
 				this.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 				this.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+				this.kanbanContentConfig = null;
 				await this.render();
 			} else {
 				this.refreshCoordinator.setTrackedFile(null);
@@ -192,6 +194,10 @@ export class TableView extends ItemView {
 			this.kanbanBoardController.reset();
 		}
 		this.kanbanBoardsLoaded = false;
+		this.kanbanSortField = DEFAULT_KANBAN_SORT_FIELD;
+		this.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+		this.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.kanbanContentConfig = null;
 		await handleOnClose(this);
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();
@@ -254,3 +260,4 @@ export class TableView extends ItemView {
 	}
 
 }
+

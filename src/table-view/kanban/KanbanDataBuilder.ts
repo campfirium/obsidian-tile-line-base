@@ -1,19 +1,16 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
-import type { KanbanSortDirection } from '../../types/kanban';
-
-export interface KanbanCardField {
-	name: string;
-	value: string;
-}
+import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
+import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
 
 export interface KanbanCard {
 	id: string;
 	rowIndex: number;
 	title: string;
+	body: string;
+	tags: string[];
 	sortOrder: number;
 	sortValue: number | null;
 	sortText: string | null;
-	fields: KanbanCardField[];
 	rawLane: string;
 	row: RowData;
 }
@@ -36,7 +33,7 @@ interface BuildKanbanBoardStateParams {
 	sortDirection: KanbanSortDirection;
 	fallbackLane: string;
 	primaryField: string | null;
-	displayFields: string[];
+	content: KanbanRuntimeCardContent;
 	quickFilter: string;
 	resolveRowIndex: (row: RowData) => number | null;
 }
@@ -49,7 +46,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		sortDirection,
 		fallbackLane,
 		primaryField,
-		displayFields,
+		content,
 		quickFilter,
 		resolveRowIndex
 	} = params;
@@ -57,6 +54,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	const normalizedQuickFilter = quickFilter.trim().toLowerCase();
 	const hasQuickFilter = normalizedQuickFilter.length > 0;
 	const laneMap = new Map<string, KanbanLane>();
+	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
 	const laneNameToId = new Map<string, string>();
 	const usedLaneIds = new Set<string>();
 	let totalCards = 0;
@@ -67,11 +65,21 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			continue;
 		}
 
-		if (hasQuickFilter && !matchesQuickFilter(row, displayFields, laneField, normalizedQuickFilter)) {
+		const laneName = normalizeString(row[laneField]) || fallbackLane;
+
+		const title = renderTitle(content.titleTemplate, row, primaryField);
+		const body = renderBody(content.bodyTemplate, row);
+		const tags = renderTags(content.tagsTemplate, row);
+
+		if (hasQuickFilter && !matchesQuickFilter(row, { title, body, tags }, {
+			laneField,
+			primaryField,
+			content,
+			needle: normalizedQuickFilter
+		})) {
 			continue;
 		}
 
-		const laneName = normalizeString(row[laneField]) || fallbackLane;
 		const laneId = resolveLaneId(laneName, laneNameToId, usedLaneIds, laneMap.size);
 
 		let lane = laneMap.get(laneId);
@@ -87,17 +95,16 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
 		const sortMeta = parseSortMetadata(sortRaw);
 		const sortOrder = sortMeta.numeric ?? lane.cards.length + 1;
-		const title = primaryField ? normalizeString(row[primaryField]) : '';
-		const fields = buildCardFields(row, displayFields, laneField, sortField, primaryField);
 
 		lane.cards.push({
 			id: buildCardId(row, rowIndex),
 			rowIndex,
 			title,
+			body,
+			tags,
 			sortOrder,
 			sortValue: sortMeta.numeric,
 			sortText: sortMeta.text,
-			fields,
 			rawLane: laneName,
 			row
 		});
@@ -105,7 +112,6 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	}
 
 	const lanes: KanbanLane[] = [];
-	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
 	for (const lane of laneMap.values()) {
 		lane.cards.sort((a, b) => {
 			if (a.sortValue != null && b.sortValue != null && a.sortValue !== b.sortValue) {
@@ -128,7 +134,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 				return 1;
 			}
 			if (a.sortOrder !== b.sortOrder) {
-				return a.sortOrder - b.sortOrder;
+				return (a.sortOrder - b.sortOrder) * directionMultiplier;
 			}
 			return a.rowIndex - b.rowIndex;
 		});
@@ -141,66 +147,44 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	};
 }
 
+interface CardTextSegments {
+	title: string;
+	body: string;
+	tags: string[];
+}
+
 function matchesQuickFilter(
 	row: RowData,
-	displayFields: string[],
-	laneField: string,
-	needle: string
+	segments: CardTextSegments,
+	options: { laneField: string; primaryField: string | null; content: KanbanRuntimeCardContent; needle: string }
 ): boolean {
-	if (needle.length === 0) {
+	const { laneField, primaryField, content, needle } = options;
+	if (!needle) {
 		return true;
 	}
-	const searchFields = new Set<string>([...displayFields, laneField]);
+	if (segments.title.toLowerCase().includes(needle)) {
+		return true;
+	}
+	if (segments.body.toLowerCase().includes(needle)) {
+		return true;
+	}
+	for (const tag of segments.tags) {
+		if (tag.toLowerCase().includes(needle)) {
+			return true;
+		}
+	}
+	const searchFields = new Set<string>([...content.referencedFields, laneField]);
+	if (primaryField) {
+		searchFields.add(primaryField);
+	}
 	for (const field of searchFields) {
 		const value = normalizeString(row[field]);
-		if (value && value.includes(needle)) {
+		if (value && value.toLowerCase().includes(needle)) {
 			return true;
 		}
 	}
 	const rowIdValue = normalizeString(row[ROW_ID_FIELD]);
-	return rowIdValue.includes(needle);
-}
-
-function buildCardFields(
-	row: RowData,
-	displayFields: string[],
-	laneField: string,
-	sortField: string | null,
-	primaryField: string | null
-): KanbanCardField[] {
-	const fields: KanbanCardField[] = [];
-	for (const field of displayFields) {
-		if (
-			field === laneField ||
-			(sortField && field === sortField) ||
-			field === ROW_ID_FIELD ||
-			field === '#' ||
-			(primaryField && field === primaryField)
-		) {
-			continue;
-		}
-		const value = normalizeString(row[field]);
-		if (value.length === 0) {
-			continue;
-		}
-		fields.push({ name: field, value });
-	}
-	return fields;
-}
-
-function parseSortMetadata(raw: string): { numeric: number | null; text: string | null } {
-	if (!raw) {
-		return { numeric: null, text: null };
-	}
-	const numeric = Number(raw);
-	if (Number.isFinite(numeric)) {
-		return { numeric, text: null };
-	}
-	const timestamp = Date.parse(raw);
-	if (Number.isFinite(timestamp)) {
-		return { numeric: timestamp, text: null };
-	}
-	return { numeric: null, text: raw.toLowerCase() };
+	return rowIdValue.toLowerCase().includes(needle);
 }
 
 function resolveLaneId(
@@ -248,6 +232,21 @@ function normalizeString(input: unknown): string {
 		return '';
 	}
 	return String(input).trim();
+}
+
+function parseSortMetadata(raw: string): { numeric: number | null; text: string | null } {
+	if (!raw) {
+		return { numeric: null, text: null };
+	}
+	const numeric = Number(raw);
+	if (Number.isFinite(numeric)) {
+		return { numeric, text: null };
+	}
+	const timestamp = Date.parse(raw);
+	if (Number.isFinite(timestamp)) {
+		return { numeric: timestamp, text: null };
+	}
+	return { numeric: null, text: raw.toLowerCase() };
 }
 
 function buildCardId(row: RowData, rowIndex: number): string {

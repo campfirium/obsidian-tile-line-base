@@ -7,7 +7,8 @@ import type {
 	DefaultFilterViewPreferences
 } from '../types/filterView';
 import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
-import type { KanbanBoardState } from '../types/kanban';
+import type { KanbanBoardState, KanbanCardContentConfig, KanbanSortDirection } from '../types/kanban';
+import { DEFAULT_KANBAN_CARD_CONTENT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -419,12 +420,20 @@ export class SettingsService {
 				const icon = this.sanitizeIconId(raw.icon);
 				const laneField = typeof raw.laneField === 'string' ? raw.laneField.trim() : '';
 				const filterRule = raw.filterRule ? this.deepClone(raw.filterRule) : null;
+				const content = this.cloneKanbanContent(raw.content);
+				const laneWidth = typeof raw.laneWidth === 'number' ? raw.laneWidth : null;
+				const sortField = this.sanitizeSortField(raw.sortField ?? null);
+				const sortDirection = this.sanitizeSortDirection(raw.sortDirection ?? null);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
-					filterRule
+					filterRule,
+					content,
+					laneWidth,
+					sortField,
+					sortDirection
 				});
 				seenIds.add(id);
 			}
@@ -437,6 +446,34 @@ export class SettingsService {
 		return {
 			boards,
 			activeBoardId
+		};
+	}
+
+	private sanitizeSortField(field: string | null | undefined): string {
+		if (typeof field !== 'string') {
+			return DEFAULT_KANBAN_SORT_FIELD;
+		}
+		const trimmed = field.trim();
+		return trimmed.length > 0 ? trimmed : DEFAULT_KANBAN_SORT_FIELD;
+	}
+
+	private sanitizeSortDirection(direction: KanbanSortDirection | string | null | undefined): KanbanSortDirection {
+		return direction === 'asc' ? 'asc' : DEFAULT_KANBAN_SORT_DIRECTION;
+	}
+
+	private cloneKanbanContent(source: KanbanCardContentConfig | null | undefined): KanbanCardContentConfig {
+		const base = DEFAULT_KANBAN_CARD_CONTENT;
+		const parseTemplate = (value: unknown): string => {
+			if (typeof value !== 'string') {
+				return '';
+			}
+			return value.replace(/\r\n/g, '\n').replace(/\{\{\s*/g, '{').replace(/\s*\}\}/g, '}');
+		};
+		return {
+			titleTemplate: parseTemplate(source?.titleTemplate) || base.titleTemplate,
+			bodyTemplate: parseTemplate(source?.bodyTemplate) || base.bodyTemplate,
+			tagsTemplate: parseTemplate(source?.tagsTemplate) || base.tagsTemplate,
+			showBody: typeof source?.showBody === 'boolean' ? source.showBody : base.showBody
 		};
 	}
 

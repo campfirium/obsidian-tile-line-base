@@ -1,12 +1,12 @@
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
+import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
-import type { KanbanSortDirection } from '../../types/kanban';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -16,10 +16,10 @@ interface KanbanViewControllerOptions {
 	container: HTMLElement;
 	laneField: string;
 	sortField: string | null;
-	sortDirection: KanbanSortDirection;
 	fallbackLaneName: string;
 	primaryField: string | null;
-	displayFields: string[];
+	content: KanbanRuntimeCardContent;
+	sortDirection: KanbanSortDirection;
 	enableDrag: boolean;
 	laneWidth: number;
 	allowManualSort: boolean;
@@ -27,7 +27,7 @@ interface KanbanViewControllerOptions {
 
 interface RowUpdate {
 	lane?: string;
-	sortOrder?: string;
+	sort?: string;
 }
 
 export class KanbanViewController {
@@ -37,10 +37,10 @@ export class KanbanViewController {
 	private readonly sortDirection: KanbanSortDirection;
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
-	private readonly displayFields: string[];
+	private readonly content: KanbanRuntimeCardContent;
 	private readonly enableDrag: boolean;
-	private readonly laneWidth: number;
 	private readonly allowManualSort: boolean;
+	private readonly laneWidth: number;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
@@ -64,10 +64,10 @@ export class KanbanViewController {
 		this.sortDirection = options.sortDirection;
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
-		this.displayFields = options.displayFields;
+		this.content = options.content;
 		this.enableDrag = options.enableDrag;
-		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth, DEFAULT_KANBAN_LANE_WIDTH);
 		this.allowManualSort = options.allowManualSort;
+		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth, DEFAULT_KANBAN_LANE_WIDTH);
 		this.dragAvailable = this.enableDrag;
 
 		this.recomputeVisibleRows();
@@ -214,7 +214,7 @@ export class KanbanViewController {
 			sortDirection: this.sortDirection,
 			fallbackLane: this.fallbackLaneName,
 			primaryField: this.primaryField,
-			displayFields: this.displayFields,
+			content: this.content,
 			quickFilter: this.quickFilterValue,
 			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row)
 		});
@@ -231,7 +231,7 @@ export class KanbanViewController {
 		}
 		const empty = this.boardEl.createDiv({ cls: 'tlb-kanban-empty' });
 		const icon = empty.createSpan({ cls: 'tlb-kanban-empty__icon' });
-		icon.setText('📋');
+		icon.setText('馃搵');
 		const label = empty.createSpan({ cls: 'tlb-kanban-empty__label' });
 		label.setText(
 			this.quickFilterValue.trim().length > 0
@@ -310,25 +310,39 @@ export class KanbanViewController {
 		});
 		cardEl.setAttribute('tabindex', '0');
 
-		const title = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
+		const titleEl = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
 		const trimmedTitle = card.title.trim();
-		title.setText(trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback'));
+		const titleText = trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback');
+		titleEl.setText(titleText);
 
-		if (card.fields.length > 0) {
-			const fieldsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__fields' });
-			for (const field of card.fields.slice(0, 6)) {
-				const fieldRow = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field' });
-				const nameEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-name' });
-				nameEl.setText(field.name);
-				const valueEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-value' });
-				valueEl.setText(field.value);
+		const ariaSegments: string[] = [titleText];
+		const bodyText = card.body.trim();
+		if (bodyText.length > 0) {
+			if (this.content.showBody) {
+				const bodyEl = cardEl.createDiv({ cls: 'tlb-kanban-card__body' });
+				bodyEl.setText(bodyText);
+			} else {
+				const tooltip = (titleText + (bodyText.length > 0 ? '\n' + bodyText : '')).trim();
+				cardEl.setAttribute('title', tooltip);
 			}
-			if (card.fields.length > 6) {
-				const more = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field-more' });
-				more.setText(t('kanbanView.moreFieldsLabel', { count: String(card.fields.length - 6) }));
+			ariaSegments.push(bodyText);
+		}
+
+		if (card.tags.length > 0) {
+			const tagsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__tags' });
+			for (const tag of card.tags) {
+				const trimmedTag = tag.trim();
+				if (!trimmedTag) {
+					continue;
+				}
+				ariaSegments.push(trimmedTag);
+				tagsEl.createSpan({ cls: 'tlb-kanban-card__tag', text: trimmedTag });
 			}
 		}
+
+		cardEl.setAttribute('aria-label', ariaSegments.join(' ? '));
 	}
+
 
 	private handleDragEnd(event: SortableEvent): void {
 		if (!this.dragAvailable) {
@@ -372,7 +386,12 @@ export class KanbanViewController {
 				}
 				const record = updates.get(blockIndex) ?? {};
 				if (this.allowManualSort && this.sortField) {
-					record.sortOrder = String(index + 1);
+					const cardinality = cardEls.length;
+					const sortValue =
+						this.sortDirection === 'desc'
+							? String(cardinality - index)
+							: String(index + 1);
+					record.sort = sortValue;
 				}
 				if (laneEl === targetEl && blockIndex === rowIndex) {
 					record.lane = laneName;
@@ -391,10 +410,8 @@ export class KanbanViewController {
 			if (typeof change.lane === 'string') {
 				fields.push(this.laneField);
 			}
-			if (this.sortField) {
-				if (this.allowManualSort && typeof change.sortOrder === 'string') {
-					fields.push(this.sortField);
-				}
+			if (this.allowManualSort && this.sortField && typeof change.sort === 'string') {
+				fields.push(this.sortField);
 			}
 			if (fields.length > 0) {
 				targets.push({ index: rowIndex, fields });
@@ -417,10 +434,8 @@ export class KanbanViewController {
 					if (typeof change.lane === 'string') {
 						block.data[this.laneField] = change.lane;
 					}
-					if (this.sortField) {
-						if (this.allowManualSort && typeof change.sortOrder === 'string') {
-							block.data[this.sortField] = change.sortOrder;
-						}
+					if (this.allowManualSort && this.sortField && typeof change.sort === 'string') {
+						block.data[this.sortField] = change.sort;
 					}
 				}
 			},

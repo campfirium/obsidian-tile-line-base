@@ -85,18 +85,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table') {
-			view.activeViewMode = preference;
-		}
+		if (preference === 'kanban' || preference === 'table') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
 			view.kanbanLaneField = kanbanConfig.laneField;
-			if (typeof kanbanConfig.sortField === 'string') {
-				view.kanbanSortField = kanbanConfig.sortField;
-			}
-			if (kanbanConfig.sortDirection === 'asc' || kanbanConfig.sortDirection === 'desc') {
-				view.kanbanSortDirection = kanbanConfig.sortDirection;
-			}
+			if (typeof kanbanConfig.sortField === 'string') view.kanbanSortField = kanbanConfig.sortField;
+			if (kanbanConfig.sortDirection === 'asc' || kanbanConfig.sortDirection === 'desc') view.kanbanSortDirection = kanbanConfig.sortDirection;
 		}
 		view.kanbanPreferencesLoaded = true;
 	}
@@ -169,6 +163,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 		container.classList.remove('tlb-has-grid');
 		const boardCount = view.kanbanBoardController?.getBoards().length ?? 0;
 		if (boardCount === 0) {
+			view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 			container.createDiv({
 				cls: 'tlb-kanban-empty',
 				text: t('kanbanView.toolbar.noBoardsPlaceholder')
@@ -182,7 +177,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 			});
 			return;
 		}
-		const sortField = view.kanbanSortField ?? null;
+		const hiddenSortable = view.hiddenSortableFields instanceof Set ? view.hiddenSortableFields : new Set<string>();
+		const candidateSortField = view.kanbanSortField ?? null;
+		const sortField = candidateSortField && (view.schema.columnNames.includes(candidateSortField) || hiddenSortable.has(candidateSortField)) ? candidateSortField : null;
 		renderKanbanView(view, container, {
 			primaryField,
 			laneField: view.kanbanLaneField,

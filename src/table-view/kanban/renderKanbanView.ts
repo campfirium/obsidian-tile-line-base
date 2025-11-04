@@ -1,6 +1,7 @@
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
 import { KanbanViewController } from './KanbanViewController';
+import { toRuntimeContent } from './KanbanCardContent';
 import { DEFAULT_KANBAN_SORT_FIELD, type KanbanSortDirection } from '../../types/kanban';
 import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 
@@ -8,8 +9,8 @@ interface RenderKanbanViewOptions {
 	primaryField: string | null;
 	laneField: string;
 	sortField: string | null;
-	sortDirection: KanbanSortDirection;
 	laneWidth: number | null;
+	sortDirection: KanbanSortDirection;
 }
 
 export function renderKanbanView(
@@ -29,9 +30,10 @@ export function renderKanbanView(
 	const columnNames = schema.columnNames ?? [];
 	const laneField = options.laneField;
 	const sortField = options.sortField;
-	const hiddenFields = view.hiddenSortableFields ?? new Set<string>();
+	const hiddenSortable = view.hiddenSortableFields instanceof Set ? view.hiddenSortableFields : new Set<string>();
 
 	const hasLaneField = columnNames.includes(laneField);
+
 	if (!hasLaneField) {
 		container.createDiv({
 			cls: 'tlb-kanban-warning',
@@ -39,9 +41,8 @@ export function renderKanbanView(
 		});
 		return;
 	}
-
 	if (sortField) {
-		const hasSortField = columnNames.includes(sortField) || hiddenFields.has(sortField);
+		const hasSortField = columnNames.includes(sortField) || hiddenSortable.has(sortField);
 		if (!hasSortField) {
 			container.createDiv({
 				cls: 'tlb-kanban-warning',
@@ -51,11 +52,16 @@ export function renderKanbanView(
 		}
 	}
 
-	const laneWidth = sanitizeKanbanLaneWidth(
-		options.laneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-		DEFAULT_KANBAN_LANE_WIDTH
-	);
+	const laneWidth = sanitizeKanbanLaneWidth(options.laneWidth ?? DEFAULT_KANBAN_LANE_WIDTH, DEFAULT_KANBAN_LANE_WIDTH);
 	const allowManualSort = Boolean(sortField && sortField !== DEFAULT_KANBAN_SORT_FIELD);
+	const availableFields = new Set(columnNames);
+	for (const hidden of hiddenSortable) {
+		availableFields.add(hidden);
+	}
+	const runtimeContent = view.kanbanContentConfig ?? toRuntimeContent(null, {
+		availableFields: Array.from(availableFields),
+		laneField
+	});
 
 	const wrapper = container.createDiv({ cls: 'tlb-kanban-wrapper' });
 	view.kanbanController = new KanbanViewController({
@@ -66,7 +72,7 @@ export function renderKanbanView(
 		sortDirection: options.sortDirection,
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,
-		displayFields: columnNames,
+		content: runtimeContent,
 		enableDrag: true,
 		laneWidth,
 		allowManualSort

@@ -10,6 +10,7 @@ import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
+import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 
 const logger = getLogger('table-view:renderer');
@@ -19,9 +20,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	rootEl.classList.add('tile-line-base-view');
 
 	const container = rootEl.children[1] as HTMLElement | undefined;
-	if (!container) {
-		return;
-	}
+	if (!container) { return; }
 	container.empty();
 	container.classList.add('tlb-table-view-content');
 	container.classList.remove('tlb-has-grid');
@@ -38,12 +37,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	const ownerDoc = container.ownerDocument;
-	const ownerWindow = ownerDoc?.defaultView ?? null;
 	logger.debug('render start', {
 		file: view.file?.path,
 		containerTag: container.tagName,
-		containerClass: container.className,
-		window: describeWindow(ownerWindow)
+		containerClass: container.className
 	});
 
 	if (!view.file) {
@@ -85,12 +82,16 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table') view.activeViewMode = preference;
+		if (preference === 'kanban' || preference === 'table') {
+			view.activeViewMode = preference;
+		}
 		const kanbanConfig = configBlock?.kanban;
+		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
 		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
 			view.kanbanLaneField = kanbanConfig.laneField;
-			if (typeof kanbanConfig.sortField === 'string') view.kanbanSortField = kanbanConfig.sortField;
-			if (kanbanConfig.sortDirection === 'asc' || kanbanConfig.sortDirection === 'desc') view.kanbanSortDirection = kanbanConfig.sortDirection;
+			if (typeof kanbanConfig.sortField === 'string') {
+				view.kanbanSortField = kanbanConfig.sortField;
+			}
 		}
 		view.kanbanPreferencesLoaded = true;
 	}
@@ -163,7 +164,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 		container.classList.remove('tlb-has-grid');
 		const boardCount = view.kanbanBoardController?.getBoards().length ?? 0;
 		if (boardCount === 0) {
-			view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 			container.createDiv({
 				cls: 'tlb-kanban-empty',
 				text: t('kanbanView.toolbar.noBoardsPlaceholder')
@@ -177,15 +177,16 @@ export async function renderTableView(view: TableView): Promise<void> {
 			});
 			return;
 		}
-		const hiddenSortable = view.hiddenSortableFields instanceof Set ? view.hiddenSortableFields : new Set<string>();
-		const candidateSortField = view.kanbanSortField ?? null;
-		const sortField = candidateSortField && (view.schema.columnNames.includes(candidateSortField) || hiddenSortable.has(candidateSortField)) ? candidateSortField : null;
+		const sortField =
+			view.kanbanSortField && view.schema.columnNames.includes(view.kanbanSortField)
+				? view.kanbanSortField
+				: null;
 		renderKanbanView(view, container, {
 			primaryField,
 			laneField: view.kanbanLaneField,
 			sortField,
-			sortDirection: view.kanbanSortDirection,
-			laneWidth: view.kanbanLaneWidth
+			heightMode: view.kanbanHeightMode,
+			initialVisibleCount: view.kanbanInitialVisibleCount
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;
@@ -313,18 +314,5 @@ function mergeColumnConfigs(
 		merged.push(remaining);
 	}
 	return merged;
-}
-
-function describeWindow(win: Window | null | undefined): Record<string, unknown> | null {
-	if (!win) {
-		return null;
-	}
-	let href: string | undefined;
-	try {
-		href = win.location?.href;
-	} catch {
-		href = undefined;
-	}
-	return { href, isMain: win === window };
 }
 

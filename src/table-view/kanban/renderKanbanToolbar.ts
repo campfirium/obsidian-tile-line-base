@@ -1,6 +1,7 @@
 import { Menu } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { KanbanToolbar } from './KanbanToolbar';
+import { t } from '../../i18n';
 
 export function renderKanbanToolbar(view: TableView, container: HTMLElement): void {
 	view.globalQuickFilterController.cleanup();
@@ -43,6 +44,22 @@ export function renderKanbanToolbar(view: TableView, container: HTMLElement): vo
 		onOpenSettings: (button, event) => {
 			event.preventDefault();
 			const menu = new Menu();
+			menu.addItem((item) => {
+				item
+					.setTitle(t('kanbanView.settings.heightAuto'))
+					.setChecked(view.kanbanHeightMode === 'auto')
+					.onClick(() => {
+						view.setKanbanHeightMode('auto');
+					});
+			});
+			menu.addItem((item) => {
+				item
+					.setTitle(t('kanbanView.settings.heightViewport'))
+					.setChecked(view.kanbanHeightMode === 'viewport')
+					.onClick(() => {
+						view.setKanbanHeightMode('viewport');
+					});
+			});
 			const rect = button.getBoundingClientRect();
 			const ownerDoc = button.ownerDocument;
 			const win = ownerDoc?.defaultView ?? window;

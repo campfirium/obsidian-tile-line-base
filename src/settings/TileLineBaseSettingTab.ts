@@ -58,6 +58,7 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					await this.plugin.setHideRightSidebarEnabled(value);
 				});
 			});
+
 	}
 
 	private renderLoggingSection(containerEl: HTMLElement): void {

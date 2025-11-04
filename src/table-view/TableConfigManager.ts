@@ -2,7 +2,7 @@ import type { App, TFile } from 'obsidian';
 import { getPluginContext } from '../pluginContext';
 import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
-import type { KanbanBoardState, KanbanSortDirection } from '../types/kanban';
+import type { KanbanBoardState, KanbanHeightMode } from '../types/kanban';
 import { getLogger } from '../utils/logger';
 import {
 	buildConfigCalloutBlock,
@@ -23,7 +23,7 @@ export interface TableConfigData {
 	kanban?: {
 		laneField: string;
 		sortField?: string | null;
-		sortDirection?: KanbanSortDirection | null;
+		heightMode?: KanbanHeightMode | null;
 	};
 	kanbanBoards?: KanbanBoardState | null;
 }

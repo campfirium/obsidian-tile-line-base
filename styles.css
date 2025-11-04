@@ -1789,6 +1789,10 @@
 	padding-bottom: var(--size-4-2);
 }
 
+.tlb-kanban-wrapper--viewport {
+	scrollbar-gutter: stable;
+}
+
 .tlb-kanban-root {
 	display: flex;
 	flex-direction: column;
@@ -1868,6 +1872,24 @@
 	gap: var(--size-4-2);
 	padding: 0 var(--size-4-3) var(--size-4-3);
 	min-height: 4rem;
+}
+
+.tlb-kanban-lane__load-more {
+	margin: var(--size-4-2) 0;
+	padding: var(--size-4-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+	text-align: center;
+}
+
+.tlb-kanban-lane__load-more:hover,
+.tlb-kanban-lane__load-more:focus {
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
 }
 
 .tlb-kanban-lane__placeholder {

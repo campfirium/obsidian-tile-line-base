@@ -1,12 +1,17 @@
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
-import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
+import type { KanbanHeightMode } from '../../types/kanban';
+import {
+	KANBAN_VIEWPORT_MIN_HEIGHT_PX,
+	KANBAN_VIEWPORT_PADDING_PX,
+	isViewportHeightMode,
+	sanitizeKanbanHeightMode
+} from './kanbanHeight';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
-import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -18,11 +23,10 @@ interface KanbanViewControllerOptions {
 	sortField: string | null;
 	fallbackLaneName: string;
 	primaryField: string | null;
-	content: KanbanRuntimeCardContent;
-	sortDirection: KanbanSortDirection;
+	displayFields: string[];
+	heightMode: KanbanHeightMode;
+	initialVisibleCount: number;
 	enableDrag: boolean;
-	laneWidth: number;
-	allowManualSort: boolean;
 }
 
 interface RowUpdate {
@@ -32,15 +36,19 @@ interface RowUpdate {
 
 export class KanbanViewController {
 	private readonly view: TableView;
+	private readonly container: HTMLElement;
 	private readonly laneField: string;
 	private readonly sortField: string | null;
-	private readonly sortDirection: KanbanSortDirection;
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
-	private readonly content: KanbanRuntimeCardContent;
+	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
-	private readonly allowManualSort: boolean;
-	private readonly laneWidth: number;
+	private readonly handleViewportResize: () => void;
+	private readonly initialVisibleCount: number;
+	private expandedLanes = new Set<string>();
+	private heightMode: KanbanHeightMode;
+	private viewportWindow: Window | null = null;
+	private viewportFrameId: number | null = null;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
@@ -59,25 +67,29 @@ export class KanbanViewController {
 
 	constructor(options: KanbanViewControllerOptions) {
 		this.view = options.view;
+		this.container = options.container;
 		this.laneField = options.laneField;
 		this.sortField = options.sortField;
-		this.sortDirection = options.sortDirection;
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
-		this.content = options.content;
+		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
-		this.allowManualSort = options.allowManualSort;
-		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth, DEFAULT_KANBAN_LANE_WIDTH);
+		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
+		const limit = Math.floor(options.initialVisibleCount ?? 1);
+		this.initialVisibleCount = Math.max(1, limit);
+		this.handleViewportResize = () => {
+			this.scheduleViewportMeasurement();
+		};
 		this.dragAvailable = this.enableDrag;
 
 		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
-		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
+		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
-		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
+		this.applyHeightMode();
 		this.registerListeners();
 		this.ensureSortableLoaded();
 		this.renderBoard();
@@ -88,11 +100,21 @@ export class KanbanViewController {
 		this.unsubscribeFilter = null;
 		this.unsubscribeQuickFilter?.();
 		this.unsubscribeQuickFilter = null;
+		this.detachViewportListeners();
+		this.resetHeightStyles();
+		this.container.classList.remove('tlb-kanban-wrapper--viewport');
 		this.destroySortables();
 		this.rootEl.empty();
 	}
-
-	private registerListeners(): void {
+		public setHeightMode(mode: KanbanHeightMode): void {
+		const normalized = sanitizeKanbanHeightMode(mode);
+		if (this.heightMode === normalized) {
+			return;
+		}
+		this.heightMode = normalized;
+		this.applyHeightMode();
+	}
+		private registerListeners(): void {
 		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener(() => {
 			this.recomputeVisibleRows();
 			if (!this.isApplyingMutation) {
@@ -104,12 +126,10 @@ export class KanbanViewController {
 			this.renderBoard();
 		});
 	}
-
-	private recomputeVisibleRows(): void {
+		private recomputeVisibleRows(): void {
 		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getAllRows());
 	}
-
-	private applyBoardFilter(rows: RowData[]): RowData[] {
+		private applyBoardFilter(rows: RowData[]): RowData[] {
 		const rule = this.view.activeKanbanBoardFilter;
 		if (!rule) {
 			return rows;
@@ -131,10 +151,24 @@ export class KanbanViewController {
 		this.boardEl?.setAttribute('aria-busy', 'true');
 
 		const state = this.buildState();
-		this.renderMessage(state);
+		this.messageEl.empty();
+		this.messageEl.toggleAttribute('hidden', true);
+
+		const laneIds = new Set(state.lanes.map((lane) => lane.id));
+		for (const id of Array.from(this.expandedLanes)) {
+			if (!laneIds.has(id)) {
+				this.expandedLanes.delete(id);
+			}
+		}
+		for (const lane of state.lanes) {
+			if (lane.cards.length <= this.initialVisibleCount && this.expandedLanes.has(lane.id)) {
+				this.expandedLanes.delete(lane.id);
+			}
+		}
 
 		if (state.totalCards === 0) {
 			this.renderEmptyState();
+			this.refreshHeightConstraints();
 			this.boardEl?.removeAttribute('aria-busy');
 			return;
 		}
@@ -142,6 +176,7 @@ export class KanbanViewController {
 		for (const lane of state.lanes) {
 			this.renderLane(lane);
 		}
+		this.refreshHeightConstraints();
 		this.boardEl?.removeAttribute('aria-busy');
 	}
 
@@ -211,18 +246,12 @@ export class KanbanViewController {
 			rows: this.visibleRows,
 			laneField: this.laneField,
 			sortField: this.sortField,
-			sortDirection: this.sortDirection,
 			fallbackLane: this.fallbackLaneName,
 			primaryField: this.primaryField,
-			content: this.content,
+			displayFields: this.displayFields,
 			quickFilter: this.quickFilterValue,
 			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row)
 		});
-	}
-
-	private renderMessage(_state: KanbanBoardState): void {
-		this.messageEl.empty();
-		this.messageEl.toggleAttribute('hidden', true);
 	}
 
 	private renderEmptyState(): void {
@@ -231,7 +260,7 @@ export class KanbanViewController {
 		}
 		const empty = this.boardEl.createDiv({ cls: 'tlb-kanban-empty' });
 		const icon = empty.createSpan({ cls: 'tlb-kanban-empty__icon' });
-		icon.setText('馃搵');
+		icon.setText('📋');
 		const label = empty.createSpan({ cls: 'tlb-kanban-empty__label' });
 		label.setText(
 			this.quickFilterValue.trim().length > 0
@@ -258,9 +287,10 @@ export class KanbanViewController {
 		const title = header.createSpan({ cls: 'tlb-kanban-lane__title' });
 		title.setText(lane.name);
 
+		const totalCards = lane.cards.length;
 		const count = header.createSpan({ cls: 'tlb-kanban-lane__count' });
-		count.setText(String(lane.cards.length));
-		count.setAttribute('aria-label', t('kanbanView.laneCountLabel', { count: String(lane.cards.length) }));
+		count.setText(String(totalCards));
+		count.setAttribute('aria-label', t('kanbanView.laneCountLabel', { count: String(totalCards) }));
 
 		const cardsContainer = laneEl.createDiv({
 			cls: 'tlb-kanban-lane__cards',
@@ -270,19 +300,39 @@ export class KanbanViewController {
 			}
 		});
 
-		if (lane.cards.length === 0) {
+		if (totalCards === 0) {
 			const placeholder = cardsContainer.createDiv({ cls: 'tlb-kanban-lane__placeholder' });
 			placeholder.setText(t('kanbanView.emptyLanePlaceholder'));
-		}
+		} else {
+			const expanded = this.expandedLanes.has(lane.id);
+			const limit = this.initialVisibleCount;
+			const visibleCards = !expanded && totalCards > limit ? lane.cards.slice(0, limit) : lane.cards;
+			const hiddenCount = expanded ? 0 : Math.max(0, totalCards - visibleCards.length);
 
-		for (const card of lane.cards) {
-			this.renderCard(cardsContainer, card);
+			for (const card of visibleCards) {
+				this.renderCard(cardsContainer, card);
+			}
+
+			if (hiddenCount > 0) {
+				const button = cardsContainer.createEl('button', {
+					cls: 'tlb-kanban-lane__load-more',
+					attr: { type: 'button' }
+				});
+				const label = t('kanbanView.showAllButtonLabel', { count: String(hiddenCount) });
+				button.setText(label);
+				button.setAttribute('aria-label', label);
+				button.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					this.expandedLanes.add(lane.id);
+					this.renderBoard();
+				});
+			}
 		}
 
 		if (this.dragAvailable && this.sortableClass) {
 			const sortable = this.sortableClass.create(cardsContainer, {
 				group: 'tlb-kanban-board',
-				sort: this.allowManualSort,
 				animation: 160,
 				ghostClass: 'tlb-kanban-card--ghost',
 				dragClass: 'tlb-kanban-card--dragging',
@@ -310,39 +360,25 @@ export class KanbanViewController {
 		});
 		cardEl.setAttribute('tabindex', '0');
 
-		const titleEl = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
+		const title = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
 		const trimmedTitle = card.title.trim();
-		const titleText = trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback');
-		titleEl.setText(titleText);
+		title.setText(trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback'));
 
-		const ariaSegments: string[] = [titleText];
-		const bodyText = card.body.trim();
-		if (bodyText.length > 0) {
-			if (this.content.showBody) {
-				const bodyEl = cardEl.createDiv({ cls: 'tlb-kanban-card__body' });
-				bodyEl.setText(bodyText);
-			} else {
-				const tooltip = (titleText + (bodyText.length > 0 ? '\n' + bodyText : '')).trim();
-				cardEl.setAttribute('title', tooltip);
+		if (card.fields.length > 0) {
+			const fieldsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__fields' });
+			for (const field of card.fields.slice(0, 6)) {
+				const fieldRow = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field' });
+				const nameEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-name' });
+				nameEl.setText(field.name);
+				const valueEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-value' });
+				valueEl.setText(field.value);
 			}
-			ariaSegments.push(bodyText);
-		}
-
-		if (card.tags.length > 0) {
-			const tagsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__tags' });
-			for (const tag of card.tags) {
-				const trimmedTag = tag.trim();
-				if (!trimmedTag) {
-					continue;
-				}
-				ariaSegments.push(trimmedTag);
-				tagsEl.createSpan({ cls: 'tlb-kanban-card__tag', text: trimmedTag });
+			if (card.fields.length > 6) {
+				const more = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field-more' });
+				more.setText(t('kanbanView.moreFieldsLabel', { count: String(card.fields.length - 6) }));
 			}
 		}
-
-		cardEl.setAttribute('aria-label', ariaSegments.join(' ? '));
 	}
-
 
 	private handleDragEnd(event: SortableEvent): void {
 		if (!this.dragAvailable) {
@@ -385,13 +421,8 @@ export class KanbanViewController {
 					return;
 				}
 				const record = updates.get(blockIndex) ?? {};
-				if (this.allowManualSort && this.sortField) {
-					const cardinality = cardEls.length;
-					const sortValue =
-						this.sortDirection === 'desc'
-							? String(cardinality - index)
-							: String(index + 1);
-					record.sort = sortValue;
+				if (this.sortField) {
+					record.sort = String(index + 1);
 				}
 				if (laneEl === targetEl && blockIndex === rowIndex) {
 					record.lane = laneName;
@@ -410,7 +441,7 @@ export class KanbanViewController {
 			if (typeof change.lane === 'string') {
 				fields.push(this.laneField);
 			}
-			if (this.allowManualSort && this.sortField && typeof change.sort === 'string') {
+			if (this.sortField && typeof change.sort === 'string') {
 				fields.push(this.sortField);
 			}
 			if (fields.length > 0) {
@@ -434,7 +465,7 @@ export class KanbanViewController {
 					if (typeof change.lane === 'string') {
 						block.data[this.laneField] = change.lane;
 					}
-					if (this.allowManualSort && this.sortField && typeof change.sort === 'string') {
+					if (this.sortField && typeof change.sort === 'string') {
 						block.data[this.sortField] = change.sort;
 					}
 				}
@@ -449,6 +480,79 @@ export class KanbanViewController {
 		if (!recorded) {
 			this.renderBoard();
 		}
+	}
+
+	private applyHeightMode(): void {
+		if (isViewportHeightMode(this.heightMode)) {
+			this.container.classList.add('tlb-kanban-wrapper--viewport');
+			this.refreshHeightConstraints();
+			return;
+		}
+		this.container.classList.remove('tlb-kanban-wrapper--viewport');
+		this.resetHeightStyles();
+		this.detachViewportListeners();
+	}
+
+	private refreshHeightConstraints(): void {
+		if (!isViewportHeightMode(this.heightMode)) {
+			this.cancelViewportMeasurement();
+			return;
+		}
+		this.scheduleViewportMeasurement();
+	}
+
+	private scheduleViewportMeasurement(): void {
+		const ownerDoc = this.container.ownerDocument;
+		const win = ownerDoc?.defaultView ?? null;
+		if (!win || !this.container.isConnected) {
+			return;
+		}
+		if (this.viewportWindow && this.viewportWindow !== win) {
+			this.detachViewportListeners();
+		}
+		if (!this.viewportWindow) {
+			this.viewportWindow = win;
+			win.addEventListener('resize', this.handleViewportResize, { passive: true });
+		}
+		this.cancelViewportMeasurement();
+		// eslint-disable-next-line obsidianmd/no-static-styles-assignment
+		this.container.style.overflowY = 'auto';
+		this.container.style.minHeight = `${KANBAN_VIEWPORT_MIN_HEIGHT_PX}px`;
+		this.viewportFrameId = win.requestAnimationFrame(() => {
+			this.viewportFrameId = null;
+			this.applyViewportHeight(win);
+		});
+	}
+
+	private applyViewportHeight(win: Window): void {
+		if (!this.container.isConnected) {
+			return;
+		}
+		const rect = this.container.getBoundingClientRect();
+		const available = win.innerHeight - rect.top - KANBAN_VIEWPORT_PADDING_PX;
+		const clamped = Math.max(available, KANBAN_VIEWPORT_MIN_HEIGHT_PX);
+		this.container.style.maxHeight = `${clamped}px`;
+	}
+
+	private cancelViewportMeasurement(): void {
+		if (this.viewportWindow && this.viewportFrameId !== null) {
+			this.viewportWindow.cancelAnimationFrame(this.viewportFrameId);
+		}
+		this.viewportFrameId = null;
+	}
+
+	private detachViewportListeners(): void {
+		if (this.viewportWindow) {
+			this.viewportWindow.removeEventListener('resize', this.handleViewportResize);
+		}
+		this.cancelViewportMeasurement();
+		this.viewportWindow = null;
+	}
+
+	private resetHeightStyles(): void {
+		this.container.style.removeProperty('max-height');
+		this.container.style.removeProperty('min-height');
+		this.container.style.removeProperty('overflow-y');
 	}
 
 	private destroySortables(): void {

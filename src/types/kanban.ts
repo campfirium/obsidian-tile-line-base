@@ -1,5 +1,7 @@
 import type { FilterRule } from './filterView';
 
+export type KanbanSortDirection = 'asc' | 'desc';
+
 export interface KanbanCardContentConfig {
 	titleTemplate: string;
 	bodyTemplate: string;
@@ -15,6 +17,8 @@ export interface KanbanBoardDefinition {
 	filterRule?: FilterRule | null;
 	content?: KanbanCardContentConfig | null;
 	laneWidth?: number | null;
+	sortField?: string | null;
+	sortDirection?: KanbanSortDirection | null;
 }
 
 export interface KanbanRuntimeCardContent extends KanbanCardContentConfig {
@@ -37,3 +41,6 @@ export const DEFAULT_KANBAN_BOARD_STATE: KanbanBoardState = {
 	boards: [],
 	activeBoardId: null
 };
+
+export const DEFAULT_KANBAN_SORT_FIELD = 'statusChanged';
+export const DEFAULT_KANBAN_SORT_DIRECTION: KanbanSortDirection = 'desc';

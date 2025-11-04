@@ -1,8 +1,8 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import { KanbanFieldModal } from './KanbanFieldModal';
+import { DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from '../../types/kanban';
 import type { TableView } from '../../TableView';
-
 type ViewMode = 'table' | 'kanban';
 
 export class KanbanViewModeManager {
@@ -66,7 +66,7 @@ export class KanbanViewModeManager {
 				this.updateToggleButton();
 				return;
 			}
-			this.ensureSortField();
+			this.ensureSortConfiguration();
 		}
 
 		this.isSwitching = true;
@@ -88,7 +88,7 @@ export class KanbanViewModeManager {
 		if (!this.hasValidLaneField()) {
 			const configured = await this.promptForLaneField();
 			if (configured) {
-				this.ensureSortField();
+				this.ensureSortConfiguration();
 				this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 				return 'kanban';
 			}
@@ -98,9 +98,9 @@ export class KanbanViewModeManager {
 			return 'table';
 		}
 
-		const created = this.ensureSortField();
+		this.ensureSortConfiguration();
 		this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
-		return created ? 'kanban' : null;
+		return null;
 	}
 
 	private getToggleLabel(): string {
@@ -184,30 +184,15 @@ export class KanbanViewModeManager {
 		return true;
 	}
 
-	private ensureSortField(): boolean {
-		const schema = this.view.schema;
-		if (!schema || !Array.isArray(schema.columnNames) || schema.columnNames.length === 0) {
-			return false;
+	private ensureSortConfiguration(): void {
+		const currentField =
+			typeof this.view.kanbanSortField === 'string' ? this.view.kanbanSortField.trim() : '';
+		this.view.kanbanSortField =
+			currentField.length > 0 ? currentField : DEFAULT_KANBAN_SORT_FIELD;
+		const direction = this.view.kanbanSortDirection;
+		if (direction !== 'asc' && direction !== 'desc') {
+			this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		}
-
-		const desiredName = this.view.kanbanSortField ?? '看板排序';
-		if (schema.columnNames.includes(desiredName)) {
-			this.view.kanbanSortField = desiredName;
-			return false;
-		}
-
-		const referenceField =
-			this.view.kanbanLaneField ?? schema.columnNames[schema.columnNames.length - 1] ?? null;
-		if (!referenceField) {
-			return false;
-		}
-
-		const created = this.view.dataStore.insertColumnAfter(referenceField, desiredName);
-		if (created) {
-			this.view.kanbanSortField = created;
-			this.view.persistenceService?.scheduleSave();
-			return true;
-		}
-		return false;
 	}
+
 }

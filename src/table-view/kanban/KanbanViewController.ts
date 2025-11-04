@@ -1,6 +1,6 @@
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
-import type { KanbanRuntimeCardContent } from '../../types/kanban';
+import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
@@ -19,8 +19,10 @@ interface KanbanViewControllerOptions {
 	fallbackLaneName: string;
 	primaryField: string | null;
 	content: KanbanRuntimeCardContent;
+	sortDirection: KanbanSortDirection;
 	enableDrag: boolean;
 	laneWidth: number;
+	allowManualSort: boolean;
 }
 
 interface RowUpdate {
@@ -32,10 +34,12 @@ export class KanbanViewController {
 	private readonly view: TableView;
 	private readonly laneField: string;
 	private readonly sortField: string | null;
+	private readonly sortDirection: KanbanSortDirection;
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
 	private readonly content: KanbanRuntimeCardContent;
 	private readonly enableDrag: boolean;
+	private readonly allowManualSort: boolean;
 	private readonly laneWidth: number;
 
 	private readonly rootEl: HTMLElement;
@@ -57,10 +61,12 @@ export class KanbanViewController {
 		this.view = options.view;
 		this.laneField = options.laneField;
 		this.sortField = options.sortField;
+		this.sortDirection = options.sortDirection;
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
 		this.content = options.content;
 		this.enableDrag = options.enableDrag;
+		this.allowManualSort = options.allowManualSort;
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth, DEFAULT_KANBAN_LANE_WIDTH);
 		this.dragAvailable = this.enableDrag;
 
@@ -205,6 +211,7 @@ export class KanbanViewController {
 			rows: this.visibleRows,
 			laneField: this.laneField,
 			sortField: this.sortField,
+			sortDirection: this.sortDirection,
 			fallbackLane: this.fallbackLaneName,
 			primaryField: this.primaryField,
 			content: this.content,
@@ -224,7 +231,7 @@ export class KanbanViewController {
 		}
 		const empty = this.boardEl.createDiv({ cls: 'tlb-kanban-empty' });
 		const icon = empty.createSpan({ cls: 'tlb-kanban-empty__icon' });
-		icon.setText('📋');
+		icon.setText('馃搵');
 		const label = empty.createSpan({ cls: 'tlb-kanban-empty__label' });
 		label.setText(
 			this.quickFilterValue.trim().length > 0
@@ -275,6 +282,7 @@ export class KanbanViewController {
 		if (this.dragAvailable && this.sortableClass) {
 			const sortable = this.sortableClass.create(cardsContainer, {
 				group: 'tlb-kanban-board',
+				sort: this.allowManualSort,
 				animation: 160,
 				ghostClass: 'tlb-kanban-card--ghost',
 				dragClass: 'tlb-kanban-card--dragging',
@@ -377,8 +385,13 @@ export class KanbanViewController {
 					return;
 				}
 				const record = updates.get(blockIndex) ?? {};
-				if (this.sortField) {
-					record.sort = String(index + 1);
+				if (this.allowManualSort && this.sortField) {
+					const cardinality = cardEls.length;
+					const sortValue =
+						this.sortDirection === 'desc'
+							? String(cardinality - index)
+							: String(index + 1);
+					record.sort = sortValue;
 				}
 				if (laneEl === targetEl && blockIndex === rowIndex) {
 					record.lane = laneName;
@@ -397,7 +410,7 @@ export class KanbanViewController {
 			if (typeof change.lane === 'string') {
 				fields.push(this.laneField);
 			}
-			if (this.sortField && typeof change.sort === 'string') {
+			if (this.allowManualSort && this.sortField && typeof change.sort === 'string') {
 				fields.push(this.sortField);
 			}
 			if (fields.length > 0) {
@@ -421,7 +434,7 @@ export class KanbanViewController {
 					if (typeof change.lane === 'string') {
 						block.data[this.laneField] = change.lane;
 					}
-					if (this.sortField && typeof change.sort === 'string') {
+					if (this.allowManualSort && this.sortField && typeof change.sort === 'string') {
 						block.data[this.sortField] = change.sort;
 					}
 				}

@@ -1,5 +1,5 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
-import type { KanbanRuntimeCardContent } from '../../types/kanban';
+import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
 
 export interface KanbanCard {
@@ -9,6 +9,8 @@ export interface KanbanCard {
 	body: string;
 	tags: string[];
 	sortOrder: number;
+	sortValue: number | null;
+	sortText: string | null;
 	rawLane: string;
 	row: RowData;
 }
@@ -28,6 +30,7 @@ interface BuildKanbanBoardStateParams {
 	rows: RowData[];
 	laneField: string;
 	sortField: string | null;
+	sortDirection: KanbanSortDirection;
 	fallbackLane: string;
 	primaryField: string | null;
 	content: KanbanRuntimeCardContent;
@@ -40,6 +43,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		rows,
 		laneField,
 		sortField,
+		sortDirection,
 		fallbackLane,
 		primaryField,
 		content,
@@ -50,6 +54,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	const normalizedQuickFilter = quickFilter.trim().toLowerCase();
 	const hasQuickFilter = normalizedQuickFilter.length > 0;
 	const laneMap = new Map<string, KanbanLane>();
+	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
 	const laneNameToId = new Map<string, string>();
 	const usedLaneIds = new Set<string>();
 	let totalCards = 0;
@@ -88,8 +93,8 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		}
 
 		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
-		const numericSort = sortRaw.length > 0 ? Number(sortRaw) : Number.NaN;
-		const sortOrder = Number.isFinite(numericSort) ? numericSort : lane.cards.length + 1;
+		const sortMeta = parseSortMetadata(sortRaw);
+		const sortOrder = sortMeta.numeric ?? lane.cards.length + 1;
 
 		lane.cards.push({
 			id: buildCardId(row, rowIndex),
@@ -98,6 +103,8 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			body,
 			tags,
 			sortOrder,
+			sortValue: sortMeta.numeric,
+			sortText: sortMeta.text,
 			rawLane: laneName,
 			row
 		});
@@ -107,10 +114,29 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	const lanes: KanbanLane[] = [];
 	for (const lane of laneMap.values()) {
 		lane.cards.sort((a, b) => {
-			if (a.sortOrder === b.sortOrder) {
-				return a.rowIndex - b.rowIndex;
+			if (a.sortValue != null && b.sortValue != null && a.sortValue !== b.sortValue) {
+				return a.sortValue < b.sortValue ? -1 * directionMultiplier : 1 * directionMultiplier;
 			}
-			return a.sortOrder - b.sortOrder;
+			if (a.sortValue != null && b.sortValue == null) {
+				return -1;
+			}
+			if (a.sortValue == null && b.sortValue != null) {
+				return 1;
+			}
+			if (a.sortText && b.sortText) {
+				const cmp = a.sortText.localeCompare(b.sortText);
+				if (cmp !== 0) {
+					return cmp * directionMultiplier;
+				}
+			} else if (a.sortText && !b.sortText) {
+				return -1;
+			} else if (!a.sortText && b.sortText) {
+				return 1;
+			}
+			if (a.sortOrder !== b.sortOrder) {
+				return (a.sortOrder - b.sortOrder) * directionMultiplier;
+			}
+			return a.rowIndex - b.rowIndex;
 		});
 		lanes.push(lane);
 	}
@@ -206,6 +232,21 @@ function normalizeString(input: unknown): string {
 		return '';
 	}
 	return String(input).trim();
+}
+
+function parseSortMetadata(raw: string): { numeric: number | null; text: string | null } {
+	if (!raw) {
+		return { numeric: null, text: null };
+	}
+	const numeric = Number(raw);
+	if (Number.isFinite(numeric)) {
+		return { numeric, text: null };
+	}
+	const timestamp = Date.parse(raw);
+	if (Number.isFinite(timestamp)) {
+		return { numeric: timestamp, text: null };
+	}
+	return { numeric: null, text: raw.toLowerCase() };
 }
 
 function buildCardId(row: RowData, rowIndex: number): string {

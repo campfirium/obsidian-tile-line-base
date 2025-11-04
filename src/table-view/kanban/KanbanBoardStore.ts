@@ -1,7 +1,7 @@
 import { getPluginContext } from '../../pluginContext';
 import type { FilterRule } from '../../types/filterView';
-import type { KanbanBoardDefinition, KanbanBoardState, KanbanCardContentConfig } from '../../types/kanban';
-import { DEFAULT_KANBAN_BOARD_STATE, DEFAULT_KANBAN_CARD_CONTENT } from '../../types/kanban';
+import type { KanbanBoardDefinition, KanbanBoardState, KanbanCardContentConfig, KanbanSortDirection } from '../../types/kanban';
+import { DEFAULT_KANBAN_BOARD_STATE, DEFAULT_KANBAN_CARD_CONTENT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from '../../types/kanban';
 import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 
 export interface CreateBoardOptions {
@@ -12,6 +12,8 @@ export interface CreateBoardOptions {
 	content: KanbanCardContentConfig;
 	laneWidth?: number | null;
 	setActive?: boolean;
+	sortField?: string | null;
+	sortDirection?: KanbanSortDirection | null;
 }
 
 export interface UpdateBoardOptions {
@@ -21,6 +23,8 @@ export interface UpdateBoardOptions {
 	filterRule?: FilterRule | null;
 	content?: KanbanCardContentConfig | null;
 	laneWidth?: number | null;
+	sortField?: string | null;
+	sortDirection?: KanbanSortDirection | null;
 }
 
 export class KanbanBoardStore {
@@ -92,7 +96,9 @@ export class KanbanBoardStore {
 			laneField: this.sanitizeLaneField(options.laneField),
 			filterRule: this.cloneFilterRule(options.filterRule),
 			content: this.cloneContent(options.content),
-			laneWidth: this.sanitizeLaneWidth(options.laneWidth)
+			laneWidth: this.sanitizeLaneWidth(options.laneWidth),
+			sortField: this.sanitizeSortField(options.sortField),
+			sortDirection: this.sanitizeSortDirection(options.sortDirection)
 		};
 		this.state.boards.push(board);
 		if (options.setActive !== false) {
@@ -126,6 +132,12 @@ export class KanbanBoardStore {
 		}
 		if (updates.laneWidth !== undefined) {
 			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
+		}
+		if (updates.sortField !== undefined) {
+			target.sortField = this.sanitizeSortField(updates.sortField);
+		}
+		if (updates.sortDirection !== undefined) {
+			target.sortDirection = this.sanitizeSortDirection(updates.sortDirection);
 		}
 		return { ...target };
 	}
@@ -194,7 +206,9 @@ export class KanbanBoardStore {
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
 						filterRule: this.cloneFilterRule(board.filterRule ?? null),
 						content: this.cloneContent(board.content ?? null),
-						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null)
+						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null),
+						sortField: this.sanitizeSortField(board.sortField ?? null),
+						sortDirection: this.sanitizeSortDirection(board.sortDirection ?? null)
 					}))
 			: [];
 		return {
@@ -205,6 +219,18 @@ export class KanbanBoardStore {
 
 	private sanitizeLaneWidth(width: number | string | null | undefined): number {
 		return sanitizeKanbanLaneWidth(width ?? DEFAULT_KANBAN_LANE_WIDTH);
+	}
+
+	private sanitizeSortField(field: string | null | undefined): string {
+		if (typeof field !== 'string') {
+			return DEFAULT_KANBAN_SORT_FIELD;
+		}
+		const trimmed = field.trim();
+		return trimmed.length > 0 ? trimmed : DEFAULT_KANBAN_SORT_FIELD;
+	}
+
+	private sanitizeSortDirection(direction: KanbanSortDirection | string | null | undefined): KanbanSortDirection {
+		return direction === 'asc' ? 'asc' : DEFAULT_KANBAN_SORT_DIRECTION;
 	}
 
 	private cloneFilterRule(rule: FilterRule | null | undefined): FilterRule | null {
@@ -234,3 +260,5 @@ export class KanbanBoardStore {
 		};
 	}
 }
+
+

@@ -9,7 +9,7 @@ import type { FilterStateStore } from './filter/FilterStateStore';
 import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
-import type { KanbanBoardState } from '../types/kanban';
+import type { KanbanBoardState, KanbanSortDirection } from '../types/kanban';
 
 const logger = getLogger('table-view:persistence');
 
@@ -25,7 +25,13 @@ interface TablePersistenceDeps {
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
 	getViewPreference: () => 'table' | 'kanban';
-	getKanbanConfig: () => { laneField: string | null; sortField: string | null } | null;
+	getKanbanConfig: () =>
+		| {
+				laneField: string | null;
+				sortField: string | null;
+				sortDirection: KanbanSortDirection | null;
+		  }
+		| null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	markSelfMutation?: (file: TFile) => void;
 }
@@ -102,6 +108,7 @@ export class TablePersistenceService {
 		const kanbanConfig = this.deps.getKanbanConfig?.();
 		const laneField = kanbanConfig?.laneField ?? null;
 		const sortField = kanbanConfig?.sortField ?? null;
+		const sortDirection = kanbanConfig?.sortDirection ?? null;
 		const kanbanBoards = this.deps.getKanbanBoards?.() ?? null;
 		const hasKanbanBoards =
 			kanbanBoards != null &&
@@ -119,7 +126,9 @@ export class TablePersistenceService {
 				laneField && laneField.trim().length > 0
 					? {
 							laneField,
-							sortField: sortField && sortField.trim().length > 0 ? sortField : undefined
+							sortField: sortField && sortField.trim().length > 0 ? sortField : undefined,
+							sortDirection:
+								sortDirection === 'asc' || sortDirection === 'desc' ? sortDirection : undefined
 						}
 					: undefined,
 			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined

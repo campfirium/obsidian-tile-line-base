@@ -43,9 +43,9 @@
       "editBoardTitle": "编辑看板", "editBoardLabel": "编辑看板",
       "deleteBoardLabel": "删除看板", "deleteBoardConfirm": "确认删除“{{name}}”吗？卡片仍可在其他看板中查看。",
       "cannotDeleteLastBoard": "至少保留一个看板。", "newBoardPlaceholder": "看板",
-      "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本", "laneWidthLabel": "列宽（rem）", "laneWidthDescription": "输入介于 {{min}} 和 {{max}} rem 的数值来控制看板列宽。"
+      "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本", "laneWidthLabel": "列宽（rem）", "laneWidthDescription": "输入介于 {{min}} 和 {{max}} rem 的数值来控制看板列宽。", "sortFieldLabel": "泳道排序字段", "sortDirectionLabel": "排序方向", "sortDirectionAsc": "升序", "sortDirectionDesc": "降序", "sortSettingLabel": "甬道排序", "sortSettingDescription": "选择甬道内卡片的排序字段与方向（支持隐藏列）。"
     },
-    "content": { "sectionTitle": "卡片内容", "titleLabel": "标题", "titlePlaceholder": "使用 {字段} 占位符展示列值", "bodyLabel": "正文", "bodyPlaceholder": "支持多行，可插入 {字段} 占位符。", "tagsLabel": "标签", "tagsPlaceholder": "使用 {字段} 占位符并以空格分隔。", "insertFieldButton": "插入字段", "showBodyToggle": "在卡片上显示正文", "showBodyToggleDesc": "关闭后正文将隐藏，并以悬浮提示的方式显示。", "noFieldOption": "暂无可用字段" }
+    "content": { "sectionTitle": "卡片内容", "insertFieldButton": "插入字段", "titleLabel": "标题模板", "titlePlaceholder": "例如 {标题}", "bodyLabel": "正文模板", "bodyPlaceholder": "例如 {简介}", "tagsLabel": "标签字段", "tagsPlaceholder": "例如 {标签}", "showBodyToggle": "在卡片上显示正文", "showBodyToggleDesc": "关闭后会隐藏看板卡片的正文，但仍会保留数据。", "noFieldOption": "当前没有可插入的字段" }
   },
   "commands": {
     "undoTableHistory": "撤销上一次表格更改",

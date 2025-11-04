@@ -50,7 +50,8 @@ export function initializeTableView(view: TableView): void {
 		getViewPreference: () => view.activeViewMode,
 		getKanbanConfig: () => ({
 			laneField: view.kanbanLaneField,
-			sortField: view.kanbanSortField
+			sortField: view.kanbanSortField,
+			sortDirection: view.kanbanSortDirection
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)

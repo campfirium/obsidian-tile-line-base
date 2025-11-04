@@ -85,15 +85,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table') {
-			view.activeViewMode = preference;
-		}
+		if (preference === 'kanban' || preference === 'table') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
 			view.kanbanLaneField = kanbanConfig.laneField;
-			if (typeof kanbanConfig.sortField === 'string') {
-				view.kanbanSortField = kanbanConfig.sortField;
-			}
+			if (typeof kanbanConfig.sortField === 'string') view.kanbanSortField = kanbanConfig.sortField;
+			if (kanbanConfig.sortDirection === 'asc' || kanbanConfig.sortDirection === 'desc') view.kanbanSortDirection = kanbanConfig.sortDirection;
 		}
 		view.kanbanPreferencesLoaded = true;
 	}
@@ -180,14 +177,14 @@ export async function renderTableView(view: TableView): Promise<void> {
 			});
 			return;
 		}
-		const sortField =
-			view.kanbanSortField && view.schema.columnNames.includes(view.kanbanSortField)
-				? view.kanbanSortField
-				: null;
+		const hiddenSortable = view.hiddenSortableFields instanceof Set ? view.hiddenSortableFields : new Set<string>();
+		const candidateSortField = view.kanbanSortField ?? null;
+		const sortField = candidateSortField && (view.schema.columnNames.includes(candidateSortField) || hiddenSortable.has(candidateSortField)) ? candidateSortField : null;
 		renderKanbanView(view, container, {
 			primaryField,
 			laneField: view.kanbanLaneField,
 			sortField,
+			sortDirection: view.kanbanSortDirection,
 			laneWidth: view.kanbanLaneWidth
 		});
 		view.filterOrchestrator.applyActiveView();

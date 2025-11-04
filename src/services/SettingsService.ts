@@ -7,8 +7,8 @@ import type {
 	DefaultFilterViewPreferences
 } from '../types/filterView';
 import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
-import type { KanbanBoardState, KanbanCardContentConfig } from '../types/kanban';
-import { DEFAULT_KANBAN_CARD_CONTENT } from '../types/kanban';
+import type { KanbanBoardState, KanbanCardContentConfig, KanbanSortDirection } from '../types/kanban';
+import { DEFAULT_KANBAN_CARD_CONTENT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -421,13 +421,19 @@ export class SettingsService {
 				const laneField = typeof raw.laneField === 'string' ? raw.laneField.trim() : '';
 				const filterRule = raw.filterRule ? this.deepClone(raw.filterRule) : null;
 				const content = this.cloneKanbanContent(raw.content);
+				const laneWidth = typeof raw.laneWidth === 'number' ? raw.laneWidth : null;
+				const sortField = this.sanitizeSortField(raw.sortField ?? null);
+				const sortDirection = this.sanitizeSortDirection(raw.sortDirection ?? null);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
 					filterRule,
-					content
+					content,
+					laneWidth,
+					sortField,
+					sortDirection
 				});
 				seenIds.add(id);
 			}
@@ -441,6 +447,18 @@ export class SettingsService {
 			boards,
 			activeBoardId
 		};
+	}
+
+	private sanitizeSortField(field: string | null | undefined): string {
+		if (typeof field !== 'string') {
+			return DEFAULT_KANBAN_SORT_FIELD;
+		}
+		const trimmed = field.trim();
+		return trimmed.length > 0 ? trimmed : DEFAULT_KANBAN_SORT_FIELD;
+	}
+
+	private sanitizeSortDirection(direction: KanbanSortDirection | string | null | undefined): KanbanSortDirection {
+		return direction === 'asc' ? 'asc' : DEFAULT_KANBAN_SORT_DIRECTION;
 	}
 
 	private cloneKanbanContent(source: KanbanCardContentConfig | null | undefined): KanbanCardContentConfig {

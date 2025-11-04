@@ -1,6 +1,13 @@
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
+import type { KanbanHeightMode } from '../../types/kanban';
+import {
+	KANBAN_VIEWPORT_MIN_HEIGHT_PX,
+	KANBAN_VIEWPORT_PADDING_PX,
+	isViewportHeightMode,
+	sanitizeKanbanHeightMode
+} from './kanbanHeight';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
@@ -17,6 +24,8 @@ interface KanbanViewControllerOptions {
 	fallbackLaneName: string;
 	primaryField: string | null;
 	displayFields: string[];
+	heightMode: KanbanHeightMode;
+	initialVisibleCount: number;
 	enableDrag: boolean;
 }
 
@@ -27,12 +36,19 @@ interface RowUpdate {
 
 export class KanbanViewController {
 	private readonly view: TableView;
+	private readonly container: HTMLElement;
 	private readonly laneField: string;
 	private readonly sortField: string | null;
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
+	private readonly handleViewportResize: () => void;
+	private readonly initialVisibleCount: number;
+	private expandedLanes = new Set<string>();
+	private heightMode: KanbanHeightMode;
+	private viewportWindow: Window | null = null;
+	private viewportFrameId: number | null = null;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
@@ -51,21 +67,29 @@ export class KanbanViewController {
 
 	constructor(options: KanbanViewControllerOptions) {
 		this.view = options.view;
+		this.container = options.container;
 		this.laneField = options.laneField;
 		this.sortField = options.sortField;
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
+		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
+		const limit = Math.floor(options.initialVisibleCount ?? 1);
+		this.initialVisibleCount = Math.max(1, limit);
+		this.handleViewportResize = () => {
+			this.scheduleViewportMeasurement();
+		};
 		this.dragAvailable = this.enableDrag;
 
 		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
-		this.rootEl = options.container.createDiv({ cls: 'tlb-kanban-root' });
+		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
 
+		this.applyHeightMode();
 		this.registerListeners();
 		this.ensureSortableLoaded();
 		this.renderBoard();
@@ -76,11 +100,21 @@ export class KanbanViewController {
 		this.unsubscribeFilter = null;
 		this.unsubscribeQuickFilter?.();
 		this.unsubscribeQuickFilter = null;
+		this.detachViewportListeners();
+		this.resetHeightStyles();
+		this.container.classList.remove('tlb-kanban-wrapper--viewport');
 		this.destroySortables();
 		this.rootEl.empty();
 	}
-
-	private registerListeners(): void {
+		public setHeightMode(mode: KanbanHeightMode): void {
+		const normalized = sanitizeKanbanHeightMode(mode);
+		if (this.heightMode === normalized) {
+			return;
+		}
+		this.heightMode = normalized;
+		this.applyHeightMode();
+	}
+		private registerListeners(): void {
 		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener(() => {
 			this.recomputeVisibleRows();
 			if (!this.isApplyingMutation) {
@@ -92,12 +126,10 @@ export class KanbanViewController {
 			this.renderBoard();
 		});
 	}
-
-	private recomputeVisibleRows(): void {
+		private recomputeVisibleRows(): void {
 		this.visibleRows = this.applyBoardFilter(this.view.filterOrchestrator.getAllRows());
 	}
-
-	private applyBoardFilter(rows: RowData[]): RowData[] {
+		private applyBoardFilter(rows: RowData[]): RowData[] {
 		const rule = this.view.activeKanbanBoardFilter;
 		if (!rule) {
 			return rows;
@@ -119,10 +151,24 @@ export class KanbanViewController {
 		this.boardEl?.setAttribute('aria-busy', 'true');
 
 		const state = this.buildState();
-		this.renderMessage(state);
+		this.messageEl.empty();
+		this.messageEl.toggleAttribute('hidden', true);
+
+		const laneIds = new Set(state.lanes.map((lane) => lane.id));
+		for (const id of Array.from(this.expandedLanes)) {
+			if (!laneIds.has(id)) {
+				this.expandedLanes.delete(id);
+			}
+		}
+		for (const lane of state.lanes) {
+			if (lane.cards.length <= this.initialVisibleCount && this.expandedLanes.has(lane.id)) {
+				this.expandedLanes.delete(lane.id);
+			}
+		}
 
 		if (state.totalCards === 0) {
 			this.renderEmptyState();
+			this.refreshHeightConstraints();
 			this.boardEl?.removeAttribute('aria-busy');
 			return;
 		}
@@ -130,6 +176,7 @@ export class KanbanViewController {
 		for (const lane of state.lanes) {
 			this.renderLane(lane);
 		}
+		this.refreshHeightConstraints();
 		this.boardEl?.removeAttribute('aria-busy');
 	}
 
@@ -207,11 +254,6 @@ export class KanbanViewController {
 		});
 	}
 
-	private renderMessage(_state: KanbanBoardState): void {
-		this.messageEl.empty();
-		this.messageEl.toggleAttribute('hidden', true);
-	}
-
 	private renderEmptyState(): void {
 		if (!this.boardEl) {
 			return;
@@ -245,9 +287,10 @@ export class KanbanViewController {
 		const title = header.createSpan({ cls: 'tlb-kanban-lane__title' });
 		title.setText(lane.name);
 
+		const totalCards = lane.cards.length;
 		const count = header.createSpan({ cls: 'tlb-kanban-lane__count' });
-		count.setText(String(lane.cards.length));
-		count.setAttribute('aria-label', t('kanbanView.laneCountLabel', { count: String(lane.cards.length) }));
+		count.setText(String(totalCards));
+		count.setAttribute('aria-label', t('kanbanView.laneCountLabel', { count: String(totalCards) }));
 
 		const cardsContainer = laneEl.createDiv({
 			cls: 'tlb-kanban-lane__cards',
@@ -257,13 +300,34 @@ export class KanbanViewController {
 			}
 		});
 
-		if (lane.cards.length === 0) {
+		if (totalCards === 0) {
 			const placeholder = cardsContainer.createDiv({ cls: 'tlb-kanban-lane__placeholder' });
 			placeholder.setText(t('kanbanView.emptyLanePlaceholder'));
-		}
+		} else {
+			const expanded = this.expandedLanes.has(lane.id);
+			const limit = this.initialVisibleCount;
+			const visibleCards = !expanded && totalCards > limit ? lane.cards.slice(0, limit) : lane.cards;
+			const hiddenCount = expanded ? 0 : Math.max(0, totalCards - visibleCards.length);
 
-		for (const card of lane.cards) {
-			this.renderCard(cardsContainer, card);
+			for (const card of visibleCards) {
+				this.renderCard(cardsContainer, card);
+			}
+
+			if (hiddenCount > 0) {
+				const button = cardsContainer.createEl('button', {
+					cls: 'tlb-kanban-lane__load-more',
+					attr: { type: 'button' }
+				});
+				const label = t('kanbanView.showAllButtonLabel', { count: String(hiddenCount) });
+				button.setText(label);
+				button.setAttribute('aria-label', label);
+				button.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					this.expandedLanes.add(lane.id);
+					this.renderBoard();
+				});
+			}
 		}
 
 		if (this.dragAvailable && this.sortableClass) {
@@ -416,6 +480,79 @@ export class KanbanViewController {
 		if (!recorded) {
 			this.renderBoard();
 		}
+	}
+
+	private applyHeightMode(): void {
+		if (isViewportHeightMode(this.heightMode)) {
+			this.container.classList.add('tlb-kanban-wrapper--viewport');
+			this.refreshHeightConstraints();
+			return;
+		}
+		this.container.classList.remove('tlb-kanban-wrapper--viewport');
+		this.resetHeightStyles();
+		this.detachViewportListeners();
+	}
+
+	private refreshHeightConstraints(): void {
+		if (!isViewportHeightMode(this.heightMode)) {
+			this.cancelViewportMeasurement();
+			return;
+		}
+		this.scheduleViewportMeasurement();
+	}
+
+	private scheduleViewportMeasurement(): void {
+		const ownerDoc = this.container.ownerDocument;
+		const win = ownerDoc?.defaultView ?? null;
+		if (!win || !this.container.isConnected) {
+			return;
+		}
+		if (this.viewportWindow && this.viewportWindow !== win) {
+			this.detachViewportListeners();
+		}
+		if (!this.viewportWindow) {
+			this.viewportWindow = win;
+			win.addEventListener('resize', this.handleViewportResize, { passive: true });
+		}
+		this.cancelViewportMeasurement();
+		// eslint-disable-next-line obsidianmd/no-static-styles-assignment
+		this.container.style.overflowY = 'auto';
+		this.container.style.minHeight = `${KANBAN_VIEWPORT_MIN_HEIGHT_PX}px`;
+		this.viewportFrameId = win.requestAnimationFrame(() => {
+			this.viewportFrameId = null;
+			this.applyViewportHeight(win);
+		});
+	}
+
+	private applyViewportHeight(win: Window): void {
+		if (!this.container.isConnected) {
+			return;
+		}
+		const rect = this.container.getBoundingClientRect();
+		const available = win.innerHeight - rect.top - KANBAN_VIEWPORT_PADDING_PX;
+		const clamped = Math.max(available, KANBAN_VIEWPORT_MIN_HEIGHT_PX);
+		this.container.style.maxHeight = `${clamped}px`;
+	}
+
+	private cancelViewportMeasurement(): void {
+		if (this.viewportWindow && this.viewportFrameId !== null) {
+			this.viewportWindow.cancelAnimationFrame(this.viewportFrameId);
+		}
+		this.viewportFrameId = null;
+	}
+
+	private detachViewportListeners(): void {
+		if (this.viewportWindow) {
+			this.viewportWindow.removeEventListener('resize', this.handleViewportResize);
+		}
+		this.cancelViewportMeasurement();
+		this.viewportWindow = null;
+	}
+
+	private resetHeightStyles(): void {
+		this.container.style.removeProperty('max-height');
+		this.container.style.removeProperty('min-height');
+		this.container.style.removeProperty('overflow-y');
 	}
 
 	private destroySortables(): void {

@@ -39,7 +39,9 @@ import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
-import type { KanbanBoardState } from "./types/kanban";
+import type { KanbanBoardState, KanbanHeightMode } from "./types/kanban";
+import { DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT } from "./types/kanban";
+import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -91,6 +93,8 @@ export class TableView extends ItemView {
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null;
 	public kanbanSortField: string | null = "看板排序";
+	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE;
+	public kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 	public kanbanPreferencesLoaded = false;
 	public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null;
@@ -241,6 +245,18 @@ export class TableView extends ItemView {
 		this.markdownToggleButton = button;
 	}
 
+
+	public setKanbanHeightMode(mode: KanbanHeightMode): void {
+		const normalized = sanitizeKanbanHeightMode(mode);
+		if (this.kanbanHeightMode === normalized) {
+			return;
+		}
+		this.kanbanHeightMode = normalized;
+		if (this.kanbanController) {
+			this.kanbanController.setHeightMode(normalized);
+		}
+		this.persistenceService?.scheduleSave();
+	}
 
 	public async setActiveViewMode(mode: 'table' | 'kanban'): Promise<void> {
 		await this.kanbanManager.setActiveViewMode(mode);

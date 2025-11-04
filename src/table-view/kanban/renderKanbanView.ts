@@ -1,4 +1,5 @@
 import type { TableView } from '../../TableView';
+import type { KanbanHeightMode } from '../../types/kanban';
 import { t } from '../../i18n';
 import { KanbanViewController } from './KanbanViewController';
 
@@ -6,6 +7,8 @@ interface RenderKanbanViewOptions {
 	primaryField: string | null;
 	laneField: string;
 	sortField: string | null;
+	heightMode: KanbanHeightMode;
+	initialVisibleCount: number;
 }
 
 export function renderKanbanView(
@@ -52,6 +55,8 @@ export function renderKanbanView(
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,
 		displayFields: columnNames,
-		enableDrag: true
+		enableDrag: true,
+		heightMode: options.heightMode,
+		initialVisibleCount: options.initialVisibleCount
 	});
 }

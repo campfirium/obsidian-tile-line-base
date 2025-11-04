@@ -395,13 +395,10 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async setHideRightSidebarEnabled(value: boolean): Promise<void> {
 		const changed = await this.settingsService.setHideRightSidebar(value);
-		if (!changed) {
-			return;
-		}
+		if (!changed) { return; }
 		this.settings = this.settingsService.getSettings();
 		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
-
 	async toggleLeafView(leaf: WorkspaceLeaf): Promise<void> {
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 		const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
@@ -430,9 +427,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async setBackupEnabled(value: boolean): Promise<void> {
 		const changed = await this.settingsService.setBackupEnabled(value);
-		if (!changed) {
-			return;
-		}
+		if (!changed) { return; }
 		this.settings = this.settingsService.getSettings();
 	}
 
@@ -442,9 +437,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async setBackupCapacityLimit(value: number): Promise<void> {
 		const changed = await this.settingsService.setBackupMaxSizeMB(value);
-		if (!changed) {
-			return;
-		}
+		if (!changed) { return; }
 		this.settings = this.settingsService.getSettings();
 		if (this.backupManager) {
 			try {

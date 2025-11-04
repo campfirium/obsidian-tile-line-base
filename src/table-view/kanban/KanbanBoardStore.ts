@@ -1,7 +1,7 @@
 import { getPluginContext } from '../../pluginContext';
 import type { FilterRule } from '../../types/filterView';
 import type { KanbanBoardDefinition, KanbanBoardState } from '../../types/kanban';
-import { DEFAULT_KANBAN_BOARD_STATE } from '../../types/kanban';
+import { DEFAULT_KANBAN_BOARD_STATE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, sanitizeKanbanInitialVisibleCount } from '../../types/kanban';
 
 export interface CreateBoardOptions {
 	name: string;
@@ -9,6 +9,7 @@ export interface CreateBoardOptions {
 	laneField: string;
 	filterRule: FilterRule | null;
 	setActive?: boolean;
+ 	initialVisibleCount?: number | null;
 }
 
 export interface UpdateBoardOptions {
@@ -16,6 +17,7 @@ export interface UpdateBoardOptions {
 	icon?: string | null;
 	laneField?: string | null;
 	filterRule?: FilterRule | null;
+ 	initialVisibleCount?: number | null;
 }
 
 export class KanbanBoardStore {
@@ -85,7 +87,8 @@ export class KanbanBoardStore {
 			name: this.sanitizeName(options.name),
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
-			filterRule: this.cloneFilterRule(options.filterRule)
+			filterRule: this.cloneFilterRule(options.filterRule),
+			initialVisibleCount: this.sanitizeInitialVisibleCount(options.initialVisibleCount)
 		};
 		this.state.boards.push(board);
 		if (options.setActive !== false) {
@@ -113,6 +116,9 @@ export class KanbanBoardStore {
 		}
 		if (updates.filterRule !== undefined) {
 			target.filterRule = this.cloneFilterRule(updates.filterRule);
+		}
+		if (updates.initialVisibleCount !== undefined) {
+			target.initialVisibleCount = this.sanitizeInitialVisibleCount(updates.initialVisibleCount);
 		}
 		return { ...target };
 	}
@@ -144,6 +150,13 @@ export class KanbanBoardStore {
 		return trimmed.length > 0 ? trimmed : null;
 	}
 
+	private sanitizeInitialVisibleCount(value: number | string | null | undefined): number {
+		return sanitizeKanbanInitialVisibleCount(
+			value ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+			DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
+		);
+	}
+
 	private sanitizeName(name: string | null | undefined): string {
 		if (typeof name !== 'string') {
 			return '';
@@ -171,17 +184,18 @@ export class KanbanBoardStore {
 		if (!state) {
 			return this.cloneState(DEFAULT_KANBAN_BOARD_STATE);
 		}
-		const boards = Array.isArray(state.boards)
-			? state.boards
-					.filter((board): board is KanbanBoardDefinition => !!board && typeof board.id === 'string')
-					.map((board) => ({
-						id: board.id,
-						name: this.sanitizeName(board.name),
-						icon: this.sanitizeIcon(board.icon),
-						laneField: this.sanitizeLaneField(board.laneField ?? null),
-						filterRule: this.cloneFilterRule(board.filterRule ?? null)
-					}))
-			: [];
+	const boards = Array.isArray(state.boards)
+		? state.boards
+				.filter((board): board is KanbanBoardDefinition => !!board && typeof board.id === 'string')
+				.map((board) => ({
+					id: board.id,
+					name: this.sanitizeName(board.name),
+					icon: this.sanitizeIcon(board.icon),
+					laneField: this.sanitizeLaneField(board.laneField ?? null),
+					filterRule: this.cloneFilterRule(board.filterRule ?? null),
+					initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null)
+				}))
+		: [];
 		return {
 			boards,
 			activeBoardId: typeof state.activeBoardId === 'string' ? state.activeBoardId : null

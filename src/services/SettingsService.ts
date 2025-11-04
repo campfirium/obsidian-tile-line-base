@@ -7,7 +7,11 @@ import type {
 	DefaultFilterViewPreferences
 } from '../types/filterView';
 import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
-import type { KanbanBoardState } from '../types/kanban';
+import {
+	type KanbanBoardState,
+	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+	sanitizeKanbanInitialVisibleCount
+} from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -419,12 +423,17 @@ export class SettingsService {
 				const icon = this.sanitizeIconId(raw.icon);
 				const laneField = typeof raw.laneField === 'string' ? raw.laneField.trim() : '';
 				const filterRule = raw.filterRule ? this.deepClone(raw.filterRule) : null;
+				const initialVisibleCount = sanitizeKanbanInitialVisibleCount(
+					raw.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+					DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
+				);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
-					filterRule
+					filterRule,
+					initialVisibleCount
 				});
 				seenIds.add(id);
 			}

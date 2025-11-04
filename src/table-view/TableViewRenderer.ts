@@ -10,6 +10,7 @@ import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
+import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 
 const logger = getLogger('table-view:renderer');
@@ -19,9 +20,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	rootEl.classList.add('tile-line-base-view');
 
 	const container = rootEl.children[1] as HTMLElement | undefined;
-	if (!container) {
-		return;
-	}
+	if (!container) { return; }
 	container.empty();
 	container.classList.add('tlb-table-view-content');
 	container.classList.remove('tlb-has-grid');
@@ -38,12 +37,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	const ownerDoc = container.ownerDocument;
-	const ownerWindow = ownerDoc?.defaultView ?? null;
 	logger.debug('render start', {
 		file: view.file?.path,
 		containerTag: container.tagName,
-		containerClass: container.className,
-		window: describeWindow(ownerWindow)
+		containerClass: container.className
 	});
 
 	if (!view.file) {
@@ -89,6 +86,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			view.activeViewMode = preference;
 		}
 		const kanbanConfig = configBlock?.kanban;
+		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
 		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
 			view.kanbanLaneField = kanbanConfig.laneField;
 			if (typeof kanbanConfig.sortField === 'string') {
@@ -186,7 +184,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 		renderKanbanView(view, container, {
 			primaryField,
 			laneField: view.kanbanLaneField,
-			sortField
+			sortField,
+			heightMode: view.kanbanHeightMode,
+			initialVisibleCount: view.kanbanInitialVisibleCount
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;
@@ -314,18 +314,5 @@ function mergeColumnConfigs(
 		merged.push(remaining);
 	}
 	return merged;
-}
-
-function describeWindow(win: Window | null | undefined): Record<string, unknown> | null {
-	if (!win) {
-		return null;
-	}
-	let href: string | undefined;
-	try {
-		href = win.location?.href;
-	} catch {
-		href = undefined;
-	}
-	return { href, isMain: win === window };
 }
 

@@ -1,7 +1,8 @@
-import { Menu, Setting, ToggleComponent } from 'obsidian';
+import { Menu, ToggleComponent } from 'obsidian';
 import { getLocaleCode, t } from '../../i18n';
 import type { KanbanCardContentConfig } from '../../types/kanban';
-import { buildDefaultContentSettings, wrapPlaceholder } from './KanbanCardContent';
+import { wrapPlaceholder } from './KanbanCardContent';
+import { cloneKanbanContentConfig } from './KanbanContentConfig';
 
 export interface ContentEditorOptions {
 	container: HTMLElement;
@@ -25,15 +26,16 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 	});
 	const insertButton = header.createEl('button', {
 		cls: 'tlb-kanban-content-settings__insert-button',
-		text: t('kanbanView.content.insertFieldButton')
+		text: t('kanbanView.content.insertFieldButton'),
+		attr: { type: 'button' }
 	});
 	insertButton.disabled = true;
 	insertButton.addEventListener('mousedown', (event) => {
 		event.preventDefault();
 	});
 
-	const state = cloneContentConfig(options.initialContent);
-	const notifyChange = () => options.onChange(cloneContentConfig(state));
+	const state = cloneKanbanContentConfig(options.initialContent);
+	const notifyChange = () => options.onChange(cloneKanbanContentConfig(state));
 	let suppressDirty = false;
 	let lastFocusedInput: HTMLInputElement | HTMLTextAreaElement | null = null;
 
@@ -59,22 +61,29 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 		multiline?: boolean;
 		rows?: number;
 		assign: (value: string) => void;
+		renderHeaderExtras?: (container: HTMLElement) => void;
 	}): HTMLTextAreaElement | HTMLInputElement => {
 		const group = root.createDiv({ cls: 'tlb-kanban-content-settings__group' });
 		const groupHeader = group.createDiv({ cls: 'tlb-kanban-content-settings__group-header' });
 		groupHeader.createSpan({ cls: 'tlb-kanban-content-settings__label', text: config.label });
+		if (config.renderHeaderExtras) {
+			const extras = groupHeader.createDiv({ cls: 'tlb-kanban-content-settings__header-extras' });
+			config.renderHeaderExtras(extras);
+		}
+		const inputWrapper = group.createDiv({ cls: 'tlb-kanban-content-settings__input-wrapper' });
 		const inputEl = config.multiline
-			? (group.createEl('textarea', {
+			? (inputWrapper.createEl('textarea', {
 					cls: 'tlb-kanban-content-settings__input tlb-kanban-content-settings__input--multiline',
 					placeholder: config.placeholder
 				}) as HTMLTextAreaElement)
-			: (group.createEl('input', {
+			: (inputWrapper.createEl('input', {
 					cls: 'tlb-kanban-content-settings__input',
 					type: 'text',
 					placeholder: config.placeholder
 				}) as HTMLInputElement);
 		if (config.multiline && config.rows) {
 			(inputEl as HTMLTextAreaElement).rows = config.rows;
+			(inputEl as HTMLTextAreaElement).wrap = 'off';
 		}
 		inputEl.value = config.value;
 		inputEl.spellcheck = false;
@@ -104,6 +113,8 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 	let titleInput: HTMLInputElement;
 	let bodyInput: HTMLTextAreaElement;
 	let tagsInput: HTMLInputElement;
+	let bodyToggle: ToggleComponent | null = null;
+	let tagsToggle: ToggleComponent | null = null;
 
 	const getInsertionTarget = (): HTMLInputElement | HTMLTextAreaElement => {
 		const target = resolveActiveInput();
@@ -144,6 +155,19 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 		value: state.bodyTemplate,
 		multiline: true,
 		rows: 2,
+		renderHeaderExtras: (container) => {
+			container.createSpan({ cls: 'tlb-kanban-content-settings__toggle-label', text: t('kanbanView.content.showBodyToggle') });
+			bodyToggle = new ToggleComponent(container);
+			bodyToggle.setValue(state.showBody);
+			bodyToggle.setTooltip(t('kanbanView.content.showBodyToggleDesc'));
+			bodyToggle.onChange((value) => {
+				if (!suppressDirty) {
+					options.onDirty();
+				}
+				state.showBody = value;
+				notifyChange();
+			});
+		},
 		assign: (value) => {
 			state.bodyTemplate = value;
 		}
@@ -154,26 +178,23 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 		placeholder: t('kanbanView.content.tagsPlaceholder'),
 		value: state.tagsTemplate,
 		multiline: false,
+		renderHeaderExtras: (container) => {
+			container.createSpan({ cls: 'tlb-kanban-content-settings__toggle-label', text: t('kanbanView.content.tagsBelowBodyToggle') });
+			tagsToggle = new ToggleComponent(container);
+			tagsToggle.setValue(state.tagsBelowBody);
+			tagsToggle.setTooltip(t('kanbanView.content.tagsBelowBodyToggleDesc'));
+			tagsToggle.onChange((value) => {
+				if (!suppressDirty) {
+					options.onDirty();
+				}
+				state.tagsBelowBody = value;
+				notifyChange();
+			});
+		},
 		assign: (value) => {
 			state.tagsTemplate = value;
 		}
 	}) as HTMLInputElement;
-
-	const toggleSetting = new Setting(root);
-	toggleSetting.setName(t('kanbanView.content.showBodyToggle'));
-	toggleSetting.setDesc(t('kanbanView.content.showBodyToggleDesc'));
-	let bodyToggle: ToggleComponent | null = null;
-	toggleSetting.addToggle((toggle) => {
-		bodyToggle = toggle;
-		toggle.setValue(state.showBody);
-		toggle.onChange((value) => {
-			if (!suppressDirty) {
-				options.onDirty();
-			}
-			state.showBody = value;
-			notifyChange();
-		});
-	});
 
 	refreshInsertButton();
 	notifyChange();
@@ -181,15 +202,17 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 	return {
 		update: (value: KanbanCardContentConfig) => {
 			suppressDirty = true;
-			const snapshot = cloneContentConfig(value);
+			const snapshot = cloneKanbanContentConfig(value);
 			state.titleTemplate = snapshot.titleTemplate;
 			state.bodyTemplate = snapshot.bodyTemplate;
 			state.tagsTemplate = snapshot.tagsTemplate;
 			state.showBody = snapshot.showBody;
+			state.tagsBelowBody = snapshot.tagsBelowBody;
 			titleInput.value = snapshot.titleTemplate;
 			bodyInput.value = snapshot.bodyTemplate;
 			tagsInput.value = snapshot.tagsTemplate;
 			bodyToggle?.setValue(snapshot.showBody);
+			tagsToggle?.setValue(snapshot.tagsBelowBody);
 			suppressDirty = false;
 			refreshInsertButton();
 			notifyChange();
@@ -198,37 +221,7 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 	};
 }
 
-export function cloneContentConfig(config: KanbanCardContentConfig | null | undefined): KanbanCardContentConfig {
-	const normalize = (value: string | null | undefined): string =>
-		typeof value === 'string' ? value.replace(/\r\n/g, '\n').replace(/\{\{\s*/g, '{').replace(/\s*\}\}/g, '}') : '';
-	return {
-		titleTemplate: normalize(config?.titleTemplate),
-		bodyTemplate: normalize(config?.bodyTemplate),
-		tagsTemplate: normalize(config?.tagsTemplate),
-		showBody: typeof config?.showBody === 'boolean' ? config.showBody : true
-	};
-}
-
-export function resolveInitialContent(
-	raw: KanbanCardContentConfig | null | undefined,
-	availableFields: string[],
-	laneField: string | null
-): KanbanCardContentConfig {
-	const defaults = buildDefaultContentSettings({
-		availableFields,
-		laneField
-	});
-	if (!raw) {
-		return defaults;
-	}
-	const sanitized = cloneContentConfig(raw);
-	return {
-		titleTemplate: sanitized.titleTemplate || defaults.titleTemplate,
-		bodyTemplate: sanitized.bodyTemplate || defaults.bodyTemplate,
-		tagsTemplate: sanitized.tagsTemplate || defaults.tagsTemplate,
-		showBody: sanitized.showBody
-	};
-}
+export { cloneKanbanContentConfig as cloneContentConfig, resolveInitialKanbanContentConfig as resolveInitialContent } from './KanbanContentConfig';
 
 function openFieldMenu(event: MouseEvent, fields: string[], onSelect: (field: string) => void): void {
 	const menu = new Menu();

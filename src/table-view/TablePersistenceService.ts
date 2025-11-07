@@ -9,8 +9,8 @@ import type { FilterStateStore } from './filter/FilterStateStore';
 import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
-import type { KanbanBoardState, KanbanHeightMode } from '../types/kanban';
-import { DEFAULT_KANBAN_HEIGHT_MODE } from '../types/kanban';
+import type { KanbanBoardState, KanbanHeightMode, KanbanSortDirection } from '../types/kanban';
+import { DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
 
 const logger = getLogger('table-view:persistence');
 
@@ -26,7 +26,12 @@ interface TablePersistenceDeps {
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
 	getViewPreference: () => 'table' | 'kanban';
-	getKanbanConfig: () => { laneField: string | null; sortField: string | null; heightMode: KanbanHeightMode | null } | null;
+	getKanbanConfig: () => {
+		laneField: string | null;
+		sortField: string | null;
+		sortDirection: KanbanSortDirection | null;
+		heightMode: KanbanHeightMode | null;
+	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	markSelfMutation?: (file: TFile) => void;
 }
@@ -103,6 +108,7 @@ export class TablePersistenceService {
 		const kanbanConfig = this.deps.getKanbanConfig?.();
 		const laneField = kanbanConfig?.laneField ?? null;
 		const sortField = kanbanConfig?.sortField ?? null;
+		const sortDirection = kanbanConfig?.sortDirection ?? null;
 		const heightMode = kanbanConfig?.heightMode ?? null;
 		const kanbanBoards = this.deps.getKanbanBoards?.() ?? null;
 		const hasKanbanBoards =
@@ -122,6 +128,10 @@ export class TablePersistenceService {
 					? {
 							laneField,
 							sortField: sortField && sortField.trim().length > 0 ? sortField : undefined,
+							sortDirection:
+								sortDirection && sortDirection !== DEFAULT_KANBAN_SORT_DIRECTION
+									? sortDirection
+									: undefined,
 							heightMode: heightMode && heightMode !== DEFAULT_KANBAN_HEIGHT_MODE ? heightMode : undefined
 						}
 					: undefined,

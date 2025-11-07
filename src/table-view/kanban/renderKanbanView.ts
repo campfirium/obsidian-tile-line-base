@@ -1,5 +1,5 @@
 import type { TableView } from '../../TableView';
-import type { KanbanHeightMode } from '../../types/kanban';
+import type { KanbanCardContentConfig, KanbanHeightMode } from '../../types/kanban';
 import { t } from '../../i18n';
 import { KanbanViewController } from './KanbanViewController';
 
@@ -9,6 +9,7 @@ interface RenderKanbanViewOptions {
 	sortField: string | null;
 	heightMode: KanbanHeightMode;
 	initialVisibleCount: number;
+	content: KanbanCardContentConfig | null;
 }
 
 export function renderKanbanView(
@@ -57,6 +58,7 @@ export function renderKanbanView(
 		displayFields: columnNames,
 		enableDrag: true,
 		heightMode: options.heightMode,
-		initialVisibleCount: options.initialVisibleCount
+		initialVisibleCount: options.initialVisibleCount,
+		contentConfig: options.content
 	});
 }

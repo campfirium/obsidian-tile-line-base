@@ -2,6 +2,11 @@ import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
 import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
 
+export interface KanbanCardField {
+	name: string;
+	value: string;
+}
+
 export interface KanbanCard {
 	id: string;
 	rowIndex: number;
@@ -12,6 +17,7 @@ export interface KanbanCard {
 	sortValue: number | null;
 	sortText: string | null;
 	rawLane: string;
+	fields: KanbanCardField[];
 	row: RowData;
 }
 
@@ -34,6 +40,7 @@ interface BuildKanbanBoardStateParams {
 	fallbackLane: string;
 	primaryField: string | null;
 	content: KanbanRuntimeCardContent;
+	displayFields: string[];
 	quickFilter: string;
 	resolveRowIndex: (row: RowData) => number | null;
 }
@@ -47,6 +54,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		fallbackLane,
 		primaryField,
 		content,
+		displayFields,
 		quickFilter,
 		resolveRowIndex
 	} = params;
@@ -95,6 +103,14 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
 		const sortMeta = parseSortMetadata(sortRaw);
 		const sortOrder = sortMeta.numeric ?? lane.cards.length + 1;
+		const cardFields = buildCardFields({
+			row,
+			displayFields,
+			laneField,
+			sortField,
+			primaryField,
+			content
+		});
 
 		lane.cards.push({
 			id: buildCardId(row, rowIndex),
@@ -106,6 +122,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			sortValue: sortMeta.numeric,
 			sortText: sortMeta.text,
 			rawLane: laneName,
+			fields: cardFields,
 			row
 		});
 		totalCards += 1;
@@ -145,6 +162,55 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		lanes,
 		totalCards
 	};
+}
+
+interface BuildCardFieldsOptions {
+	row: RowData;
+	displayFields: string[];
+	laneField: string;
+	sortField: string | null;
+	primaryField: string | null;
+	content: KanbanRuntimeCardContent;
+}
+
+function buildCardFields(options: BuildCardFieldsOptions): KanbanCardField[] {
+	const { row, displayFields, laneField, sortField, primaryField, content } = options;
+	const result: KanbanCardField[] = [];
+	const seen = new Set<string>();
+	const excluded = new Set<string>([laneField, ROW_ID_FIELD]);
+	if (sortField) {
+		excluded.add(sortField);
+	}
+	if (primaryField) {
+		excluded.add(primaryField);
+	}
+	for (const field of content.referencedFields) {
+		if (typeof field === 'string' && field.trim().length > 0) {
+			excluded.add(field.trim());
+		}
+	}
+	for (const field of displayFields) {
+		if (typeof field !== 'string') {
+			continue;
+		}
+		const trimmed = field.trim();
+		if (!trimmed || trimmed === '#' || seen.has(trimmed)) {
+			continue;
+		}
+		seen.add(trimmed);
+		if (excluded.has(trimmed)) {
+			continue;
+		}
+		const value = normalizeString(row[trimmed]);
+		if (!value) {
+			continue;
+		}
+		result.push({
+			name: trimmed,
+			value
+		});
+	}
+	return result;
 }
 
 interface CardTextSegments {

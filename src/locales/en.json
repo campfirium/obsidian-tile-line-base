@@ -6,11 +6,11 @@
     "openTableView": "Switch to TileLineBase table view",
     "openMarkdownView": "Switch back to Markdown editor"
   },
-  "kanbanView": {
-    "schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
-    "missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
-    "missingSortField": "Kanban view needs the \"{{field}}\" column to keep card ordering.",
-    "unassignedLaneLabel": "Unassigned",
+	"kanbanView": {
+		"schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
+		"missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
+		"missingSortField": "Kanban view needs the \"{{field}}\" column to keep card ordering.",
+		"unassignedLaneLabel": "Unassigned",
     "filteredCountLabel": "{{count}} cards match the current filters",
     "totalCountLabel": "{{count}} cards",
     "dragHint": "Drag cards to reorder within a lane or move them across lanes.",
@@ -27,20 +27,21 @@
       "switchToKanban": "Switch to kanban view",
       "switchToTable": "Switch to table view"
     },
-    "fieldModal": {
-      "title": "Select kanban column",
-      "description": "Pick the column whose values should form the lanes in the kanban board.",
-      "laneFieldLabel": "Kanban column",
-      "confirmLabel": "Use column",
-      "cancelLabel": "Cancel",
-      "schemaUnavailable": "Load the table first before choosing a kanban column.",
-      "noColumns": "No available columns to use as kanban lanes."
-    },
-    "toolbar": {
-      "defaultBoardLabel": "Default board", "unnamedBoardLabel": "Untitled board",
-      "addBoardButtonAriaLabel": "Add kanban board", "createBoardTitle": "New kanban board",
-      "editBoardTitle": "Edit kanban board", "editBoardLabel": "Edit board",
-      "deleteBoardLabel": "Delete board", "deleteBoardConfirm": "Delete \"{{name}}\"? Cards remain available from other boards.",
+		"fieldModal": {
+			"title": "Select kanban column",
+			"description": "Pick the column whose values should form the lanes in the kanban board.",
+			"laneFieldLabel": "Kanban column",
+			"confirmLabel": "Use column",
+			"cancelLabel": "Cancel",
+			"schemaUnavailable": "Load the table first before choosing a kanban column.",
+			"noColumns": "No available columns to use as kanban lanes."
+		},
+		"content": { "sectionTitle": "Card content", "insertFieldButton": "Insert field", "titleLabel": "Title template", "titlePlaceholder": "Example: {Title}", "bodyLabel": "Body template", "bodyPlaceholder": "Example: {Description}\\n{Notes}", "tagsLabel": "Tags template", "tagsPlaceholder": "Separate placeholders with spaces or commas, e.g. {Tags}", "showBodyToggle": "Show body inside card", "showBodyToggleDesc": "When disabled, the body appears as a hover tooltip.", "tagsBelowBodyToggle": "Show tags under body", "tagsBelowBodyToggleDesc": "Keep unchecked to show tags next to the title.", "noFieldOption": "No fields available" },
+		"toolbar": {
+			"defaultBoardLabel": "Default board", "unnamedBoardLabel": "Untitled board",
+			"addBoardButtonAriaLabel": "Add kanban board", "createBoardTitle": "New kanban board",
+			"editBoardTitle": "Edit kanban board", "editBoardLabel": "Edit board",
+			"deleteBoardLabel": "Delete board", "deleteBoardConfirm": "Delete \"{{name}}\"? Cards remain available from other boards.",
       "cannotDeleteLastBoard": "Keep at least one board.", "newBoardPlaceholder": "Kanban board",
       "deleteBoardConfirmAction": "Delete", "laneFieldMissingNotice": "The kanban board no longer has a valid lane column. Pick a new column to continue.", "noBoardsPlaceholder": "No kanban boards yet. Use the + button to create one.", "laneFieldLabel": "Kanban column", "duplicateBoardLabel": "Duplicate board", "duplicateBoardTitle": "Duplicate board: {{name}}", "duplicateBoardNotice": "Duplicated board: {{name}}", "duplicateNameSuffix": "copy", "initialVisibleCountLabel": "Initial cards per lane", "initialVisibleCountDesc": "Show this many cards in each lane before revealing the rest."
     },

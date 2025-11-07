@@ -37,6 +37,7 @@
       "schemaUnavailable": "请先加载表格后再选择看板列。",
       "noColumns": "当前没有可用列用于看板泳道。"
     },
+		"content": { "sectionTitle": "卡片内容", "insertFieldButton": "插入字段", "titleLabel": "标题模板", "titlePlaceholder": "示例：{标题}", "bodyLabel": "正文模板", "bodyPlaceholder": "示例：{描述}\\n{备注}", "tagsLabel": "标签模板", "tagsPlaceholder": "使用空格或逗号分隔占位符，例如 {标签}", "showBodyToggle": "在卡片内显示正文", "showBodyToggleDesc": "取消后，正文会作为鼠标悬停提示显示。", "tagsBelowBodyToggle": "标签显示在正文下方", "tagsBelowBodyToggleDesc": "不勾选时，标签与标题同行显示。", "noFieldOption": "暂无可用字段" },
     "toolbar": {
       "defaultBoardLabel": "默认看板", "unnamedBoardLabel": "未命名看板",
       "addBoardButtonAriaLabel": "新建看板", "createBoardTitle": "新建看板",

@@ -51,6 +51,7 @@ export function initializeTableView(view: TableView): void {
 		getKanbanConfig: () => ({
 			laneField: view.kanbanLaneField,
 			sortField: view.kanbanSortField,
+			sortDirection: view.kanbanSortDirection,
 			heightMode: view.kanbanHeightMode
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),

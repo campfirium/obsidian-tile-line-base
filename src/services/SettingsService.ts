@@ -9,6 +9,7 @@ import type {
 import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
 import {
 	type KanbanBoardState,
+	type KanbanCardContentConfig,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 	sanitizeKanbanInitialVisibleCount
 } from '../types/kanban';
@@ -427,13 +428,15 @@ export class SettingsService {
 					raw.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 					DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
 				);
+				const content = this.cloneKanbanCardContentConfig(raw.content ?? null);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
 					filterRule,
-					initialVisibleCount
+					initialVisibleCount,
+					content
 				});
 				seenIds.add(id);
 			}
@@ -447,6 +450,32 @@ export class SettingsService {
 			boards,
 			activeBoardId
 		};
+	}
+
+	private cloneKanbanCardContentConfig(
+		source: KanbanCardContentConfig | null | undefined
+	): KanbanCardContentConfig | null {
+		if (!source) {
+			return null;
+		}
+		const normalize = (value: string | null | undefined): string =>
+			typeof value === 'string'
+				? value.replace(/\r\n?/g, '\n').replace(/\{\{\s*/g, '{').replace(/\s*\}\}/g, '}')
+				: '';
+		const normalized = {
+			titleTemplate: normalize(source.titleTemplate),
+			bodyTemplate: normalize(source.bodyTemplate),
+			tagsTemplate: normalize(source.tagsTemplate),
+			showBody: typeof source.showBody === 'boolean' ? source.showBody : true,
+			tagsBelowBody: typeof source.tagsBelowBody === 'boolean' ? source.tagsBelowBody : false
+		};
+		const isEmpty =
+			normalized.titleTemplate.length === 0 &&
+			normalized.bodyTemplate.length === 0 &&
+			normalized.tagsTemplate.length === 0 &&
+			normalized.showBody === true &&
+			normalized.tagsBelowBody === false;
+		return isEmpty ? null : normalized;
 	}
 
 	private cloneTagGroupMetadata(source: FileTagGroupMetadata | null | undefined): FileTagGroupMetadata {

@@ -92,6 +92,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 			if (typeof kanbanConfig.sortField === 'string') {
 				view.kanbanSortField = kanbanConfig.sortField;
 			}
+			if (kanbanConfig.sortDirection === 'asc' || kanbanConfig.sortDirection === 'desc') {
+				view.kanbanSortDirection = kanbanConfig.sortDirection;
+			}
 		}
 		view.kanbanPreferencesLoaded = true;
 	}
@@ -186,7 +189,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 			laneField: view.kanbanLaneField,
 			sortField,
 			heightMode: view.kanbanHeightMode,
-			initialVisibleCount: view.kanbanInitialVisibleCount
+			initialVisibleCount: view.kanbanInitialVisibleCount,
+			content: view.kanbanCardContentConfig
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;

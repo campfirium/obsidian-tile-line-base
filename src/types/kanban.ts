@@ -1,11 +1,34 @@
 import type { FilterRule } from './filterView';
 
 export type KanbanHeightMode = 'auto' | 'viewport';
+export type KanbanSortDirection = 'asc' | 'desc';
+
+export interface KanbanCardContentConfig {
+	titleTemplate: string;
+	bodyTemplate: string;
+	tagsTemplate: string;
+	showBody: boolean;
+	tagsBelowBody: boolean;
+}
+
+export interface KanbanRuntimeCardContent extends KanbanCardContentConfig {
+	referencedFields: string[];
+}
 
 export const DEFAULT_KANBAN_HEIGHT_MODE: KanbanHeightMode = 'auto';
+export const DEFAULT_KANBAN_SORT_DIRECTION: KanbanSortDirection = 'asc';
+export const DEFAULT_KANBAN_SORT_FIELD = '看板排序';
 export const DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT = 10;
 export const MIN_KANBAN_INITIAL_VISIBLE_COUNT = 1;
 export const MAX_KANBAN_INITIAL_VISIBLE_COUNT = 500;
+
+export const DEFAULT_KANBAN_CARD_CONTENT: KanbanCardContentConfig = {
+	titleTemplate: '',
+	bodyTemplate: '',
+	tagsTemplate: '',
+	showBody: true,
+	tagsBelowBody: false
+};
 
 export function sanitizeKanbanInitialVisibleCount(
 	value: unknown,
@@ -37,6 +60,7 @@ export interface KanbanBoardDefinition {
 	laneField: string;
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
+	content?: KanbanCardContentConfig | null;
 }
 
 export interface KanbanBoardState {

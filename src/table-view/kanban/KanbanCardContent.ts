@@ -23,13 +23,14 @@ export function buildDefaultContentSettings(options: {
 	return {
 		titleTemplate: titleField ? wrapPlaceholder(titleField) : DEFAULT_KANBAN_CARD_CONTENT.titleTemplate,
 		bodyTemplate: bodyFields.length > 0
-			? bodyFields.map((field) => wrapPlaceholder(field)).join('\n')
-			: DEFAULT_KANBAN_CARD_CONTENT.bodyTemplate,
-		tagsTemplate: tagFields.length > 0
-			? tagFields.map((field) => wrapPlaceholder(field)).join(' ')
-			: DEFAULT_KANBAN_CARD_CONTENT.tagsTemplate,
-		showBody: true
-	};
+			? bodyFields.map((field) => wrapPlaceholder(field)).join(' ')
+		: DEFAULT_KANBAN_CARD_CONTENT.bodyTemplate,
+	tagsTemplate: tagFields.length > 0
+		? tagFields.map((field) => wrapPlaceholder(field)).join(' ')
+		: DEFAULT_KANBAN_CARD_CONTENT.tagsTemplate,
+	showBody: true,
+	tagsBelowBody: DEFAULT_KANBAN_CARD_CONTENT.tagsBelowBody
+};
 }
 
 export function toRuntimeContent(
@@ -49,6 +50,8 @@ export function toRuntimeContent(
 	const bodyTemplate = normalizedBody.length > 0 ? normalize(normalizedBody) : defaults.bodyTemplate;
 	const tagsTemplate = normalizedTags.length > 0 ? normalize(normalizedTags) : defaults.tagsTemplate;
 	const showBody = typeof raw?.showBody === 'boolean' ? raw.showBody : defaults.showBody;
+	const tagsBelowBody =
+		typeof raw?.tagsBelowBody === 'boolean' ? raw.tagsBelowBody : defaults.tagsBelowBody;
 
 	const referencedFields = new Set<string>();
 	for (const template of [titleTemplate, bodyTemplate, tagsTemplate]) {
@@ -65,6 +68,7 @@ export function toRuntimeContent(
 		bodyTemplate,
 		tagsTemplate,
 		showBody,
+		tagsBelowBody,
 		referencedFields: Array.from(referencedFields)
 	};
 }

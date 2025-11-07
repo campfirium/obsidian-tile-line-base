@@ -1,19 +1,19 @@
-import { App, Menu, Notice, Setting } from 'obsidian';
+import { App, Menu, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
 import {
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
-	MAX_KANBAN_INITIAL_VISIBLE_COUNT,
-	MIN_KANBAN_INITIAL_VISIBLE_COUNT,
 	sanitizeKanbanInitialVisibleCount,
-	type KanbanBoardDefinition
+	type KanbanBoardDefinition,
+	type KanbanCardContentConfig
 } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import type { FilterRule } from '../../types/filterView';
-import { FilterViewEditorModal } from '../filter/FilterViewModals';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
 import { getAvailableColumns } from '../TableViewFilterPresenter';
 import { KanbanBoardConfirmModal } from './KanbanBoardConfirmModal';
+import { cloneKanbanContentConfig } from './KanbanContentConfig';
+import { openKanbanBoardModal } from './KanbanBoardModal';
 interface KanbanBoardControllerOptions {
 	app: App;
 	view: TableView;
@@ -68,6 +68,25 @@ export class KanbanBoardController {
 			this.refreshToolbar();
 		}
 	}
+	ensureBoardForActiveKanbanView(): void {
+		const snapshot = this.store.getState();
+		const boards = snapshot.boards ?? [];
+		if (boards.length === 0) {
+			this.handleEmptyBoards();
+			return;
+		}
+		const activeBoardId = snapshot.activeBoardId;
+		const activeBoard = activeBoardId ? boards.find((board) => board.id === activeBoardId) ?? null : null;
+		if (activeBoard) {
+			this.applyBoardContext(activeBoard, { persist: false, rerender: false });
+			return;
+		}
+		const fallback = boards[0];
+		this.store.setActiveBoard(fallback.id);
+		const refreshed = this.store.getState();
+		const resolved = refreshed.boards.find((board) => board.id === fallback.id) ?? fallback;
+		this.applyBoardContext(resolved, { persist: true, rerender: false });
+	}
 	getBoards(): KanbanBoardDefinition[] {
 		return this.store.getState().boards;
 	}
@@ -81,7 +100,8 @@ export class KanbanBoardController {
 		defaultIcon: 'layout-kanban',
 		initialFilter: null,
 		initialLaneField: this.view.kanbanLaneField ?? null,
-		initialVisibleCount: this.view.kanbanInitialVisibleCount
+		initialVisibleCount: this.view.kanbanInitialVisibleCount,
+		initialContent: null
 	});
 		if (!editor) {
 			return;
@@ -92,6 +112,7 @@ export class KanbanBoardController {
 			laneField: editor.laneField,
 			filterRule: editor.filterRule,
 			initialVisibleCount: editor.initialVisibleCount,
+			content: editor.content,
 			setActive: true
 		});
 		await this.store.persist();
@@ -105,7 +126,8 @@ export class KanbanBoardController {
 		defaultIcon: board.icon ?? null,
 		initialFilter: board.filterRule ?? null,
 		initialLaneField: board.laneField,
-		initialVisibleCount: board.initialVisibleCount ?? null
+		initialVisibleCount: board.initialVisibleCount ?? null,
+		initialContent: board.content ?? null
 	});
 		if (!editor) {
 			return;
@@ -115,7 +137,8 @@ export class KanbanBoardController {
 		icon: editor.icon,
 		laneField: editor.laneField,
 		filterRule: editor.filterRule,
-		initialVisibleCount: editor.initialVisibleCount
+		initialVisibleCount: editor.initialVisibleCount,
+		content: editor.content
 	});
 		if (!updated) {
 			return;
@@ -136,7 +159,8 @@ export class KanbanBoardController {
 		defaultIcon: board.icon ?? null,
 		initialFilter: board.filterRule ?? null,
 		initialLaneField: board.laneField,
-		initialVisibleCount: board.initialVisibleCount ?? null
+		initialVisibleCount: board.initialVisibleCount ?? null,
+		initialContent: board.content ?? null
 	});
 		if (!editor) {
 			return;
@@ -147,6 +171,7 @@ export class KanbanBoardController {
 		laneField: editor.laneField,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
+		content: editor.content,
 		setActive: true
 	});
 		await this.store.persist();
@@ -233,6 +258,7 @@ export class KanbanBoardController {
 		this.loadedFilePath = null;
 		this.store.reset();
 		this.view.activeKanbanBoardFilter = null;
+		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanBoardsLoaded = false;
 		this.repairingLaneField = false;
 	}
@@ -241,6 +267,7 @@ export class KanbanBoardController {
 		options?: { persist?: boolean; rerender?: boolean }
 	): void {
 	if (board) {
+		this.view.kanbanCardContentConfig = board.content ? cloneKanbanContentConfig(board.content) : null;
 		const laneField = typeof board.laneField === 'string' ? board.laneField.trim() : '';
 		if (laneField.length > 0 && this.isLaneFieldAvailable(laneField)) {
 			this.view.kanbanLaneField = laneField;
@@ -257,6 +284,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
+		this.view.kanbanCardContentConfig = null;
 	}
 		if (options?.persist !== false) {
 			void this.view.persistenceService?.saveConfig();
@@ -272,6 +300,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
+		this.view.kanbanCardContentConfig = null;
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
 	}
@@ -292,7 +321,8 @@ export class KanbanBoardController {
 				defaultIcon: board.icon ?? null,
 				initialFilter: board.filterRule ?? null,
 				initialLaneField: null,
-				initialVisibleCount: board.initialVisibleCount ?? null
+				initialVisibleCount: board.initialVisibleCount ?? null,
+				initialContent: board.content ?? null
 			});
 			if (!editor) {
 				return;
@@ -302,7 +332,8 @@ export class KanbanBoardController {
 		icon: editor.icon,
 		laneField: editor.laneField,
 		filterRule: editor.filterRule,
-		initialVisibleCount: editor.initialVisibleCount
+		initialVisibleCount: editor.initialVisibleCount,
+		content: editor.content
 	});
 			if (!updated) {
 				return;
@@ -328,6 +359,9 @@ export class KanbanBoardController {
 			}
 			return trimmed !== '#' && trimmed !== '__tlb_row_id';
 		});
+	}
+	private getContentFieldCandidates(): string[] {
+		return this.getLaneFieldCandidates();
 	}
 	private getFilterColumnOptions(): FilterColumnOption[] {
 		const columns = getAvailableColumns(this.view);
@@ -401,12 +435,14 @@ export class KanbanBoardController {
 		initialFilter: FilterRule | null;
 		initialLaneField: string | null;
 		initialVisibleCount: number | null;
+		initialContent: KanbanCardContentConfig | null;
 	}): Promise<{
 		name: string;
 		icon: string | null;
 		laneField: string;
 		filterRule: FilterRule | null;
 		initialVisibleCount: number;
+		content: KanbanCardContentConfig | null;
 	} | null> {
 		const columns = this.getFilterColumnOptions();
 		if (columns.length === 0) {
@@ -418,74 +454,18 @@ export class KanbanBoardController {
 			new Notice(t('kanbanView.fieldModal.noColumns'));
 			return null;
 		}
-		let selectedLane = options.initialLaneField && laneOptions.includes(options.initialLaneField)
-			? options.initialLaneField
-			: laneOptions[0];
-		let initialVisibleCount = sanitizeKanbanInitialVisibleCount(
-			options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
-			DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
-		);
-		return new Promise((resolve) => {
-			const modal = new FilterViewEditorModal(this.app, {
-				title: options.title,
-				columns,
-				initialName: options.defaultName,
-				initialIcon: options.defaultIcon,
-				initialRule: options.initialFilter,
-				allowFilterEditing: true,
-				allowSortEditing: false,
-				minConditionCount: 0,
-				renderAdditionalControls: (container) => {
-				const laneSetting = new Setting(container);
-				laneSetting.setName(t('kanbanView.toolbar.laneFieldLabel'));
-				laneSetting.addDropdown((dropdown) => {
-					for (const option of laneOptions) {
-						dropdown.addOption(option, option);
-					}
-					dropdown.setValue(selectedLane);
-					dropdown.onChange((value) => {
-						selectedLane = value;
-					});
-				});
-				const countSetting = new Setting(container);
-				countSetting.setName(t('kanbanView.toolbar.initialVisibleCountLabel'));
-				countSetting.setDesc(t('kanbanView.toolbar.initialVisibleCountDesc'));
-				countSetting.addText((text) => {
-					text.inputEl.type = 'number';
-					text.inputEl.min = String(MIN_KANBAN_INITIAL_VISIBLE_COUNT);
-					text.inputEl.max = String(MAX_KANBAN_INITIAL_VISIBLE_COUNT);
-					text.setValue(String(initialVisibleCount));
-					text.onChange((raw) => {
-						const trimmed = raw.trim();
-						if (!trimmed) {
-							return;
-						}
-						initialVisibleCount = sanitizeKanbanInitialVisibleCount(trimmed, initialVisibleCount);
-					});
-					text.inputEl.addEventListener('blur', () => {
-						initialVisibleCount = sanitizeKanbanInitialVisibleCount(initialVisibleCount);
-						text.setValue(String(initialVisibleCount));
-					});
-				});
-			},
-			onSubmit: (result) => {
-					const trimmed = result.name?.trim();
-					if (!trimmed) {
-						resolve(null);
-						return;
-					}
-					const laneField = typeof selectedLane === 'string' ? selectedLane.trim() : '';
-				resolve({
-					name: trimmed,
-					icon: result.icon ?? null,
-					laneField: laneField.length > 0 ? laneField : laneOptions[0],
-					filterRule: result.filterRule ?? null,
-					initialVisibleCount: sanitizeKanbanInitialVisibleCount(initialVisibleCount)
-				});
-				},
-				onCancel: () => resolve(null)
-			});
-			modal.open();
+		return openKanbanBoardModal({
+			app: this.app,
+			title: options.title,
+			defaultName: options.defaultName,
+			defaultIcon: options.defaultIcon,
+			initialFilter: options.initialFilter,
+			initialLaneField: options.initialLaneField,
+			initialVisibleCount: options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+			initialContent: options.initialContent ?? null,
+			columns,
+			laneOptions,
+			getContentFields: () => this.getContentFieldCandidates()
 		});
 	}
 }

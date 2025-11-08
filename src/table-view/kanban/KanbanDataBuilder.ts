@@ -43,6 +43,7 @@ interface BuildKanbanBoardStateParams {
 	displayFields: string[];
 	quickFilter: string;
 	resolveRowIndex: (row: RowData) => number | null;
+	expectedLaneNames?: string[] | null;
 }
 
 export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): KanbanBoardState {
@@ -62,6 +63,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	const normalizedQuickFilter = quickFilter.trim().toLowerCase();
 	const hasQuickFilter = normalizedQuickFilter.length > 0;
 	const laneMap = new Map<string, KanbanLane>();
+	const laneNameLookup = new Map<string, KanbanLane>();
 	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
 	const laneNameToId = new Map<string, string>();
 	const usedLaneIds = new Set<string>();
@@ -98,6 +100,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 				cards: []
 			};
 			laneMap.set(laneId, lane);
+			laneNameLookup.set(normalizeLaneKey(laneName), lane);
 		}
 
 		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
@@ -128,34 +131,52 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 		totalCards += 1;
 	}
 
+	const expectedLaneNames = Array.isArray(params.expectedLaneNames)
+		? params.expectedLaneNames.filter((value) => typeof value === 'string')
+		: null;
+	if (expectedLaneNames && expectedLaneNames.length > 0) {
+		for (const candidate of expectedLaneNames) {
+			const normalized = normalizeLaneKey(candidate);
+			if (!normalized || laneNameLookup.has(normalized)) {
+				continue;
+			}
+			const laneId = resolveLaneId(candidate, laneNameToId, usedLaneIds, laneMap.size + 1);
+			const lane: KanbanLane = {
+				id: laneId,
+				name: candidate,
+				cards: []
+			};
+			laneMap.set(laneId, lane);
+			laneNameLookup.set(normalized, lane);
+		}
+	}
+
 	const lanes: KanbanLane[] = [];
-	for (const lane of laneMap.values()) {
-		lane.cards.sort((a, b) => {
-			if (a.sortValue != null && b.sortValue != null && a.sortValue !== b.sortValue) {
-				return a.sortValue < b.sortValue ? -1 * directionMultiplier : 1 * directionMultiplier;
-			}
-			if (a.sortValue != null && b.sortValue == null) {
-				return -1;
-			}
-			if (a.sortValue == null && b.sortValue != null) {
-				return 1;
-			}
-			if (a.sortText && b.sortText) {
-				const cmp = a.sortText.localeCompare(b.sortText);
-				if (cmp !== 0) {
-					return cmp * directionMultiplier;
-				}
-			} else if (a.sortText && !b.sortText) {
-				return -1;
-			} else if (!a.sortText && b.sortText) {
-				return 1;
-			}
-			if (a.sortOrder !== b.sortOrder) {
-				return (a.sortOrder - b.sortOrder) * directionMultiplier;
-			}
-			return a.rowIndex - b.rowIndex;
-		});
+	const addedLaneIds = new Set<string>();
+	const pushLane = (lane: KanbanLane) => {
+		if (addedLaneIds.has(lane.id)) {
+			return;
+		}
+		sortLaneCards(lane, directionMultiplier);
 		lanes.push(lane);
+		addedLaneIds.add(lane.id);
+	};
+
+	if (expectedLaneNames && expectedLaneNames.length > 0) {
+		for (const candidate of expectedLaneNames) {
+			const normalized = normalizeLaneKey(candidate);
+			if (!normalized) {
+				continue;
+			}
+			const lane = laneNameLookup.get(normalized);
+			if (lane) {
+				pushLane(lane);
+			}
+		}
+	}
+
+	for (const lane of laneMap.values()) {
+		pushLane(lane);
 	}
 
 	return {
@@ -321,4 +342,36 @@ function buildCardId(row: RowData, rowIndex: number): string {
 		return explicit;
 	}
 	return String(rowIndex);
+}
+
+function normalizeLaneKey(value: string): string {
+	return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function sortLaneCards(lane: KanbanLane, directionMultiplier: number): void {
+	lane.cards.sort((a, b) => {
+		if (a.sortValue != null && b.sortValue != null && a.sortValue !== b.sortValue) {
+			return a.sortValue < b.sortValue ? -1 * directionMultiplier : 1 * directionMultiplier;
+		}
+		if (a.sortValue != null && b.sortValue == null) {
+			return -1;
+		}
+		if (a.sortValue == null && b.sortValue != null) {
+			return 1;
+		}
+		if (a.sortText && b.sortText) {
+			const cmp = a.sortText.localeCompare(b.sortText);
+			if (cmp !== 0) {
+				return cmp * directionMultiplier;
+			}
+		} else if (a.sortText && !b.sortText) {
+			return -1;
+		} else if (!a.sortText && b.sortText) {
+			return 1;
+		}
+		if (a.sortOrder !== b.sortOrder) {
+			return (a.sortOrder - b.sortOrder) * directionMultiplier;
+		}
+		return a.rowIndex - b.rowIndex;
+	});
 }

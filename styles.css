@@ -1807,6 +1807,7 @@
 }
 
 .tlb-kanban-board {
+	--tlb-kanban-lane-width: 15rem;
 	display: flex;
 	flex-direction: row;
 	gap: var(--size-4-4);
@@ -1836,8 +1837,9 @@
 .tlb-kanban-lane {
 	display: flex;
 	flex-direction: column;
-	min-width: 18rem;
-	max-width: 20rem;
+	min-width: var(--tlb-kanban-lane-width, 15rem);
+	max-width: var(--tlb-kanban-lane-width, 15rem);
+	flex: 0 0 var(--tlb-kanban-lane-width, 15rem);
 	background-color: var(--background-secondary);
 	border-radius: var(--radius-m);
 	box-shadow: var(--shadow-s);

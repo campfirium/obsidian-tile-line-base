@@ -42,6 +42,7 @@ import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardContr
 import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, KanbanSortDirection } from "./types/kanban";
 import { DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
+import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -92,6 +93,7 @@ export class TableView extends ItemView {
 	public activeViewMode: 'table' | 'kanban' = 'table';
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null;
+	public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 	public kanbanSortField: string | null = null;
 	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE;

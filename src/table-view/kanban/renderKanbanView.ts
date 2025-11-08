@@ -6,6 +6,7 @@ import { KanbanViewController } from './KanbanViewController';
 interface RenderKanbanViewOptions {
 	primaryField: string | null;
 	laneField: string;
+	laneWidth: number;
 	sortField: string | null;
 	heightMode: KanbanHeightMode;
 	initialVisibleCount: number;
@@ -53,6 +54,7 @@ export function renderKanbanView(
 		view,
 		container: wrapper,
 		laneField,
+		laneWidth: options.laneWidth,
 		sortField,
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,

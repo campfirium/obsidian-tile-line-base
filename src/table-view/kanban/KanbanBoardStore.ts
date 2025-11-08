@@ -13,11 +13,13 @@ import {
 	sanitizeKanbanInitialVisibleCount
 } from '../../types/kanban';
 import { cloneKanbanContentConfig, isKanbanContentConfigEffectivelyEmpty } from './KanbanContentConfig';
+import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 
 export interface CreateBoardOptions {
 	name: string;
 	icon: string | null;
 	laneField: string;
+	laneWidth?: number | null;
 	filterRule: FilterRule | null;
 	setActive?: boolean;
 	initialVisibleCount?: number | null;
@@ -30,6 +32,7 @@ export interface UpdateBoardOptions {
 	name?: string | null;
 	icon?: string | null;
 	laneField?: string | null;
+	laneWidth?: number | null;
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;
@@ -104,6 +107,7 @@ export class KanbanBoardStore {
 			name: this.sanitizeName(options.name),
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
+			laneWidth: this.sanitizeLaneWidth(options.laneWidth),
 			filterRule: this.cloneFilterRule(options.filterRule),
 			initialVisibleCount: this.sanitizeInitialVisibleCount(options.initialVisibleCount),
 			content: this.sanitizeContentConfig(options.content),
@@ -133,6 +137,9 @@ export class KanbanBoardStore {
 			if (lane) {
 				target.laneField = lane;
 			}
+		}
+		if (updates.laneWidth !== undefined) {
+			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
 		}
 		if (updates.filterRule !== undefined) {
 			target.filterRule = this.cloneFilterRule(updates.filterRule);
@@ -224,6 +231,10 @@ export class KanbanBoardStore {
 		return direction === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
 	}
 
+	private sanitizeLaneWidth(value: unknown): number {
+		return sanitizeKanbanLaneWidth(value, DEFAULT_KANBAN_LANE_WIDTH);
+	}
+
 	private generateId(): string {
 		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
 			return crypto.randomUUID();
@@ -243,6 +254,7 @@ export class KanbanBoardStore {
 						name: this.sanitizeName(board.name),
 						icon: this.sanitizeIcon(board.icon),
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
+						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null),
 						filterRule: this.cloneFilterRule(board.filterRule ?? null),
 						initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null),
 						content: this.sanitizeContentConfig(board.content ?? null),

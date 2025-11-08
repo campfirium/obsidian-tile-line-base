@@ -190,6 +190,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 		renderKanbanView(view, container, {
 			primaryField,
 			laneField: view.kanbanLaneField,
+			laneWidth: view.kanbanLaneWidth,
 			sortField,
 			heightMode: view.kanbanHeightMode,
 			initialVisibleCount: view.kanbanInitialVisibleCount,

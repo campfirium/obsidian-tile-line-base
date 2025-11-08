@@ -1,6 +1,6 @@
 export const MIN_KANBAN_LANE_WIDTH = 12;
 export const MAX_KANBAN_LANE_WIDTH = 32;
-export const DEFAULT_KANBAN_LANE_WIDTH = 18;
+export const DEFAULT_KANBAN_LANE_WIDTH = 15;
 
 const DECIMAL_PRECISION = 2;
 

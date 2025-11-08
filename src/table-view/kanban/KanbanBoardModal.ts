@@ -17,6 +17,13 @@ import {
 	resolveInitialKanbanContentConfig
 } from './KanbanContentConfig';
 import { t } from '../../i18n';
+import {
+	DEFAULT_KANBAN_LANE_WIDTH,
+	MAX_KANBAN_LANE_WIDTH,
+	MIN_KANBAN_LANE_WIDTH,
+	parseKanbanLaneWidth,
+	sanitizeKanbanLaneWidth
+} from './kanbanWidth';
 
 export interface KanbanBoardModalRequest {
 	app: App;
@@ -25,6 +32,7 @@ export interface KanbanBoardModalRequest {
 	defaultIcon: string | null;
 	initialFilter: FilterRule | null;
 	initialLaneField: string | null;
+	initialLaneWidth: number | null;
 	initialVisibleCount: number | null;
 	initialContent: KanbanCardContentConfig | null;
 	columns: FilterColumnOption[];
@@ -39,6 +47,7 @@ export interface KanbanBoardModalResult {
 	name: string;
 	icon: string | null;
 	laneField: string;
+	laneWidth: number;
 	filterRule: FilterRule | null;
 	initialVisibleCount: number;
 	content: KanbanCardContentConfig | null;
@@ -52,6 +61,7 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 		options.initialLaneField && laneOptions.includes(options.initialLaneField)
 			? options.initialLaneField
 			: laneOptions[0];
+	let selectedLaneWidth = sanitizeKanbanLaneWidth(options.initialLaneWidth ?? null, DEFAULT_KANBAN_LANE_WIDTH);
 	let initialVisibleCount = sanitizeKanbanInitialVisibleCount(
 		options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 		DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
@@ -109,6 +119,55 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 						} else {
 							contentHandle?.refresh();
 						}
+					});
+				});
+
+				const widthSetting = new Setting(container);
+				widthSetting.setName(t('kanbanView.toolbar.laneWidthLabel'));
+				widthSetting.setDesc(
+					t('kanbanView.toolbar.laneWidthDescription', {
+						min: String(MIN_KANBAN_LANE_WIDTH),
+						max: String(MAX_KANBAN_LANE_WIDTH)
+					})
+				);
+				let suppressWidthChange = false;
+				widthSetting.addText((text) => {
+					const syncDisplayValue = (value: number) => {
+						suppressWidthChange = true;
+						text.setValue(String(value));
+						suppressWidthChange = false;
+					};
+					text.inputEl.type = 'number';
+					text.inputEl.step = '0.5';
+					text.inputEl.min = String(MIN_KANBAN_LANE_WIDTH);
+					text.inputEl.max = String(MAX_KANBAN_LANE_WIDTH);
+					syncDisplayValue(selectedLaneWidth);
+					text.onChange((raw) => {
+						if (suppressWidthChange) {
+							return;
+						}
+						const trimmed = raw.trim();
+						if (!trimmed) {
+							text.inputEl.setAttribute('aria-invalid', 'true');
+							return;
+						}
+						const parsed = parseKanbanLaneWidth(trimmed);
+						if (parsed === null) {
+							text.inputEl.setAttribute('aria-invalid', 'true');
+							return;
+						}
+						text.inputEl.removeAttribute('aria-invalid');
+						selectedLaneWidth = parsed;
+					});
+					text.inputEl.addEventListener('blur', () => {
+						const parsed = parseKanbanLaneWidth(text.inputEl.value);
+						const normalized =
+							parsed === null
+								? sanitizeKanbanLaneWidth(selectedLaneWidth, DEFAULT_KANBAN_LANE_WIDTH)
+								: parsed;
+						selectedLaneWidth = normalized;
+						text.inputEl.removeAttribute('aria-invalid');
+						syncDisplayValue(normalized);
 					});
 				});
 
@@ -187,6 +246,7 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					name: trimmed,
 					icon: result.icon ?? null,
 					laneField: laneField.length > 0 ? laneField : laneOptions[0],
+					laneWidth: sanitizeKanbanLaneWidth(selectedLaneWidth, DEFAULT_KANBAN_LANE_WIDTH),
 					filterRule: result.filterRule ?? null,
 					initialVisibleCount: sanitizeKanbanInitialVisibleCount(initialVisibleCount),
 					content: persistedContent,

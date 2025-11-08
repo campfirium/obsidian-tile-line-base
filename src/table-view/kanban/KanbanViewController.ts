@@ -7,6 +7,7 @@ import type {
 	KanbanRuntimeCardContent,
 	KanbanSortDirection
 } from '../../types/kanban';
+import { sanitizeKanbanFontScale } from '../../types/kanban';
 import { sanitizeKanbanHeightMode } from './kanbanHeight';
 import { sanitizeKanbanLaneWidth } from './kanbanWidth';
 import type { TableView } from '../../TableView';
@@ -17,6 +18,7 @@ import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { resolveExpectedStatusLanes } from './statusLaneHelpers';
+import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -26,6 +28,7 @@ interface KanbanViewControllerOptions {
 	container: HTMLElement;
 	laneField: string;
 	laneWidth: number;
+	fontScale: number;
 	sortField: string | null;
 	fallbackLaneName: string;
 	primaryField: string | null;
@@ -50,6 +53,7 @@ export class KanbanViewController {
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
 	private readonly laneWidth: number;
+	private readonly fontScale: number;
 	private readonly initialVisibleCount: number;
 	private readonly rawContentConfig: KanbanCardContentConfig | null;
 	private readonly viewportManager: KanbanViewportManager;
@@ -83,6 +87,7 @@ export class KanbanViewController {
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
+		this.fontScale = sanitizeKanbanFontScale(options.fontScale);
 		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
 		const limit = Math.floor(options.initialVisibleCount ?? 1);
 		this.initialVisibleCount = Math.max(1, limit);
@@ -97,12 +102,15 @@ export class KanbanViewController {
 		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
+		ensureFontScaleStyles(this.container.ownerDocument ?? document);
 		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
+		this.rootEl.style.setProperty('--tlb-kanban-font-scale', `${this.fontScale}`);
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
 		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
 		this.viewportManager.apply(this.heightMode);
+		this.tooltipManager.setFontScale(this.fontScale);
 		this.registerListeners();
 		this.ensureSortableLoaded();
 		this.renderBoard();

@@ -10,6 +10,7 @@ import {
 	DEFAULT_KANBAN_BOARD_STATE,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 	DEFAULT_KANBAN_SORT_DIRECTION,
+	sanitizeKanbanFontScale,
 	sanitizeKanbanInitialVisibleCount
 } from '../../types/kanban';
 import { cloneKanbanContentConfig, isKanbanContentConfigEffectivelyEmpty } from './KanbanContentConfig';
@@ -20,6 +21,7 @@ export interface CreateBoardOptions {
 	icon: string | null;
 	laneField: string;
 	laneWidth?: number | null;
+	fontScale?: number | null;
 	filterRule: FilterRule | null;
 	setActive?: boolean;
 	initialVisibleCount?: number | null;
@@ -33,6 +35,7 @@ export interface UpdateBoardOptions {
 	icon?: string | null;
 	laneField?: string | null;
 	laneWidth?: number | null;
+	fontScale?: number | null;
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;
@@ -108,6 +111,7 @@ export class KanbanBoardStore {
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
 			laneWidth: this.sanitizeLaneWidth(options.laneWidth),
+			fontScale: this.sanitizeFontScale(options.fontScale),
 			filterRule: this.cloneFilterRule(options.filterRule),
 			initialVisibleCount: this.sanitizeInitialVisibleCount(options.initialVisibleCount),
 			content: this.sanitizeContentConfig(options.content),
@@ -140,6 +144,9 @@ export class KanbanBoardStore {
 		}
 		if (updates.laneWidth !== undefined) {
 			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
+		}
+		if (updates.fontScale !== undefined) {
+			target.fontScale = this.sanitizeFontScale(updates.fontScale);
 		}
 		if (updates.filterRule !== undefined) {
 			target.filterRule = this.cloneFilterRule(updates.filterRule);
@@ -235,6 +242,10 @@ export class KanbanBoardStore {
 		return sanitizeKanbanLaneWidth(value, DEFAULT_KANBAN_LANE_WIDTH);
 	}
 
+	private sanitizeFontScale(value: unknown): number {
+		return sanitizeKanbanFontScale(value);
+	}
+
 	private generateId(): string {
 		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
 			return crypto.randomUUID();
@@ -255,6 +266,7 @@ export class KanbanBoardStore {
 						icon: this.sanitizeIcon(board.icon),
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
 						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null),
+						fontScale: this.sanitizeFontScale(board.fontScale ?? null),
 						filterRule: this.cloneFilterRule(board.filterRule ?? null),
 						initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null),
 						content: this.sanitizeContentConfig(board.content ?? null),

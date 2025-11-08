@@ -11,6 +11,7 @@ import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
+import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 
 const logger = getLogger('table-view:renderer');
@@ -87,6 +88,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
+		if (typeof kanbanConfig?.fontScale === 'number') {
+			view.kanbanFontScale = sanitizeKanbanFontScale(kanbanConfig.fontScale);
+		}
 		if (kanbanConfig && typeof kanbanConfig.laneField === 'string') {
 			view.kanbanLaneField = kanbanConfig.laneField;
 			if (typeof kanbanConfig.sortField === 'string') {
@@ -191,6 +195,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			primaryField,
 			laneField: view.kanbanLaneField,
 			laneWidth: view.kanbanLaneWidth,
+			fontScale: view.kanbanFontScale,
 			sortField,
 			heightMode: view.kanbanHeightMode,
 			initialVisibleCount: view.kanbanInitialVisibleCount,

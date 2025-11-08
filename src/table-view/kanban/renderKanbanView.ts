@@ -7,6 +7,7 @@ interface RenderKanbanViewOptions {
 	primaryField: string | null;
 	laneField: string;
 	laneWidth: number;
+	fontScale: number;
 	sortField: string | null;
 	heightMode: KanbanHeightMode;
 	initialVisibleCount: number;
@@ -55,6 +56,7 @@ export function renderKanbanView(
 		container: wrapper,
 		laneField,
 		laneWidth: options.laneWidth,
+		fontScale: options.fontScale,
 		sortField,
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,

@@ -10,7 +10,7 @@ import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
 import type { KanbanBoardState, KanbanHeightMode, KanbanSortDirection } from '../types/kanban';
-import { DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
+import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
 
 const logger = getLogger('table-view:persistence');
 
@@ -31,6 +31,7 @@ interface TablePersistenceDeps {
 		sortField: string | null;
 		sortDirection: KanbanSortDirection | null;
 		heightMode: KanbanHeightMode | null;
+		fontScale: number | null;
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	markSelfMutation?: (file: TFile) => void;
@@ -110,6 +111,7 @@ export class TablePersistenceService {
 		const sortField = kanbanConfig?.sortField ?? null;
 		const sortDirection = kanbanConfig?.sortDirection ?? null;
 		const heightMode = kanbanConfig?.heightMode ?? null;
+		const fontScale = kanbanConfig?.fontScale ?? null;
 		const kanbanBoards = this.deps.getKanbanBoards?.() ?? null;
 		const hasKanbanBoards =
 			kanbanBoards != null &&
@@ -132,7 +134,11 @@ export class TablePersistenceService {
 								sortDirection && sortDirection !== DEFAULT_KANBAN_SORT_DIRECTION
 									? sortDirection
 									: undefined,
-							heightMode: heightMode && heightMode !== DEFAULT_KANBAN_HEIGHT_MODE ? heightMode : undefined
+							heightMode: heightMode && heightMode !== DEFAULT_KANBAN_HEIGHT_MODE ? heightMode : undefined,
+							fontScale:
+								typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
+									? fontScale
+									: undefined
 						}
 					: undefined,
 			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined

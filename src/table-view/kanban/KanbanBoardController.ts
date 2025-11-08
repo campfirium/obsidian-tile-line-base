@@ -1,7 +1,7 @@
 import { App, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
-import { DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD, sanitizeKanbanInitialVisibleCount, type KanbanBoardDefinition, type KanbanCardContentConfig, type KanbanSortDirection } from '../../types/kanban';
+import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD, sanitizeKanbanFontScale, sanitizeKanbanInitialVisibleCount, type KanbanBoardDefinition, type KanbanCardContentConfig, type KanbanSortDirection } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import type { FilterRule } from '../../types/filterView';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
@@ -93,14 +93,7 @@ export class KanbanBoardController {
 		title: t('kanbanView.toolbar.createBoardTitle'),
 		defaultName: this.suggestNewBoardName(),
 		defaultIcon: 'layout-kanban',
-		initialFilter: null,
-		initialLaneField: this.view.kanbanLaneField ?? null,
-		initialLaneWidth: this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-		initialVisibleCount: this.view.kanbanInitialVisibleCount,
-		initialContent: null,
-		initialSortField: this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
-		initialSortDirection: this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
-		sortFieldOptions: this.getSortFieldOptions()
+		...this.getModalDefaults(null)
 	});
 		if (!editor) {
 			return;
@@ -110,6 +103,7 @@ export class KanbanBoardController {
 			icon: editor.icon,
 			laneField: editor.laneField,
 			laneWidth: editor.laneWidth,
+			fontScale: editor.fontScale,
 			filterRule: editor.filterRule,
 			initialVisibleCount: editor.initialVisibleCount,
 			content: editor.content,
@@ -126,15 +120,7 @@ export class KanbanBoardController {
 		title: t('kanbanView.toolbar.editBoardTitle'),
 		defaultName: board.name,
 		defaultIcon: board.icon ?? null,
-		initialFilter: board.filterRule ?? null,
-		initialLaneField: board.laneField,
-		initialLaneWidth: board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-		initialVisibleCount: board.initialVisibleCount ?? null,
-		initialContent: board.content ?? null,
-		initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
-		initialSortDirection:
-			board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
-		sortFieldOptions: this.getSortFieldOptions()
+		...this.getModalDefaults(board)
 	});
 		if (!editor) {
 			return;
@@ -144,6 +130,7 @@ export class KanbanBoardController {
 		icon: editor.icon,
 		laneField: editor.laneField,
 		laneWidth: editor.laneWidth,
+		fontScale: editor.fontScale,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -167,15 +154,7 @@ export class KanbanBoardController {
 		}),
 		defaultName: duplicatedName,
 		defaultIcon: board.icon ?? null,
-		initialFilter: board.filterRule ?? null,
-		initialLaneField: board.laneField,
-		initialLaneWidth: board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-		initialVisibleCount: board.initialVisibleCount ?? null,
-		initialContent: board.content ?? null,
-		initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
-		initialSortDirection:
-			board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
-		sortFieldOptions: this.getSortFieldOptions()
+		...this.getModalDefaults(board)
 	});
 		if (!editor) {
 			return;
@@ -185,6 +164,7 @@ export class KanbanBoardController {
 		icon: editor.icon,
 		laneField: editor.laneField,
 		laneWidth: editor.laneWidth,
+		fontScale: editor.fontScale,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -265,6 +245,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
 		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.view.kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -292,6 +273,9 @@ export class KanbanBoardController {
 			board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
 			DEFAULT_KANBAN_LANE_WIDTH
 		);
+		this.view.kanbanFontScale = sanitizeKanbanFontScale(
+			board.fontScale ?? this.view.kanbanFontScale ?? DEFAULT_KANBAN_FONT_SCALE
+		);
 		this.view.kanbanInitialVisibleCount = sanitizeKanbanInitialVisibleCount(
 			board.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
 		);
@@ -303,6 +287,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.view.kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -322,6 +307,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
 		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.view.kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -365,15 +351,8 @@ export class KanbanBoardController {
 				title: t('kanbanView.toolbar.editBoardTitle'),
 				defaultName: board.name,
 				defaultIcon: board.icon ?? null,
-				initialFilter: board.filterRule ?? null,
-				initialLaneField: null,
-				initialLaneWidth: board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-				initialVisibleCount: board.initialVisibleCount ?? null,
-				initialContent: board.content ?? null,
-				initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
-				initialSortDirection:
-					board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
-				sortFieldOptions: this.getSortFieldOptions()
+				...this.getModalDefaults(board),
+				initialLaneField: null
 			});
 			if (!editor) {
 				return;
@@ -383,6 +362,7 @@ export class KanbanBoardController {
 		icon: editor.icon,
 		laneField: editor.laneField,
 		laneWidth: editor.laneWidth,
+		fontScale: editor.fontScale,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -435,6 +415,20 @@ export class KanbanBoardController {
 		}
 		return ordered;
 	}
+
+	private getModalDefaults(board: KanbanBoardDefinition | null) {
+		return {
+			initialFilter: board?.filterRule ?? null,
+			initialLaneField: board?.laneField ?? this.view.kanbanLaneField ?? null,
+			initialLaneWidth: board?.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
+			initialFontScale: board?.fontScale ?? this.view.kanbanFontScale ?? DEFAULT_KANBAN_FONT_SCALE,
+			initialVisibleCount: board?.initialVisibleCount ?? this.view.kanbanInitialVisibleCount,
+			initialContent: board?.content ? cloneKanbanContentConfig(board.content) : null,
+			initialSortField: board?.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+			initialSortDirection: board?.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+			sortFieldOptions: this.getSortFieldOptions()
+		};
+	}
 	private async confirmBoardDeletion(boardName: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			const modal = new KanbanBoardConfirmModal(this.app, {
@@ -468,8 +462,9 @@ export class KanbanBoardController {
 		defaultName: string;
 		defaultIcon: string | null;
 		initialFilter: FilterRule | null;
-		initialLaneField: string | null;
-		initialLaneWidth: number | null;
+	initialLaneField: string | null;
+	initialLaneWidth: number | null;
+	initialFontScale: number | null;
 		initialVisibleCount: number | null;
 		initialContent: KanbanCardContentConfig | null;
 		initialSortField: string | null;
@@ -478,8 +473,9 @@ export class KanbanBoardController {
 	}): Promise<{
 		name: string;
 		icon: string | null;
-		laneField: string;
-		laneWidth: number;
+	laneField: string;
+	laneWidth: number;
+	fontScale: number;
 		filterRule: FilterRule | null;
 		initialVisibleCount: number;
 		content: KanbanCardContentConfig | null;
@@ -504,6 +500,7 @@ export class KanbanBoardController {
 			initialFilter: options.initialFilter,
 			initialLaneField: options.initialLaneField,
 			initialLaneWidth: options.initialLaneWidth,
+			initialFontScale: options.initialFontScale,
 			initialVisibleCount: options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 			initialContent: options.initialContent ?? null,
 			columns,

@@ -2,10 +2,15 @@ import { App, Setting } from 'obsidian';
 import type { FilterRule } from '../../types/filterView';
 import type { KanbanCardContentConfig, KanbanSortDirection } from '../../types/kanban';
 import {
+	DEFAULT_KANBAN_FONT_SCALE,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 	MAX_KANBAN_INITIAL_VISIBLE_COUNT,
 	MIN_KANBAN_INITIAL_VISIBLE_COUNT,
 	DEFAULT_KANBAN_SORT_DIRECTION,
+	MAX_KANBAN_FONT_SCALE,
+	MIN_KANBAN_FONT_SCALE,
+	parseKanbanFontScale,
+	sanitizeKanbanFontScale,
 	sanitizeKanbanInitialVisibleCount
 } from '../../types/kanban';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
@@ -33,6 +38,7 @@ export interface KanbanBoardModalRequest {
 	initialFilter: FilterRule | null;
 	initialLaneField: string | null;
 	initialLaneWidth: number | null;
+	initialFontScale: number | null;
 	initialVisibleCount: number | null;
 	initialContent: KanbanCardContentConfig | null;
 	columns: FilterColumnOption[];
@@ -48,6 +54,7 @@ export interface KanbanBoardModalResult {
 	icon: string | null;
 	laneField: string;
 	laneWidth: number;
+	fontScale: number;
 	filterRule: FilterRule | null;
 	initialVisibleCount: number;
 	content: KanbanCardContentConfig | null;
@@ -62,6 +69,10 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 			? options.initialLaneField
 			: laneOptions[0];
 	let selectedLaneWidth = sanitizeKanbanLaneWidth(options.initialLaneWidth ?? null, DEFAULT_KANBAN_LANE_WIDTH);
+	let selectedFontScale = sanitizeKanbanFontScale(
+		options.initialFontScale ?? DEFAULT_KANBAN_FONT_SCALE,
+		DEFAULT_KANBAN_FONT_SCALE
+	);
 	let initialVisibleCount = sanitizeKanbanInitialVisibleCount(
 		options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 		DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
@@ -171,6 +182,45 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					});
 				});
 
+				const fontScaleSetting = new Setting(container);
+				fontScaleSetting.setName(t('kanbanView.toolbar.fontScaleLabel'));
+				fontScaleSetting.setDesc(
+					t('kanbanView.toolbar.fontScaleDescription', {
+						min: `${Math.round(MIN_KANBAN_FONT_SCALE * 100)}%`,
+						max: `${Math.round(MAX_KANBAN_FONT_SCALE * 100)}%`
+					})
+				);
+				let suppressFontScaleChange = false;
+				fontScaleSetting.addText((text) => {
+					const syncFontScaleValue = (value: number) => {
+						suppressFontScaleChange = true;
+						text.setValue(String(value));
+						suppressFontScaleChange = false;
+					};
+					text.inputEl.type = 'number';
+					text.inputEl.step = '0.05';
+					text.inputEl.min = String(MIN_KANBAN_FONT_SCALE);
+					text.inputEl.max = String(MAX_KANBAN_FONT_SCALE);
+					syncFontScaleValue(selectedFontScale);
+					text.onChange((raw) => {
+						if (suppressFontScaleChange) {
+							return;
+						}
+						const parsed = parseKanbanFontScale(raw);
+						if (parsed === null) {
+							text.inputEl.setAttribute('aria-invalid', 'true');
+							return;
+						}
+						text.inputEl.removeAttribute('aria-invalid');
+						selectedFontScale = parsed;
+					});
+					text.inputEl.addEventListener('blur', () => {
+						selectedFontScale = sanitizeKanbanFontScale(selectedFontScale, DEFAULT_KANBAN_FONT_SCALE);
+						text.inputEl.removeAttribute('aria-invalid');
+						syncFontScaleValue(selectedFontScale);
+					});
+				});
+
 				const countSetting = new Setting(container);
 				countSetting.setName(t('kanbanView.toolbar.initialVisibleCountLabel'));
 				countSetting.setDesc(t('kanbanView.toolbar.initialVisibleCountDesc'));
@@ -247,6 +297,7 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					icon: result.icon ?? null,
 					laneField: laneField.length > 0 ? laneField : laneOptions[0],
 					laneWidth: sanitizeKanbanLaneWidth(selectedLaneWidth, DEFAULT_KANBAN_LANE_WIDTH),
+					fontScale: sanitizeKanbanFontScale(selectedFontScale, DEFAULT_KANBAN_FONT_SCALE),
 					filterRule: result.filterRule ?? null,
 					initialVisibleCount: sanitizeKanbanInitialVisibleCount(initialVisibleCount),
 					content: persistedContent,

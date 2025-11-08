@@ -10,6 +10,7 @@ export class KanbanTooltipManager {
 	private anchorEl: HTMLElement | null = null;
 	private globalsDoc: Document | null = null;
 	private readonly globalListener = () => this.hide();
+	private fontScale = 1;
 
 	register(anchor: HTMLElement, text: string): void {
 		if (!text || text.trim().length === 0) {
@@ -109,6 +110,7 @@ export class KanbanTooltipManager {
 		} else if (this.tooltipEl.parentElement !== doc.body) {
 			doc.body.appendChild(this.tooltipEl);
 		}
+		this.tooltipEl.style.setProperty('--tlb-kanban-font-scale', `${this.fontScale}`);
 		return this.tooltipEl;
 	}
 
@@ -148,5 +150,16 @@ export class KanbanTooltipManager {
 		doc.addEventListener('scroll', this.globalListener, true);
 		doc.defaultView?.addEventListener('resize', this.globalListener, { passive: true });
 		this.globalsDoc = doc;
+	}
+
+	setFontScale(scale: number): void {
+		if (Number.isFinite(scale) && scale > 0) {
+			this.fontScale = scale;
+		} else {
+			this.fontScale = 1;
+		}
+		if (this.tooltipEl) {
+			this.tooltipEl.style.setProperty('--tlb-kanban-font-scale', `${this.fontScale}`);
+		}
 	}
 }

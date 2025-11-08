@@ -59,6 +59,7 @@ export interface KanbanBoardDefinition {
 	icon?: string | null;
 	laneField: string;
 	laneWidth?: number | null;
+	lanePresets?: string[] | null;
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;

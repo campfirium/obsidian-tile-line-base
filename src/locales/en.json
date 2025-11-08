@@ -1,6 +1,7 @@
 {
   "tableView": {
-    "displayName": "TileLineBase Table"
+    "displayName": "TileLineBase Table",
+    "titleSuffix": { "table": " (table)", "kanban": " (kanban)" }
   },
   "viewControls": {
     "openTableView": "Switch to TileLineBase table view",

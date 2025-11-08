@@ -72,14 +72,15 @@ export class KanbanViewModeManager {
 			this.ensureSortConfiguration();
 		}
 
-		this.isSwitching = true;
-		try {
-			this.view.activeViewMode = mode;
-			this.updateToggleButton();
-			void this.view.persistenceService?.saveConfig();
-			await this.view.render();
-		} finally {
-			this.isSwitching = false;
+			this.isSwitching = true;
+			try {
+				this.view.activeViewMode = mode;
+				this.view.refreshDisplayText();
+				this.updateToggleButton();
+				void this.view.persistenceService?.saveConfig();
+				await this.view.render();
+			} finally {
+				this.isSwitching = false;
 		}
 	}
 
@@ -96,16 +97,17 @@ export class KanbanViewModeManager {
 			}
 
 			const configured = await this.promptForLaneField();
-			if (configured) {
-				this.ensureSortConfiguration();
-				this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
-				return 'kanban';
+				if (configured) {
+					this.ensureSortConfiguration();
+					this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
+					return 'kanban';
+				}
+				this.view.activeViewMode = 'table';
+				this.view.refreshDisplayText();
+				this.updateToggleButton();
+				void this.view.persistenceService?.saveConfig();
+				return 'table';
 			}
-			this.view.activeViewMode = 'table';
-			this.updateToggleButton();
-			void this.view.persistenceService?.saveConfig();
-			return 'table';
-		}
 
 		this.ensureSortConfiguration();
 		this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();

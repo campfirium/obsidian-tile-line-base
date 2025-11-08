@@ -75,6 +75,7 @@ export class KanbanViewModeManager {
 		this.isSwitching = true;
 		try {
 			this.view.activeViewMode = mode;
+			this.view.refreshDisplayText();
 			this.updateToggleButton();
 			void this.view.persistenceService?.saveConfig();
 			await this.view.render();
@@ -102,6 +103,7 @@ export class KanbanViewModeManager {
 				return 'kanban';
 			}
 			this.view.activeViewMode = 'table';
+			this.view.refreshDisplayText();
 			this.updateToggleButton();
 			void this.view.persistenceService?.saveConfig();
 			return 'table';

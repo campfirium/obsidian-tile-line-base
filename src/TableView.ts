@@ -121,6 +121,28 @@ export class TableView extends ItemView {
 		return this.file?.basename ?? t("tableView.displayName");
 	}
 
+	public refreshDisplayText(): void {
+		const displayText = this.getDisplayText();
+		const leafWithTab = this.leaf as WorkspaceLeaf & { tabHeaderInnerTitleEl?: HTMLElement | null };
+		this.setElementText(leafWithTab?.tabHeaderInnerTitleEl ?? null, displayText);
+
+		const leafEl = this.containerEl.closest('.workspace-leaf');
+		const headerTitleEl = (leafEl?.querySelector('.view-header-title') as HTMLElement | null) ?? null;
+		this.setElementText(headerTitleEl, displayText);
+	}
+
+	private setElementText(element: HTMLElement | null | undefined, text: string): void {
+		if (!element) {
+			return;
+		}
+		const setText = (element as any).setText;
+		if (typeof setText === 'function') {
+			setText.call(element, text);
+			return;
+		}
+		element.textContent = text;
+	}
+
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
@@ -131,11 +153,14 @@ export class TableView extends ItemView {
 				this.kanbanBoardsLoaded = false;
 				await this.render();
 			} else {
+				this.file = null;
 				this.refreshCoordinator.setTrackedFile(null);
 			}
 		} catch (error) {
 			logger.error("setState failed", error);
 			throw error;
+		} finally {
+			this.refreshDisplayText();
 		}
 	}
 
@@ -163,6 +188,7 @@ export class TableView extends ItemView {
 			await this.refreshCoordinator.finalizeRender(snapshot);
 		}
 		this.kanbanManager.updateToggleButton();
+		this.refreshDisplayText();
 	}
 
 	async onOpen(): Promise<void> {

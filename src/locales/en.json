@@ -1,7 +1,5 @@
 {
-  "tableView": {
-    "displayName": "TileLineBase Table"
-  },
+  "tableView": { "displayName": "TileLineBase Table" },
   "viewControls": {
     "openTableView": "Switch to TileLineBase table view",
     "openMarkdownView": "Switch back to Markdown editor"

@@ -18,17 +18,14 @@ import { KanbanBoardConfirmModal } from './KanbanBoardConfirmModal';
 import { cloneKanbanContentConfig } from './KanbanContentConfig';
 import { openKanbanBoardModal } from './KanbanBoardModal';
 import { composeBoardName } from './boardNaming';
-interface KanbanBoardControllerOptions {
-	app: App;
-	view: TableView;
-	store: KanbanBoardStore;
-}
+interface KanbanBoardControllerOptions { app: App; view: TableView; store: KanbanBoardStore; }
 export class KanbanBoardController {
 	private readonly app: App;
 	private readonly view: TableView;
 	private readonly store: KanbanBoardStore;
 	private loadedFilePath: string | null = null;
 	private repairingLaneField = false;
+	private autoCreateInProgress = false;
 	constructor(options: KanbanBoardControllerOptions) {
 		this.app = options.app;
 		this.view = options.view;
@@ -287,6 +284,7 @@ export class KanbanBoardController {
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.view.kanbanBoardsLoaded = false;
 		this.repairingLaneField = false;
+		this.autoCreateInProgress = false;
 	}
 	private applyBoardContext(
 		board: KanbanBoardDefinition | null,
@@ -337,6 +335,27 @@ export class KanbanBoardController {
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
+		this.maybeTriggerAutoCreate();
+	}
+
+	private maybeTriggerAutoCreate(): void {
+		const schema = this.view.schema;
+		if (
+			this.view.activeViewMode !== 'kanban' ||
+			this.autoCreateInProgress ||
+			this.store.getState().boards.length > 0 ||
+			!schema ||
+			!Array.isArray(schema.columnNames) ||
+			schema.columnNames.length === 0 ||
+			this.getLaneFieldCandidates().length === 0
+		) {
+			return;
+		}
+
+		this.autoCreateInProgress = true;
+		void this.createBoard().catch(() => undefined).finally(() => {
+			this.autoCreateInProgress = false;
+		});
 	}
 	private isLaneFieldAvailable(field: string): boolean {
 		const candidates = this.getLaneFieldCandidates();

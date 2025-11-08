@@ -61,10 +61,13 @@ export class KanbanViewModeManager {
 		}
 
 		if (mode === 'kanban' && this.view.schema) {
-			const ready = this.hasValidLaneField() || await this.promptForLaneField();
-			if (!ready) {
-				this.updateToggleButton();
-				return;
+			const hasBoards = (this.view.kanbanBoardController?.getBoards().length ?? 0) > 0;
+			if (!this.hasValidLaneField() && hasBoards) {
+				const configured = await this.promptForLaneField();
+				if (!configured) {
+					this.updateToggleButton();
+					return;
+				}
 			}
 			this.ensureSortConfiguration();
 		}
@@ -85,7 +88,13 @@ export class KanbanViewModeManager {
 			return null;
 		}
 
+		const hasBoards = (this.view.kanbanBoardController?.getBoards().length ?? 0) > 0;
 		if (!this.hasValidLaneField()) {
+			if (!hasBoards) {
+				this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
+				return null;
+			}
+
 			const configured = await this.promptForLaneField();
 			if (configured) {
 				this.ensureSortConfiguration();

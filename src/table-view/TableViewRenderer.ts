@@ -167,6 +167,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 		container.classList.remove('tlb-has-grid');
 		const boardCount = view.kanbanBoardController?.getBoards().length ?? 0;
 		if (boardCount === 0) {
+			view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 			container.createDiv({
 				cls: 'tlb-kanban-empty',
 				text: t('kanbanView.toolbar.noBoardsPlaceholder')

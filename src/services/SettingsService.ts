@@ -10,8 +10,10 @@ import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from
 import {
 	type KanbanBoardState,
 	type KanbanCardContentConfig,
+	DEFAULT_KANBAN_FONT_SCALE,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 	DEFAULT_KANBAN_SORT_DIRECTION,
+	sanitizeKanbanFontScale,
 	sanitizeKanbanInitialVisibleCount
 } from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
@@ -439,6 +441,7 @@ export class SettingsService {
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
+					fontScale: sanitizeKanbanFontScale(raw.fontScale ?? DEFAULT_KANBAN_FONT_SCALE),
 					filterRule,
 					initialVisibleCount,
 					content,

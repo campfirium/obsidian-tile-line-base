@@ -7,6 +7,7 @@ import type {
 	KanbanRuntimeCardContent,
 	KanbanSortDirection
 } from '../../types/kanban';
+import { sanitizeKanbanFontScale } from '../../types/kanban';
 import { sanitizeKanbanHeightMode } from './kanbanHeight';
 import { sanitizeKanbanLaneWidth } from './kanbanWidth';
 import type { TableView } from '../../TableView';
@@ -17,6 +18,7 @@ import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { resolveExpectedStatusLanes } from './statusLaneHelpers';
+import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -26,7 +28,7 @@ interface KanbanViewControllerOptions {
 	container: HTMLElement;
 	laneField: string;
 	laneWidth: number;
-	lanePresets: string[];
+	fontScale: number;
 	sortField: string | null;
 	fallbackLaneName: string;
 	primaryField: string | null;
@@ -51,7 +53,7 @@ export class KanbanViewController {
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
 	private readonly laneWidth: number;
-	private readonly lanePresets: string[];
+	private readonly fontScale: number;
 	private readonly initialVisibleCount: number;
 	private readonly rawContentConfig: KanbanCardContentConfig | null;
 	private readonly viewportManager: KanbanViewportManager;
@@ -85,9 +87,7 @@ export class KanbanViewController {
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
-		this.lanePresets = Array.isArray(options.lanePresets)
-			? options.lanePresets.filter((value) => typeof value === 'string' && value.trim().length > 0)
-			: [];
+		this.fontScale = sanitizeKanbanFontScale(options.fontScale);
 		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
 		const limit = Math.floor(options.initialVisibleCount ?? 1);
 		this.initialVisibleCount = Math.max(1, limit);
@@ -102,12 +102,15 @@ export class KanbanViewController {
 		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
 
+		ensureFontScaleStyles(this.container.ownerDocument ?? document);
 		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
+		this.rootEl.style.setProperty('--tlb-kanban-font-scale', `${this.fontScale}`);
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
 		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
 		this.viewportManager.apply(this.heightMode);
+		this.tooltipManager.setFontScale(this.fontScale);
 		this.registerListeners();
 		this.ensureSortableLoaded();
 		this.renderBoard();
@@ -269,11 +272,10 @@ export class KanbanViewController {
 		});
 		const sortDirection: KanbanSortDirection =
 			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
-		const statusLaneNames = resolveExpectedStatusLanes({
+		const expectedLaneNames = resolveExpectedStatusLanes({
 			laneField: this.laneField,
 			filterRule: this.view.activeKanbanBoardFilter
 		});
-		const expectedLaneNames = this.mergeLaneExpectations(statusLaneNames);
 		return buildKanbanBoardState({
 			rows: this.visibleRows,
 			laneField: this.laneField,
@@ -287,16 +289,6 @@ export class KanbanViewController {
 			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row),
 			expectedLaneNames
 		});
-	}
-
-	private mergeLaneExpectations(statusLaneNames: string[] | null): string[] | null {
-		const presets = this.lanePresets;
-		const combined = [
-			...presets,
-			...(statusLaneNames ?? [])
-		];
-		const filtered = combined.filter((value) => typeof value === 'string' && value.trim().length > 0);
-		return filtered.length > 0 ? filtered : null;
 	}
 
 	private getAvailableFields(): string[] {

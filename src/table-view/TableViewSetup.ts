@@ -52,7 +52,8 @@ export function initializeTableView(view: TableView): void {
 			laneField: view.kanbanLaneField,
 			sortField: view.kanbanSortField,
 			sortDirection: view.kanbanSortDirection,
-			heightMode: view.kanbanHeightMode
+			heightMode: view.kanbanHeightMode,
+			fontScale: view.kanbanFontScale
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)

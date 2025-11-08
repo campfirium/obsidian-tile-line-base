@@ -10,6 +10,7 @@ import {
 	DEFAULT_KANBAN_BOARD_STATE,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 	DEFAULT_KANBAN_SORT_DIRECTION,
+	sanitizeKanbanFontScale,
 	sanitizeKanbanInitialVisibleCount
 } from '../../types/kanban';
 import { cloneKanbanContentConfig, isKanbanContentConfigEffectivelyEmpty } from './KanbanContentConfig';
@@ -20,7 +21,7 @@ export interface CreateBoardOptions {
 	icon: string | null;
 	laneField: string;
 	laneWidth?: number | null;
-	lanePresets?: string[] | null;
+	fontScale?: number | null;
 	filterRule: FilterRule | null;
 	setActive?: boolean;
 	initialVisibleCount?: number | null;
@@ -34,7 +35,7 @@ export interface UpdateBoardOptions {
 	icon?: string | null;
 	laneField?: string | null;
 	laneWidth?: number | null;
-	lanePresets?: string[] | null;
+	fontScale?: number | null;
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;
@@ -110,7 +111,7 @@ export class KanbanBoardStore {
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
 			laneWidth: this.sanitizeLaneWidth(options.laneWidth),
-			lanePresets: this.sanitizeLanePresets(options.lanePresets),
+			fontScale: this.sanitizeFontScale(options.fontScale),
 			filterRule: this.cloneFilterRule(options.filterRule),
 			initialVisibleCount: this.sanitizeInitialVisibleCount(options.initialVisibleCount),
 			content: this.sanitizeContentConfig(options.content),
@@ -144,8 +145,8 @@ export class KanbanBoardStore {
 		if (updates.laneWidth !== undefined) {
 			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
 		}
-		if (updates.lanePresets !== undefined) {
-			target.lanePresets = this.sanitizeLanePresets(updates.lanePresets);
+		if (updates.fontScale !== undefined) {
+			target.fontScale = this.sanitizeFontScale(updates.fontScale);
 		}
 		if (updates.filterRule !== undefined) {
 			target.filterRule = this.cloneFilterRule(updates.filterRule);
@@ -241,28 +242,8 @@ export class KanbanBoardStore {
 		return sanitizeKanbanLaneWidth(value, DEFAULT_KANBAN_LANE_WIDTH);
 	}
 
-	private sanitizeLanePresets(value: unknown): string[] {
-		if (!Array.isArray(value)) {
-			return [];
-		}
-		const seen = new Set<string>();
-		const presets: string[] = [];
-		for (const candidate of value) {
-			if (typeof candidate !== 'string') {
-				continue;
-			}
-			const trimmed = candidate.trim();
-			if (!trimmed) {
-				continue;
-			}
-			const key = trimmed.toLowerCase();
-			if (seen.has(key)) {
-				continue;
-			}
-			seen.add(key);
-			presets.push(trimmed);
-		}
-		return presets;
+	private sanitizeFontScale(value: unknown): number {
+		return sanitizeKanbanFontScale(value);
 	}
 
 	private generateId(): string {
@@ -285,7 +266,7 @@ export class KanbanBoardStore {
 						icon: this.sanitizeIcon(board.icon),
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
 						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null),
-						lanePresets: this.sanitizeLanePresets(board.lanePresets ?? null),
+						fontScale: this.sanitizeFontScale(board.fontScale ?? null),
 						filterRule: this.cloneFilterRule(board.filterRule ?? null),
 						initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null),
 						content: this.sanitizeContentConfig(board.content ?? null),

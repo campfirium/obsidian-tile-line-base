@@ -25,6 +25,7 @@ export interface TableConfigData {
 		sortField?: string | null;
 		sortDirection?: KanbanSortDirection | null;
 		heightMode?: KanbanHeightMode | null;
+		fontScale?: number | null;
 	};
 	kanbanBoards?: KanbanBoardState | null;
 }

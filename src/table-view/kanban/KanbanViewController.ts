@@ -8,6 +8,7 @@ import type {
 	KanbanSortDirection
 } from '../../types/kanban';
 import { sanitizeKanbanHeightMode } from './kanbanHeight';
+import { sanitizeKanbanLaneWidth } from './kanbanWidth';
 import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { toRuntimeContent } from './KanbanCardContent';
@@ -24,6 +25,7 @@ interface KanbanViewControllerOptions {
 	view: TableView;
 	container: HTMLElement;
 	laneField: string;
+	laneWidth: number;
 	sortField: string | null;
 	fallbackLaneName: string;
 	primaryField: string | null;
@@ -47,6 +49,7 @@ export class KanbanViewController {
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
+	private readonly laneWidth: number;
 	private readonly initialVisibleCount: number;
 	private readonly rawContentConfig: KanbanCardContentConfig | null;
 	private readonly viewportManager: KanbanViewportManager;
@@ -79,6 +82,7 @@ export class KanbanViewController {
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
+		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
 		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
 		const limit = Math.floor(options.initialVisibleCount ?? 1);
 		this.initialVisibleCount = Math.max(1, limit);
@@ -96,6 +100,7 @@ export class KanbanViewController {
 		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
+		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
 		this.viewportManager.apply(this.heightMode);
 		this.registerListeners();

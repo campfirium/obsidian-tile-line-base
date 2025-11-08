@@ -1,15 +1,7 @@
-import { App, Menu, Notice } from 'obsidian';
+import { App, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
-import {
-	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
-	DEFAULT_KANBAN_SORT_DIRECTION,
-	DEFAULT_KANBAN_SORT_FIELD,
-	sanitizeKanbanInitialVisibleCount,
-	type KanbanBoardDefinition,
-	type KanbanCardContentConfig,
-	type KanbanSortDirection
-} from '../../types/kanban';
+import { DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD, sanitizeKanbanInitialVisibleCount, type KanbanBoardDefinition, type KanbanCardContentConfig, type KanbanSortDirection } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import type { FilterRule } from '../../types/filterView';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
@@ -18,6 +10,8 @@ import { KanbanBoardConfirmModal } from './KanbanBoardConfirmModal';
 import { cloneKanbanContentConfig } from './KanbanContentConfig';
 import { openKanbanBoardModal } from './KanbanBoardModal';
 import { composeBoardName } from './boardNaming';
+import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
+import { showKanbanBoardMenu } from './KanbanBoardMenu';
 interface KanbanBoardControllerOptions { app: App; view: TableView; store: KanbanBoardStore; }
 export class KanbanBoardController {
 	private readonly app: App;
@@ -101,6 +95,7 @@ export class KanbanBoardController {
 		defaultIcon: 'layout-kanban',
 		initialFilter: null,
 		initialLaneField: this.view.kanbanLaneField ?? null,
+		initialLaneWidth: this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
 		initialVisibleCount: this.view.kanbanInitialVisibleCount,
 		initialContent: null,
 		initialSortField: this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
@@ -114,6 +109,7 @@ export class KanbanBoardController {
 			name: editor.name,
 			icon: editor.icon,
 			laneField: editor.laneField,
+			laneWidth: editor.laneWidth,
 			filterRule: editor.filterRule,
 			initialVisibleCount: editor.initialVisibleCount,
 			content: editor.content,
@@ -132,6 +128,7 @@ export class KanbanBoardController {
 		defaultIcon: board.icon ?? null,
 		initialFilter: board.filterRule ?? null,
 		initialLaneField: board.laneField,
+		initialLaneWidth: board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
 		initialVisibleCount: board.initialVisibleCount ?? null,
 		initialContent: board.content ?? null,
 		initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
@@ -146,6 +143,7 @@ export class KanbanBoardController {
 		name: editor.name,
 		icon: editor.icon,
 		laneField: editor.laneField,
+		laneWidth: editor.laneWidth,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -171,6 +169,7 @@ export class KanbanBoardController {
 		defaultIcon: board.icon ?? null,
 		initialFilter: board.filterRule ?? null,
 		initialLaneField: board.laneField,
+		initialLaneWidth: board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
 		initialVisibleCount: board.initialVisibleCount ?? null,
 		initialContent: board.content ?? null,
 		initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
@@ -185,6 +184,7 @@ export class KanbanBoardController {
 		name: editor.name,
 		icon: editor.icon,
 		laneField: editor.laneField,
+		laneWidth: editor.laneWidth,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -228,32 +228,18 @@ export class KanbanBoardController {
 		this.refreshToolbar();
 	}
 	openBoardMenu(board: KanbanBoardDefinition, event: MouseEvent): void {
-		const menu = new Menu();
-		menu.addItem((item) => {
-			item
-				.setTitle(t('kanbanView.toolbar.editBoardLabel'))
-				.setIcon('pencil')
-				.onClick(() => {
-					void this.editBoard(board);
-				});
+		showKanbanBoardMenu({
+			event,
+			onEdit: () => {
+				void this.editBoard(board);
+			},
+			onDuplicate: () => {
+				void this.duplicateBoard(board);
+			},
+			onDelete: () => {
+				void this.deleteBoard(board);
+			}
 		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('kanbanView.toolbar.duplicateBoardLabel'))
-				.setIcon('copy')
-				.onClick(() => {
-					void this.duplicateBoard(board);
-				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('kanbanView.toolbar.deleteBoardLabel'))
-				.setIcon('trash-2')
-				.onClick(() => {
-					void this.deleteBoard(board);
-				});
-		});
-		menu.showAtPosition({ x: event.clientX, y: event.clientY });
 	}
 	refreshToolbar(): void {
 		const toolbar = this.view.kanbanToolbar;
@@ -278,6 +264,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
+		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -301,6 +288,10 @@ export class KanbanBoardController {
 		}
 		this.view.activeKanbanBoardFilter = board.filterRule ?? null;
 		this.view.activeKanbanBoardId = board.id;
+		this.view.kanbanLaneWidth = sanitizeKanbanLaneWidth(
+			board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
+			DEFAULT_KANBAN_LANE_WIDTH
+		);
 		this.view.kanbanInitialVisibleCount = sanitizeKanbanInitialVisibleCount(
 			board.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
 		);
@@ -311,6 +302,7 @@ export class KanbanBoardController {
 	} else {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
+		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -329,6 +321,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
+		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -374,6 +367,7 @@ export class KanbanBoardController {
 				defaultIcon: board.icon ?? null,
 				initialFilter: board.filterRule ?? null,
 				initialLaneField: null,
+				initialLaneWidth: board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
 				initialVisibleCount: board.initialVisibleCount ?? null,
 				initialContent: board.content ?? null,
 				initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
@@ -388,6 +382,7 @@ export class KanbanBoardController {
 		name: editor.name,
 		icon: editor.icon,
 		laneField: editor.laneField,
+		laneWidth: editor.laneWidth,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -474,6 +469,7 @@ export class KanbanBoardController {
 		defaultIcon: string | null;
 		initialFilter: FilterRule | null;
 		initialLaneField: string | null;
+		initialLaneWidth: number | null;
 		initialVisibleCount: number | null;
 		initialContent: KanbanCardContentConfig | null;
 		initialSortField: string | null;
@@ -483,6 +479,7 @@ export class KanbanBoardController {
 		name: string;
 		icon: string | null;
 		laneField: string;
+		laneWidth: number;
 		filterRule: FilterRule | null;
 		initialVisibleCount: number;
 		content: KanbanCardContentConfig | null;
@@ -506,6 +503,7 @@ export class KanbanBoardController {
 			defaultIcon: options.defaultIcon,
 			initialFilter: options.initialFilter,
 			initialLaneField: options.initialLaneField,
+			initialLaneWidth: options.initialLaneWidth,
 			initialVisibleCount: options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 			initialContent: options.initialContent ?? null,
 			columns,

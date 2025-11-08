@@ -41,7 +41,7 @@
       "editBoardTitle": "编辑看板", "editBoardLabel": "编辑看板",
       "deleteBoardLabel": "删除看板", "deleteBoardConfirm": "确认删除“{{name}}”吗？卡片仍可在其他看板中查看。",
       "cannotDeleteLastBoard": "至少保留一个看板。", "newBoardPlaceholder": "看板",
-        "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本", "initialVisibleCountLabel": "每列初始显示数量", "initialVisibleCountDesc": "每列仅展示设定数量的卡片，剩余卡片通过“显示全部”展开。", "sortSettingLabel": "条目排序", "sortSettingDesc": "选择要排序的字段以及顺序。", "sortFieldLabel": "排序字段", "sortFieldNone": "不排序", "sortDirectionLabel": "排序方向", "sortDirectionAsc": "升序（A -> Z）", "sortDirectionDesc": "降序（Z -> A）"
+        "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本", "laneWidthLabel": "列宽（rem）", "laneWidthDescription": "输入介于 {{min}} 和 {{max}} rem 的数值来控制看板列宽。", "initialVisibleCountLabel": "每列初始显示数量", "initialVisibleCountDesc": "每列仅展示设定数量的卡片，剩余卡片通过“显示全部”展开。", "sortSettingLabel": "条目排序", "sortSettingDesc": "选择要排序的字段以及顺序。", "sortFieldLabel": "排序字段", "sortFieldNone": "不排序", "sortDirectionLabel": "排序方向", "sortDirectionAsc": "升序（A -> Z）", "sortDirectionDesc": "降序（Z -> A）"
     },
     "settings": { "heightAuto": "自适应高度（显示全部卡片）", "heightViewport": "匹配窗口高度（列内滚动）" },
     "showAllButtonLabel": "显示全部（剩余 {{count}} 条）"

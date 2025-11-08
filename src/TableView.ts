@@ -118,26 +118,56 @@ export class TableView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return this.file?.basename ?? t("tableView.displayName");
+		const baseName = this.file?.basename ?? t("tableView.displayName");
+		return `${baseName}${this.getActiveViewSuffix()}`;
+	}
+
+	private getActiveViewSuffix(): string {
+		const suffixKey = this.activeViewMode === 'kanban' ? 'tableView.titleSuffix.kanban' : 'tableView.titleSuffix.table';
+		return t(suffixKey);
+	}
+
+	public refreshDisplayText(): void {
+		const displayText = this.getDisplayText();
+		const leafWithTab = this.leaf as WorkspaceLeaf & { tabHeaderInnerTitleEl?: HTMLElement | null };
+		this.setElementText(leafWithTab?.tabHeaderInnerTitleEl ?? null, displayText);
+
+		const leafEl = this.containerEl.closest('.workspace-leaf');
+		const headerTitleEl = (leafEl?.querySelector('.view-header-title') as HTMLElement | null) ?? null;
+		this.setElementText(headerTitleEl, displayText);
+	}
+
+	private setElementText(element: HTMLElement | null | undefined, text: string): void {
+		if (!element) {
+			return;
+		}
+		const setText = (element as any).setText;
+		if (typeof setText === 'function') {
+			setText.call(element, text);
+			return;
+		}
+		element.textContent = text;
 	}
 
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
-			const file = this.app.vault.getAbstractFileByPath(state.filePath);
-			if (file instanceof TFile) {
-				this.file = file;
-				this.refreshCoordinator.setTrackedFile(file);
-				this.kanbanBoardsLoaded = false;
-				await this.render();
-			} else {
-				this.refreshCoordinator.setTrackedFile(null);
+				const file = this.app.vault.getAbstractFileByPath(state.filePath);
+				if (file instanceof TFile) {
+					this.file = file;
+					this.refreshCoordinator.setTrackedFile(file);
+					this.kanbanBoardsLoaded = false;
+					await this.render();
+				} else {
+					this.file = null;
+					this.refreshCoordinator.setTrackedFile(null);
+				}
+				this.refreshDisplayText();
+			} catch (error) {
+				logger.error("setState failed", error);
+				throw error;
 			}
-		} catch (error) {
-			logger.error("setState failed", error);
-			throw error;
 		}
-	}
 
 	getState(): TableViewState {
 		return { filePath: this.file?.path ?? "" };
@@ -159,11 +189,12 @@ export class TableView extends ItemView {
 			}
 		}
 
-		if (this.refreshCoordinator) {
-			await this.refreshCoordinator.finalizeRender(snapshot);
+			if (this.refreshCoordinator) {
+				await this.refreshCoordinator.finalizeRender(snapshot);
+			}
+			this.kanbanManager.updateToggleButton();
+			this.refreshDisplayText();
 		}
-		this.kanbanManager.updateToggleButton();
-	}
 
 	async onOpen(): Promise<void> {
 		this.ensureMarkdownToggle();

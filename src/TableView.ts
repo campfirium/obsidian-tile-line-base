@@ -118,13 +118,7 @@ export class TableView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		const baseName = this.file?.basename ?? t("tableView.displayName");
-		return `${baseName}${this.getActiveViewSuffix()}`;
-	}
-
-	private getActiveViewSuffix(): string {
-		const suffixKey = this.activeViewMode === 'kanban' ? 'tableView.titleSuffix.kanban' : 'tableView.titleSuffix.table';
-		return t(suffixKey);
+		return this.file?.basename ?? t("tableView.displayName");
 	}
 
 	public refreshDisplayText(): void {
@@ -152,22 +146,23 @@ export class TableView extends ItemView {
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
-				const file = this.app.vault.getAbstractFileByPath(state.filePath);
-				if (file instanceof TFile) {
-					this.file = file;
-					this.refreshCoordinator.setTrackedFile(file);
-					this.kanbanBoardsLoaded = false;
-					await this.render();
-				} else {
-					this.file = null;
-					this.refreshCoordinator.setTrackedFile(null);
-				}
-				this.refreshDisplayText();
-			} catch (error) {
-				logger.error("setState failed", error);
-				throw error;
+			const file = this.app.vault.getAbstractFileByPath(state.filePath);
+			if (file instanceof TFile) {
+				this.file = file;
+				this.refreshCoordinator.setTrackedFile(file);
+				this.kanbanBoardsLoaded = false;
+				await this.render();
+			} else {
+				this.file = null;
+				this.refreshCoordinator.setTrackedFile(null);
 			}
+		} catch (error) {
+			logger.error("setState failed", error);
+			throw error;
+		} finally {
+			this.refreshDisplayText();
 		}
+	}
 
 	getState(): TableViewState {
 		return { filePath: this.file?.path ?? "" };
@@ -189,12 +184,12 @@ export class TableView extends ItemView {
 			}
 		}
 
-			if (this.refreshCoordinator) {
-				await this.refreshCoordinator.finalizeRender(snapshot);
-			}
-			this.kanbanManager.updateToggleButton();
-			this.refreshDisplayText();
+		if (this.refreshCoordinator) {
+			await this.refreshCoordinator.finalizeRender(snapshot);
 		}
+		this.kanbanManager.updateToggleButton();
+		this.refreshDisplayText();
+	}
 
 	async onOpen(): Promise<void> {
 		this.ensureMarkdownToggle();

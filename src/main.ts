@@ -1,5 +1,6 @@
 import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
+import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
 import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
@@ -40,6 +41,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private editorConfigController: EditorConfigBlockController | null = null;
 	private backupManager: BackupManager | null = null;
 	private viewActionManager!: ViewActionManager;
+	private tableTitleRefresher!: TableViewTitleRefresher;
 	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
@@ -52,6 +54,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
+		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
 		this.editorConfigController = new EditorConfigBlockController(this.app);
 		await this.loadSettings();
 
@@ -87,25 +90,31 @@ export default class TileLineBasePlugin extends Plugin {
 		logger.info('Plugin onload start');
 		logger.debug('Registering TableView view', { viewType: TABLE_VIEW_TYPE });
 
-		this.registerView(
-			TABLE_VIEW_TYPE,
-			(leaf) => {
-				const leafWindow = this.windowContextManager.getLeafWindow(leaf);
-				logger.debug('registerView factory invoked', {
-					leaf: snapshotLeaf(this.windowContextManager, leaf),
-					windowRegistered: this.windowContextManager.hasWindow(leafWindow ?? window)
-				});
+		this.registerView(TABLE_VIEW_TYPE, (leaf) => {
+			const leafWindow = this.windowContextManager.getLeafWindow(leaf);
+			logger.debug('registerView factory invoked', {
+				leaf: snapshotLeaf(this.windowContextManager, leaf),
+				windowRegistered: this.windowContextManager.hasWindow(leafWindow ?? window)
+			});
 
-				const view = new TableView(leaf);
-				logger.debug('TableView instance created');
-				return view;
-			}
-		);
+			const view = new TableView(leaf);
+			logger.debug('TableView instance created');
+			return view;
+		});
 		logger.debug('registerView completed');
 
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 		this.viewActionManager.refreshAll();
+
+		this.app.workspace.onLayoutReady(() => {
+			this.tableTitleRefresher.refreshAll();
+		});
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => {
+				this.tableTitleRefresher.refreshAll();
+			})
+		);
 
 		this.onboardingManager = new OnboardingManager({
 			app: this.app,
@@ -114,47 +123,43 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 		await this.onboardingManager.runInitialOnboarding();
 
-		this.registerEvent(
-			this.app.workspace.on('file-open', (openedFile) => {
-				logger.debug('file-open event received', { file: openedFile?.path ?? null });
-				if (openedFile instanceof TFile) {
-					window.setTimeout(() => {
-						void this.viewCoordinator.maybeSwitchToTableView(openedFile);
-					}, 0);
-				}
-			})
-		);
-
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', (leaf) => {
-				this.viewActionManager.ensureActionsForLeaf(leaf ?? null);
-				this.applyRightSidebarForLeaf(leaf ?? null);
-
-				const markdownView = leaf?.view instanceof MarkdownView ? leaf.view : null;
-				const file = markdownView?.file ?? null;
-				if (!file) {
-					return;
-				}
-
-				if (!this.settingsService.shouldAutoOpen(file.path)) {
-					return;
-				}
-
-				logger.debug('active-leaf-change: auto switch candidate', {
-					file: file.path,
-					leaf: snapshotLeaf(this.windowContextManager, leaf ?? null)
-				});
-
+		this.registerEvent(this.app.workspace.on('file-open', (openedFile) => {
+			logger.debug('file-open event received', { file: openedFile?.path ?? null });
+			if (openedFile instanceof TFile) {
 				window.setTimeout(() => {
-					const openContext = {
-						leaf: leaf ?? null,
-						preferredWindow: this.windowContextManager.getLeafWindow(leaf ?? null),
-						workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace
-					};
-					void this.viewCoordinator.openTableView(file, openContext);
+					void this.viewCoordinator.maybeSwitchToTableView(openedFile);
 				}, 0);
-			})
-		);
+			}
+		}));
+
+		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
+			this.viewActionManager.ensureActionsForLeaf(leaf ?? null);
+			this.applyRightSidebarForLeaf(leaf ?? null);
+
+			const markdownView = leaf?.view instanceof MarkdownView ? leaf.view : null;
+			const file = markdownView?.file ?? null;
+			if (!file) {
+				return;
+			}
+
+			if (!this.settingsService.shouldAutoOpen(file.path)) {
+				return;
+			}
+
+			logger.debug('active-leaf-change: auto switch candidate', {
+				file: file.path,
+				leaf: snapshotLeaf(this.windowContextManager, leaf ?? null)
+			});
+
+			window.setTimeout(() => {
+				const openContext = {
+					leaf: leaf ?? null,
+					preferredWindow: this.windowContextManager.getLeafWindow(leaf ?? null),
+					workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace
+				};
+				void this.viewCoordinator.openTableView(file, openContext);
+			}, 0);
+		}));
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.viewActionManager.refreshAll();

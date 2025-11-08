@@ -35,7 +35,6 @@ interface KanbanViewControllerOptions {
 
 interface RowUpdate {
 	lane?: string;
-	sort?: string;
 }
 
 export class KanbanViewController {
@@ -483,13 +482,10 @@ export class KanbanViewController {
 			processed.add(laneEl);
 			const laneName = laneEl.dataset.laneName ?? this.fallbackLaneName;
 			const cardEls = Array.from(laneEl.querySelectorAll<HTMLElement>('.tlb-kanban-card'));
-			cardEls.forEach((cardEl, index) => {
+			cardEls.forEach((cardEl, _index) => {
 				const blockIndex = parseInt(cardEl.dataset.rowIndex ?? '', 10);
 				if (!Number.isInteger(blockIndex)) { return; }
 				const record = updates.get(blockIndex) ?? {};
-				if (this.sortField) {
-					record.sort = String(index + 1);
-				}
 				if (laneEl === targetEl && blockIndex === rowIndex) {
 					record.lane = laneName;
 				}
@@ -505,7 +501,6 @@ export class KanbanViewController {
 		for (const [rowIndex, change] of updates.entries()) {
 			const fields: string[] = [];
 			if (typeof change.lane === 'string') { fields.push(this.laneField); }
-			if (this.sortField && typeof change.sort === 'string') { fields.push(this.sortField); }
 			if (fields.length > 0) { targets.push({ index: rowIndex, fields }); }
 		}
 		if (targets.length === 0) { this.renderBoard(); return; }
@@ -518,7 +513,6 @@ export class KanbanViewController {
 					const block = this.view.blocks[rowIndex];
 					if (!block) { continue; }
 					if (typeof change.lane === 'string') { block.data[this.laneField] = change.lane; }
-					if (this.sortField && typeof change.sort === 'string') { block.data[this.sortField] = change.sort; }
 				}
 			},
 			() => ({

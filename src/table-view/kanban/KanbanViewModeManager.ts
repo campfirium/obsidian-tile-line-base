@@ -1,7 +1,7 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import { KanbanFieldModal } from './KanbanFieldModal';
-import { DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from '../../types/kanban';
+import { DEFAULT_KANBAN_SORT_DIRECTION } from '../../types/kanban';
 import type { TableView } from '../../TableView';
 type ViewMode = 'table' | 'kanban';
 
@@ -187,8 +187,7 @@ export class KanbanViewModeManager {
 	private ensureSortConfiguration(): void {
 		const currentField =
 			typeof this.view.kanbanSortField === 'string' ? this.view.kanbanSortField.trim() : '';
-		this.view.kanbanSortField =
-			currentField.length > 0 ? currentField : DEFAULT_KANBAN_SORT_FIELD;
+		this.view.kanbanSortField = currentField.length > 0 ? currentField : null;
 		const direction = this.view.kanbanSortDirection;
 		if (direction !== 'asc' && direction !== 'desc') {
 			this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;

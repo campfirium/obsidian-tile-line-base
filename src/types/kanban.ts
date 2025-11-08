@@ -17,7 +17,7 @@ export interface KanbanRuntimeCardContent extends KanbanCardContentConfig {
 
 export const DEFAULT_KANBAN_HEIGHT_MODE: KanbanHeightMode = 'auto';
 export const DEFAULT_KANBAN_SORT_DIRECTION: KanbanSortDirection = 'asc';
-export const DEFAULT_KANBAN_SORT_FIELD = '看板排序';
+export const DEFAULT_KANBAN_SORT_FIELD = '';
 export const DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT = 10;
 export const MIN_KANBAN_INITIAL_VISIBLE_COUNT = 1;
 export const MAX_KANBAN_INITIAL_VISIBLE_COUNT = 500;
@@ -61,6 +61,8 @@ export interface KanbanBoardDefinition {
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;
+	sortField?: string | null;
+	sortDirection?: KanbanSortDirection | null;
 }
 
 export interface KanbanBoardState {

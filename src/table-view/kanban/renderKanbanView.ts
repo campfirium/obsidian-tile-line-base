@@ -29,6 +29,7 @@ export function renderKanbanView(
 	const columnNames = schema.columnNames ?? [];
 	const laneField = options.laneField;
 	const sortField = options.sortField;
+	const hiddenFields = view.hiddenSortableFields ?? new Set<string>();
 
 	const hasLaneField = columnNames.includes(laneField);
 
@@ -39,7 +40,7 @@ export function renderKanbanView(
 		});
 		return;
 	}
-	if (sortField && !columnNames.includes(sortField)) {
+	if (sortField && !columnNames.includes(sortField) && !hiddenFields.has(sortField)) {
 		container.createDiv({
 			cls: 'tlb-kanban-warning',
 			text: t('kanbanView.missingSortField', { field: sortField })

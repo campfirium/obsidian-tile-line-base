@@ -11,6 +11,7 @@ import {
 	type KanbanBoardState,
 	type KanbanCardContentConfig,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+	DEFAULT_KANBAN_SORT_DIRECTION,
 	sanitizeKanbanInitialVisibleCount
 } from '../types/kanban';
 import type { ConfigCacheEntry } from '../types/config';
@@ -429,6 +430,10 @@ export class SettingsService {
 					DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
 				);
 				const content = this.cloneKanbanCardContentConfig(raw.content ?? null);
+				const rawSortField = typeof raw.sortField === 'string' ? raw.sortField.trim() : '';
+				const sortField = rawSortField.length > 0 ? rawSortField : null;
+				const sortDirection =
+					raw.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
@@ -436,7 +441,9 @@ export class SettingsService {
 					laneField: laneField.length > 0 ? laneField : '',
 					filterRule,
 					initialVisibleCount,
-					content
+					content,
+					sortField,
+					sortDirection
 				});
 				seenIds.add(id);
 			}

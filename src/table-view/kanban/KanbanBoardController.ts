@@ -3,9 +3,12 @@ import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
 import {
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+	DEFAULT_KANBAN_SORT_DIRECTION,
+	DEFAULT_KANBAN_SORT_FIELD,
 	sanitizeKanbanInitialVisibleCount,
 	type KanbanBoardDefinition,
-	type KanbanCardContentConfig
+	type KanbanCardContentConfig,
+	type KanbanSortDirection
 } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import type { FilterRule } from '../../types/filterView';
@@ -14,6 +17,7 @@ import { getAvailableColumns } from '../TableViewFilterPresenter';
 import { KanbanBoardConfirmModal } from './KanbanBoardConfirmModal';
 import { cloneKanbanContentConfig } from './KanbanContentConfig';
 import { openKanbanBoardModal } from './KanbanBoardModal';
+import { composeBoardName } from './boardNaming';
 interface KanbanBoardControllerOptions {
 	app: App;
 	view: TableView;
@@ -101,7 +105,10 @@ export class KanbanBoardController {
 		initialFilter: null,
 		initialLaneField: this.view.kanbanLaneField ?? null,
 		initialVisibleCount: this.view.kanbanInitialVisibleCount,
-		initialContent: null
+		initialContent: null,
+		initialSortField: this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+		initialSortDirection: this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+		sortFieldOptions: this.getSortFieldOptions()
 	});
 		if (!editor) {
 			return;
@@ -113,6 +120,8 @@ export class KanbanBoardController {
 			filterRule: editor.filterRule,
 			initialVisibleCount: editor.initialVisibleCount,
 			content: editor.content,
+			sortField: editor.sortField,
+			sortDirection: editor.sortDirection,
 			setActive: true
 		});
 		await this.store.persist();
@@ -127,7 +136,11 @@ export class KanbanBoardController {
 		initialFilter: board.filterRule ?? null,
 		initialLaneField: board.laneField,
 		initialVisibleCount: board.initialVisibleCount ?? null,
-		initialContent: board.content ?? null
+		initialContent: board.content ?? null,
+		initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+		initialSortDirection:
+			board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+		sortFieldOptions: this.getSortFieldOptions()
 	});
 		if (!editor) {
 			return;
@@ -138,7 +151,9 @@ export class KanbanBoardController {
 		laneField: editor.laneField,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
-		content: editor.content
+		content: editor.content,
+		sortField: editor.sortField,
+		sortDirection: editor.sortDirection
 	});
 		if (!updated) {
 			return;
@@ -160,7 +175,11 @@ export class KanbanBoardController {
 		initialFilter: board.filterRule ?? null,
 		initialLaneField: board.laneField,
 		initialVisibleCount: board.initialVisibleCount ?? null,
-		initialContent: board.content ?? null
+		initialContent: board.content ?? null,
+		initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+		initialSortDirection:
+			board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+		sortFieldOptions: this.getSortFieldOptions()
 	});
 		if (!editor) {
 			return;
@@ -172,6 +191,8 @@ export class KanbanBoardController {
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
+		sortField: editor.sortField,
+		sortDirection: editor.sortDirection,
 		setActive: true
 	});
 		await this.store.persist();
@@ -258,7 +279,12 @@ export class KanbanBoardController {
 		this.loadedFilePath = null;
 		this.store.reset();
 		this.view.activeKanbanBoardFilter = null;
+		this.view.activeKanbanBoardId = null;
+		this.view.kanbanLaneField = null;
+		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
+		this.view.kanbanSortField = null;
+		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.view.kanbanBoardsLoaded = false;
 		this.repairingLaneField = false;
 	}
@@ -280,11 +306,17 @@ export class KanbanBoardController {
 		this.view.kanbanInitialVisibleCount = sanitizeKanbanInitialVisibleCount(
 			board.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
 		);
+		const sortField = typeof board.sortField === 'string' ? board.sortField.trim() : '';
+		this.view.kanbanSortField = sortField.length > 0 ? sortField : null;
+		this.view.kanbanSortDirection =
+			board.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
 	} else {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
+		this.view.kanbanSortField = null;
+		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	}
 		if (options?.persist !== false) {
 			void this.view.persistenceService?.saveConfig();
@@ -301,6 +333,8 @@ export class KanbanBoardController {
 		this.view.kanbanLaneField = null;
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
+		this.view.kanbanSortField = null;
+		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
 	}
@@ -322,7 +356,11 @@ export class KanbanBoardController {
 				initialFilter: board.filterRule ?? null,
 				initialLaneField: null,
 				initialVisibleCount: board.initialVisibleCount ?? null,
-				initialContent: board.content ?? null
+				initialContent: board.content ?? null,
+				initialSortField: board.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
+				initialSortDirection:
+					board.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+				sortFieldOptions: this.getSortFieldOptions()
 			});
 			if (!editor) {
 				return;
@@ -333,7 +371,9 @@ export class KanbanBoardController {
 		laneField: editor.laneField,
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
-		content: editor.content
+		content: editor.content,
+		sortField: editor.sortField,
+		sortDirection: editor.sortDirection
 	});
 			if (!updated) {
 				return;
@@ -360,9 +400,6 @@ export class KanbanBoardController {
 			return trimmed !== '#' && trimmed !== '__tlb_row_id';
 		});
 	}
-	private getContentFieldCandidates(): string[] {
-		return this.getLaneFieldCandidates();
-	}
 	private getFilterColumnOptions(): FilterColumnOption[] {
 		const columns = getAvailableColumns(this.view);
 		return columns.map((name) => ({
@@ -370,6 +407,19 @@ export class KanbanBoardController {
 			kind: 'text',
 			allowNumericOperators: true
 		}));
+	}
+	private getSortFieldOptions(): string[] {
+		const columns = getAvailableColumns(this.view);
+		const ordered: string[] = [];
+		const seen = new Set<string>();
+		for (const column of columns) {
+			if (!column || seen.has(column)) {
+				continue;
+			}
+			seen.add(column);
+			ordered.push(column);
+		}
+		return ordered;
 	}
 	private async confirmBoardDeletion(boardName: string): Promise<boolean> {
 		return new Promise((resolve) => {
@@ -388,45 +438,16 @@ export class KanbanBoardController {
 				.boards.map((entry) => (typeof entry.name === 'string' ? entry.name.toLowerCase() : ''))
 		);
 		const base = t('kanbanView.toolbar.newBoardPlaceholder').trim();
+		const locale = getLocaleCode();
+		const normalizedBase = base.length > 0 ? base : t('kanbanView.toolbar.newBoardPlaceholder');
 		for (let index = 1; index < 100; index += 1) {
-			const candidate = this.composeDefaultBoardName(base, index);
+			const candidate = composeBoardName(normalizedBase, index, locale);
 			if (!existing.has(candidate.toLowerCase())) {
 				return candidate;
 			}
 		}
-		const fallbackBase = base.length > 0 ? base : 'Board';
+		const fallbackBase = normalizedBase.length > 0 ? normalizedBase : 'Board';
 		return `${fallbackBase} ${Date.now()}`;
-	}
-	private composeDefaultBoardName(base: string, index: number): string {
-		const locale = getLocaleCode();
-		const normalizedBase = base.length > 0 ? base : t('kanbanView.toolbar.newBoardPlaceholder');
-		if (locale === 'zh') {
-			return `${normalizedBase}${this.toChineseNumeral(index)}`;
-		}
-		return normalizedBase.length > 0 ? `${normalizedBase} ${index}` : `Board ${index}`;
-	}
-	private toChineseNumeral(value: number): string {
-		const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-		if (!Number.isFinite(value) || value <= 0) {
-			return String(value);
-		}
-		if (value <= 9) {
-			return digits[value];
-		}
-		if (value === 10) {
-			return '十';
-		}
-		if (value < 20) {
-			const units = value % 10;
-			return `十${units === 0 ? '' : digits[units]}`;
-		}
-		if (value < 100) {
-			const tens = Math.floor(value / 10);
-			const units = value % 10;
-			const tensLabel = tens === 1 ? '十' : `${digits[tens]}十`;
-			return units === 0 ? tensLabel : `${tensLabel}${digits[units]}`;
-		}
-		return String(value);
 	}
 	private async openBoardModal(options: {
 		title: string;
@@ -436,6 +457,9 @@ export class KanbanBoardController {
 		initialLaneField: string | null;
 		initialVisibleCount: number | null;
 		initialContent: KanbanCardContentConfig | null;
+		initialSortField: string | null;
+		initialSortDirection: KanbanSortDirection | null;
+		sortFieldOptions: string[];
 	}): Promise<{
 		name: string;
 		icon: string | null;
@@ -443,6 +467,8 @@ export class KanbanBoardController {
 		filterRule: FilterRule | null;
 		initialVisibleCount: number;
 		content: KanbanCardContentConfig | null;
+		sortField: string | null;
+		sortDirection: KanbanSortDirection;
 	} | null> {
 		const columns = this.getFilterColumnOptions();
 		if (columns.length === 0) {
@@ -465,7 +491,10 @@ export class KanbanBoardController {
 			initialContent: options.initialContent ?? null,
 			columns,
 			laneOptions,
-			getContentFields: () => this.getContentFieldCandidates()
+			sortFieldOptions: options.sortFieldOptions,
+			initialSortField: options.initialSortField,
+			initialSortDirection: options.initialSortDirection,
+			getContentFields: () => this.getLaneFieldCandidates()
 		});
 	}
 }

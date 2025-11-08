@@ -1,9 +1,15 @@
 import { getPluginContext } from '../../pluginContext';
 import type { FilterRule } from '../../types/filterView';
-import type { KanbanBoardDefinition, KanbanBoardState, KanbanCardContentConfig } from '../../types/kanban';
+import type {
+	KanbanBoardDefinition,
+	KanbanBoardState,
+	KanbanCardContentConfig,
+	KanbanSortDirection
+} from '../../types/kanban';
 import {
 	DEFAULT_KANBAN_BOARD_STATE,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+	DEFAULT_KANBAN_SORT_DIRECTION,
 	sanitizeKanbanInitialVisibleCount
 } from '../../types/kanban';
 import { cloneKanbanContentConfig, isKanbanContentConfigEffectivelyEmpty } from './KanbanContentConfig';
@@ -16,6 +22,8 @@ export interface CreateBoardOptions {
 	setActive?: boolean;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;
+	sortField?: string | null;
+	sortDirection?: KanbanSortDirection | null;
 }
 
 export interface UpdateBoardOptions {
@@ -25,6 +33,8 @@ export interface UpdateBoardOptions {
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;
 	content?: KanbanCardContentConfig | null;
+	sortField?: string | null;
+	sortDirection?: KanbanSortDirection | null;
 }
 
 export class KanbanBoardStore {
@@ -96,7 +106,9 @@ export class KanbanBoardStore {
 			laneField: this.sanitizeLaneField(options.laneField),
 			filterRule: this.cloneFilterRule(options.filterRule),
 			initialVisibleCount: this.sanitizeInitialVisibleCount(options.initialVisibleCount),
-			content: this.sanitizeContentConfig(options.content)
+			content: this.sanitizeContentConfig(options.content),
+			sortField: this.sanitizeSortField(options.sortField),
+			sortDirection: this.sanitizeSortDirection(options.sortDirection)
 		};
 		this.state.boards.push(board);
 		if (options.setActive !== false) {
@@ -130,6 +142,12 @@ export class KanbanBoardStore {
 		}
 		if (updates.content !== undefined) {
 			target.content = this.sanitizeContentConfig(updates.content);
+		}
+		if (updates.sortField !== undefined) {
+			target.sortField = this.sanitizeSortField(updates.sortField);
+		}
+		if (updates.sortDirection !== undefined) {
+			target.sortDirection = this.sanitizeSortDirection(updates.sortDirection);
 		}
 		return { ...target };
 	}
@@ -192,6 +210,20 @@ export class KanbanBoardStore {
 		return trimmed.length > 0 ? trimmed : '';
 	}
 
+	private sanitizeSortField(field: string | null | undefined): string | null {
+		if (typeof field !== 'string') {
+			return null;
+		}
+		const trimmed = field.trim();
+		return trimmed.length > 0 ? trimmed : null;
+	}
+
+	private sanitizeSortDirection(
+		direction: KanbanSortDirection | string | null | undefined
+	): KanbanSortDirection {
+		return direction === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
+	}
+
 	private generateId(): string {
 		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
 			return crypto.randomUUID();
@@ -203,19 +235,21 @@ export class KanbanBoardStore {
 		if (!state) {
 			return this.cloneState(DEFAULT_KANBAN_BOARD_STATE);
 		}
-const boards = Array.isArray(state.boards)
-		? state.boards
-				.filter((board): board is KanbanBoardDefinition => !!board && typeof board.id === 'string')
-				.map((board) => ({
-					id: board.id,
-					name: this.sanitizeName(board.name),
-					icon: this.sanitizeIcon(board.icon),
-					laneField: this.sanitizeLaneField(board.laneField ?? null),
-					filterRule: this.cloneFilterRule(board.filterRule ?? null),
-					initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null),
-					content: this.sanitizeContentConfig(board.content ?? null)
-				}))
-		: [];
+		const boards = Array.isArray(state.boards)
+			? state.boards
+					.filter((board): board is KanbanBoardDefinition => !!board && typeof board.id === 'string')
+					.map((board) => ({
+						id: board.id,
+						name: this.sanitizeName(board.name),
+						icon: this.sanitizeIcon(board.icon),
+						laneField: this.sanitizeLaneField(board.laneField ?? null),
+						filterRule: this.cloneFilterRule(board.filterRule ?? null),
+						initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null),
+						content: this.sanitizeContentConfig(board.content ?? null),
+						sortField: this.sanitizeSortField(board.sortField ?? null),
+						sortDirection: this.sanitizeSortDirection(board.sortDirection ?? null)
+					}))
+			: [];
 		return {
 			boards,
 			activeBoardId: typeof state.activeBoardId === 'string' ? state.activeBoardId : null

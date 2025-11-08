@@ -180,8 +180,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 			});
 			return;
 		}
+		const hiddenFields = view.hiddenSortableFields ?? new Set<string>();
 		const sortField =
-			view.kanbanSortField && view.schema.columnNames.includes(view.kanbanSortField)
+			view.kanbanSortField &&
+			(view.schema.columnNames.includes(view.kanbanSortField) || hiddenFields.has(view.kanbanSortField))
 				? view.kanbanSortField
 				: null;
 		renderKanbanView(view, container, {

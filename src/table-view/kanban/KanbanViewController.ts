@@ -19,6 +19,7 @@ import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { resolveExpectedStatusLanes } from './statusLaneHelpers';
 import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
+import { prepareLaneUpdates, type RowUpdate } from './KanbanLaneMutation';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -37,10 +38,6 @@ interface KanbanViewControllerOptions {
 	initialVisibleCount: number;
 	enableDrag: boolean;
 	contentConfig: KanbanCardContentConfig | null;
-}
-
-interface RowUpdate {
-	lane?: string;
 }
 
 export class KanbanViewController {
@@ -517,22 +514,23 @@ export class KanbanViewController {
 	}
 
 	private applyUpdates(updates: Map<number, RowUpdate>, focusRowIndex: number): void {
-		const targets = [];
-		for (const [rowIndex, change] of updates.entries()) {
-			const fields: string[] = [];
-			if (typeof change.lane === 'string') { fields.push(this.laneField); }
-			if (fields.length > 0) { targets.push({ index: rowIndex, fields }); }
+		const { targets, normalized } = prepareLaneUpdates(this.view, this.laneField, updates);
+		if (targets.length === 0) {
+			this.renderBoard();
+			return;
 		}
-		if (targets.length === 0) { this.renderBoard(); return; }
 
 		this.isApplyingMutation = true;
 		const recorded = this.view.historyManager.captureCellChanges(
 			targets,
 			() => {
-				for (const [rowIndex, change] of updates.entries()) {
+				for (const [rowIndex, change] of normalized.entries()) {
 					const block = this.view.blocks[rowIndex];
 					if (!block) { continue; }
-					if (typeof change.lane === 'string') { block.data[this.laneField] = change.lane; }
+					block.data[this.laneField] = change.lane;
+					if (typeof change.statusTimestamp === 'string') {
+						block.data['statusChanged'] = change.statusTimestamp;
+					}
 				}
 			},
 			() => ({
@@ -542,7 +540,13 @@ export class KanbanViewController {
 		);
 		this.isApplyingMutation = false;
 
-		if (!recorded) { this.renderBoard(); }
+		if (!recorded) {
+			this.renderBoard();
+			return;
+		}
+
+		this.view.filterOrchestrator?.refresh();
+		this.view.persistenceService?.scheduleSave();
 	}
 
 	private destroySortables(): void {
@@ -559,3 +563,4 @@ export class KanbanViewController {
 		this.sortables.clear();
 	}
 }
+

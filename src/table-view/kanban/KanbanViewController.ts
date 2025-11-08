@@ -26,6 +26,7 @@ interface KanbanViewControllerOptions {
 	container: HTMLElement;
 	laneField: string;
 	laneWidth: number;
+	lanePresets: string[];
 	sortField: string | null;
 	fallbackLaneName: string;
 	primaryField: string | null;
@@ -50,6 +51,7 @@ export class KanbanViewController {
 	private readonly displayFields: string[];
 	private readonly enableDrag: boolean;
 	private readonly laneWidth: number;
+	private readonly lanePresets: string[];
 	private readonly initialVisibleCount: number;
 	private readonly rawContentConfig: KanbanCardContentConfig | null;
 	private readonly viewportManager: KanbanViewportManager;
@@ -83,6 +85,9 @@ export class KanbanViewController {
 		this.displayFields = options.displayFields;
 		this.enableDrag = options.enableDrag;
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
+		this.lanePresets = Array.isArray(options.lanePresets)
+			? options.lanePresets.filter((value) => typeof value === 'string' && value.trim().length > 0)
+			: [];
 		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
 		const limit = Math.floor(options.initialVisibleCount ?? 1);
 		this.initialVisibleCount = Math.max(1, limit);
@@ -264,10 +269,11 @@ export class KanbanViewController {
 		});
 		const sortDirection: KanbanSortDirection =
 			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
-		const expectedLaneNames = resolveExpectedStatusLanes({
+		const statusLaneNames = resolveExpectedStatusLanes({
 			laneField: this.laneField,
 			filterRule: this.view.activeKanbanBoardFilter
 		});
+		const expectedLaneNames = this.mergeLaneExpectations(statusLaneNames);
 		return buildKanbanBoardState({
 			rows: this.visibleRows,
 			laneField: this.laneField,
@@ -281,6 +287,16 @@ export class KanbanViewController {
 			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row),
 			expectedLaneNames
 		});
+	}
+
+	private mergeLaneExpectations(statusLaneNames: string[] | null): string[] | null {
+		const presets = this.lanePresets;
+		const combined = [
+			...presets,
+			...(statusLaneNames ?? [])
+		];
+		const filtered = combined.filter((value) => typeof value === 'string' && value.trim().length > 0);
+		return filtered.length > 0 ? filtered : null;
 	}
 
 	private getAvailableFields(): string[] {

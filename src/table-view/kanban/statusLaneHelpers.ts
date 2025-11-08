@@ -125,7 +125,7 @@ function extractStatusFilterPreferences(rule: FilterRule | null, laneField: stri
 	};
 }
 
-function isStatusLaneField(laneField: string): boolean {
+export function isStatusLaneField(laneField: string): boolean {
 	return normalizeStatusKey(laneField) === 'status';
 }
 

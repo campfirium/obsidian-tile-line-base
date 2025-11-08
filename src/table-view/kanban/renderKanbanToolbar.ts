@@ -2,6 +2,7 @@ import { Menu } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { KanbanToolbar } from './KanbanToolbar';
 import { t } from '../../i18n';
+import { isStatusLaneField } from './statusLaneHelpers';
 
 export function renderKanbanToolbar(view: TableView, container: HTMLElement): void {
 	view.globalQuickFilterController.cleanup();
@@ -44,6 +45,25 @@ export function renderKanbanToolbar(view: TableView, container: HTMLElement): vo
 		onOpenSettings: (button, event) => {
 			event.preventDefault();
 			const menu = new Menu();
+			const laneField = view.kanbanLaneField ?? '';
+			const hasLaneField = laneField.trim().length > 0;
+			const statusLane = hasLaneField && isStatusLaneField(laneField);
+			const canCreateLanePreset = hasLaneField && !statusLane;
+			menu.addItem((item) => {
+				const baseLabel = t('kanbanView.toolbar.addLanePresetMenuLabel');
+				item
+					.setTitle(baseLabel)
+					.setIcon('plus')
+					.onClick(() => {
+						if (canCreateLanePreset) {
+							void view.kanbanBoardController?.addLanePreset();
+						}
+					});
+				if (!canCreateLanePreset) {
+					item.setDisabled(true);
+				}
+			});
+			menu.addSeparator();
 			menu.addItem((item) => {
 				item
 					.setTitle(t('kanbanView.settings.heightAuto'))

@@ -94,6 +94,7 @@ export class TableView extends ItemView {
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null;
 	public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+	public kanbanLanePresets: string[] = [];
 	public kanbanSortField: string | null = null;
 	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE;

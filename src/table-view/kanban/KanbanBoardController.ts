@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO(T0152): split KanbanBoardController into leaner modules */
 import { App, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { getLocaleCode, t } from '../../i18n';
@@ -9,9 +10,11 @@ import { getAvailableColumns } from '../TableViewFilterPresenter';
 import { KanbanBoardConfirmModal } from './KanbanBoardConfirmModal';
 import { cloneKanbanContentConfig } from './KanbanContentConfig';
 import { openKanbanBoardModal } from './KanbanBoardModal';
+import { openKanbanLanePresetModal } from './KanbanLanePresetModal';
 import { composeBoardName } from './boardNaming';
 import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 import { showKanbanBoardMenu } from './KanbanBoardMenu';
+import { isStatusLaneField } from './statusLaneHelpers';
 interface KanbanBoardControllerOptions { app: App; view: TableView; store: KanbanBoardStore; }
 export class KanbanBoardController {
 	private readonly app: App;
@@ -185,6 +188,7 @@ export class KanbanBoardController {
 		icon: editor.icon,
 		laneField: editor.laneField,
 		laneWidth: editor.laneWidth,
+		lanePresets: board.lanePresets ?? [],
 		filterRule: editor.filterRule,
 		initialVisibleCount: editor.initialVisibleCount,
 		content: editor.content,
@@ -196,6 +200,49 @@ export class KanbanBoardController {
 		this.applyBoardContext(cloned, { persist: true, rerender: true });
 		this.refreshToolbar();
 		new Notice(t('kanbanView.toolbar.duplicateBoardNotice', { name: cloned.name }));
+	}
+
+	async addLanePreset(): Promise<void> {
+		const state = this.store.getState();
+		const activeBoardId = state.activeBoardId;
+		if (!activeBoardId) {
+			new Notice(t('kanbanView.toolbar.noBoardsPlaceholder'));
+			return;
+		}
+		const board = state.boards.find((entry) => entry.id === activeBoardId);
+		if (!board) {
+			new Notice(t('kanbanView.toolbar.noBoardsPlaceholder'));
+			return;
+		}
+		const laneField = typeof board.laneField === 'string' ? board.laneField.trim() : '';
+		if (!laneField) {
+			new Notice(t('kanbanView.toolbar.laneFieldMissingNotice'));
+			return;
+		}
+		if (isStatusLaneField(laneField)) {
+			new Notice(t('kanbanView.toolbar.statusLanePresetForbidden'));
+			return;
+		}
+		const existing = Array.isArray(board.lanePresets) ? board.lanePresets : [];
+		const preset = await openKanbanLanePresetModal({
+			app: this.app,
+			laneField,
+			existingPresets: existing
+		});
+		if (!preset) {
+			return;
+		}
+		const updated = this.store.updateBoard(board.id, {
+			lanePresets: [...existing, preset]
+		});
+		if (!updated) {
+			return;
+		}
+		await this.store.persist();
+		if (this.store.getState().activeBoardId === board.id) {
+			this.applyBoardContext(updated, { persist: true, rerender: true });
+		}
+		new Notice(t('kanbanView.toolbar.lanePresetCreated', { name: preset }));
 	}
 	async deleteBoard(board: KanbanBoardDefinition): Promise<void> {
 		const state = this.store.getState();
@@ -265,6 +312,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
 		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.view.kanbanLanePresets = [];
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -288,25 +336,29 @@ export class KanbanBoardController {
 		}
 		this.view.activeKanbanBoardFilter = board.filterRule ?? null;
 		this.view.activeKanbanBoardId = board.id;
-		this.view.kanbanLaneWidth = sanitizeKanbanLaneWidth(
-			board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-			DEFAULT_KANBAN_LANE_WIDTH
-		);
-		this.view.kanbanInitialVisibleCount = sanitizeKanbanInitialVisibleCount(
-			board.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
-		);
-		const sortField = typeof board.sortField === 'string' ? board.sortField.trim() : '';
-		this.view.kanbanSortField = sortField.length > 0 ? sortField : null;
-		this.view.kanbanSortDirection =
-			board.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
-	} else {
-		this.view.activeKanbanBoardFilter = null;
-		this.view.activeKanbanBoardId = null;
-		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
-		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
-		this.view.kanbanCardContentConfig = null;
-		this.view.kanbanSortField = null;
-		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+			this.view.kanbanLaneWidth = sanitizeKanbanLaneWidth(
+				board.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
+				DEFAULT_KANBAN_LANE_WIDTH
+			);
+			this.view.kanbanLanePresets = Array.isArray(board.lanePresets)
+				? [...board.lanePresets]
+				: [];
+			this.view.kanbanInitialVisibleCount = sanitizeKanbanInitialVisibleCount(
+				board.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
+			);
+			const sortField = typeof board.sortField === 'string' ? board.sortField.trim() : '';
+			this.view.kanbanSortField = sortField.length > 0 ? sortField : null;
+			this.view.kanbanSortDirection =
+				board.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
+		} else {
+			this.view.activeKanbanBoardFilter = null;
+			this.view.activeKanbanBoardId = null;
+			this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+			this.view.kanbanLanePresets = [];
+			this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
+			this.view.kanbanCardContentConfig = null;
+			this.view.kanbanSortField = null;
+			this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	}
 		if (options?.persist !== false) {
 			void this.view.persistenceService?.saveConfig();
@@ -322,6 +374,7 @@ export class KanbanBoardController {
 		this.view.activeKanbanBoardId = null;
 		this.view.kanbanLaneField = null;
 		this.view.kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+		this.view.kanbanLanePresets = [];
 		this.view.kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
@@ -515,3 +568,5 @@ export class KanbanBoardController {
 		});
 	}
 }
+
+/* eslint-enable max-lines */

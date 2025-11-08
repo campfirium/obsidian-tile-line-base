@@ -15,6 +15,7 @@ import { KanbanViewportManager } from './KanbanViewportManager';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
+import { resolveExpectedStatusLanes } from './statusLaneHelpers';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -258,6 +259,10 @@ export class KanbanViewController {
 		});
 		const sortDirection: KanbanSortDirection =
 			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
+		const expectedLaneNames = resolveExpectedStatusLanes({
+			laneField: this.laneField,
+			filterRule: this.view.activeKanbanBoardFilter
+		});
 		return buildKanbanBoardState({
 			rows: this.visibleRows,
 			laneField: this.laneField,
@@ -268,7 +273,8 @@ export class KanbanViewController {
 			content: this.cardContent,
 			displayFields: availableFields,
 			quickFilter: this.quickFilterValue,
-			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row)
+			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row),
+			expectedLaneNames
 		});
 	}
 
@@ -293,6 +299,7 @@ export class KanbanViewController {
 		}
 		return result;
 	}
+
 
 	private renderEmptyState(): void {
 		if (!this.boardEl) {

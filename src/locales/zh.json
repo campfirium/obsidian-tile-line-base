@@ -1,9 +1,12 @@
 {
-  "tableView": { "displayName": "TileLineBase 表格" },
-  "viewControls": {
-    "openTableView": "切换到 TileLineBase 表格视图",
-    "openMarkdownView": "切换回 Markdown 编辑器"
+  "tableView": {
+    "displayName": "TileLineBase 表格",
+    "mode": {
+      "table": "表格",
+      "kanban": "看板"
+    }
   },
+  "viewControls": { "openTableView": "切换到 TileLineBase 表格视图", "openMarkdownView": "切换回 Markdown 编辑器" },
   "kanbanView": {
     "schemaUnavailable": "看板视图需要有效的表结构，请重新加载后再试。",
     "missingLaneField": "看板视图需要“{{field}}”列，请在表格视图中新增该字段或切换回表格。",
@@ -34,6 +37,7 @@
       "schemaUnavailable": "请先加载表格后再选择看板列。",
       "noColumns": "当前没有可用列用于看板泳道。"
     },
+		"lanePresetModal": { "title": "新建泳道", "description": "为「{{field}}」列添加一个泳道名称，即使还没有卡片也会提前显示。", "fieldLabel": "泳道名称", "fieldDescription": "请使用唯一值，拖入卡片时会自动写入该字段。", "placeholder": "例如：待评审", "confirmLabel": "添加泳道", "cancelLabel": "取消", "emptyError": "请先输入泳道名称。", "duplicateError": "该泳道已存在。", "successNotice": "已创建泳道「{{name}}」。", "statusFieldBlocked": "状态列已有内置泳道，请在表格中调整状态值。", "missingLaneField": "请先选择看板列再创建泳道。" },
 		"content": { "sectionTitle": "卡片内容", "insertFieldButton": "插入字段", "titleLabel": "标题模板", "titlePlaceholder": "示例：{标题}", "bodyLabel": "正文模板", "bodyPlaceholder": "示例：{描述}\\n{备注}", "tagsLabel": "标签模板", "tagsPlaceholder": "使用空格或逗号分隔占位符，例如 {标签}", "showBodyToggle": "在卡片内显示正文", "showBodyToggleDesc": "取消后，正文会作为鼠标悬停提示显示。", "tagsBelowBodyToggle": "标签显示在正文下方", "tagsBelowBodyToggleDesc": "不勾选时，标签与标题同行显示。", "noFieldOption": "暂无可用字段" },
     "toolbar": {
       "defaultBoardLabel": "默认看板", "unnamedBoardLabel": "未命名看板",
@@ -42,22 +46,12 @@
       "deleteBoardLabel": "删除看板", "deleteBoardConfirm": "确认删除“{{name}}”吗？卡片仍可在其他看板中查看。",
       "cannotDeleteLastBoard": "至少保留一个看板。", "newBoardPlaceholder": "看板",
         "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本", "laneWidthLabel": "列宽（rem）", "laneWidthDescription": "输入介于 {{min}} 和 {{max}} rem 的数值来控制看板列宽。", "initialVisibleCountLabel": "每列初始显示数量", "initialVisibleCountDesc": "每列仅展示设定数量的卡片，剩余卡片通过“显示全部”展开。", "sortSettingLabel": "条目排序", "sortSettingDesc": "选择要排序的字段以及顺序。", "sortFieldLabel": "排序字段", "sortFieldNone": "不排序", "sortDirectionLabel": "排序方向", "sortDirectionAsc": "升序（A -> Z）", "sortDirectionDesc": "降序（Z -> A）"
-        , "fontScaleLabel": "卡片字体缩放", "fontScaleDescription": "请输入 {{min}} 至 {{max}} 之间的数值，以同时调整标题、正文、标签与提示文字的大小。"
+        , "fontScaleLabel": "卡片字体缩放", "fontScaleDescription": "请输入 {{min}} 至 {{max}} 之间的数值，以同时调整标题、正文、标签与提示文字的大小。", "addLanePresetMenuLabel": "新建泳道"
       },
     "settings": { "heightAuto": "自适应高度（显示全部卡片）", "heightViewport": "匹配窗口高度（列内滚动）" },
     "showAllButtonLabel": "显示全部（剩余 {{count}} 条）"
   },
-  "commands": {
-    "undoTableHistory": "撤销上一次表格更改",
-    "redoTableHistory": "重做表格更改",
-    "openHelpDocument": "打开 TileLineBase 帮助文档",
-    "createTable": "新建 TileLineBase 表格笔记",
-    "exportCsv": "导出当前表格为 CSV",
-    "importCsv": "将 CSV 导入当前表格",
-    "toggleTableView": "切换表格视图",
-    "importCsvAsTable": "导入 CSV 并创建新表格",
-    "openKanbanView": "打开 TileLineBase 看板视图"
-  },
+  "commands": { "undoTableHistory": "撤销上一次表格更改", "redoTableHistory": "重做表格更改", "openHelpDocument": "打开 TileLineBase 帮助文档", "createTable": "新建 TileLineBase 表格笔记", "exportCsv": "导出当前表格为 CSV", "importCsv": "将 CSV 导入当前表格", "toggleTableView": "切换表格视图", "importCsvAsTable": "导入 CSV 并创建新表格", "openKanbanView": "打开 TileLineBase 看板视图" },
   "csv": {
     "errorNoFile": "请先保存当前笔记或选择有效的 CSV 文件后再试。",
     "exportFailure": "导出 CSV 失败，请查看控制台日志。",
@@ -88,9 +82,7 @@
     "backupCapacityLabel": "备份容量上限（MB）",
     "backupCapacityDesc": "超过上限时会删除最早的快照。默认值：200 MB。"
   },
-  "readingView": {
-    "configBlockTitle": "TLB 配置块"
-  },
+  "readingView": { "configBlockTitle": "TLB 配置块" },
   "formula": {
     "errors": {
       "unexpectedChar": "检测到无法识别的字符",
@@ -339,22 +331,7 @@
     "settingsMenuHelpLabel": "打开帮助笔记",
     "unnamedViewLabel": "未命名视图"
   },
-  "backup": {
-    "menuLabel": "恢复备份",
-    "modalTitle": "{{file}} 的备份",
-    "modalTitleConfirm": "恢复备份",
-    "errorNoFile": "当前文件不可用。",
-    "errorUnavailable": "备份服务尚未准备好。",
-    "errorLoadFailed": "加载备份失败，请稍后再试。",
-    "emptyState": "尚未记录任何备份。",
-    "restoreButton": "恢复",
-    "restoreButtonAria": "从 {{timestamp}} 的备份恢复",
-    "confirmRestore": "是否将文件恢复到 {{timestamp}} 的版本？",
-    "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。",
-    "noticeRestoreFailed": "恢复备份失败，详见控制台。",
-    "restoreCancelButton": "取消",
-    "sizeLabel": "大小：{{size}}"
-  },
+  "backup": { "menuLabel": "恢复备份", "modalTitle": "{{file}} 的备份", "modalTitleConfirm": "恢复备份", "errorNoFile": "当前文件不可用。", "errorUnavailable": "备份服务尚未准备好。", "errorLoadFailed": "加载备份失败，请稍后再试。", "emptyState": "尚未记录任何备份。", "restoreButton": "恢复", "restoreButtonAria": "从 {{timestamp}} 的备份恢复", "confirmRestore": "是否将文件恢复到 {{timestamp}} 的版本？", "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。", "noticeRestoreFailed": "恢复备份失败，详见控制台。", "restoreCancelButton": "取消", "sizeLabel": "大小：{{size}}" },
   "filterViewController": {
     "noColumns": "无法获取列信息，请稍后再试",
     "createModalTitle": "创建筛选视图",

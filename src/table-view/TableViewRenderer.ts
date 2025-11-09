@@ -135,6 +135,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 		container.createDiv({ text: t('tableViewRenderer.noSchema') });
 		return;
 	}
+	view.kanbanBoardController?.processPendingLaneFieldRepairs();
 	if (view.schemaDirty || view.sparseCleanupRequired) {
 		view.persistenceService.scheduleSave();
 		view.schemaDirty = false;
@@ -199,7 +200,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 			sortField,
 			heightMode: view.kanbanHeightMode,
 			initialVisibleCount: view.kanbanInitialVisibleCount,
-			content: view.kanbanCardContentConfig
+			content: view.kanbanCardContentConfig,
+			lanePresets: Array.isArray(view.kanbanLanePresets) ? view.kanbanLanePresets : []
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;

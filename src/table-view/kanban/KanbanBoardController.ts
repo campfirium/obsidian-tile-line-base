@@ -1,22 +1,22 @@
 import { App, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
-import { getLocaleCode, t } from '../../i18n';
-import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD, sanitizeKanbanFontScale, sanitizeKanbanInitialVisibleCount, type KanbanBoardDefinition, type KanbanCardContentConfig, type KanbanSortDirection } from '../../types/kanban';
+import { t } from '../../i18n';
+import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, sanitizeKanbanFontScale, sanitizeKanbanInitialVisibleCount, type KanbanBoardDefinition } from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
-import type { FilterRule } from '../../types/filterView';
-import type { FilterColumnOption } from '../TableViewFilterPresenter';
-import { getAvailableColumns } from '../TableViewFilterPresenter';
-import { KanbanBoardConfirmModal } from './KanbanBoardConfirmModal';
 import { cloneKanbanContentConfig } from './KanbanContentConfig';
-import { openKanbanBoardModal } from './KanbanBoardModal';
-import { composeBoardName } from './boardNaming';
 import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
 import { showKanbanBoardMenu } from './KanbanBoardMenu';
+import { KanbanLaneFieldRepair } from './KanbanLaneFieldRepair';
+import { openKanbanLanePresetModal } from './KanbanLanePresetModal';
+import { isStatusLaneField } from './statusLaneHelpers';
+import { KanbanBoardDialogService } from './KanbanBoardDialogService';
 interface KanbanBoardControllerOptions { app: App; view: TableView; store: KanbanBoardStore; }
 export class KanbanBoardController {
 	private readonly app: App;
 	private readonly view: TableView;
 	private readonly store: KanbanBoardStore;
+	private readonly laneFieldRepair: KanbanLaneFieldRepair;
+	private readonly dialogs: KanbanBoardDialogService;
 	private loadedFilePath: string | null = null;
 	private repairingLaneField = false;
 	private autoCreateInProgress = false;
@@ -24,6 +24,8 @@ export class KanbanBoardController {
 		this.app = options.app;
 		this.view = options.view;
 		this.store = options.store;
+		this.laneFieldRepair = new KanbanLaneFieldRepair(this.view);
+		this.dialogs = new KanbanBoardDialogService(this.app, this.view, this.laneFieldRepair, this.store);
 	}
 	ensureInitialized(): void {
 		const filePath = this.view.file?.path ?? null;
@@ -88,12 +90,20 @@ export class KanbanBoardController {
 	getActiveBoardId(): string | null {
 		return this.store.getState().activeBoardId;
 	}
+
+	private getActiveBoardDefinition(): KanbanBoardDefinition | null {
+		const snapshot = this.store.getState();
+		if (!snapshot.activeBoardId) {
+			return null;
+		}
+		return snapshot.boards.find((board) => board.id === snapshot.activeBoardId) ?? null;
+	}
 	async createBoard(): Promise<void> {
-	const editor = await this.openBoardModal({
+	const editor = await this.dialogs.openBoardModal({
 		title: t('kanbanView.toolbar.createBoardTitle'),
-		defaultName: this.suggestNewBoardName(),
+		defaultName: this.dialogs.suggestNewBoardName(),
 		defaultIcon: 'layout-kanban',
-		...this.getModalDefaults(null)
+		...this.dialogs.getModalDefaults(null)
 	});
 		if (!editor) {
 			return;
@@ -116,11 +126,11 @@ export class KanbanBoardController {
 		this.refreshToolbar();
 	}
 	async editBoard(board: KanbanBoardDefinition): Promise<void> {
-	const editor = await this.openBoardModal({
+	const editor = await this.dialogs.openBoardModal({
 		title: t('kanbanView.toolbar.editBoardTitle'),
 		defaultName: board.name,
 		defaultIcon: board.icon ?? null,
-		...this.getModalDefaults(board)
+		...this.dialogs.getModalDefaults(board)
 	});
 		if (!editor) {
 			return;
@@ -148,13 +158,13 @@ export class KanbanBoardController {
 	}
 	async duplicateBoard(board: KanbanBoardDefinition): Promise<void> {
 		const duplicatedName = `${board.name} ${t('kanbanView.toolbar.duplicateNameSuffix')}`.trim();
-	const editor = await this.openBoardModal({
+	const editor = await this.dialogs.openBoardModal({
 		title: t('kanbanView.toolbar.duplicateBoardTitle', {
 			name: board.name || t('kanbanView.toolbar.unnamedBoardLabel')
 		}),
 		defaultName: duplicatedName,
 		defaultIcon: board.icon ?? null,
-		...this.getModalDefaults(board)
+		...this.dialogs.getModalDefaults(board)
 	});
 		if (!editor) {
 			return;
@@ -163,6 +173,7 @@ export class KanbanBoardController {
 		name: editor.name,
 		icon: editor.icon,
 		laneField: editor.laneField,
+		lanePresets: board.lanePresets ?? [],
 		laneWidth: editor.laneWidth,
 		fontScale: editor.fontScale,
 		filterRule: editor.filterRule,
@@ -183,7 +194,7 @@ export class KanbanBoardController {
 			new Notice(t('kanbanView.toolbar.cannotDeleteLastBoard'));
 			return;
 		}
-		const confirmed = await this.confirmBoardDeletion(board.name || t('kanbanView.toolbar.unnamedBoardLabel'));
+		const confirmed = await this.dialogs.confirmBoardDeletion(board.name || t('kanbanView.toolbar.unnamedBoardLabel'));
 		if (!confirmed) {
 			return;
 		}
@@ -250,9 +261,11 @@ export class KanbanBoardController {
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+		this.view.kanbanLanePresets = [];
 		this.view.kanbanBoardsLoaded = false;
 		this.repairingLaneField = false;
 		this.autoCreateInProgress = false;
+		this.laneFieldRepair.reset();
 	}
 	private applyBoardContext(
 		board: KanbanBoardDefinition | null,
@@ -260,9 +273,11 @@ export class KanbanBoardController {
 	): void {
 	if (board) {
 		this.view.kanbanCardContentConfig = board.content ? cloneKanbanContentConfig(board.content) : null;
+		this.view.kanbanLanePresets = Array.isArray(board.lanePresets) ? [...board.lanePresets] : [];
 		const laneField = typeof board.laneField === 'string' ? board.laneField.trim() : '';
 		if (laneField.length > 0 && this.isLaneFieldAvailable(laneField)) {
 			this.view.kanbanLaneField = laneField;
+			this.laneFieldRepair.reset();
 		} else {
 			this.view.kanbanLaneField = null;
 			void this.handleInvalidLaneField(board);
@@ -292,6 +307,8 @@ export class KanbanBoardController {
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+		this.view.kanbanLanePresets = [];
+		this.laneFieldRepair.reset();
 	}
 		if (options?.persist !== false) {
 			void this.view.persistenceService?.saveConfig();
@@ -312,6 +329,7 @@ export class KanbanBoardController {
 		this.view.kanbanCardContentConfig = null;
 		this.view.kanbanSortField = null;
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
+		this.view.kanbanLanePresets = [];
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
 		this.maybeTriggerAutoCreate();
@@ -326,7 +344,7 @@ export class KanbanBoardController {
 			!schema ||
 			!Array.isArray(schema.columnNames) ||
 			schema.columnNames.length === 0 ||
-			this.getLaneFieldCandidates().length === 0
+			this.dialogs.getLaneFieldCandidates().length === 0
 		) {
 			return;
 		}
@@ -337,38 +355,43 @@ export class KanbanBoardController {
 		});
 	}
 	private isLaneFieldAvailable(field: string): boolean {
-		const candidates = this.getLaneFieldCandidates();
+		const candidates = this.dialogs.getLaneFieldCandidates();
 		return candidates.includes(field);
 	}
 	private async handleInvalidLaneField(board: KanbanBoardDefinition): Promise<void> {
+		this.laneFieldRepair.markMissing(board.id);
 		if (this.repairingLaneField) {
 			return;
 		}
+		if (!this.laneFieldRepair.hasLaneFieldPrerequisites()) {
+			return;
+		}
+
+		this.laneFieldRepair.clearPending();
 		this.repairingLaneField = true;
 		try {
-			new Notice(t('kanbanView.toolbar.laneFieldMissingNotice'));
-			const editor = await this.openBoardModal({
+			const editor = await this.dialogs.openBoardModal({
 				title: t('kanbanView.toolbar.editBoardTitle'),
 				defaultName: board.name,
 				defaultIcon: board.icon ?? null,
-				...this.getModalDefaults(board),
+				...this.dialogs.getModalDefaults(board),
 				initialLaneField: null
 			});
 			if (!editor) {
 				return;
 			}
-	const updated = this.store.updateBoard(board.id, {
-		name: editor.name,
-		icon: editor.icon,
-		laneField: editor.laneField,
-		laneWidth: editor.laneWidth,
-		fontScale: editor.fontScale,
-		filterRule: editor.filterRule,
-		initialVisibleCount: editor.initialVisibleCount,
-		content: editor.content,
-		sortField: editor.sortField,
-		sortDirection: editor.sortDirection
-	});
+			const updated = this.store.updateBoard(board.id, {
+				name: editor.name,
+				icon: editor.icon,
+				laneField: editor.laneField,
+				laneWidth: editor.laneWidth,
+				fontScale: editor.fontScale,
+				filterRule: editor.filterRule,
+				initialVisibleCount: editor.initialVisibleCount,
+				content: editor.content,
+				sortField: editor.sortField,
+				sortDirection: editor.sortDirection
+			});
 			if (!updated) {
 				return;
 			}
@@ -378,137 +401,59 @@ export class KanbanBoardController {
 			this.repairingLaneField = false;
 		}
 	}
-	private getLaneFieldCandidates(): string[] {
-		const schema = this.view.schema;
-		if (!schema || !Array.isArray(schema.columnNames)) {
-			return [];
+
+	public processPendingLaneFieldRepairs(): void {
+		if (this.repairingLaneField) {
+			return;
 		}
-		return schema.columnNames.filter((name) => {
-			if (!name || typeof name !== 'string') {
-				return false;
-			}
-			const trimmed = name.trim();
-			if (trimmed.length === 0) {
-				return false;
-			}
-			return trimmed !== '#' && trimmed !== '__tlb_row_id';
-		});
-	}
-	private getFilterColumnOptions(): FilterColumnOption[] {
-		const columns = getAvailableColumns(this.view);
-		return columns.map((name) => ({
-			name,
-			kind: 'text',
-			allowNumericOperators: true
-		}));
-	}
-	private getSortFieldOptions(): string[] {
-		const columns = getAvailableColumns(this.view);
-		const ordered: string[] = [];
-		const seen = new Set<string>();
-		for (const column of columns) {
-			if (!column || seen.has(column)) {
-				continue;
-			}
-			seen.add(column);
-			ordered.push(column);
+		if (!this.laneFieldRepair.hasLaneFieldPrerequisites()) {
+			return;
 		}
-		return ordered;
+		const boardId = this.laneFieldRepair.getPendingBoardId();
+		if (!boardId) {
+			return;
+		}
+		const state = this.store.getState();
+		const board = state.boards.find((entry) => entry.id === boardId);
+		if (!board) {
+			this.laneFieldRepair.clearPending();
+			return;
+		}
+		void this.handleInvalidLaneField(board);
 	}
 
-	private getModalDefaults(board: KanbanBoardDefinition | null) {
-		return {
-			initialFilter: board?.filterRule ?? null,
-			initialLaneField: board?.laneField ?? this.view.kanbanLaneField ?? null,
-			initialLaneWidth: board?.laneWidth ?? this.view.kanbanLaneWidth ?? DEFAULT_KANBAN_LANE_WIDTH,
-			initialFontScale: board?.fontScale ?? this.view.kanbanFontScale ?? DEFAULT_KANBAN_FONT_SCALE,
-			initialVisibleCount: board?.initialVisibleCount ?? this.view.kanbanInitialVisibleCount,
-			initialContent: board?.content ? cloneKanbanContentConfig(board.content) : null,
-			initialSortField: board?.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
-			initialSortDirection: board?.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
-			sortFieldOptions: this.getSortFieldOptions()
-		};
-	}
-	private async confirmBoardDeletion(boardName: string): Promise<boolean> {
-		return new Promise((resolve) => {
-			const modal = new KanbanBoardConfirmModal(this.app, {
-				message: t('kanbanView.toolbar.deleteBoardConfirm', { name: boardName }),
-				onConfirm: () => resolve(true),
-				onCancel: () => resolve(false)
-			});
-			modal.open();
-		});
-	}
-	private suggestNewBoardName(): string {
-		const existing = new Set(
-			this.store
-				.getState()
-				.boards.map((entry) => (typeof entry.name === 'string' ? entry.name.toLowerCase() : ''))
-		);
-		const base = t('kanbanView.toolbar.newBoardPlaceholder').trim();
-		const locale = getLocaleCode();
-		const normalizedBase = base.length > 0 ? base : t('kanbanView.toolbar.newBoardPlaceholder');
-		for (let index = 1; index < 100; index += 1) {
-			const candidate = composeBoardName(normalizedBase, index, locale);
-			if (!existing.has(candidate.toLowerCase())) {
-				return candidate;
-			}
+	public async addLanePreset(): Promise<void> {
+		const board = this.getActiveBoardDefinition();
+		if (!board) {
+			return;
 		}
-		const fallbackBase = normalizedBase.length > 0 ? normalizedBase : 'Board';
-		return `${fallbackBase} ${Date.now()}`;
-	}
-	private async openBoardModal(options: {
-		title: string;
-		defaultName: string;
-		defaultIcon: string | null;
-		initialFilter: FilterRule | null;
-	initialLaneField: string | null;
-	initialLaneWidth: number | null;
-	initialFontScale: number | null;
-		initialVisibleCount: number | null;
-		initialContent: KanbanCardContentConfig | null;
-		initialSortField: string | null;
-		initialSortDirection: KanbanSortDirection | null;
-		sortFieldOptions: string[];
-	}): Promise<{
-		name: string;
-		icon: string | null;
-	laneField: string;
-	laneWidth: number;
-	fontScale: number;
-		filterRule: FilterRule | null;
-		initialVisibleCount: number;
-		content: KanbanCardContentConfig | null;
-		sortField: string | null;
-		sortDirection: KanbanSortDirection;
-	} | null> {
-		const columns = this.getFilterColumnOptions();
-		if (columns.length === 0) {
-			new Notice(t('filterViewController.noColumns'));
-			return null;
+		const laneField =
+			typeof this.view.kanbanLaneField === 'string' ? this.view.kanbanLaneField.trim() : '';
+		if (!laneField) {
+			new Notice(t('kanbanView.lanePresetModal.missingLaneField'));
+			return;
 		}
-		const laneOptions = this.getLaneFieldCandidates();
-		if (laneOptions.length === 0) {
-			new Notice(t('kanbanView.fieldModal.noColumns'));
-			return null;
+		if (isStatusLaneField(laneField)) {
+			new Notice(t('kanbanView.lanePresetModal.statusFieldBlocked'));
+			return;
 		}
-		return openKanbanBoardModal({
+		const existing = Array.isArray(board.lanePresets) ? board.lanePresets : [];
+		const preset = await openKanbanLanePresetModal({
 			app: this.app,
-			title: options.title,
-			defaultName: options.defaultName,
-			defaultIcon: options.defaultIcon,
-			initialFilter: options.initialFilter,
-			initialLaneField: options.initialLaneField,
-			initialLaneWidth: options.initialLaneWidth,
-			initialFontScale: options.initialFontScale,
-			initialVisibleCount: options.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
-			initialContent: options.initialContent ?? null,
-			columns,
-			laneOptions,
-			sortFieldOptions: options.sortFieldOptions,
-			initialSortField: options.initialSortField,
-			initialSortDirection: options.initialSortDirection,
-			getContentFields: () => this.getLaneFieldCandidates()
+			laneField,
+			existingPresets: existing
 		});
+		if (!preset) {
+			return;
+		}
+		const updated = this.store.updateBoard(board.id, {
+			lanePresets: [...existing, preset]
+		});
+		if (!updated) {
+			return;
+		}
+		await this.store.persist();
+		this.applyBoardContext(updated, { persist: false, rerender: true });
+		new Notice(t('kanbanView.lanePresetModal.successNotice', { name: preset }));
 	}
 }

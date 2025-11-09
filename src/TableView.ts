@@ -43,6 +43,7 @@ import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, Kanba
 import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
 import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
+import { buildTableViewTitle } from "./utils/viewTitle";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -100,6 +101,7 @@ export class TableView extends ItemView {
 	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE;
 	public kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 	public kanbanCardContentConfig: KanbanCardContentConfig | null = null;
+	public kanbanLanePresets: string[] = [];
 	public kanbanPreferencesLoaded = false;
 	public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null;
@@ -121,7 +123,11 @@ export class TableView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return this.file?.basename ?? t("tableView.displayName");
+		return buildTableViewTitle({
+			file: this.file,
+			filePath: this.file?.path ?? null,
+			mode: this.activeViewMode
+		});
 	}
 
 	public refreshDisplayText(): void {

@@ -6,10 +6,9 @@ import type {
 	SortRule,
 	DefaultFilterViewPreferences
 } from '../types/filterView';
-import type { FileTagGroupMetadata, FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
+import type { FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
 import {
 	type KanbanBoardState,
-	type KanbanCardContentConfig,
 	DEFAULT_KANBAN_FONT_SCALE,
 	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 	DEFAULT_KANBAN_SORT_DIRECTION,
@@ -19,6 +18,9 @@ import {
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
+import { sanitizeLanePresets } from '../table-view/kanban/lanePresetUtils';
+import { cloneTagGroupMetadata } from './tagGroupUtils';
+import { cloneKanbanCardContentConfig } from './kanbanBoardSerialization';
 
 const logger = getLogger('service:settings');
 
@@ -402,7 +404,7 @@ export class SettingsService {
 		}
 
 		const activeGroupId = groups.some((group) => group.id === source.activeGroupId) ? source.activeGroupId : null;
-		const metadata = this.cloneTagGroupMetadata(source.metadata);
+		const metadata = cloneTagGroupMetadata(source.metadata);
 
 		return {
 			activeGroupId,
@@ -431,16 +433,18 @@ export class SettingsService {
 					raw.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
 					DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
 				);
-				const content = this.cloneKanbanCardContentConfig(raw.content ?? null);
+				const content = cloneKanbanCardContentConfig(raw.content ?? null);
 				const rawSortField = typeof raw.sortField === 'string' ? raw.sortField.trim() : '';
 				const sortField = rawSortField.length > 0 ? rawSortField : null;
 				const sortDirection =
 					raw.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
+				const lanePresets = sanitizeLanePresets(raw.lanePresets);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
+					lanePresets,
 					fontScale: sanitizeKanbanFontScale(raw.fontScale ?? DEFAULT_KANBAN_FONT_SCALE),
 					filterRule,
 					initialVisibleCount,
@@ -462,42 +466,6 @@ export class SettingsService {
 		};
 	}
 
-	private cloneKanbanCardContentConfig(
-		source: KanbanCardContentConfig | null | undefined
-	): KanbanCardContentConfig | null {
-		if (!source) {
-			return null;
-		}
-		const normalize = (value: string | null | undefined): string =>
-			typeof value === 'string'
-				? value.replace(/\r\n?/g, '\n').replace(/\{\{\s*/g, '{').replace(/\s*\}\}/g, '}')
-				: '';
-		const normalized = {
-			titleTemplate: normalize(source.titleTemplate),
-			bodyTemplate: normalize(source.bodyTemplate),
-			tagsTemplate: normalize(source.tagsTemplate),
-			showBody: typeof source.showBody === 'boolean' ? source.showBody : true,
-			tagsBelowBody: typeof source.tagsBelowBody === 'boolean' ? source.tagsBelowBody : false
-		};
-		const isEmpty =
-			normalized.titleTemplate.length === 0 &&
-			normalized.bodyTemplate.length === 0 &&
-			normalized.tagsTemplate.length === 0 &&
-			normalized.showBody === true &&
-			normalized.tagsBelowBody === false;
-		return isEmpty ? null : normalized;
-	}
-
-	private cloneTagGroupMetadata(source: FileTagGroupMetadata | null | undefined): FileTagGroupMetadata {
-		if (!source) {
-			return {};
-		}
-		const metadata: FileTagGroupMetadata = {};
-		if (source.defaultSeeded) {
-			metadata.defaultSeeded = true;
-		}
-		return metadata;
-	}
 	private sanitizeBackupSettings(raw: Partial<BackupSettings> | undefined): BackupSettings {
 		const base = DEFAULT_SETTINGS.backups;
 		const enabled = typeof raw?.enabled === 'boolean' ? raw.enabled : base.enabled;
@@ -548,4 +516,5 @@ export class SettingsService {
 		}
 		return Object.keys(result).length > 0 ? result : null;
 	}
+
 }

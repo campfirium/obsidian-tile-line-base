@@ -12,6 +12,7 @@ interface RenderKanbanViewOptions {
 	heightMode: KanbanHeightMode;
 	initialVisibleCount: number;
 	content: KanbanCardContentConfig | null;
+	lanePresets: string[];
 }
 
 export function renderKanbanView(
@@ -61,6 +62,7 @@ export function renderKanbanView(
 		fallbackLaneName: t('kanbanView.unassignedLaneLabel'),
 		primaryField: options.primaryField,
 		displayFields: columnNames,
+		lanePresets: options.lanePresets ?? [],
 		enableDrag: true,
 		heightMode: options.heightMode,
 		initialVisibleCount: options.initialVisibleCount,

@@ -17,8 +17,9 @@ import { KanbanViewportManager } from './KanbanViewportManager';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
-import { resolveExpectedStatusLanes } from './statusLaneHelpers';
 import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
+import { prepareLaneUpdates, type RowUpdate } from './KanbanLaneMutation';
+import { buildExpectedLaneNames } from './expectedLaneNames';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -33,14 +34,11 @@ interface KanbanViewControllerOptions {
 	fallbackLaneName: string;
 	primaryField: string | null;
 	displayFields: string[];
+	lanePresets: string[];
 	heightMode: KanbanHeightMode;
 	initialVisibleCount: number;
 	enableDrag: boolean;
 	contentConfig: KanbanCardContentConfig | null;
-}
-
-interface RowUpdate {
-	lane?: string;
 }
 
 export class KanbanViewController {
@@ -51,6 +49,7 @@ export class KanbanViewController {
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
+	private readonly lanePresets: string[];
 	private readonly enableDrag: boolean;
 	private readonly laneWidth: number;
 	private readonly fontScale: number;
@@ -85,6 +84,7 @@ export class KanbanViewController {
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
+		this.lanePresets = Array.isArray(options.lanePresets) ? options.lanePresets : [];
 		this.enableDrag = options.enableDrag;
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
 		this.fontScale = sanitizeKanbanFontScale(options.fontScale);
@@ -272,9 +272,10 @@ export class KanbanViewController {
 		});
 		const sortDirection: KanbanSortDirection =
 			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
-		const expectedLaneNames = resolveExpectedStatusLanes({
+		const expectedLaneNames = buildExpectedLaneNames({
 			laneField: this.laneField,
-			filterRule: this.view.activeKanbanBoardFilter
+			filterRule: this.view.activeKanbanBoardFilter,
+			lanePresets: this.lanePresets
 		});
 		return buildKanbanBoardState({
 			rows: this.visibleRows,
@@ -290,6 +291,7 @@ export class KanbanViewController {
 			expectedLaneNames
 		});
 	}
+
 
 	private getAvailableFields(): string[] {
 		const result: string[] = [];
@@ -320,7 +322,7 @@ export class KanbanViewController {
 		}
 		const empty = this.boardEl.createDiv({ cls: 'tlb-kanban-empty' });
 		const icon = empty.createSpan({ cls: 'tlb-kanban-empty__icon' });
-		icon.setText('📋');
+		icon.setText('棣冩惖');
 		const label = empty.createSpan({ cls: 'tlb-kanban-empty__label' });
 		label.setText(
 			this.quickFilterValue.trim().length > 0
@@ -517,22 +519,23 @@ export class KanbanViewController {
 	}
 
 	private applyUpdates(updates: Map<number, RowUpdate>, focusRowIndex: number): void {
-		const targets = [];
-		for (const [rowIndex, change] of updates.entries()) {
-			const fields: string[] = [];
-			if (typeof change.lane === 'string') { fields.push(this.laneField); }
-			if (fields.length > 0) { targets.push({ index: rowIndex, fields }); }
+		const { targets, normalized } = prepareLaneUpdates(this.view, this.laneField, updates);
+		if (targets.length === 0) {
+			this.renderBoard();
+			return;
 		}
-		if (targets.length === 0) { this.renderBoard(); return; }
 
 		this.isApplyingMutation = true;
 		const recorded = this.view.historyManager.captureCellChanges(
 			targets,
 			() => {
-				for (const [rowIndex, change] of updates.entries()) {
+				for (const [rowIndex, change] of normalized.entries()) {
 					const block = this.view.blocks[rowIndex];
 					if (!block) { continue; }
-					if (typeof change.lane === 'string') { block.data[this.laneField] = change.lane; }
+					block.data[this.laneField] = change.lane;
+					if (typeof change.statusTimestamp === 'string') {
+						block.data['statusChanged'] = change.statusTimestamp;
+					}
 				}
 			},
 			() => ({
@@ -542,7 +545,13 @@ export class KanbanViewController {
 		);
 		this.isApplyingMutation = false;
 
-		if (!recorded) { this.renderBoard(); }
+		if (!recorded) {
+			this.renderBoard();
+			return;
+		}
+
+		this.view.filterOrchestrator?.refresh();
+		this.view.persistenceService?.scheduleSave();
 	}
 
 	private destroySortables(): void {
@@ -559,3 +568,4 @@ export class KanbanViewController {
 		this.sortables.clear();
 	}
 }
+

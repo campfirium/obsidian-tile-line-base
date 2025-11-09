@@ -20,6 +20,7 @@ export interface CreateBoardOptions {
 	name: string;
 	icon: string | null;
 	laneField: string;
+	lanePresets?: string[] | null;
 	laneWidth?: number | null;
 	fontScale?: number | null;
 	filterRule: FilterRule | null;
@@ -34,6 +35,7 @@ export interface UpdateBoardOptions {
 	name?: string | null;
 	icon?: string | null;
 	laneField?: string | null;
+	lanePresets?: string[] | null;
 	laneWidth?: number | null;
 	fontScale?: number | null;
 	filterRule?: FilterRule | null;
@@ -110,6 +112,7 @@ export class KanbanBoardStore {
 			name: this.sanitizeName(options.name),
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
+			lanePresets: this.sanitizeLanePresets(options.lanePresets),
 			laneWidth: this.sanitizeLaneWidth(options.laneWidth),
 			fontScale: this.sanitizeFontScale(options.fontScale),
 			filterRule: this.cloneFilterRule(options.filterRule),
@@ -142,6 +145,9 @@ export class KanbanBoardStore {
 				target.laneField = lane;
 			}
 		}
+		if (updates.lanePresets !== undefined) {
+			target.lanePresets = this.sanitizeLanePresets(updates.lanePresets);
+		}
 		if (updates.laneWidth !== undefined) {
 			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
 		}
@@ -163,7 +169,10 @@ export class KanbanBoardStore {
 		if (updates.sortDirection !== undefined) {
 			target.sortDirection = this.sanitizeSortDirection(updates.sortDirection);
 		}
-		return { ...target };
+		return {
+			...target,
+			lanePresets: Array.isArray(target.lanePresets) ? [...target.lanePresets] : []
+		};
 	}
 
 	deleteBoard(id: string): boolean {
@@ -224,6 +233,27 @@ export class KanbanBoardStore {
 		return trimmed.length > 0 ? trimmed : '';
 	}
 
+	private sanitizeLanePresets(values: string[] | null | undefined): string[] {
+		if (!Array.isArray(values)) {
+			return [];
+		}
+		const result: string[] = [];
+		const seen = new Set<string>();
+		for (const value of values) {
+			const label = typeof value === 'string' ? value.trim() : '';
+			if (!label) {
+				continue;
+			}
+			const normalized = label.toLowerCase();
+			if (seen.has(normalized)) {
+				continue;
+			}
+			seen.add(normalized);
+			result.push(label);
+		}
+		return result;
+	}
+
 	private sanitizeSortField(field: string | null | undefined): string | null {
 		if (typeof field !== 'string') {
 			return null;
@@ -265,6 +295,7 @@ export class KanbanBoardStore {
 						name: this.sanitizeName(board.name),
 						icon: this.sanitizeIcon(board.icon),
 						laneField: this.sanitizeLaneField(board.laneField ?? null),
+						lanePresets: this.sanitizeLanePresets(board.lanePresets ?? null),
 						laneWidth: this.sanitizeLaneWidth(board.laneWidth ?? null),
 						fontScale: this.sanitizeFontScale(board.fontScale ?? null),
 						filterRule: this.cloneFilterRule(board.filterRule ?? null),

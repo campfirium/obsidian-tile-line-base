@@ -93,6 +93,7 @@ export interface KanbanBoardDefinition {
 	name: string;
 	icon?: string | null;
 	laneField: string;
+	lanePresets?: string[] | null;
 	laneWidth?: number | null;
 	filterRule?: FilterRule | null;
 	initialVisibleCount?: number | null;

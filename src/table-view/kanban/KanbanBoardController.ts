@@ -275,12 +275,19 @@ export class KanbanBoardController {
 		this.view.kanbanCardContentConfig = board.content ? cloneKanbanContentConfig(board.content) : null;
 		this.view.kanbanLanePresets = Array.isArray(board.lanePresets) ? [...board.lanePresets] : [];
 		const laneField = typeof board.laneField === 'string' ? board.laneField.trim() : '';
-		if (laneField.length > 0 && this.isLaneFieldAvailable(laneField)) {
-			this.view.kanbanLaneField = laneField;
-			this.laneFieldRepair.reset();
+		if (laneField.length > 0) {
+			if (this.isLaneFieldAvailable(laneField)) {
+				this.view.kanbanLaneField = laneField;
+				this.laneFieldRepair.reset();
+			} else {
+				this.view.kanbanLaneField = null;
+				this.laneFieldRepair.markMissing(board.id);
+				if (this.laneFieldRepair.hasLaneFieldPrerequisites()) {
+					void this.handleInvalidLaneField(board);
+				}
+			}
 		} else {
 			this.view.kanbanLaneField = null;
-			void this.handleInvalidLaneField(board);
 		}
 		this.view.activeKanbanBoardFilter = board.filterRule ?? null;
 		this.view.activeKanbanBoardId = board.id;
@@ -417,6 +424,12 @@ export class KanbanBoardController {
 		const board = state.boards.find((entry) => entry.id === boardId);
 		if (!board) {
 			this.laneFieldRepair.clearPending();
+			return;
+		}
+		const laneField = typeof board.laneField === 'string' ? board.laneField.trim() : '';
+		if (laneField.length > 0 && this.isLaneFieldAvailable(laneField)) {
+			this.laneFieldRepair.reset();
+			this.applyBoardContext(board, { persist: false, rerender: false });
 			return;
 		}
 		void this.handleInvalidLaneField(board);

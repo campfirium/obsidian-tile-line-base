@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
 import type { WindowContextManager } from './WindowContextManager';
 import { snapshotLeaf } from './utils/snapshotLeaf';
+import { buildTableViewTabTitle } from '../utils/viewTitle';
 
 const logger = getLogger('plugin:tab-title');
 
@@ -39,28 +40,17 @@ export class TableViewTitleRefresher {
 	}
 
 	private resolveTitle(filePath: string | null): string {
-		if (!filePath) {
-			return t('tableView.displayName');
-		}
-		const file = this.app.vault.getAbstractFileByPath(filePath);
-		if (file instanceof TFile) {
-			return file.basename;
-		}
-		const normalized = filePath.replace(/\\/g, '/');
-		const segments = normalized.split('/');
-		const lastSegment = segments[segments.length - 1] ?? normalized;
-		const withoutExtension = lastSegment.replace(/\.md$/i, '');
-		return withoutExtension || t('tableView.displayName');
+		const file = filePath ? this.app.vault.getAbstractFileByPath(filePath) : null;
+		return buildTableViewTabTitle({
+			file: file instanceof TFile ? file : null,
+			filePath
+		});
 	}
 
 	private setLeafTitleElements(leaf: WorkspaceLeaf, title: string): void {
 		const effectiveTitle = title || t('tableView.displayName');
 		const leafWithTab = leaf as WorkspaceLeaf & { tabHeaderInnerTitleEl?: HTMLElement | null };
 		this.setElementText(leafWithTab?.tabHeaderInnerTitleEl ?? null, effectiveTitle);
-
-		const containerEl = leaf.view?.containerEl ?? null;
-		const headerTitleEl = (containerEl?.closest('.workspace-leaf')?.querySelector('.view-header-title') as HTMLElement | null) ?? null;
-		this.setElementText(headerTitleEl, effectiveTitle);
 	}
 
 	private setElementText(element: HTMLElement | null | undefined, text: string): void {

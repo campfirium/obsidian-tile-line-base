@@ -43,7 +43,7 @@ import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, Kanba
 import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
 import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
-import { buildTableViewTitle } from "./utils/viewTitle";
+import { buildTableViewTabTitle, buildTableViewTitle } from "./utils/viewTitle";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -131,9 +131,13 @@ export class TableView extends ItemView {
 	}
 
 	public refreshDisplayText(): void {
+		const tabTitle = buildTableViewTabTitle({
+			file: this.file,
+			filePath: this.file?.path ?? null
+		});
 		const displayText = this.getDisplayText();
 		const leafWithTab = this.leaf as WorkspaceLeaf & { tabHeaderInnerTitleEl?: HTMLElement | null };
-		this.setElementText(leafWithTab?.tabHeaderInnerTitleEl ?? null, displayText);
+		this.setElementText(leafWithTab?.tabHeaderInnerTitleEl ?? null, tabTitle);
 
 		const leafEl = this.containerEl.closest('.workspace-leaf');
 		const headerTitleEl = (leafEl?.querySelector('.view-header-title') as HTMLElement | null) ?? null;

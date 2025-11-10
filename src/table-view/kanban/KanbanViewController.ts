@@ -23,6 +23,7 @@ import type { RowUpdate } from './KanbanLaneMutation';
 import { buildExpectedLaneNames } from './expectedLaneNames';
 import { renderKanbanCard } from './KanbanCardRenderer';
 import { handleCardDragEnd, applyLaneUpdates } from './KanbanCardDragHandler';
+import { KanbanLaneWrapController } from './KanbanLaneWrapController';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -40,6 +41,7 @@ interface KanbanViewControllerOptions {
 	lanePresets: string[];
 	laneOrder: string[];
 	heightMode: KanbanHeightMode;
+	multiRowEnabled: boolean;
 	initialVisibleCount: number;
 	enableDrag: boolean;
 	contentConfig: KanbanCardContentConfig | null;
@@ -64,6 +66,7 @@ export class KanbanViewController {
 	private cardContent!: KanbanRuntimeCardContent;
 	private expandedLanes = new Set<string>();
 	private heightMode: KanbanHeightMode;
+	private multiRowEnabled: boolean;
 
 	private readonly rootEl: HTMLElement;
 	private readonly messageEl: HTMLElement;
@@ -75,6 +78,7 @@ export class KanbanViewController {
 	private unsubscribeQuickFilter: (() => void) | null = null;
 	private sortables = new Map<string, SortableInstance>();
 	private readonly laneReorderController: KanbanLaneReorderController;
+	private readonly laneWrapController: KanbanLaneWrapController | null;
 	private isApplyingMutation = false;
 	private dragAvailable: boolean;
 	private sortableClass: SortableStatic | null = null;
@@ -96,6 +100,7 @@ export class KanbanViewController {
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
 		this.fontScale = sanitizeKanbanFontScale(options.fontScale);
 		this.heightMode = sanitizeKanbanHeightMode(options.heightMode);
+		this.multiRowEnabled = options.multiRowEnabled;
 		const limit = Math.floor(options.initialVisibleCount ?? 1);
 		this.initialVisibleCount = Math.max(1, limit);
 		this.rawContentConfig = options.contentConfig ?? null;
@@ -132,6 +137,12 @@ export class KanbanViewController {
 		this.boardEl = this.rootEl.createDiv({ cls: 'tlb-kanban-board', attr: { role: 'list' } });
 		this.boardEl.style.setProperty('--tlb-kanban-lane-width', `${this.laneWidth}rem`);
 
+		this.laneWrapController = new KanbanLaneWrapController({
+			wrapper: this.container,
+			board: this.boardEl,
+			enabled: this.multiRowEnabled
+		});
+
 		this.viewportManager.apply(this.heightMode);
 		this.tooltipManager.setFontScale(this.fontScale);
 		this.registerListeners();
@@ -148,6 +159,7 @@ export class KanbanViewController {
 		this.viewportManager.dispose();
 		this.destroySortables();
 		this.laneReorderController.destroy();
+		this.laneWrapController?.destroy();
 		this.rootEl.empty();
 	}
 
@@ -158,6 +170,18 @@ export class KanbanViewController {
 		}
 		this.heightMode = normalized;
 		this.viewportManager.apply(this.heightMode);
+		this.laneWrapController?.updateLaneMetrics();
+	}
+
+	public setMultiRowEnabled(enabled: boolean): void {
+		if (this.multiRowEnabled === enabled) {
+			return;
+		}
+		this.multiRowEnabled = enabled;
+		this.laneWrapController?.setEnabled(enabled);
+		if (enabled) {
+			this.laneWrapController?.updateLaneMetrics();
+		}
 	}
 
 	private registerListeners(): void {
@@ -216,6 +240,7 @@ export class KanbanViewController {
 
 		if (state.totalCards === 0) {
 			this.renderEmptyState();
+			this.laneWrapController?.updateLaneMetrics();
 			this.viewportManager.refresh(this.heightMode);
 			this.boardEl?.removeAttribute('aria-busy');
 			return;
@@ -225,6 +250,7 @@ export class KanbanViewController {
 			this.renderLane(lane);
 		}
 		this.laneReorderController.attach(this.boardEl);
+		this.laneWrapController?.updateLaneMetrics();
 		this.viewportManager.refresh(this.heightMode);
 		this.boardEl?.removeAttribute('aria-busy');
 	}

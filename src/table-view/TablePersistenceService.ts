@@ -32,6 +32,7 @@ interface TablePersistenceDeps {
 		sortDirection: KanbanSortDirection | null;
 		heightMode: KanbanHeightMode | null;
 		fontScale: number | null;
+		multiRow: boolean | null;
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	markSelfMutation?: (file: TFile) => void;
@@ -112,6 +113,7 @@ export class TablePersistenceService {
 		const sortDirection = kanbanConfig?.sortDirection ?? null;
 		const heightMode = kanbanConfig?.heightMode ?? null;
 		const fontScale = kanbanConfig?.fontScale ?? null;
+		const multiRow = kanbanConfig?.multiRow ?? null;
 		const kanbanBoards = this.deps.getKanbanBoards?.() ?? null;
 		const hasKanbanBoards =
 			kanbanBoards != null &&
@@ -135,10 +137,11 @@ export class TablePersistenceService {
 									? sortDirection
 									: undefined,
 							heightMode: heightMode && heightMode !== DEFAULT_KANBAN_HEIGHT_MODE ? heightMode : undefined,
-							fontScale:
-								typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
-									? fontScale
-									: undefined
+						fontScale:
+							typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
+								? fontScale
+								: undefined,
+						multiRow: multiRow === false ? false : undefined
 						}
 					: undefined,
 			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined

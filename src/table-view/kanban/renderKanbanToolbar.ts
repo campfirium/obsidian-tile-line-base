@@ -66,18 +66,10 @@ export function renderKanbanToolbar(view: TableView, container: HTMLElement): vo
 			menu.addSeparator();
 			menu.addItem((item) => {
 				item
-					.setTitle(t('kanbanView.settings.heightAuto'))
-					.setChecked(view.kanbanHeightMode === 'auto')
+					.setTitle(t('kanbanView.settings.multiRowToggle'))
+					.setChecked(view.kanbanMultiRowEnabled)
 					.onClick(() => {
-						view.setKanbanHeightMode('auto');
-					});
-			});
-			menu.addItem((item) => {
-				item
-					.setTitle(t('kanbanView.settings.heightViewport'))
-					.setChecked(view.kanbanHeightMode === 'viewport')
-					.onClick(() => {
-						view.setKanbanHeightMode('viewport');
+						view.setKanbanMultiRowEnabled(!view.kanbanMultiRowEnabled);
 					});
 			});
 			const rect = button.getBoundingClientRect();

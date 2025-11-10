@@ -53,7 +53,8 @@ export function initializeTableView(view: TableView): void {
 			sortField: view.kanbanSortField,
 			sortDirection: view.kanbanSortDirection,
 			heightMode: view.kanbanHeightMode,
-			fontScale: view.kanbanFontScale
+			fontScale: view.kanbanFontScale,
+			multiRow: view.kanbanMultiRowEnabled
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)

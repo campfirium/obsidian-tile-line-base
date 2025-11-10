@@ -99,6 +99,7 @@ export class TableView extends ItemView {
 	public kanbanSortField: string | null = null;
 	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE;
+	public kanbanMultiRowEnabled = true;
 	public kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 	public kanbanCardContentConfig: KanbanCardContentConfig | null = null;
 	public kanbanLanePresets: string[] = [];
@@ -296,6 +297,17 @@ export class TableView extends ItemView {
 		this.kanbanHeightMode = normalized;
 		if (this.kanbanController) {
 			this.kanbanController.setHeightMode(normalized);
+		}
+		this.persistenceService?.scheduleSave();
+	}
+
+	public setKanbanMultiRowEnabled(enabled: boolean): void {
+		if (this.kanbanMultiRowEnabled === enabled) {
+			return;
+		}
+		this.kanbanMultiRowEnabled = enabled;
+		if (this.kanbanController) {
+			this.kanbanController.setMultiRowEnabled(enabled);
 		}
 		this.persistenceService?.scheduleSave();
 	}

@@ -49,7 +49,7 @@
         "deleteBoardConfirmAction": "删除", "laneFieldMissingNotice": "当前看板缺少有效的泳道列，请选择新的列后继续使用。", "noBoardsPlaceholder": "现在还没有看板，请点击左侧的加号新建一个。", "laneFieldLabel": "看板列", "duplicateBoardLabel": "复制看板", "duplicateBoardTitle": "复制看板：{{name}}", "duplicateBoardNotice": "已复制看板：{{name}}", "duplicateNameSuffix": "副本", "laneWidthLabel": "列宽（rem）", "laneWidthDescription": "输入介于 {{min}} 和 {{max}} rem 的数值来控制看板列宽。", "initialVisibleCountLabel": "每列初始显示数量", "initialVisibleCountDesc": "每列仅展示设定数量的卡片，剩余卡片通过“显示全部”展开。", "sortSettingLabel": "条目排序", "sortSettingDesc": "选择要排序的字段以及顺序。", "sortFieldLabel": "排序字段", "sortFieldNone": "不排序", "sortDirectionLabel": "排序方向", "sortDirectionAsc": "升序（A -> Z）", "sortDirectionDesc": "降序（Z -> A）"
         , "fontScaleLabel": "卡片字体缩放", "fontScaleDescription": "请输入 {{min}} 至 {{max}} 之间的数值，以同时调整标题、正文、标签与提示文字的大小。", "addLanePresetMenuLabel": "新建泳道"
       },
-    "settings": { "heightAuto": "自适应高度（显示全部卡片）", "heightViewport": "匹配窗口高度（列内滚动）" },
+    "settings": { "multiRowToggle": "允许泳道自动换行" },
     "showAllButtonLabel": "显示全部（剩余 {{count}} 条）"
   },
   "commands": { "undoTableHistory": "撤销上一次表格更改", "redoTableHistory": "重做表格更改", "openHelpDocument": "打开 TileLineBase 帮助文档", "createTable": "新建 TileLineBase 表格笔记", "exportCsv": "导出当前表格为 CSV", "importCsv": "将 CSV 导入当前表格", "toggleTableView": "切换表格视图", "importCsvAsTable": "导入 CSV 并创建新表格", "openKanbanView": "打开 TileLineBase 看板视图" },

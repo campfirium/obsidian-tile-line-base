@@ -83,11 +83,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table') {
-			view.activeViewMode = preference;
-		}
+		if (preference === 'kanban' || preference === 'table') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
+		view.kanbanMultiRowEnabled = kanbanConfig?.multiRow !== false;
 		if (typeof kanbanConfig?.fontScale === 'number') {
 			view.kanbanFontScale = sanitizeKanbanFontScale(kanbanConfig.fontScale);
 		}
@@ -197,6 +196,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			fontScale: view.kanbanFontScale,
 			sortField,
 			heightMode: view.kanbanHeightMode,
+			multiRowEnabled: view.kanbanMultiRowEnabled,
 			initialVisibleCount: view.kanbanInitialVisibleCount,
 			content: view.kanbanCardContentConfig,
 			lanePresets: Array.isArray(view.kanbanLanePresets) ? view.kanbanLanePresets : [],

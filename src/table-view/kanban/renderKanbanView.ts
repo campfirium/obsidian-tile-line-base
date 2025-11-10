@@ -10,6 +10,7 @@ interface RenderKanbanViewOptions {
 	fontScale: number;
 	sortField: string | null;
 	heightMode: KanbanHeightMode;
+	multiRowEnabled: boolean;
 	initialVisibleCount: number;
 	content: KanbanCardContentConfig | null;
 	lanePresets: string[];
@@ -67,6 +68,7 @@ export function renderKanbanView(
 		laneOrder: options.laneOrder ?? [],
 		enableDrag: true,
 		heightMode: options.heightMode,
+		multiRowEnabled: options.multiRowEnabled,
 		initialVisibleCount: options.initialVisibleCount,
 		contentConfig: options.content
 	});

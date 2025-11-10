@@ -165,13 +165,11 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.kanbanToolbar.destroy();
 		view.kanbanToolbar = null;
 	}
-
 	if (view.activeViewMode === 'kanban') {
 		renderKanbanToolbar(view, container);
 		container.classList.add('tlb-kanban-mode');
 		container.classList.remove('tlb-has-grid');
-		const boardCount = view.kanbanBoardController?.getBoards().length ?? 0;
-		if (boardCount === 0) {
+		if ((view.kanbanBoardController?.getBoards().length ?? 0) === 0) {
 			view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 			container.createDiv({
 				cls: 'tlb-kanban-empty',
@@ -201,12 +199,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 			heightMode: view.kanbanHeightMode,
 			initialVisibleCount: view.kanbanInitialVisibleCount,
 			content: view.kanbanCardContentConfig,
-			lanePresets: Array.isArray(view.kanbanLanePresets) ? view.kanbanLanePresets : []
+			lanePresets: Array.isArray(view.kanbanLanePresets) ? view.kanbanLanePresets : [],
+			laneOrder: Array.isArray(view.kanbanLaneOrder) ? view.kanbanLaneOrder : []
 		});
 		view.filterOrchestrator.applyActiveView();
 		return;
 	}
-
 	renderFilterViewControls(view, container);
 
 	container.classList.add('tlb-has-grid');

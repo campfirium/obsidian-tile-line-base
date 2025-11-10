@@ -18,7 +18,7 @@ import {
 import type { ConfigCacheEntry } from '../types/config';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
-import { sanitizeLanePresets } from '../table-view/kanban/lanePresetUtils';
+import { sanitizeLanePresets, sanitizeLaneOrdering } from '../table-view/kanban/lanePresetUtils';
 import { cloneTagGroupMetadata } from './tagGroupUtils';
 import { cloneKanbanCardContentConfig } from './kanbanBoardSerialization';
 
@@ -439,12 +439,14 @@ export class SettingsService {
 				const sortDirection =
 					raw.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
 				const lanePresets = sanitizeLanePresets(raw.lanePresets);
+				const laneOrder = sanitizeLaneOrdering(raw.laneOrderOverrides);
 				boards.push({
 					id,
 					name: rawName.length > 0 ? rawName : id,
 					icon,
 					laneField: laneField.length > 0 ? laneField : '',
 					lanePresets,
+					laneOrderOverrides: laneOrder.length > 0 ? laneOrder : null,
 					fontScale: sanitizeKanbanFontScale(raw.fontScale ?? DEFAULT_KANBAN_FONT_SCALE),
 					filterRule,
 					initialVisibleCount,

@@ -17,9 +17,12 @@ import { KanbanViewportManager } from './KanbanViewportManager';
 import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
+import { KanbanLaneReorderController } from './KanbanLaneReorderController';
 import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
-import { prepareLaneUpdates, type RowUpdate } from './KanbanLaneMutation';
+import type { RowUpdate } from './KanbanLaneMutation';
 import { buildExpectedLaneNames } from './expectedLaneNames';
+import { renderKanbanCard } from './KanbanCardRenderer';
+import { handleCardDragEnd, applyLaneUpdates } from './KanbanCardDragHandler';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -35,6 +38,7 @@ interface KanbanViewControllerOptions {
 	primaryField: string | null;
 	displayFields: string[];
 	lanePresets: string[];
+	laneOrder: string[];
 	heightMode: KanbanHeightMode;
 	initialVisibleCount: number;
 	enableDrag: boolean;
@@ -50,6 +54,7 @@ export class KanbanViewController {
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
 	private readonly lanePresets: string[];
+	private laneOrder: string[];
 	private readonly enableDrag: boolean;
 	private readonly laneWidth: number;
 	private readonly fontScale: number;
@@ -69,6 +74,7 @@ export class KanbanViewController {
 	private unsubscribeFilter: (() => void) | null = null;
 	private unsubscribeQuickFilter: (() => void) | null = null;
 	private sortables = new Map<string, SortableInstance>();
+	private readonly laneReorderController: KanbanLaneReorderController;
 	private isApplyingMutation = false;
 	private dragAvailable: boolean;
 	private sortableClass: SortableStatic | null = null;
@@ -85,6 +91,7 @@ export class KanbanViewController {
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
 		this.lanePresets = Array.isArray(options.lanePresets) ? options.lanePresets : [];
+		this.laneOrder = Array.isArray(options.laneOrder) ? [...options.laneOrder] : [];
 		this.enableDrag = options.enableDrag;
 		this.laneWidth = sanitizeKanbanLaneWidth(options.laneWidth);
 		this.fontScale = sanitizeKanbanFontScale(options.fontScale);
@@ -98,6 +105,22 @@ export class KanbanViewController {
 			laneField: this.laneField
 		});
 		this.dragAvailable = this.enableDrag;
+		this.laneReorderController = new KanbanLaneReorderController({
+			getSortableClass: () => this.sortableClass,
+			isDragAvailable: () => this.dragAvailable,
+			disableCardDrag: (disabled) => {
+				for (const sortable of this.sortables.values()) {
+					try {
+						sortable.option('disabled', disabled);
+					} catch {
+						// noop
+					}
+				}
+			},
+			onLaneOrderChange: (order) => {
+				this.handleLaneOrderChange(order);
+			}
+		});
 
 		this.recomputeVisibleRows();
 		this.quickFilterValue = globalQuickFilterManager.getValue();
@@ -124,6 +147,7 @@ export class KanbanViewController {
 		this.unsubscribeQuickFilter = null;
 		this.viewportManager.dispose();
 		this.destroySortables();
+		this.laneReorderController.destroy();
 		this.rootEl.empty();
 	}
 
@@ -170,6 +194,7 @@ export class KanbanViewController {
 		this.tooltipManager.hide();
 		this.ensureSortableLoaded();
 		this.destroySortables();
+		this.laneReorderController.destroy();
 		this.boardEl.empty();
 		this.boardEl?.setAttribute('aria-busy', 'true');
 
@@ -199,6 +224,7 @@ export class KanbanViewController {
 		for (const lane of state.lanes) {
 			this.renderLane(lane);
 		}
+		this.laneReorderController.attach(this.boardEl);
 		this.viewportManager.refresh(this.heightMode);
 		this.boardEl?.removeAttribute('aria-busy');
 	}
@@ -275,7 +301,8 @@ export class KanbanViewController {
 		const expectedLaneNames = buildExpectedLaneNames({
 			laneField: this.laneField,
 			filterRule: this.view.activeKanbanBoardFilter,
-			lanePresets: this.lanePresets
+			lanePresets: this.lanePresets,
+			laneOrder: this.laneOrder
 		});
 		return buildKanbanBoardState({
 			rows: this.visibleRows,
@@ -346,6 +373,7 @@ export class KanbanViewController {
 		});
 
 		const header = laneEl.createDiv({ cls: 'tlb-kanban-lane__header' });
+		header.setAttribute('title', t('kanbanView.laneReorderHint'));
 		const title = header.createSpan({ cls: 'tlb-kanban-lane__title' });
 		title.setText(lane.name);
 
@@ -372,7 +400,12 @@ export class KanbanViewController {
 			const hiddenCount = expanded ? 0 : Math.max(0, totalCards - visibleCards.length);
 
 			for (const card of visibleCards) {
-				this.renderCard(cardsContainer, card);
+				renderKanbanCard({
+					container: cardsContainer,
+					card,
+					cardContent: this.cardContent,
+					tooltipManager: this.tooltipManager
+				});
 			}
 
 			if (hiddenCount > 0) {
@@ -411,147 +444,47 @@ export class KanbanViewController {
 		}
 	}
 
-	private renderCard(container: HTMLElement, card: KanbanLane['cards'][number]): void {
-		const cardEl = container.createDiv({
-			cls: 'tlb-kanban-card',
-			attr: {
-				'data-row-index': String(card.rowIndex),
-				'data-card-id': card.id,
-				'data-lane-name': card.rawLane
+	private handleDragEnd(event: SortableEvent): void {
+		handleCardDragEnd({
+			event,
+			dragAvailable: this.dragAvailable,
+			fallbackLaneName: this.fallbackLaneName,
+			onInvalidDrop: () => {
+				this.renderBoard();
+			},
+			applyUpdates: (updates, focusRowIndex) => {
+				this.applyUpdates(updates, focusRowIndex);
 			}
 		});
-		cardEl.setAttribute('tabindex', '0');
-
-		const title = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
-		const titleText = title.createSpan({ cls: 'tlb-kanban-card__title-text' });
-		const trimmedTitle = card.title.trim();
-		titleText.setText(trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback'));
-		if (!this.cardContent.tagsBelowBody && card.tags.length > 0) {
-			const tagsInline = title.createSpan({
-				cls: 'tlb-kanban-card__tags tlb-kanban-card__tags--inline'
-			});
-			this.renderTags(tagsInline, card.tags);
-		}
-
-		const bodyText = card.body.trim();
-		const showBody = this.cardContent.showBody && bodyText.length > 0;
-		if (!showBody && bodyText.length > 0) {
-			cardEl.addClass('tlb-kanban-card--tooltip');
-			this.tooltipManager.register(cardEl, bodyText);
-		} else {
-			cardEl.removeClass('tlb-kanban-card--tooltip');
-			this.tooltipManager.unregister(cardEl);
-		}
-		if (showBody) {
-			const bodyEl = cardEl.createDiv({ cls: 'tlb-kanban-card__body' });
-			bodyEl.setText(bodyText);
-		}
-
-		if (card.tags.length > 0 && this.cardContent.tagsBelowBody) {
-			const tagsBlock = cardEl.createDiv({
-				cls: 'tlb-kanban-card__tags tlb-kanban-card__tags--block'
-			});
-			this.renderTags(tagsBlock, card.tags);
-		}
-
-		cardEl.toggleClass('tlb-kanban-card--compact', !showBody);
-
-		if (card.fields.length > 0) {
-			const fieldsEl = cardEl.createDiv({ cls: 'tlb-kanban-card__fields' });
-			for (const field of card.fields.slice(0, 6)) {
-				const fieldRow = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field' });
-				const nameEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-name' });
-				nameEl.setText(field.name);
-				const valueEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-value' });
-				valueEl.setText(field.value);
-			}
-			if (card.fields.length > 6) {
-				const more = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field-more' });
-				more.setText(t('kanbanView.moreFieldsLabel', { count: String(card.fields.length - 6) }));
-			}
-		}
-	}
-
-	private renderTags(container: HTMLElement, tags: string[]): void {
-		for (const tag of tags) {
-			const tagEl = container.createSpan({ cls: 'tlb-kanban-card__tag' });
-			tagEl.setText(tag);
-		}
-	}
-
-	private handleDragEnd(event: SortableEvent): void {
-		if (!this.dragAvailable) { return; }
-		const itemEl = event.item as HTMLElement | null;
-		const targetEl = event.to as HTMLElement | null;
-		if (!itemEl || !targetEl) { this.renderBoard(); return; }
-		const rowIndex = parseInt(itemEl.dataset.rowIndex ?? '', 10);
-		if (!Number.isInteger(rowIndex)) { this.renderBoard(); return; }
-
-		const targetLaneName = targetEl.dataset.laneName ?? this.fallbackLaneName;
-		itemEl.dataset.laneName = targetLaneName;
-
-		const updates = new Map<number, RowUpdate>();
-		const processed = new Set<HTMLElement>();
-		const lanesToProcess: HTMLElement[] = [];
-		lanesToProcess.push(targetEl);
-		const fromEl = event.from as HTMLElement | null;
-		if (fromEl && fromEl !== targetEl) {
-			lanesToProcess.push(fromEl);
-		}
-
-		for (const laneEl of lanesToProcess) {
-			if (!laneEl || processed.has(laneEl)) { continue; }
-			processed.add(laneEl);
-			const laneName = laneEl.dataset.laneName ?? this.fallbackLaneName;
-			const cardEls = Array.from(laneEl.querySelectorAll<HTMLElement>('.tlb-kanban-card'));
-			cardEls.forEach((cardEl, _index) => {
-				const blockIndex = parseInt(cardEl.dataset.rowIndex ?? '', 10);
-				if (!Number.isInteger(blockIndex)) { return; }
-				const record = updates.get(blockIndex) ?? {};
-				if (laneEl === targetEl && blockIndex === rowIndex) {
-					record.lane = laneName;
-				}
-				updates.set(blockIndex, record);
-			});
-		}
-
-		this.applyUpdates(updates, rowIndex);
 	}
 
 	private applyUpdates(updates: Map<number, RowUpdate>, focusRowIndex: number): void {
-		const { targets, normalized } = prepareLaneUpdates(this.view, this.laneField, updates);
-		if (targets.length === 0) {
-			this.renderBoard();
-			return;
-		}
-
-		this.isApplyingMutation = true;
-		const recorded = this.view.historyManager.captureCellChanges(
-			targets,
-			() => {
-				for (const [rowIndex, change] of normalized.entries()) {
-					const block = this.view.blocks[rowIndex];
-					if (!block) { continue; }
-					block.data[this.laneField] = change.lane;
-					if (typeof change.statusTimestamp === 'string') {
-						block.data['statusChanged'] = change.statusTimestamp;
-					}
-				}
+		applyLaneUpdates({
+			view: this.view,
+			laneField: this.laneField,
+			updates,
+			focusRowIndex,
+			renderBoard: () => {
+				this.renderBoard();
 			},
-			() => ({
-				undo: { rowIndex: focusRowIndex, field: this.laneField },
-				redo: { rowIndex: focusRowIndex, field: this.laneField }
-			})
-		);
-		this.isApplyingMutation = false;
+			setApplyingMutation: (value) => {
+				this.isApplyingMutation = value;
+			}
+		});
+	}
 
-		if (!recorded) {
-			this.renderBoard();
+	private handleLaneOrderChange(order: string[]): void {
+		const matchesExisting =
+			this.laneOrder.length === order.length &&
+			this.laneOrder.every((value, index) => value === order[index]);
+		if (order.length === 0 || matchesExisting) {
 			return;
 		}
-
-		this.view.filterOrchestrator?.refresh();
-		this.view.persistenceService?.scheduleSave();
+		this.laneOrder = [...order];
+		const controller = this.view.kanbanBoardController;
+		if (controller && typeof controller.updateActiveLaneOrder === 'function') {
+			void controller.updateActiveLaneOrder([...order]).catch(() => undefined);
+		}
 	}
 
 	private destroySortables(): void {

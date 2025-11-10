@@ -13,6 +13,7 @@ interface RenderKanbanViewOptions {
 	initialVisibleCount: number;
 	content: KanbanCardContentConfig | null;
 	lanePresets: string[];
+	laneOrder: string[];
 }
 
 export function renderKanbanView(
@@ -63,6 +64,7 @@ export function renderKanbanView(
 		primaryField: options.primaryField,
 		displayFields: columnNames,
 		lanePresets: options.lanePresets ?? [],
+		laneOrder: options.laneOrder ?? [],
 		enableDrag: true,
 		heightMode: options.heightMode,
 		initialVisibleCount: options.initialVisibleCount,

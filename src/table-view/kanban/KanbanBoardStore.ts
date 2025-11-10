@@ -21,6 +21,7 @@ export interface CreateBoardOptions {
 	icon: string | null;
 	laneField: string;
 	lanePresets?: string[] | null;
+	laneOrderOverrides?: string[] | null;
 	laneWidth?: number | null;
 	fontScale?: number | null;
 	filterRule: FilterRule | null;
@@ -36,6 +37,7 @@ export interface UpdateBoardOptions {
 	icon?: string | null;
 	laneField?: string | null;
 	lanePresets?: string[] | null;
+	laneOrderOverrides?: string[] | null;
 	laneWidth?: number | null;
 	fontScale?: number | null;
 	filterRule?: FilterRule | null;
@@ -107,12 +109,14 @@ export class KanbanBoardStore {
 	}
 
 	createBoard(options: CreateBoardOptions): KanbanBoardDefinition {
+		const laneOrderOverrides = this.normalizeLaneOrderOverrides(options.laneOrderOverrides);
 		const board: KanbanBoardDefinition = {
 			id: this.generateId(),
 			name: this.sanitizeName(options.name),
 			icon: this.sanitizeIcon(options.icon),
 			laneField: this.sanitizeLaneField(options.laneField),
 			lanePresets: this.sanitizeLanePresets(options.lanePresets),
+			laneOrderOverrides,
 			laneWidth: this.sanitizeLaneWidth(options.laneWidth),
 			fontScale: this.sanitizeFontScale(options.fontScale),
 			filterRule: this.cloneFilterRule(options.filterRule),
@@ -148,6 +152,9 @@ export class KanbanBoardStore {
 		if (updates.lanePresets !== undefined) {
 			target.lanePresets = this.sanitizeLanePresets(updates.lanePresets);
 		}
+		if (updates.laneOrderOverrides !== undefined) {
+			target.laneOrderOverrides = this.normalizeLaneOrderOverrides(updates.laneOrderOverrides);
+		}
 		if (updates.laneWidth !== undefined) {
 			target.laneWidth = this.sanitizeLaneWidth(updates.laneWidth);
 		}
@@ -171,8 +178,24 @@ export class KanbanBoardStore {
 		}
 		return {
 			...target,
-			lanePresets: Array.isArray(target.lanePresets) ? [...target.lanePresets] : []
+			lanePresets: Array.isArray(target.lanePresets) ? [...target.lanePresets] : [],
+			laneOrderOverrides: Array.isArray(target.laneOrderOverrides)
+				? [...target.laneOrderOverrides]
+				: null
 		};
+	}
+
+	applyLaneOrder(id: string, laneNames: string[]): string[] | undefined {
+		const target = this.state.boards.find((board) => board.id === id);
+		if (!target) {
+			return undefined;
+		}
+		const next = this.normalizeLaneOrderOverrides(laneNames);
+		if (this.areLaneOrdersEqual(target.laneOrderOverrides, next)) {
+			return undefined;
+		}
+		target.laneOrderOverrides = next ? [...next] : null;
+		return next ? [...next] : [];
 	}
 
 	deleteBoard(id: string): boolean {
@@ -254,6 +277,32 @@ export class KanbanBoardStore {
 		return result;
 	}
 
+	private sanitizeLaneOrderOverrides(values: string[] | null | undefined): string[] {
+		if (!Array.isArray(values)) {
+			return [];
+		}
+		const result: string[] = [];
+		const seen = new Set<string>();
+		for (const value of values) {
+			const label = typeof value === 'string' ? value.trim() : '';
+			if (!label) {
+				continue;
+			}
+			const normalized = label.toLowerCase();
+			if (seen.has(normalized)) {
+				continue;
+			}
+			seen.add(normalized);
+			result.push(label);
+		}
+		return result;
+	}
+
+	private normalizeLaneOrderOverrides(values: string[] | null | undefined): string[] | null {
+		const sanitized = this.sanitizeLaneOrderOverrides(values);
+		return sanitized.length > 0 ? sanitized : null;
+	}
+
 	private sanitizeSortField(field: string | null | undefined): string | null {
 		if (typeof field !== 'string') {
 			return null;
@@ -302,13 +351,40 @@ export class KanbanBoardStore {
 						initialVisibleCount: this.sanitizeInitialVisibleCount(board.initialVisibleCount ?? null),
 						content: this.sanitizeContentConfig(board.content ?? null),
 						sortField: this.sanitizeSortField(board.sortField ?? null),
-						sortDirection: this.sanitizeSortDirection(board.sortDirection ?? null)
+						sortDirection: this.sanitizeSortDirection(board.sortDirection ?? null),
+						laneOrderOverrides: this.normalizeLaneOrderOverrides(board.laneOrderOverrides ?? null)
 					}))
 			: [];
 		return {
 			boards,
 			activeBoardId: typeof state.activeBoardId === 'string' ? state.activeBoardId : null
 		};
+	}
+
+	private areLaneOrdersEqual(
+		current: string[] | null | undefined,
+		next: string[] | null
+	): boolean {
+		const normalize = (values: string[] | null | undefined): string[] | null => {
+			if (!Array.isArray(values) || values.length === 0) {
+				return null;
+			}
+			return values;
+		};
+		const a = normalize(current);
+		const b = normalize(next);
+		if (!a && !b) {
+			return true;
+		}
+		if (!a || !b || a.length !== b.length) {
+			return false;
+		}
+		for (let i = 0; i < a.length; i += 1) {
+			if (a[i] !== b[i]) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private cloneFilterRule(rule: FilterRule | null | undefined): FilterRule | null {

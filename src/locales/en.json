@@ -15,6 +15,7 @@
     "filteredCountLabel": "{{count}} cards match the current filters",
     "totalCountLabel": "{{count}} cards",
     "dragHint": "Drag cards to reorder within a lane or move them across lanes.",
+    "laneReorderHint": "Drag a lane header to reorder columns.",
     "dragUnavailable": "Drag interactions are disabled because the required module failed to load. Refresh the note or reinstall the plugin to restore kanban drag-and-drop.",
     "emptyState": "No cards yet. Add rows from the table view to populate this board.",
     "emptyStateFiltered": "No cards match the current filters.",

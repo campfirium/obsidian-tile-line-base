@@ -1579,6 +1579,9 @@
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover,
 .markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
 	color: var(--text-normal);
+	cursor: grab;
+	user-select: none;
+	-webkit-user-select: none;
 	border-color: var(--text-muted);
 }
 

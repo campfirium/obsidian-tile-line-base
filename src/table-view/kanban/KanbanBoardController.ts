@@ -262,6 +262,7 @@ export class KanbanBoardController {
 		this.view.kanbanSortField = null;
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.view.kanbanLanePresets = [];
+		this.view.kanbanLaneOrder = [];
 		this.view.kanbanBoardsLoaded = false;
 		this.repairingLaneField = false;
 		this.autoCreateInProgress = false;
@@ -274,6 +275,7 @@ export class KanbanBoardController {
 	if (board) {
 		this.view.kanbanCardContentConfig = board.content ? cloneKanbanContentConfig(board.content) : null;
 		this.view.kanbanLanePresets = Array.isArray(board.lanePresets) ? [...board.lanePresets] : [];
+		this.view.kanbanLaneOrder = Array.isArray(board.laneOrderOverrides) ? [...board.laneOrderOverrides] : [];
 		const laneField = typeof board.laneField === 'string' ? board.laneField.trim() : '';
 		if (laneField.length > 0) {
 			if (this.isLaneFieldAvailable(laneField)) {
@@ -315,6 +317,7 @@ export class KanbanBoardController {
 		this.view.kanbanSortField = null;
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.view.kanbanLanePresets = [];
+		this.view.kanbanLaneOrder = [];
 		this.laneFieldRepair.reset();
 	}
 		if (options?.persist !== false) {
@@ -337,6 +340,7 @@ export class KanbanBoardController {
 		this.view.kanbanSortField = null;
 		this.view.kanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 		this.view.kanbanLanePresets = [];
+		this.view.kanbanLaneOrder = [];
 		this.refreshToolbar();
 		this.view.kanbanToolbar?.setActiveBoard(null);
 		this.maybeTriggerAutoCreate();
@@ -433,6 +437,19 @@ export class KanbanBoardController {
 			return;
 		}
 		void this.handleInvalidLaneField(board);
+	}
+
+	public async updateActiveLaneOrder(laneNames: string[]): Promise<void> {
+		const boardId = this.view.activeKanbanBoardId;
+		if (!boardId || !Array.isArray(laneNames)) {
+			return;
+		}
+		const applied = this.store.applyLaneOrder(boardId, laneNames);
+		if (!applied) {
+			return;
+		}
+		this.view.kanbanLaneOrder = [...applied];
+		await this.store.persist();
 	}
 
 	public async addLanePreset(): Promise<void> {

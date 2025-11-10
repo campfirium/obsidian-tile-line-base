@@ -102,6 +102,7 @@ export class TableView extends ItemView {
 	public kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 	public kanbanCardContentConfig: KanbanCardContentConfig | null = null;
 	public kanbanLanePresets: string[] = [];
+	public kanbanLaneOrder: string[] = [];
 	public kanbanPreferencesLoaded = false;
 	public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null;

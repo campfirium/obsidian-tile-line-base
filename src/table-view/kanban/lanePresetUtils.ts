@@ -1,4 +1,4 @@
-export function sanitizeLanePresets(value: unknown): string[] {
+const sanitizeLaneValues = (value: unknown): string[] => {
 	if (!Array.isArray(value)) {
 		return [];
 	}
@@ -17,4 +17,12 @@ export function sanitizeLanePresets(value: unknown): string[] {
 		result.push(label);
 	}
 	return result;
+};
+
+export function sanitizeLanePresets(value: unknown): string[] {
+	return sanitizeLaneValues(value);
+}
+
+export function sanitizeLaneOrdering(value: unknown): string[] {
+	return sanitizeLaneValues(value);
 }

@@ -5,6 +5,7 @@ interface BuildExpectedLaneNamesOptions {
 	laneField: string;
 	filterRule: FilterRule | null;
 	lanePresets: string[];
+	laneOrder: string[];
 }
 
 export function buildExpectedLaneNames(options: BuildExpectedLaneNamesOptions): string[] | null {
@@ -22,6 +23,12 @@ export function buildExpectedLaneNames(options: BuildExpectedLaneNamesOptions): 
 		seen.add(normalized);
 		result.push(label);
 	};
+
+	if (Array.isArray(options.laneOrder)) {
+		for (const orderedLane of options.laneOrder) {
+			push(orderedLane);
+		}
+	}
 
 	const statusLanes = resolveExpectedStatusLanes({
 		laneField: options.laneField,

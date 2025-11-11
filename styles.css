@@ -1,4 +1,4 @@
-/* TileLineBase ������?*/
+/* TileLineBase �����?*/
 
 :root {
 	--tlb-popup-border-color: color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.55)) 100%, transparent);
@@ -159,7 +159,7 @@
   /* ά�� flex: 1 ���֣�������С�߶ȱ�֤������ʱҲ��չʾ���� */
 }
 
-/* ���뷨����򣺱�����?AG Grid ������ʽһ�µ������� */
+/* ���뷨����򣺱����?AG Grid ������ʽһ�µ������� */
 .tlb-ime-capture {
   position: fixed;
   left: var(--tlb-ime-left, -9999px);
@@ -983,7 +983,7 @@
   background-color: var(--background-modifier-hover);
 }
 
-/* ���״̬�У���΢���������ֿɼ�?*/
+/* ���״̬�У���΢���������ֿɼ?*/
 .tlb-row-completed .ag-cell {
   color: color-mix(in srgb, var(--text-normal) 88%, transparent);
 }
@@ -1490,138 +1490,6 @@
 	color: color-mix(in srgb, var(--text-normal, #dadada) 85%, var(--text-muted, #9aa0ab) 15%);
 	border-color: var(--tlb-popup-border-color);
 	box-shadow: 0 18px 38px rgba(0, 0, 0, 0.6);
-}
-
-/* Editing view config block handling */
-.markdown-source-view.mod-cm6.tlb-has-config-block {
-	--tlb-config-heading-indent: 2ch;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line {
-	margin: 24px 0;
-	padding: 0;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line .cm-lineContent {
-	display: flex;
-	align-items: center;
-	gap: 0.75ch;
-	padding: 0;
-	width: 100%;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content {
-	display: flex;
-	align-items: center;
-	gap: 1ch;
-	width: 100%;
-	padding-left: var(--tlb-config-heading-indent);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content::before {
-	content: '';
-	display: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent {
-	color: transparent !important;
-	text-shadow: none !important;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-line:not(.tlb-config-heading-line) {
-	display: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent > :not(.tlb-config-heading-toggle) {
-	display: none !important;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content {
-	position: relative;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content::before {
-	content: attr(data-tlb-heading);
-	display: block;
-	font-family: var(--font-interface);
-	font-size: 0.7em;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.14em;
-	color: var(--text-faint);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle {
-	margin-left: auto;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 20px;
-	height: 20px;
-	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
-	border-radius: 4px;
-	background: transparent;
-	color: var(--text-faint);
-	cursor: pointer;
-	transition: border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle::before {
-	content: '-';
-	font-size: 0.85em;
-	line-height: 1;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle[data-state='collapsed']::before {
-	content: '+';
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover,
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
-	color: var(--text-normal);
-	cursor: grab;
-	user-select: none;
-	-webkit-user-select: none;
-	border-color: var(--text-muted);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
-}
-
-.callout[data-callout='tlb-config'] {
-	margin: 28px 0;
-	padding: 24px;
-	padding-left: calc(24px + 2ch);
-	text-align: left;
-	display: block;
-}
-
-.callout[data-callout='tlb-config'] .callout-icon {
-	display: none;
-}
-
-.callout[data-callout='tlb-config'] .callout-title {
-	display: block;
-	padding: 0;
-	margin: 0 0 12px;
-}
-
-.callout[data-callout='tlb-config'] .callout-title-inner {
-	font-family: var(--font-interface);
-	font-size: 0.8em;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.14em;
-	color: var(--text-faint);
-	padding-left: 0;
-}
-
-.callout[data-callout='tlb-config'] .callout-content {
-	padding: 0;
-	margin: 0;
-	padding-left: 2ch;
 }
 
 /* Collapsed field callout styling */

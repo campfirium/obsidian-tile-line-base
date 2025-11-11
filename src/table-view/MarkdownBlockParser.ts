@@ -33,8 +33,6 @@ export interface H2Block {
 }
 
 const FULL_WIDTH_COLON = '\uFF1A';
-const CONFIG_CALLOUT_PREFIX = /^>\s*\[!tlb-config]/i;
-const CONFIG_COMMENT_PREFIX = /^<!--\s*tlb\.config/i;
 const COLLAPSED_COMMENT_PREFIX = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}`, 'i');
 
 export class MarkdownBlockParser {
@@ -88,10 +86,6 @@ export class MarkdownBlockParser {
 				continue;
 			}
 
-			if (!inCodeBlock && CONFIG_CALLOUT_PREFIX.test(trimmed)) {
-				break;
-			}
-
 			if (inCodeBlock || trimmed.length === 0) {
 				continue;
 			}
@@ -139,10 +133,6 @@ export class MarkdownBlockParser {
 				}
 				continue;
 			}
-			if (CONFIG_COMMENT_PREFIX.test(trimmed)) {
-				continue;
-			}
-
 			const colonIndex = resolveColonIndex(trimmed);
 			if (colonIndex > 0) {
 				const commentIndex = trimmed.indexOf('<!--');

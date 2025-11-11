@@ -20,6 +20,7 @@ import { RowMigrationTargetModal } from './RowMigrationTargetModal';
 
 import { TableConfigManager } from './TableConfigManager';
 
+import { getPluginContext } from '../pluginContext';
 
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 
@@ -702,11 +703,41 @@ export class RowMigrationController {
 
 	private buildExistingFileCandidates(currentFile: TFile): TFile[] {
 
+		const plugin = getPluginContext();
+
+		const cacheManager = plugin?.cacheManager ?? null;
+
 		const vault = this.deps.app.vault;
 
 		const seen = new Set<string>();
 
 		const result: TFile[] = [];
+
+
+
+		if (cacheManager) {
+
+			for (const path of cacheManager.listFilePaths()) {
+
+				if (!path || path === currentFile.path) {
+
+					continue;
+
+				}
+
+				const file = vault.getAbstractFileByPath(path);
+
+				if (file instanceof TFile && !seen.has(file.path)) {
+
+					seen.add(file.path);
+
+					result.push(file);
+
+				}
+
+			}
+
+		}
 
 
 
@@ -804,7 +835,7 @@ export class RowMigrationController {
 
 		const payload = this.deps.persistence.getConfigPayload();
 
-		const configManager = new TableConfigManager();
+		const configManager = new TableConfigManager(this.deps.app);
 
 		await configManager.save(file, payload);
 

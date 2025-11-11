@@ -3,6 +3,7 @@ import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
+import { EditorConfigBlockController } from './editor/EditorConfigBlockController';
 import {
 	applyLoggingConfig,
 	getLogger,
@@ -14,6 +15,7 @@ import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
 import type { FileTagGroupState } from './types/tagGroup';
 import type { KanbanBoardState } from './types/kanban';
+import { FileCacheManager } from './cache/FileCacheManager';
 import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './services/SettingsService';
 import { BackupManager } from './services/BackupManager';
 import { WindowContextManager } from './plugin/WindowContextManager';
@@ -36,9 +38,11 @@ export default class TileLineBasePlugin extends Plugin {
 	private settingsService!: SettingsService;
 	private suppressAutoSwitchUntil = new Map<string, number>();
 	private viewCoordinator!: ViewSwitchCoordinator;
+	private editorConfigController: EditorConfigBlockController | null = null;
 	private backupManager: BackupManager | null = null;
 	private viewActionManager!: ViewActionManager;
 	private tableTitleRefresher!: TableViewTitleRefresher;
+	public cacheManager: FileCacheManager | null = null;
 	private unsubscribeLogging: (() => void) | null = null;
 	private rightSidebarState = { applied: false, wasCollapsed: false };
 	private onboardingManager: OnboardingManager | null = null;
@@ -51,6 +55,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
+		this.editorConfigController = new EditorConfigBlockController(this.app);
 		await this.loadSettings();
 
 		this.backupManager = new BackupManager({
@@ -77,6 +82,10 @@ export default class TileLineBasePlugin extends Plugin {
 			}
 		});
 		installLoggerConsoleBridge();
+
+		// Initialise cache manager
+		this.cacheManager = new FileCacheManager(this.settingsService);
+		await this.cacheManager.load();
 
 		logger.info('Plugin onload start');
 		logger.debug('Registering TableView view', { viewType: TABLE_VIEW_TYPE });
@@ -309,6 +318,10 @@ export default class TileLineBasePlugin extends Plugin {
 		);
 
 		this.addSettingTab(new TileLineBaseSettingTab(this.app, this));
+		if (this.editorConfigController) {
+			this.editorConfigController.start(this);
+		}
+
 		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
 
@@ -317,6 +330,11 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager.clearInjectedActions();
 		logger.info('Plugin unload: cleaning up resources');
 		this.restoreRightSidebarIfNeeded();
+
+		if (this.editorConfigController) {
+			this.editorConfigController.dispose();
+			this.editorConfigController = null;
+		}
 
 		this.onboardingManager = null;
 		this.commandTableCreationController = null;
@@ -332,10 +350,6 @@ export default class TileLineBasePlugin extends Plugin {
 			return;
 		}
 		await this.onboardingManager.openHelpDocument();
-	}
-
-	getSettingsService(): SettingsService {
-		return this.settingsService;
 	}
 
 	getColumnLayout(filePath: string): Record<string, number> | undefined {

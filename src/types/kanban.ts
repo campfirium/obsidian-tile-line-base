@@ -113,12 +113,3 @@ export const DEFAULT_KANBAN_BOARD_STATE: KanbanBoardState = {
 	boards: [],
 	activeBoardId: null
 };
-
-export interface KanbanViewPreferenceConfig {
-	laneField: string;
-	sortField?: string | null;
-	sortDirection?: KanbanSortDirection | null;
-	heightMode?: KanbanHeightMode | null;
-	fontScale?: number | null;
-	multiRow?: boolean | null;
-}

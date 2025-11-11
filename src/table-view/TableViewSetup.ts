@@ -35,7 +35,7 @@ export function initializeTableView(view: TableView): void {
 	logger.debug('leaf', view.leaf);
 
 	view.refreshCoordinator = new TableRefreshCoordinator(view);
-	view.configManager = new TableConfigManager();
+	view.configManager = new TableConfigManager(view.app);
 	view.persistenceService = new TablePersistenceService({
 		app: view.app,
 		dataStore: view.dataStore,

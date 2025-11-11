@@ -109,8 +109,14 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 			allowFilterEditing: true,
 			allowSortEditing: false,
 			minConditionCount: 0,
-			renderAdditionalControls: (container) => {
-				const laneSetting = new Setting(container);
+			layout: 'dual',
+			renderAdditionalControls: (_container, context) => {
+				const stylesCard = context.leftColumn.createDiv({
+					cls: 'tlb-kanban-board-modal__card tlb-kanban-board-modal__card--styles'
+				});
+				const settingsGrid = stylesCard.createDiv({ cls: 'tlb-kanban-board-modal__grid' });
+
+				const laneSetting = new Setting(settingsGrid);
 				laneSetting.setName(t('kanbanView.toolbar.laneFieldLabel'));
 				laneSetting.addDropdown((dropdown) => {
 					for (const option of laneOptions) {
@@ -133,7 +139,7 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					});
 				});
 
-				const widthSetting = new Setting(container);
+				const widthSetting = new Setting(settingsGrid);
 				widthSetting.setName(t('kanbanView.toolbar.laneWidthLabel'));
 				widthSetting.setDesc(
 					t('kanbanView.toolbar.laneWidthDescription', {
@@ -182,7 +188,7 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					});
 				});
 
-				const fontScaleSetting = new Setting(container);
+				const fontScaleSetting = new Setting(settingsGrid);
 				fontScaleSetting.setName(t('kanbanView.toolbar.fontScaleLabel'));
 				fontScaleSetting.setDesc(
 					t('kanbanView.toolbar.fontScaleDescription', {
@@ -221,7 +227,7 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					});
 				});
 
-				const countSetting = new Setting(container);
+				const countSetting = new Setting(settingsGrid);
 				countSetting.setName(t('kanbanView.toolbar.initialVisibleCountLabel'));
 				countSetting.setDesc(t('kanbanView.toolbar.initialVisibleCountDesc'));
 				countSetting.addText((text) => {
@@ -242,32 +248,55 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					});
 				});
 
-				const sortSetting = new Setting(container);
-				sortSetting.setName(t('kanbanView.toolbar.sortSettingLabel'));
-				sortSetting.setDesc(t('kanbanView.toolbar.sortSettingDesc'));
-				sortSetting.addDropdown((dropdown) => {
-					for (const option of sortOptions) {
-						const label =
-							option.length > 0 ? option : t('kanbanView.toolbar.sortFieldNone');
-						dropdown.addOption(option, label);
-					}
-					dropdown.setValue(selectedSortField);
-					dropdown.onChange((value) => {
-						selectedSortField = value;
-					});
-					dropdown.selectEl.setAttribute('aria-label', t('kanbanView.toolbar.sortFieldLabel'));
+				const laneOrderCard = context.leftColumn.createDiv({
+					cls: 'tlb-kanban-board-modal__card tlb-kanban-board-modal__lane-order'
 				});
-				sortSetting.addDropdown((dropdown) => {
-					dropdown.addOption('asc', t('kanbanView.toolbar.sortDirectionAsc'));
-					dropdown.addOption('desc', t('kanbanView.toolbar.sortDirectionDesc'));
-					dropdown.setValue(selectedSortDirection);
-					dropdown.onChange((value) => {
-						selectedSortDirection = value === 'desc' ? 'desc' : 'asc';
-					});
-					dropdown.selectEl.setAttribute('aria-label', t('kanbanView.toolbar.sortDirectionLabel'));
+				const laneOrderHeader = laneOrderCard.createDiv({ cls: 'tlb-kanban-board-modal__lane-order-header' });
+				laneOrderHeader.createSpan({
+					cls: 'tlb-kanban-board-modal__card-title',
+					text: t('kanbanView.toolbar.sortSettingLabel')
+				});
+				laneOrderHeader.createSpan({
+					cls: 'tlb-kanban-board-modal__lane-order-desc',
+					text: t('kanbanView.toolbar.sortSettingDesc')
+				});
+				const laneOrderControls = laneOrderCard.createDiv({ cls: 'tlb-kanban-board-modal__lane-order-controls' });
+				const sortFieldSelect = laneOrderControls.createEl('select', {
+					cls: 'tlb-kanban-board-modal__select',
+					attr: { 'aria-label': t('kanbanView.toolbar.sortFieldLabel') }
+				});
+				for (const option of sortOptions) {
+					const label = option.length > 0 ? option : t('kanbanView.toolbar.sortFieldNone');
+					const optionEl = sortFieldSelect.createEl('option', { text: label, value: option });
+					if (option === selectedSortField) {
+						optionEl.selected = true;
+					}
+				}
+				sortFieldSelect.addEventListener('change', () => {
+					selectedSortField = sortFieldSelect.value;
+				});
+				const directionSelect = laneOrderControls.createEl('select', {
+					cls: 'tlb-kanban-board-modal__select',
+					attr: { 'aria-label': t('kanbanView.toolbar.sortDirectionLabel') }
+				});
+				directionSelect.createEl('option', {
+					text: t('kanbanView.toolbar.sortDirectionAsc'),
+					value: 'asc'
+				});
+				directionSelect.createEl('option', {
+					text: t('kanbanView.toolbar.sortDirectionDesc'),
+					value: 'desc'
+				});
+				directionSelect.value = selectedSortDirection;
+				directionSelect.addEventListener('change', () => {
+					selectedSortDirection = directionSelect.value === 'desc' ? 'desc' : 'asc';
 				});
 
-				const contentContainer = container.createDiv({ cls: 'tlb-kanban-board-modal__content' });
+				const contentColumn = context.rightColumn.createDiv({
+					cls: 'tlb-kanban-board-modal__column tlb-kanban-board-modal__column--content'
+				});
+				const contentPanel = contentColumn.createDiv({ cls: 'tlb-kanban-board-modal__content-panel' });
+				const contentContainer = contentPanel.createDiv({ cls: 'tlb-kanban-board-modal__content' });
 				contentHandle = renderContentSettingsEditor({
 					container: contentContainer,
 					getFields: getContentFields,

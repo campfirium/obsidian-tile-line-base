@@ -13,6 +13,12 @@ export interface FilterViewEditorResult {
 	sortRules: SortRule[];
 }
 
+export interface FilterViewAdditionalControlsContext {
+	leftColumn: HTMLElement;
+	rightColumn: HTMLElement;
+	layout: 'single' | 'dual';
+}
+
 export interface FilterViewEditorModalOptions {
 	title: string;
 	columns: FilterColumnOption[];
@@ -23,13 +29,15 @@ export interface FilterViewEditorModalOptions {
 	allowFilterEditing?: boolean;
 	allowSortEditing?: boolean;
 	minConditionCount?: number;
-	renderAdditionalControls?: (container: HTMLElement) => void;
+	layout?: 'single' | 'dual';
+	renderAdditionalControls?: (container: HTMLElement, context: FilterViewAdditionalControlsContext) => void;
 	onSubmit: (result: FilterViewEditorResult) => void;
 	onCancel: () => void;
 }
 
 export class FilterViewEditorModal extends Modal {
 	private readonly options: FilterViewEditorModalOptions;
+	private readonly layout: 'single' | 'dual';
 	private nameInputEl!: HTMLInputElement;
 	private iconInputEl!: HTMLInputElement;
 	private iconMatchesEl: HTMLElement | null = null;
@@ -41,7 +49,9 @@ export class FilterViewEditorModal extends Modal {
 	private readonly allowFilterEditing: boolean;
 	private readonly allowSortEditing: boolean;
 	private readonly minimumConditionCount: number;
-	private readonly additionalControlsRenderer: ((container: HTMLElement) => void) | null;
+	private readonly additionalControlsRenderer:
+		| ((container: HTMLElement, context: FilterViewAdditionalControlsContext) => void)
+		| null;
 	private conditionsContainer: HTMLElement | null = null;
 	private conditions: FilterCondition[] = [];
 	private combineMode: 'AND' | 'OR' = 'AND';
@@ -51,6 +61,7 @@ export class FilterViewEditorModal extends Modal {
 
 	constructor(app: App, options: FilterViewEditorModalOptions) {
 		super(app);
+		this.modalEl.addClass('tlb-filter-editor-modal-container');
 		this.options = options;
 		this.allowFilterEditing = options.allowFilterEditing !== false;
 		this.allowSortEditing = options.allowSortEditing !== false;
@@ -62,6 +73,7 @@ export class FilterViewEditorModal extends Modal {
 		);
 		this.additionalControlsRenderer =
 			typeof options.renderAdditionalControls === 'function' ? options.renderAdditionalControls : null;
+		this.layout = options.layout === 'dual' ? 'dual' : 'single';
 		this.iconValue = this.sanitizeIconId(options.initialIcon);
 		this.iconSelectionId = this.iconValue ? this.resolveCanonicalIconId(this.iconValue) : null;
 		if (this.iconSelectionId) {
@@ -83,9 +95,22 @@ export class FilterViewEditorModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass('tlb-filter-editor-modal');
+		const isDualLayout = this.layout === 'dual';
+		let leftColumn = contentEl;
+		let rightColumn = contentEl;
+		if (isDualLayout) {
+			contentEl.addClass('tlb-filter-editor-modal--dual');
+			const columnsWrapper = contentEl.createDiv({ cls: 'tlb-filter-editor-modal__columns' });
+			leftColumn = columnsWrapper.createDiv({
+				cls: 'tlb-filter-editor-modal__column tlb-filter-editor-modal__column--left'
+			});
+			rightColumn = columnsWrapper.createDiv({
+				cls: 'tlb-filter-editor-modal__column tlb-filter-editor-modal__column--right'
+			});
+		}
 		this.titleEl.setText(this.options.title);
 
-		const nameSetting = new Setting(contentEl);
+		const nameSetting = new Setting(isDualLayout ? leftColumn : contentEl);
 		nameSetting.setName(t('filterViewModals.viewNameLabel'));
 		nameSetting.addText((text) => {
 			text.setPlaceholder(t('filterViewModals.viewNamePlaceholder'));
@@ -95,7 +120,7 @@ export class FilterViewEditorModal extends Modal {
 			this.nameInputEl = text.inputEl;
 		});
 
-		const iconSetting = new Setting(contentEl);
+		const iconSetting = new Setting(isDualLayout ? leftColumn : contentEl);
 		iconSetting.setName('');
 		iconSetting.setDesc('');
 		if (iconSetting.descEl) {
@@ -130,15 +155,38 @@ export class FilterViewEditorModal extends Modal {
 		this.renderIconMatches(this.iconInputEl.value);
 
 		if (this.additionalControlsRenderer) {
-			const extraContainer = contentEl.createDiv({ cls: 'tlb-filter-editor-extra' });
-			this.additionalControlsRenderer(extraContainer);
+			const extraContainer = (isDualLayout ? leftColumn : contentEl).createDiv({
+				cls: 'tlb-filter-editor-extra'
+			});
+			this.additionalControlsRenderer(extraContainer, {
+				leftColumn,
+				rightColumn,
+				layout: this.layout
+			});
 			if (!extraContainer.hasChildNodes()) {
 				extraContainer.remove();
 			}
 		}
 
+		let filterPanel: HTMLElement | null = null;
+		let filterBody: HTMLElement = isDualLayout ? rightColumn : contentEl;
+		let filterFooter: HTMLElement | null = null;
+		if (isDualLayout) {
+			filterPanel = rightColumn.createDiv({ cls: 'tlb-filter-editor-panel' });
+			const filterHeader = filterPanel.createDiv({ cls: 'tlb-filter-editor-panel__header' });
+			filterHeader.createSpan({
+				cls: 'tlb-filter-editor-panel__title',
+				text: t('filterViewModals.conditionsHeading')
+			});
+			filterBody = filterPanel.createDiv({ cls: 'tlb-filter-editor-panel__body' });
+			filterFooter = filterPanel.createDiv({ cls: 'tlb-filter-editor-panel__footer' });
+		}
+
 		if (this.allowFilterEditing) {
-			const modeSetting = new Setting(contentEl);
+			if (!isDualLayout) {
+				contentEl.createEl('h3', { text: t('filterViewModals.conditionsHeading') });
+			}
+			const modeSetting = new Setting(filterBody);
 			modeSetting.setName(t('filterViewModals.combineModeLabel'));
 			modeSetting.addDropdown((dropdown) => {
 				dropdown.addOption('AND', t('filterViewModals.combineModeOptionAll'));
@@ -149,21 +197,24 @@ export class FilterViewEditorModal extends Modal {
 				});
 			});
 
-			contentEl.createEl('h3', { text: t('filterViewModals.conditionsHeading') });
-			this.conditionsContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions' });
+			this.conditionsContainer = filterBody.createDiv({ cls: 'tlb-filter-conditions' });
 			this.renderConditions();
 
-			const addConditionButton = contentEl.createEl('button', { text: t('filterViewModals.addConditionButton') });
-			addConditionButton.addClass('mod-cta');
+			const addConditionHost = filterFooter ?? filterBody;
+			const addConditionButton = addConditionHost.createEl('button', {
+				text: t('filterViewModals.addConditionButton')
+			});
+			addConditionButton.addClass('tlb-filter-editor-add-condition');
 			addConditionButton.addEventListener('click', () => this.addCondition());
 		}
 
 		if (this.allowSortEditing) {
-			contentEl.createEl('h3', { text: t('filterViewModals.sortHeading') });
-			this.sortContainer = contentEl.createDiv({ cls: 'tlb-filter-conditions tlb-filter-sort' });
+			const sortHeadingParent = filterPanel ?? contentEl;
+			sortHeadingParent.createEl('h3', { text: t('filterViewModals.sortHeading') });
+			this.sortContainer = sortHeadingParent.createDiv({ cls: 'tlb-filter-conditions tlb-filter-sort' });
 			this.renderSortRules();
 
-			const addSortButton = contentEl.createEl('button', { text: t('filterViewModals.addSortButton') });
+			const addSortButton = sortHeadingParent.createEl('button', { text: t('filterViewModals.addSortButton') });
 			addSortButton.addEventListener('click', () => this.addSortRule());
 		}
 
@@ -262,7 +313,12 @@ export class FilterViewEditorModal extends Modal {
 				}
 			}
 
-			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning' });
+			const removeButton = row.createEl('button', {
+				type: 'button',
+				cls: 'tlb-filter-view-modal__remove-button',
+				attr: { 'aria-label': t('filterViewModals.removeButton') }
+			});
+			setIcon(removeButton, 'trash-2');
 			removeButton.addEventListener('click', () => {
 				this.conditions.splice(index, 1);
 				this.renderConditions();
@@ -443,7 +499,12 @@ export class FilterViewEditorModal extends Modal {
 				rule.direction = directionSelect.value === 'desc' ? 'desc' : 'asc';
 			});
 
-			const removeButton = row.createEl('button', { text: t('filterViewModals.removeButton'), cls: 'mod-warning tlb-filter-view-modal__remove' });
+			const removeButton = row.createEl('button', {
+				type: 'button',
+				cls: 'tlb-filter-view-modal__remove-button',
+				attr: { 'aria-label': t('filterViewModals.removeButton') }
+			});
+			setIcon(removeButton, 'trash-2');
 			removeButton.addEventListener('click', () => {
 				this.sortRules.splice(index, 1);
 				this.renderSortRules();
@@ -576,35 +637,40 @@ export class FilterViewEditorModal extends Modal {
 			});
 		});
 
-		if (pageCount > 1) {
-			const nav = row.createDiv({ cls: 'tlb-filter-view-icon-matches-nav' });
-			const prev = nav.createEl('button', {
-				type: 'button',
-				cls: 'tlb-filter-view-icon-nav'
-			});
-			prev.setAttribute('aria-label', t('filterViewModals.iconNavPrev'));
-			setIcon(prev, 'chevron-left');
-			prev.disabled = this.iconPage === 0;
-			prev.addEventListener('click', () => {
-				if (this.iconPage > 0) {
-					this.iconPage -= 1;
-					this.renderIconMatches(this.iconInputEl?.value ?? '');
-				}
-			});
-			const next = nav.createEl('button', {
-				type: 'button',
-				cls: 'tlb-filter-view-icon-nav'
-			});
-			next.setAttribute('aria-label', t('filterViewModals.iconNavNext'));
-			setIcon(next, 'chevron-right');
-			next.disabled = this.iconPage >= pageCount - 1;
-			next.addEventListener('click', () => {
-				if (this.iconPage < pageCount - 1) {
-					this.iconPage += 1;
-					this.renderIconMatches(this.iconInputEl?.value ?? '');
-				}
-			});
+		const placeholdersNeeded = ICON_MATCHES_PER_PAGE - visible.length;
+		for (let index = 0; index < placeholdersNeeded; index += 1) {
+			grid.createSpan({ cls: 'tlb-filter-view-icon-placeholder' });
 		}
+
+		grid.createSpan({ cls: 'tlb-filter-view-icon-grid-spacer' });
+
+		const prev = grid.createEl('button', {
+			type: 'button',
+			cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--prev'
+		});
+		prev.setAttribute('aria-label', t('filterViewModals.iconNavPrev'));
+		setIcon(prev, 'chevron-left');
+		prev.disabled = pageCount <= 1 || this.iconPage === 0;
+		prev.addEventListener('click', () => {
+			if (this.iconPage > 0) {
+				this.iconPage -= 1;
+				this.renderIconMatches(this.iconInputEl?.value ?? '');
+			}
+		});
+
+		const next = grid.createEl('button', {
+			type: 'button',
+			cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--right'
+		});
+		next.setAttribute('aria-label', t('filterViewModals.iconNavNext'));
+		setIcon(next, 'chevron-right');
+		next.disabled = pageCount <= 1 || this.iconPage >= pageCount - 1;
+		next.addEventListener('click', () => {
+			if (this.iconPage < pageCount - 1) {
+				this.iconPage += 1;
+				this.renderIconMatches(this.iconInputEl?.value ?? '');
+			}
+		});
 
 		return true;
 	}
@@ -795,7 +861,7 @@ function getFuzzyMatchScore(value: string, query: string): number | null {
 	return score;
 }
 
-const ICON_MATCHES_PER_PAGE = 10;
+const ICON_MATCHES_PER_PAGE = 27;
 
 export class FilterViewNameModal extends Modal {
 	private readonly options: FilterViewNameModalOptions;
@@ -867,5 +933,4 @@ export function openFilterViewNameModal(app: App, options: { title: string; plac
 		modal.open();
 	});
 }
-
 

@@ -341,6 +341,11 @@
   justify-self: center;
 }
 
+.tlb-filter-view-icon-nav svg {
+  width: 18px;
+  height: 18px;
+}
+
 .tlb-filter-view-icon-nav--prev {
   grid-column: 9;
 }
@@ -2313,18 +2318,6 @@
 .tlb-filter-view-modal__remove-button svg {
   width: 14px;
   height: 14px;
-}
-
-.tlb-filter-view-icon-grid-spacer {
-  visibility: hidden;
-}
-
-.tlb-filter-view-icon-nav {
-  justify-self: end;
-}
-
-.tlb-filter-view-icon-nav--right {
-  margin-left: auto;
 }
 
 .tlb-kanban-content-settings__header {

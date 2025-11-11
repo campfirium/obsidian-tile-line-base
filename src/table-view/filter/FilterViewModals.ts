@@ -642,7 +642,10 @@ export class FilterViewEditorModal extends Modal {
 			grid.createSpan({ cls: 'tlb-filter-view-icon-placeholder' });
 		}
 
-		grid.createSpan({ cls: 'tlb-filter-view-icon-grid-spacer' });
+		const spacerSlots = Math.max(0, ICON_GRID_TOTAL_SLOTS - ICON_MATCHES_PER_PAGE - 2);
+		for (let index = 0; index < spacerSlots; index += 1) {
+			grid.createSpan({ cls: 'tlb-filter-view-icon-grid-spacer' });
+		}
 
 		const prev = grid.createEl('button', {
 			type: 'button',
@@ -862,6 +865,7 @@ function getFuzzyMatchScore(value: string, query: string): number | null {
 }
 
 const ICON_MATCHES_PER_PAGE = 27;
+const ICON_GRID_TOTAL_SLOTS = 30;
 
 export class FilterViewNameModal extends Modal {
 	private readonly options: FilterViewNameModalOptions;
@@ -933,4 +937,3 @@ export function openFilterViewNameModal(app: App, options: { title: string; plac
 		modal.open();
 	});
 }
-

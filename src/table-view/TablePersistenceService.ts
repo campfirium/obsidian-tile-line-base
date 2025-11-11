@@ -148,20 +148,13 @@ export class TablePersistenceService {
 		};
 	}
 
-	async saveConfig(options?: { beforeWrite?: (file: TFile) => void }): Promise<void> {
+	async saveConfig(_options?: { beforeWrite?: (file: TFile) => void }): Promise<void> {
 		const file = this.deps.getFile();
 		if (!file) {
 			return;
 		}
 
-		const beforeWrite =
-			typeof options?.beforeWrite === 'function'
-				? options.beforeWrite
-				: (target: TFile) => this.deps.markSelfMutation?.(target);
-
-		await this.deps.configManager.save(file, this.getConfigPayload(), {
-			beforeWrite
-		});
+		await this.deps.configManager.save(file, this.getConfigPayload());
 	}
 
 	dispose(): void {

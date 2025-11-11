@@ -1,4 +1,4 @@
-/* TileLineBase ������?*/
+/* TileLineBase �����?*/
 
 :root {
 	--tlb-popup-border-color: color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.55)) 100%, transparent);
@@ -159,7 +159,7 @@
   /* ά�� flex: 1 ���֣�������С�߶ȱ�֤������ʱҲ��չʾ���� */
 }
 
-/* ���뷨����򣺱�����?AG Grid ������ʽһ�µ������� */
+/* ���뷨����򣺱����?AG Grid ������ʽһ�µ������� */
 .tlb-ime-capture {
   position: fixed;
   left: var(--tlb-ime-left, -9999px);
@@ -265,18 +265,19 @@
 
 .tlb-filter-view-icon-matches-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   width: 100%;
 }
 
 .tlb-filter-view-icon-matches-grid {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(32px, 1fr));
-  grid-auto-rows: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 8px;
   flex: 1 1 auto;
-  padding-right: 4px;
+  overflow: hidden;
 }
 
 .tlb-filter-view-icon-match {
@@ -315,44 +316,23 @@
   height: 18px;
 }
 
-
-.tlb-filter-view-icon-placeholder {
-  visibility: hidden;
-  width: 32px;
-  height: 32px;
-}
-
-.tlb-filter-view-icon-grid-spacer {
-  visibility: hidden;
-  width: 32px;
-  height: 32px;
+.tlb-filter-view-icon-matches-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .tlb-filter-view-icon-nav {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-s);
   border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
   background: color-mix(in srgb, var(--background-primary) 92%, transparent);
   transition: border-color 120ms ease, background 120ms ease;
-  justify-self: center;
-}
-
-.tlb-filter-view-icon-nav svg {
-  width: 18px;
-  height: 18px;
-}
-
-.tlb-filter-view-icon-nav--prev {
-  grid-column: 9;
-}
-
-.tlb-filter-view-icon-nav--right {
-  grid-column: 10;
-  justify-self: end;
 }
 
 .tlb-filter-view-icon-nav:disabled {
@@ -790,72 +770,8 @@
 }
 
 /* ���˱༭��ģ̬�� */
-.tlb-filter-editor-modal-container {
-  width: min(92vw, 960px);
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-.tlb-filter-editor-modal--dual .tlb-filter-editor-modal__columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(320px, 1fr));
-  gap: var(--size-4-4);
-}
-
-.tlb-filter-editor-modal__column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-3);
-  min-width: 0;
-}
-
-.tlb-filter-editor-panel {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-m);
-  background-color: var(--background-secondary);
-  padding: var(--size-4-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-3);
-}
-
-.tlb-filter-editor-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--size-2-2);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tlb-filter-editor-panel__title {
-  font-weight: 600;
-  font-size: var(--font-ui-small);
-}
-
-.tlb-filter-editor-panel__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
-}
-
-.tlb-filter-editor-panel__footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.tlb-filter-editor-panel__action {
-  background-color: var(--color-green, #2ecc71);
-  border: 1px solid color-mix(in srgb, var(--color-green, #2ecc71) 85%, transparent);
-  color: var(--background-primary);
-  font-weight: 600;
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius-s);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background-primary) 30%, transparent);
-}
-
-.tlb-filter-editor-panel__action:hover,
-.tlb-filter-editor-panel__action:focus-visible {
-  filter: brightness(1.05);
+.tlb-filter-editor-modal .modal-content {
+  max-width: 600px;
 }
 
 .tlb-filter-conditions {
@@ -1067,7 +983,7 @@
   background-color: var(--background-modifier-hover);
 }
 
-/* ���״̬�У���΢���������ֿɼ�?*/
+/* ���״̬�У���΢���������ֿɼ?*/
 .tlb-row-completed .ag-cell {
   color: color-mix(in srgb, var(--text-normal) 88%, transparent);
 }
@@ -1576,138 +1492,6 @@
 	box-shadow: 0 18px 38px rgba(0, 0, 0, 0.6);
 }
 
-/* Editing view config block handling */
-.markdown-source-view.mod-cm6.tlb-has-config-block {
-	--tlb-config-heading-indent: 2ch;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line {
-	margin: 24px 0;
-	padding: 0;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-line .cm-lineContent {
-	display: flex;
-	align-items: center;
-	gap: 0.75ch;
-	padding: 0;
-	width: 100%;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content {
-	display: flex;
-	align-items: center;
-	gap: 1ch;
-	width: 100%;
-	padding-left: var(--tlb-config-heading-indent);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-content::before {
-	content: '';
-	display: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent {
-	color: transparent !important;
-	text-shadow: none !important;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-line:not(.tlb-config-heading-line) {
-	display: none;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-line .cm-lineContent > :not(.tlb-config-heading-toggle) {
-	display: none !important;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content {
-	position: relative;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block[data-tlb-config-state='collapsed'] .tlb-config-heading-content::before {
-	content: attr(data-tlb-heading);
-	display: block;
-	font-family: var(--font-interface);
-	font-size: 0.7em;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.14em;
-	color: var(--text-faint);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle {
-	margin-left: auto;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 20px;
-	height: 20px;
-	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
-	border-radius: 4px;
-	background: transparent;
-	color: var(--text-faint);
-	cursor: pointer;
-	transition: border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle::before {
-	content: '-';
-	font-size: 0.85em;
-	line-height: 1;
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle[data-state='collapsed']::before {
-	content: '+';
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:hover,
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
-	color: var(--text-normal);
-	cursor: grab;
-	user-select: none;
-	-webkit-user-select: none;
-	border-color: var(--text-muted);
-}
-
-.markdown-source-view.mod-cm6.tlb-has-config-block .tlb-config-heading-toggle:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
-}
-
-.callout[data-callout='tlb-config'] {
-	margin: 28px 0;
-	padding: 24px;
-	padding-left: calc(24px + 2ch);
-	text-align: left;
-	display: block;
-}
-
-.callout[data-callout='tlb-config'] .callout-icon {
-	display: none;
-}
-
-.callout[data-callout='tlb-config'] .callout-title {
-	display: block;
-	padding: 0;
-	margin: 0 0 12px;
-}
-
-.callout[data-callout='tlb-config'] .callout-title-inner {
-	font-family: var(--font-interface);
-	font-size: 0.8em;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.14em;
-	color: var(--text-faint);
-	padding-left: 0;
-}
-
-.callout[data-callout='tlb-config'] .callout-content {
-	padding: 0;
-	margin: 0;
-	padding-left: 2ch;
-}
-
 /* Collapsed field callout styling */
 .callout[data-callout='tlb-collapsed'] {
 	margin: 12px 0;
@@ -2096,68 +1880,6 @@
 	cursor: help;
 }
 
-.tlb-kanban-board-modal__column {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-4-3);
-	min-width: 0;
-}
-
-.tlb-kanban-board-modal__card {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background-color: var(--background-secondary);
-	padding: var(--size-4-4);
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-4-2);
-}
-
-.tlb-kanban-board-modal__card-title {
-	font-weight: 600;
-}
-
-.tlb-kanban-board-modal__card-desc {
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-}
-
-.tlb-kanban-board-modal__lane-order-header {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-2-1);
-	padding-bottom: var(--size-2-2);
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tlb-kanban-board-modal__lane-order-controls {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-	gap: var(--size-4-2);
-}
-
-.tlb-kanban-board-modal__select {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	background-color: var(--background-primary);
-	color: var(--text-normal);
-	padding: 0.4rem 0.6rem;
-	width: 100%;
-}
-
-.tlb-kanban-board-modal__grid {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-4-2);
-}
-
-.tlb-kanban-board-modal__content-panel {
-	padding: var(--size-4-4);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background-color: var(--background-secondary);
-}
-
 .tlb-kanban-board-modal__content {
 	margin-top: var(--size-4-2);
 }
@@ -2236,6 +1958,33 @@
 	width: 100%;
 }
 
+.tlb-kanban-content-settings__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+}
+
+.tlb-kanban-content-settings__title {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.tlb-kanban-content-settings__insert-button {
+	padding: 0.35rem 0.75rem;
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	background-color: var(--background-modifier-form-field);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	transition: background-color 120ms ease;
+}
+
+.tlb-kanban-content-settings__insert-button:not(:disabled):hover {
+	background-color: var(--background-modifier-form-field-highlighted);
+	color: var(--text-normal);
+}
+
 .tlb-kanban-content-settings__group {
 	display: flex;
 	flex-direction: column;
@@ -2283,94 +2032,3 @@
 }
 
 
-
-
-.tlb-filter-editor-add-condition {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  background-color: var(--background-modifier-form-field);
-  color: var(--text-normal);
-  padding: 0.4rem 0.9rem;
-}
-
-.tlb-filter-editor-add-condition:hover,
-.tlb-filter-editor-add-condition:focus-visible {
-  background-color: var(--background-modifier-form-field-highlighted);
-}
-
-.tlb-filter-view-modal__remove-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-s);
-  border: 1px solid var(--background-modifier-border);
-  background-color: var(--background-modifier-form-field);
-  color: var(--text-normal);
-}
-
-.tlb-filter-view-modal__remove-button:hover,
-.tlb-filter-view-modal__remove-button:focus-visible {
-  background-color: var(--background-modifier-form-field-highlighted);
-}
-
-.tlb-filter-view-modal__remove-button svg {
-  width: 14px;
-  height: 14px;
-}
-
-.tlb-kanban-content-settings__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--size-4-2);
-  padding-bottom: var(--size-2-2);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tlb-kanban-content-settings__title {
-  font-weight: 600;
-  color: var(--text-normal);
-}
-
-.tlb-kanban-content-settings__insert-button {
-  margin-left: auto;
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--radius-s);
-  border: 1px solid var(--background-modifier-border);
-  background-color: var(--background-modifier-form-field);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  transition: background-color 120ms ease;
-}
-
-.tlb-kanban-content-settings__insert-button:not(:disabled):hover {
-  background-color: var(--background-modifier-form-field-highlighted);
-  color: var(--text-normal);
-}
-
-.tlb-kanban-board-modal__lane-order-desc {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  white-space: normal;
-  line-height: 1.4;
-  display: block;
-  margin-bottom: var(--size-2-2);
-}
-
-.tlb-kanban-board-modal__lane-order-controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--size-4-2);
-  margin-top: var(--size-3-2);
-}
-
-.tlb-kanban-board-modal__select {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  background-color: var(--background-primary);
-  color: var(--text-normal);
-  padding: 0.4rem 0.6rem;
-  width: 100%;
-}

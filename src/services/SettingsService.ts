@@ -6,21 +6,20 @@ import type {
 	SortRule,
 	DefaultFilterViewPreferences
 } from '../types/filterView';
-import type { FileTagGroupState, TagGroupDefinition } from '../types/tagGroup';
-import {
-	type KanbanBoardState,
-	DEFAULT_KANBAN_FONT_SCALE,
-	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
-	DEFAULT_KANBAN_SORT_DIRECTION,
-	sanitizeKanbanFontScale,
-	sanitizeKanbanInitialVisibleCount
-} from '../types/kanban';
-import type { ConfigCacheEntry } from '../types/config';
+import type { FileTagGroupState } from '../types/tagGroup';
+import { type KanbanBoardState, type KanbanViewPreferenceConfig } from '../types/kanban';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
-import { sanitizeLanePresets, sanitizeLaneOrdering } from '../table-view/kanban/lanePresetUtils';
-import { cloneTagGroupMetadata } from './tagGroupUtils';
-import { cloneKanbanCardContentConfig } from './kanbanBoardSerialization';
+import {
+	applyColumnLayout,
+	getColumnConfigs,
+	getCopyTemplate,
+	getKanbanPreferences,
+	saveColumnConfigs,
+	saveCopyTemplate,
+	saveKanbanPreferences
+} from './fileConfigStore';
+import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelpers';
 
 const logger = getLogger('service:settings');
 
@@ -40,7 +39,9 @@ export interface TileLineBaseSettings {
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
 	kanbanBoards: Record<string, KanbanBoardState>;
-	configCache: Record<string, ConfigCacheEntry>;
+	columnConfigs: Record<string, string[]>;
+	copyTemplates: Record<string, string>;
+	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
 	backups: BackupSettings;
@@ -53,7 +54,9 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	filterViews: {},
 	tagGroups: {},
 	kanbanBoards: {},
-	configCache: {},
+	columnConfigs: {},
+	copyTemplates: {},
+	kanbanPreferences: {},
 	hideRightSidebar: false,
 	logging: {
 		globalLevel: 'warn',
@@ -85,7 +88,9 @@ export class SettingsService {
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.tagGroups = { ...DEFAULT_SETTINGS.tagGroups, ...(merged.tagGroups ?? {}) };
 		merged.kanbanBoards = { ...DEFAULT_SETTINGS.kanbanBoards, ...(merged.kanbanBoards ?? {}) };
-		merged.configCache = { ...DEFAULT_SETTINGS.configCache, ...(merged.configCache ?? {}) };
+		merged.columnConfigs = { ...DEFAULT_SETTINGS.columnConfigs, ...(merged.columnConfigs ?? {}) };
+		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
+		merged.kanbanPreferences = { ...DEFAULT_SETTINGS.kanbanPreferences, ...(merged.kanbanPreferences ?? {}) };
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -133,6 +138,11 @@ export class SettingsService {
 		return pref === 'table' || pref === 'kanban';
 	}
 
+	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | null {
+		const pref = this.settings.fileViewPrefs[filePath];
+		return typeof pref === 'string' ? pref : null;
+	}
+
 	async setFileViewPreference(filePath: string, view: 'markdown' | 'table' | 'kanban'): Promise<boolean> {
 		const current = this.settings.fileViewPrefs[filePath];
 		if (current === view) {
@@ -146,6 +156,13 @@ export class SettingsService {
 	getColumnLayout(filePath: string): Record<string, number> | undefined {
 		const layout = this.settings.columnLayouts[filePath];
 		return layout ? { ...layout } : undefined;
+	}
+
+	async setColumnLayout(filePath: string, layout: Record<string, number> | null | undefined): Promise<void> {
+		const { changed } = applyColumnLayout(this.settings, filePath, layout);
+		if (changed) {
+			await this.persist();
+		}
 	}
 
 	updateColumnWidthPreference(filePath: string, field: string, width: number): boolean {
@@ -190,34 +207,52 @@ export class SettingsService {
 
 	getTagGroupsForFile(filePath: string): FileTagGroupState {
 		const stored = this.settings.tagGroups[filePath];
-		return this.cloneTagGroupState(stored ?? null);
+		return cloneTagGroupState(stored ?? null);
 	}
 
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
-		const sanitized = this.cloneTagGroupState(state);
+		const sanitized = cloneTagGroupState(state);
 		this.settings.tagGroups[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
 	}
 
+	getColumnConfigsForFile(filePath: string): string[] | null {
+		return getColumnConfigs(this.settings, filePath);
+	}
+
+	async saveColumnConfigsForFile(filePath: string, configs: string[] | null): Promise<string[] | null> {
+		return saveColumnConfigs(this.settings, filePath, configs, () => this.persist());
+	}
+
+	getCopyTemplateForFile(filePath: string): string | null {
+		return getCopyTemplate(this.settings, filePath);
+	}
+
+	async saveCopyTemplateForFile(filePath: string, template: string | null): Promise<string | null> {
+		return saveCopyTemplate(this.settings, filePath, template, () => this.persist());
+	}
+	getKanbanPreferencesForFile(filePath: string): KanbanViewPreferenceConfig | null {
+		return getKanbanPreferences(this.settings, filePath);
+	}
+
+	async saveKanbanPreferencesForFile(
+		filePath: string,
+		preferences: KanbanViewPreferenceConfig | null | undefined
+	): Promise<KanbanViewPreferenceConfig | null> {
+		return saveKanbanPreferences(this.settings, filePath, preferences, () => this.persist());
+	}
+
 	getKanbanBoardsForFile(filePath: string): KanbanBoardState {
 		const stored = this.settings.kanbanBoards[filePath];
-		return this.cloneKanbanBoardState(stored ?? null);
+		return cloneKanbanBoardState(stored ?? null, (value) => this.deepClone(value));
 	}
 
 	async saveKanbanBoardsForFile(filePath: string, state: KanbanBoardState): Promise<KanbanBoardState> {
-		const sanitized = this.cloneKanbanBoardState(state);
+		const sanitized = cloneKanbanBoardState(state, (value) => this.deepClone(value));
 		this.settings.kanbanBoards[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
-	}
-
-	getConfigCache(): Record<string, ConfigCacheEntry> {
-		return this.settings.configCache;
-	}
-
-	setConfigCache(cache: Record<string, ConfigCacheEntry>): void {
-		this.settings.configCache = cache;
 	}
 
 	private cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {
@@ -364,110 +399,6 @@ export class SettingsService {
 		await this.persist();
 		return this.getOnboardingState();
 	}
-
-	private cloneTagGroupState(source: FileTagGroupState | null): FileTagGroupState {
-		if (!source) {
-			return { activeGroupId: null, groups: [], metadata: {} };
-		}
-		const seenIds = new Set<string>();
-		const groups: TagGroupDefinition[] = [];
-
-		for (const entry of source.groups ?? []) {
-			if (!entry) {
-				continue;
-			}
-			const id = typeof entry.id === 'string' ? entry.id.trim() : '';
-			if (!id || seenIds.has(id)) {
-				continue;
-			}
-			const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-			const rawViewIds = Array.isArray(entry.viewIds) ? entry.viewIds : [];
-			const viewIds: string[] = [];
-			const seenViewIds = new Set<string>();
-			for (const raw of rawViewIds) {
-				if (typeof raw !== 'string') {
-					continue;
-				}
-				const trimmed = raw.trim();
-				if (!trimmed || seenViewIds.has(trimmed)) {
-					continue;
-				}
-				seenViewIds.add(trimmed);
-				viewIds.push(trimmed);
-			}
-			groups.push({
-				id,
-				name: name.length > 0 ? name : id,
-				viewIds
-			});
-			seenIds.add(id);
-		}
-
-		const activeGroupId = groups.some((group) => group.id === source.activeGroupId) ? source.activeGroupId : null;
-		const metadata = cloneTagGroupMetadata(source.metadata);
-
-		return {
-			activeGroupId,
-			groups,
-			metadata
-		};
-	}
-
-	private cloneKanbanBoardState(source: KanbanBoardState | null | undefined): KanbanBoardState {
-		const boards: KanbanBoardState['boards'] = [];
-		const seenIds = new Set<string>();
-		if (source?.boards) {
-			for (const raw of source.boards) {
-				if (!raw || typeof raw.id !== 'string') {
-					continue;
-				}
-				const id = raw.id.trim();
-				if (!id || seenIds.has(id)) {
-					continue;
-				}
-				const rawName = typeof raw.name === 'string' ? raw.name.trim() : '';
-				const icon = this.sanitizeIconId(raw.icon);
-				const laneField = typeof raw.laneField === 'string' ? raw.laneField.trim() : '';
-				const filterRule = raw.filterRule ? this.deepClone(raw.filterRule) : null;
-				const initialVisibleCount = sanitizeKanbanInitialVisibleCount(
-					raw.initialVisibleCount ?? DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
-					DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT
-				);
-				const content = cloneKanbanCardContentConfig(raw.content ?? null);
-				const rawSortField = typeof raw.sortField === 'string' ? raw.sortField.trim() : '';
-				const sortField = rawSortField.length > 0 ? rawSortField : null;
-				const sortDirection =
-					raw.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
-				const lanePresets = sanitizeLanePresets(raw.lanePresets);
-				const laneOrder = sanitizeLaneOrdering(raw.laneOrderOverrides);
-				boards.push({
-					id,
-					name: rawName.length > 0 ? rawName : id,
-					icon,
-					laneField: laneField.length > 0 ? laneField : '',
-					lanePresets,
-					laneOrderOverrides: laneOrder.length > 0 ? laneOrder : null,
-					fontScale: sanitizeKanbanFontScale(raw.fontScale ?? DEFAULT_KANBAN_FONT_SCALE),
-					filterRule,
-					initialVisibleCount,
-					content,
-					sortField,
-					sortDirection
-				});
-				seenIds.add(id);
-			}
-		}
-		let activeBoardId: string | null =
-			typeof source?.activeBoardId === 'string' ? source.activeBoardId.trim() : null;
-		if (!activeBoardId || !seenIds.has(activeBoardId)) {
-			activeBoardId = boards[0]?.id ?? null;
-		}
-		return {
-			boards,
-			activeBoardId
-		};
-	}
-
 	private sanitizeBackupSettings(raw: Partial<BackupSettings> | undefined): BackupSettings {
 		const base = DEFAULT_SETTINGS.backups;
 		const enabled = typeof raw?.enabled === 'boolean' ? raw.enabled : base.enabled;
@@ -518,5 +449,7 @@ export class SettingsService {
 		}
 		return Object.keys(result).length > 0 ? result : null;
 	}
+
+
 
 }

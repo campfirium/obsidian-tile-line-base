@@ -62,6 +62,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 					adapter.fillColumnsToMinimumWidth();
 				}
 			},
+			onDuplicateCurrentFile: () => {
+				void view.fileDuplicationController.duplicateCurrentFile();
+			},
 			onOpenBackupRestore: () => {
 
 				void openBackupRestoreModal(view);

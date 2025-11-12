@@ -324,6 +324,7 @@
     "tagGroupButtonLabel": "视图分组",
     "addButtonAriaLabel": "创建新的筛选视图",
     "settingsMenuAriaLabel": "打开表格操作菜单",
+    "settingsMenuDuplicateFileLabel": "复制当前文件",
     "settingsMenuAutoWidthLabel": "调整列宽",
     "settingsMenuColumnLabel": "列设置",
     "settingsMenuExportCsvLabel": "导出当前表格为 CSV",
@@ -331,6 +332,13 @@
     "settingsMenuImportCsvAsTableLabel": "导入 CSV 并创建新表格",
     "settingsMenuHelpLabel": "打开帮助笔记",
     "unnamedViewLabel": "未命名视图"
+  },
+  "fileDuplication": {
+    "errorNoFile": "当前没有可复制的文件。",
+    "failureNotice": "复制文件失败，请稍后再试。",
+    "successNotice": "已复制文件：{{fileName}}",
+    "copyNameSuffix": "副本",
+    "fallbackName": "复制的笔记"
   },
   "backup": { "menuLabel": "恢复备份", "modalTitle": "{{file}} 的备份", "modalTitleConfirm": "恢复备份", "errorNoFile": "当前文件不可用。", "errorUnavailable": "备份服务尚未准备好。", "errorLoadFailed": "加载备份失败，请稍后再试。", "emptyState": "尚未记录任何备份。", "restoreButton": "恢复", "restoreButtonAria": "从 {{timestamp}} 的备份恢复", "confirmRestore": "是否将文件恢复到 {{timestamp}} 的版本？", "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。", "noticeRestoreFailed": "恢复备份失败，详见控制台。", "restoreCancelButton": "取消", "sizeLabel": "大小：{{size}}" },
   "filterViewController": {

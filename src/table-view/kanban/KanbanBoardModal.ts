@@ -1,4 +1,4 @@
-import { App, Setting } from 'obsidian';
+import { App, DropdownComponent, Setting } from 'obsidian';
 import type { FilterRule } from '../../types/filterView';
 import type { KanbanCardContentConfig, KanbanSortDirection } from '../../types/kanban';
 import {
@@ -261,35 +261,29 @@ export function openKanbanBoardModal(options: KanbanBoardModalRequest): Promise<
 					text: t('kanbanView.toolbar.sortSettingDesc')
 				});
 				const laneOrderControls = laneOrderCard.createDiv({ cls: 'tlb-kanban-board-modal__lane-order-controls' });
-				const sortFieldSelect = laneOrderControls.createEl('select', {
-					cls: 'tlb-kanban-board-modal__select',
-					attr: { 'aria-label': t('kanbanView.toolbar.sortFieldLabel') }
-				});
+				const sortFieldDropdown = new DropdownComponent(laneOrderControls);
+				sortFieldDropdown.selectEl.addClass('tlb-kanban-board-modal__select');
+				sortFieldDropdown.selectEl.setAttr('aria-label', t('kanbanView.toolbar.sortFieldLabel'));
 				for (const option of sortOptions) {
 					const label = option.length > 0 ? option : t('kanbanView.toolbar.sortFieldNone');
-					const optionEl = sortFieldSelect.createEl('option', { text: label, value: option });
-					if (option === selectedSortField) {
-						optionEl.selected = true;
-					}
+					sortFieldDropdown.addOption(option, label);
 				}
-				sortFieldSelect.addEventListener('change', () => {
-					selectedSortField = sortFieldSelect.value;
+				if (!sortOptions.includes(selectedSortField)) {
+					selectedSortField = '';
+				}
+				sortFieldDropdown.setValue(selectedSortField);
+				sortFieldDropdown.onChange((value) => {
+					selectedSortField = value;
 				});
-				const directionSelect = laneOrderControls.createEl('select', {
-					cls: 'tlb-kanban-board-modal__select',
-					attr: { 'aria-label': t('kanbanView.toolbar.sortDirectionLabel') }
-				});
-				directionSelect.createEl('option', {
-					text: t('kanbanView.toolbar.sortDirectionAsc'),
-					value: 'asc'
-				});
-				directionSelect.createEl('option', {
-					text: t('kanbanView.toolbar.sortDirectionDesc'),
-					value: 'desc'
-				});
-				directionSelect.value = selectedSortDirection;
-				directionSelect.addEventListener('change', () => {
-					selectedSortDirection = directionSelect.value === 'desc' ? 'desc' : 'asc';
+
+				const directionDropdown = new DropdownComponent(laneOrderControls);
+				directionDropdown.selectEl.addClass('tlb-kanban-board-modal__select');
+				directionDropdown.selectEl.setAttr('aria-label', t('kanbanView.toolbar.sortDirectionLabel'));
+				directionDropdown.addOption('asc', t('kanbanView.toolbar.sortDirectionAsc'));
+				directionDropdown.addOption('desc', t('kanbanView.toolbar.sortDirectionDesc'));
+				directionDropdown.setValue(selectedSortDirection);
+				directionDropdown.onChange((value) => {
+					selectedSortDirection = value === 'desc' ? 'desc' : 'asc';
 				});
 
 				const contentColumn = context.rightColumn.createDiv({

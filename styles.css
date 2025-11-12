@@ -2001,18 +2001,7 @@
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.tlb-kanban-board-modal__lane-order-controls {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-	gap: var(--size-4-2);
-}
-
 .tlb-kanban-board-modal__select {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	background-color: var(--background-primary);
-	color: var(--text-normal);
-	padding: 0.4rem 0.6rem;
 	width: 100%;
 }
 
@@ -2197,15 +2186,6 @@
 	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	gap: var(--size-4-2);
 	margin-top: var(--size-3-2);
-}
-
-.tlb-kanban-board-modal__select {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	background-color: var(--background-primary);
-	color: var(--text-normal);
-	padding: 0.4rem 0.6rem;
-	width: 100%;
 }
 
 .tlb-filter-editor-add-condition {

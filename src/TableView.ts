@@ -34,6 +34,7 @@ import { getPluginContext } from "./pluginContext";
 import type { ParagraphPromotionController } from "./table-view/paragraph/ParagraphPromotionController";
 import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
+import { TableFileDuplicationController } from "./table-view/TableFileDuplicationController";
 import type { KanbanViewController } from "./table-view/kanban/KanbanViewController";
 import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager";
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
@@ -79,6 +80,7 @@ export class TableView extends ItemView {
 	public copyTemplateController!: CopyTemplateController;
 	public paragraphPromotionController!: ParagraphPromotionController;
 	public tableCreationController!: TableCreationController;
+	public fileDuplicationController!: TableFileDuplicationController;
 	public historyManager = new TableHistoryManager(this);
 	public refreshCoordinator!: TableRefreshCoordinator;
 	public tableContainer: HTMLElement | null = null;

@@ -26,6 +26,7 @@ import { getPluginContext } from '../pluginContext';
 import { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { TableCreationController } from './TableCreationController';
+import { TableFileDuplicationController } from './TableFileDuplicationController';
 import { KanbanBoardController } from './kanban/KanbanBoardController';
 
 const logger = getLogger('table-view:setup');
@@ -112,6 +113,12 @@ export function initializeTableView(view: TableView): void {
 	});
 	view.tableCreationController = new TableCreationController({
 		app: view.app,
+		getCurrentFile: () => view.file
+	});
+	view.fileDuplicationController = new TableFileDuplicationController({
+		app: view.app,
+		configManager: view.configManager,
+		persistence: view.persistenceService,
 		getCurrentFile: () => view.file
 	});
 	view.kanbanBoardController = new KanbanBoardController({

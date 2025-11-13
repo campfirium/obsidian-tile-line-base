@@ -653,6 +653,7 @@ export class FilterViewEditorModal extends Modal {
 		});
 		prev.setAttribute('aria-label', t('filterViewModals.iconNavPrev'));
 		setIcon(prev, 'chevron-left');
+		this.reinforceIconNavButton(prev);
 		prev.disabled = pageCount <= 1 || this.iconPage === 0;
 		prev.addEventListener('click', () => {
 			if (this.iconPage > 0) {
@@ -667,6 +668,7 @@ export class FilterViewEditorModal extends Modal {
 		});
 		next.setAttribute('aria-label', t('filterViewModals.iconNavNext'));
 		setIcon(next, 'chevron-right');
+		this.reinforceIconNavButton(next);
 		next.disabled = pageCount <= 1 || this.iconPage >= pageCount - 1;
 		next.addEventListener('click', () => {
 			if (this.iconPage < pageCount - 1) {
@@ -676,6 +678,21 @@ export class FilterViewEditorModal extends Modal {
 		});
 
 		return true;
+	}
+
+	private reinforceIconNavButton(button: HTMLButtonElement): void {
+		button.classList.add('clickable-icon', 'tlb-filter-view-icon-nav-button');
+		const applySizing = (): void => {
+			const svg = button.querySelector('svg');
+			if (!svg) {
+				requestAnimationFrame(applySizing);
+				return;
+			}
+			svg.classList.add('tlb-filter-view-icon-nav__svg');
+			svg.setAttribute('width', '32');
+			svg.setAttribute('height', '32');
+		};
+		applySizing();
 	}
 
 	private resolveCanonicalIconId(value: string | null): string | null {

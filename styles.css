@@ -345,6 +345,18 @@
   height: 18px;
 }
 
+.tlb-filter-view-icon-nav-button {
+  grid-row: 3;
+}
+
+.tlb-filter-view-icon-nav__svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .tlb-filter-view-icon-nav:disabled {
   opacity: 0.4;
   cursor: default;

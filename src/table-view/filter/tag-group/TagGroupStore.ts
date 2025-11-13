@@ -5,13 +5,12 @@ import { STATUS_BASELINE_VALUES } from '../statusDefaults';
 
 export const DEFAULT_TAG_GROUP_ID = '__tlb_tag_group_default__';
 export const STATUS_TAG_GROUP_ID = '__tlb_tag_group_status__';
-const PROTECTED_GROUP_IDS = new Set<string>([DEFAULT_TAG_GROUP_ID, STATUS_TAG_GROUP_ID]);
+const PROTECTED_GROUP_IDS = new Set<string>([DEFAULT_TAG_GROUP_ID]);
 
 export class TagGroupStore {
 	private state: FileTagGroupState = this.createEmptyState();
 	private filePath: string | null;
 	private fallbackDefaultName = 'Default';
-	private fallbackStatusName = 'Status';
 
 	constructor(filePath: string | null) {
 		this.filePath = filePath;
@@ -28,17 +27,6 @@ export class TagGroupStore {
 		this.fallbackDefaultName = label;
 		const group = this.getDefaultGroup();
 		if (group && (!group.name || group.name.trim().length === 0 || group.name === DEFAULT_TAG_GROUP_ID)) {
-			group.name = label;
-		}
-	}
-
-	setStatusGroupLabel(label: string): void {
-		if (label.trim().length === 0) {
-			return;
-		}
-		this.fallbackStatusName = label;
-		const group = this.getStatusGroup();
-		if (group && (!group.name || group.name.trim().length === 0 || group.name === STATUS_TAG_GROUP_ID)) {
 			group.name = label;
 		}
 	}
@@ -89,35 +77,7 @@ export class TagGroupStore {
 		});
 	}
 
-	applyStatusGroup(viewIds: string[], label: string): void {
-		const normalizedLabel = this.resolveGroupName(label, this.fallbackStatusName);
-		const uniqueIds = Array.from(
-			new Set(
-				viewIds
-					.map((id) => (typeof id === 'string' ? id.trim() : ''))
-					.filter((id): id is string => id.length > 0)
-			)
-		);
 
-		this.updateState((state) => {
-			let group = state.groups.find((entry) => entry.id === STATUS_TAG_GROUP_ID);
-			if (!group) {
-				group = {
-					id: STATUS_TAG_GROUP_ID,
-					name: normalizedLabel,
-					viewIds: uniqueIds
-				};
-				const defaultIndex = state.groups.findIndex((entry) => entry.id === DEFAULT_TAG_GROUP_ID);
-				const insertIndex = defaultIndex === -1 ? 0 : defaultIndex + 1;
-				state.groups.splice(insertIndex, 0, group);
-			} else {
-				if (!group.name || group.name.trim().length === 0 || group.name === STATUS_TAG_GROUP_ID) {
-					group.name = normalizedLabel;
-				}
-				group.viewIds = uniqueIds;
-			}
-		});
-	}
 
 	getActiveGroup(): TagGroupDefinition | null {
 		const id = this.state.activeGroupId;
@@ -174,18 +134,15 @@ export class TagGroupStore {
 			const defaultGroup = this.ensureDefaultGroup(state, defaultGroupName);
 			defaultGroup.name = this.resolveGroupName(defaultGroup.name, defaultGroupName);
 
-			this.ensureStatusGroup(state, this.fallbackStatusName);
-
 			const normalizedGroups: TagGroupDefinition[] = [];
 			for (const group of [...state.groups]) {
-				if (group.id === DEFAULT_TAG_GROUP_ID) {
+				if (group.id === DEFAULT_TAG_GROUP_ID || group.id === STATUS_TAG_GROUP_ID) {
 					continue;
 				}
-				const fallbackName = group.id === STATUS_TAG_GROUP_ID ? this.fallbackStatusName : group.id;
 				const sanitizedIds = this.normalizeViewIds(group.viewIds, idSet);
 				normalizedGroups.push({
 					id: group.id,
-					name: this.resolveGroupName(group.name, fallbackName),
+					name: this.resolveGroupName(group.name, group.id),
 					viewIds: sanitizedIds
 				});
 			}
@@ -210,14 +167,10 @@ export class TagGroupStore {
 
 	private normalizeGroupOrder(groups: TagGroupDefinition[]): TagGroupDefinition[] {
 		const defaultGroup = groups.find((group) => group.id === DEFAULT_TAG_GROUP_ID);
-		const statusGroup = groups.find((group) => group.id === STATUS_TAG_GROUP_ID);
 		const others = groups.filter((group) => group.id !== DEFAULT_TAG_GROUP_ID && group.id !== STATUS_TAG_GROUP_ID);
 		const ordered: TagGroupDefinition[] = [];
 		if (defaultGroup) {
 			ordered.push(defaultGroup);
-		}
-		if (statusGroup) {
-			ordered.push(statusGroup);
 		}
 		ordered.push(...others);
 		return ordered;
@@ -281,20 +234,7 @@ export class TagGroupStore {
 		return group;
 	}
 
-	private ensureStatusGroup(state: FileTagGroupState, name: string): TagGroupDefinition {
-		let group = state.groups.find((entry) => entry.id === STATUS_TAG_GROUP_ID);
-		if (!group) {
-			group = {
-				id: STATUS_TAG_GROUP_ID,
-				name: this.resolveGroupName(name, this.fallbackStatusName),
-				viewIds: []
-			};
-			const defaultIndex = state.groups.findIndex((entry) => entry.id === DEFAULT_TAG_GROUP_ID);
-			const insertIndex = defaultIndex === -1 ? 0 : defaultIndex + 1;
-			state.groups.splice(insertIndex, 0, group);
-		}
-		return group;
-	}
+
 
 	getDefaultGroup(): TagGroupDefinition {
 		this.ensureMetadata(this.state);
@@ -309,13 +249,10 @@ export class TagGroupStore {
 		};
 		this.state.groups.unshift(group);
 		this.state.activeGroupId = DEFAULT_TAG_GROUP_ID;
-		this.ensureStatusGroup(this.state, this.fallbackStatusName);
 		return group;
 	}
 
-	private getStatusGroup(): TagGroupDefinition | null {
-		return this.state.groups.find((group) => group.id === STATUS_TAG_GROUP_ID) ?? null;
-	}
+
 
 	private cloneState(source: FileTagGroupState | null | undefined): FileTagGroupState {
 		const groups: TagGroupDefinition[] = [];
@@ -373,17 +310,6 @@ export class TagGroupStore {
 			groups.unshift(defaultGroup);
 		}
 
-		const hasStatus = groups.some((group) => group.id === STATUS_TAG_GROUP_ID);
-		if (!hasStatus) {
-			const statusGroup: TagGroupDefinition = {
-				id: STATUS_TAG_GROUP_ID,
-				name: this.fallbackStatusName,
-				viewIds: []
-			};
-			const defaultIndex = groups.findIndex((group) => group.id === DEFAULT_TAG_GROUP_ID);
-			const insertIndex = defaultIndex === -1 ? 0 : defaultIndex + 1;
-			groups.splice(insertIndex, 0, statusGroup);
-		}
 	}
 
 	private cloneGroup(source: TagGroupDefinition | null | undefined): TagGroupDefinition | null {
@@ -392,6 +318,9 @@ export class TagGroupStore {
 		}
 		const id = typeof source.id === 'string' ? source.id.trim() : '';
 		if (!id) {
+			return null;
+		}
+		if (id === STATUS_TAG_GROUP_ID) {
 			return null;
 		}
 		const name = typeof source.name === 'string' ? source.name.trim() : '';
@@ -417,8 +346,6 @@ export class TagGroupStore {
 			resolvedName = name;
 		} else if (id === DEFAULT_TAG_GROUP_ID) {
 			resolvedName = this.fallbackDefaultName;
-		} else if (id === STATUS_TAG_GROUP_ID) {
-			resolvedName = this.fallbackStatusName;
 		} else {
 			resolvedName = id;
 		}
@@ -441,11 +368,6 @@ export class TagGroupStore {
 				{
 					id: DEFAULT_TAG_GROUP_ID,
 					name: this.fallbackDefaultName,
-					viewIds: []
-				},
-				{
-					id: STATUS_TAG_GROUP_ID,
-					name: this.fallbackStatusName,
 					viewIds: []
 				}
 			],

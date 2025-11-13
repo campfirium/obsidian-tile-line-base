@@ -2,7 +2,7 @@ import { App, Menu, Notice } from 'obsidian';
 import type { FilterViewDefinition, FileFilterViewState } from '../../../types/filterView';
 import type { TagGroupDefinition } from '../../../types/tagGroup';
 import { t } from '../../../i18n';
-import { openFilterViewNameModal } from '../FilterViewModals';
+import { openFilterViewNameModal } from '../FilterViewNameModal';
 import { type TagGroupStore } from './TagGroupStore';
 import { openTagGroupCreateModal, type TagGroupCreateMode } from './TagGroupCreateModal';
 import { STATUS_BASELINE_VALUES } from '../statusDefaults';

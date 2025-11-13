@@ -315,7 +315,7 @@ export class FilterViewEditorModal extends Modal {
 
 			const removeButton = row.createEl('button', {
 				type: 'button',
-				cls: 'clickable-icon tlb-filter-view-modal__remove-button',
+				cls: 'tlb-filter-view-modal__remove-button',
 				attr: { 'aria-label': t('filterViewModals.removeButton') }
 			});
 			setIcon(removeButton, 'trash-2');
@@ -501,7 +501,7 @@ export class FilterViewEditorModal extends Modal {
 
 			const removeButton = row.createEl('button', {
 				type: 'button',
-				cls: 'clickable-icon tlb-filter-view-modal__remove-button',
+				cls: 'tlb-filter-view-modal__remove-button',
 				attr: { 'aria-label': t('filterViewModals.removeButton') }
 			});
 			setIcon(removeButton, 'trash-2');
@@ -616,44 +616,81 @@ export class FilterViewEditorModal extends Modal {
 		}
 		const row = this.iconMatchesEl.createDiv({ cls: 'tlb-filter-view-icon-matches-row' });
 		const grid = row.createDiv({ cls: 'tlb-filter-view-icon-matches-grid' });
-		const start = this.iconPage * ICON_MATCHES_PER_PAGE;
-		const visible = results.slice(start, start + ICON_MATCHES_PER_PAGE);
-		const selectedNormalized = this.iconSelectionId ? normalizeIconQuery(this.iconSelectionId) : null;
-
-		visible.forEach((iconId) => {
-			const button = grid.createEl('button', {
-				type: 'button',
-				cls: 'tlb-filter-view-icon-match'
-			});
-			button.setAttribute('aria-label', t('filterViewModals.iconMatchAriaLabel', { icon: iconId }));
-			const iconSpan = button.createSpan({ cls: 'tlb-filter-view-icon-match__icon' });
-			setIcon(iconSpan, iconId);
-			if (selectedNormalized && normalizeIconQuery(iconId) === selectedNormalized) {
-				button.classList.add('is-active');
+			const start = this.iconPage * ICON_MATCHES_PER_PAGE;
+			const visible = results.slice(start, start + ICON_MATCHES_PER_PAGE);
+			const selectedNormalized = this.iconSelectionId ? normalizeIconQuery(this.iconSelectionId) : null;
+			const iconSlotPositions: Array<{ row: number; column: number }> = [];
+			const gapSlotPositions: Array<{ row: number; column: number }> = [];
+			for (let rowIndex = 0; rowIndex < ICON_GRID_ROWS; rowIndex += 1) {
+				for (let columnIndex = 0; columnIndex < ICON_GRID_COLUMNS; columnIndex += 1) {
+					const isLastRow = rowIndex === ICON_GRID_ROWS - 1;
+					const isNavSlot = isLastRow && columnIndex >= ICON_NAV_FIRST_COLUMN;
+					const isGapSlot =
+						isLastRow &&
+						columnIndex >= Math.max(0, ICON_NAV_FIRST_COLUMN - ICON_NAV_GAP_COLUMNS) &&
+						columnIndex < ICON_NAV_FIRST_COLUMN;
+					if (isNavSlot) {
+						continue;
+					}
+					if (isGapSlot) {
+						gapSlotPositions.push({ row: rowIndex, column: columnIndex });
+						continue;
+					}
+					iconSlotPositions.push({ row: rowIndex, column: columnIndex });
+				}
 			}
-			button.addEventListener('click', () => {
-				this.setIconValue(iconId);
-				this.iconInputEl?.focus();
-			});
-		});
+			const applyGridPosition = (element: HTMLElement, position: { row: number; column: number }): void => {
+				element.classList.add(
+					`tlb-filter-view-icon-cell-row-${position.row + 1}`,
+					`tlb-filter-view-icon-cell-col-${position.column + 1}`
+				);
+			};
 
-		const placeholdersNeeded = ICON_MATCHES_PER_PAGE - visible.length;
-		for (let index = 0; index < placeholdersNeeded; index += 1) {
-			grid.createSpan({ cls: 'tlb-filter-view-icon-placeholder' });
-		}
+			for (let slotIndex = 0; slotIndex < iconSlotPositions.length; slotIndex += 1) {
+				const position = iconSlotPositions[slotIndex];
+				if (slotIndex < visible.length) {
+					const iconId = visible[slotIndex];
+					const button = grid.createEl('button', {
+						type: 'button',
+						cls: 'tlb-filter-view-icon-match'
+					});
+					button.setAttribute('aria-label', t('filterViewModals.iconMatchAriaLabel', { icon: iconId }));
+					const iconSpan = button.createSpan({ cls: 'tlb-filter-view-icon-match__icon' });
+					setIcon(iconSpan, iconId);
+					if (selectedNormalized && normalizeIconQuery(iconId) === selectedNormalized) {
+						button.classList.add('is-active');
+					}
+					button.addEventListener('click', () => {
+						this.setIconValue(iconId);
+						this.iconInputEl?.focus();
+					});
+					applyGridPosition(button, position);
+				} else {
+					const placeholder = grid.createSpan({ cls: 'tlb-filter-view-icon-placeholder' });
+					applyGridPosition(placeholder, position);
+				}
+			}
 
-		const spacerSlots = Math.max(0, ICON_GRID_TOTAL_SLOTS - ICON_MATCHES_PER_PAGE - 2);
-		for (let index = 0; index < spacerSlots; index += 1) {
-			grid.createSpan({ cls: 'tlb-filter-view-icon-grid-spacer' });
-		}
+			for (const gapPosition of gapSlotPositions) {
+				const gap = grid.createSpan({
+					cls: 'tlb-filter-view-icon-placeholder tlb-filter-view-icon-placeholder--gap'
+				});
+				applyGridPosition(gap, gapPosition);
+			}
 
-		const prev = grid.createEl('button', {
-			type: 'button',
-			cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--prev'
+			const prev = grid.createEl('button', {
+				type: 'button',
+				cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--prev'
 		});
 		prev.setAttribute('aria-label', t('filterViewModals.iconNavPrev'));
-		setIcon(prev, 'chevron-left');
-		this.reinforceIconNavButton(prev);
+			const prevIcon = prev.createSpan({
+				cls: 'tlb-filter-view-icon-match__icon tlb-filter-view-icon-match__icon--nav'
+			});
+			setIcon(prevIcon, 'chevron-left');
+			applyGridPosition(prev, {
+				row: ICON_GRID_ROWS - 1,
+				column: ICON_NAV_FIRST_COLUMN
+			});
 		prev.disabled = pageCount <= 1 || this.iconPage === 0;
 		prev.addEventListener('click', () => {
 			if (this.iconPage > 0) {
@@ -667,8 +704,14 @@ export class FilterViewEditorModal extends Modal {
 			cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--right'
 		});
 		next.setAttribute('aria-label', t('filterViewModals.iconNavNext'));
-		setIcon(next, 'chevron-right');
-		this.reinforceIconNavButton(next);
+			const nextIcon = next.createSpan({
+				cls: 'tlb-filter-view-icon-match__icon tlb-filter-view-icon-match__icon--nav'
+			});
+			setIcon(nextIcon, 'chevron-right');
+			applyGridPosition(next, {
+				row: ICON_GRID_ROWS - 1,
+				column: ICON_GRID_COLUMNS - 1
+			});
 		next.disabled = pageCount <= 1 || this.iconPage >= pageCount - 1;
 		next.addEventListener('click', () => {
 			if (this.iconPage < pageCount - 1) {
@@ -678,21 +721,6 @@ export class FilterViewEditorModal extends Modal {
 		});
 
 		return true;
-	}
-
-	private reinforceIconNavButton(button: HTMLButtonElement): void {
-		button.classList.add('clickable-icon', 'tlb-filter-view-icon-nav-button');
-		const applySizing = (): void => {
-			const svg = button.querySelector('svg');
-			if (!svg) {
-				requestAnimationFrame(applySizing);
-				return;
-			}
-			svg.classList.add('tlb-filter-view-icon-nav__svg');
-			svg.setAttribute('width', '32');
-			svg.setAttribute('height', '32');
-		};
-		applySizing();
 	}
 
 	private resolveCanonicalIconId(value: string | null): string | null {
@@ -800,14 +828,6 @@ export class FilterViewEditorModal extends Modal {
 	}
 }
 
-export interface FilterViewNameModalOptions {
-	title: string;
-	placeholder: string;
-	defaultValue: string;
-	onSubmit: (value: string) => void;
-	onCancel: () => void;
-}
-
 function collectLucideIconIds(app: App): string[] {
 	const iconIds = new Set<string>();
 	try {
@@ -881,76 +901,9 @@ function getFuzzyMatchScore(value: string, query: string): number | null {
 	return score;
 }
 
-const ICON_MATCHES_PER_PAGE = 27;
-const ICON_GRID_TOTAL_SLOTS = 30;
-
-export class FilterViewNameModal extends Modal {
-	private readonly options: FilterViewNameModalOptions;
-	private inputEl!: HTMLInputElement;
-
-	constructor(app: App, options: FilterViewNameModalOptions) {
-		super(app);
-		this.options = options;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		this.titleEl.setText(this.options.title);
-
-		const setting = new Setting(contentEl);
-		setting.setClass('tlb-filter-view-modal');
-		setting.addText((text) => {
-			text.setPlaceholder(this.options.placeholder);
-			text.setValue(this.options.defaultValue);
-			text.inputEl.addEventListener('keydown', (event) => {
-				if (event.key === 'Enter') {
-					event.preventDefault();
-					event.stopPropagation();
-					this.submit();
-				}
-			});
-			this.inputEl = text.inputEl;
-		});
-
-		setting.addButton((button) => {
-			button.setButtonText(t('filterViewModals.saveButton'));
-			button.setCta();
-			button.onClick(() => this.submit());
-		});
-
-		const cancelBtn = contentEl.createEl('button', { text: t('filterViewModals.cancelButton') });
-		cancelBtn.addClass('mod-cta-secondary');
-		cancelBtn.addEventListener('click', () => this.close());
-	}
-
-	onClose(): void {
-		if (this.inputEl) {
-			this.inputEl.blur();
-		}
-		this.options.onCancel();
-	}
-
-	private submit(): void {
-		const value = this.inputEl?.value ?? '';
-		this.options.onSubmit(value);
-		this.options.onCancel = () => undefined;
-		this.close();
-	}
-}
-
-export function openFilterViewNameModal(app: App, options: { title: string; placeholder: string; defaultValue?: string }): Promise<string | null> {
-	return new Promise((resolve) => {
-		const modal = new FilterViewNameModal(app, {
-			title: options.title,
-			placeholder: options.placeholder,
-			defaultValue: options.defaultValue ?? '',
-			onSubmit: (value) => {
-				const trimmed = value.trim();
-				resolve(trimmed.length > 0 ? trimmed : null);
-			},
-			onCancel: () => resolve(null)
-		});
-		modal.open();
-	});
-}
+const ICON_GRID_COLUMNS = 10;
+const ICON_GRID_ROWS = 3;
+const ICON_NAV_SLOT_COUNT = 2;
+const ICON_NAV_GAP_COLUMNS = 1;
+const ICON_NAV_FIRST_COLUMN = ICON_GRID_COLUMNS - ICON_NAV_SLOT_COUNT;
+const ICON_MATCHES_PER_PAGE = ICON_GRID_COLUMNS * ICON_GRID_ROWS - ICON_NAV_SLOT_COUNT - ICON_NAV_GAP_COLUMNS;

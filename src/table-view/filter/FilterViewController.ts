@@ -1,6 +1,7 @@
 import { App, Menu, Notice } from 'obsidian';
 import type { FilterViewDefinition, FilterRule, SortRule } from '../../types/filterView';
-import { FilterViewEditorModal, openFilterViewNameModal, type FilterViewEditorResult } from './FilterViewModals';
+import { FilterViewEditorModal, type FilterViewEditorResult } from './FilterViewModals';
+import { openFilterViewNameModal } from './FilterViewNameModal';
 import { FilterStateStore } from './FilterStateStore';
 import { t } from '../../i18n';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';

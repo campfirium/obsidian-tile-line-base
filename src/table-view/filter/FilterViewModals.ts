@@ -315,7 +315,7 @@ export class FilterViewEditorModal extends Modal {
 
 			const removeButton = row.createEl('button', {
 				type: 'button',
-				cls: 'tlb-filter-view-modal__remove-button',
+				cls: 'clickable-icon tlb-filter-view-modal__remove-button',
 				attr: { 'aria-label': t('filterViewModals.removeButton') }
 			});
 			setIcon(removeButton, 'trash-2');
@@ -501,7 +501,7 @@ export class FilterViewEditorModal extends Modal {
 
 			const removeButton = row.createEl('button', {
 				type: 'button',
-				cls: 'tlb-filter-view-modal__remove-button',
+				cls: 'clickable-icon tlb-filter-view-modal__remove-button',
 				attr: { 'aria-label': t('filterViewModals.removeButton') }
 			});
 			setIcon(removeButton, 'trash-2');

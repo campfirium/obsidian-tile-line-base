@@ -2202,6 +2202,8 @@
 }
 
 .tlb-filter-view-modal__remove-button {
+  --tlb-filter-remove-icon-size: 20px;
+  --tlb-filter-remove-icon-stroke: 2.2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2219,6 +2221,11 @@
 }
 
 .tlb-filter-view-modal__remove-button svg {
-  width: 14px;
-  height: 14px;
+  display: block;
+  width: var(--tlb-filter-remove-icon-size) !important;
+  height: var(--tlb-filter-remove-icon-size) !important;
+  stroke-width: var(--tlb-filter-remove-icon-stroke);
+  stroke: currentColor;
+  fill: none;
+  pointer-events: none;
 }

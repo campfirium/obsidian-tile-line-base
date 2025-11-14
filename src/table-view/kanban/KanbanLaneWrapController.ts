@@ -1,5 +1,4 @@
 const MAX_LANE_ROWS = 2;
-const MIN_HEIGHT_FOR_MULTIROW_PX = 640;
 const MIN_LANE_COUNT_FOR_MULTIROW = 4;
 
 interface KanbanLaneWrapControllerOptions {
@@ -79,18 +78,12 @@ export class KanbanLaneWrapController {
 			this.resetLayout();
 			return;
 		}
-		const wrapper = this.options.wrapper;
-		if (!wrapper.classList.contains('tlb-kanban-wrapper--viewport')) {
-			this.resetLayout();
-			return;
-		}
 		const board = this.options.board;
 		if (!this.laneWidthPx || this.laneCount === 0) {
 			this.resetLayout();
 			return;
 		}
-		const wrapperRect = wrapper.getBoundingClientRect();
-		const targetRows = this.computeRows(wrapperRect.height);
+		const targetRows = this.computeRows();
 		if (targetRows <= 1) {
 			this.resetLayout();
 			return;
@@ -102,14 +95,11 @@ export class KanbanLaneWrapController {
 		board.classList.add('tlb-kanban-board--wrapped');
 	}
 
-	private computeRows(height: number): number {
-		if (!Number.isFinite(height) || height < MIN_HEIGHT_FOR_MULTIROW_PX) {
-			return 1;
-		}
+	private computeRows(): number {
 		if (this.laneCount < MIN_LANE_COUNT_FOR_MULTIROW) {
 			return 1;
 		}
-		return Math.min(MAX_LANE_ROWS, 2);
+		return MAX_LANE_ROWS;
 	}
 
 	private resetLayout(): void {

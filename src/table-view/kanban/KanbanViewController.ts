@@ -144,6 +144,7 @@ export class KanbanViewController {
 		});
 
 		this.viewportManager.apply(this.heightMode);
+		this.updateWrapperLayout();
 		this.tooltipManager.setFontScale(this.fontScale);
 		this.registerListeners();
 		this.ensureSortableLoaded();
@@ -171,6 +172,7 @@ export class KanbanViewController {
 		this.heightMode = normalized;
 		this.viewportManager.apply(this.heightMode);
 		this.laneWrapController?.updateLaneMetrics();
+		this.updateWrapperLayout();
 	}
 
 	public setMultiRowEnabled(enabled: boolean): void {
@@ -182,6 +184,12 @@ export class KanbanViewController {
 		if (enabled) {
 			this.laneWrapController?.updateLaneMetrics();
 		}
+		this.updateWrapperLayout();
+	}
+
+	private updateWrapperLayout(): void {
+		const forceSingleRowHeight = this.heightMode !== 'viewport' && !this.multiRowEnabled;
+		this.container.classList.toggle('tlb-kanban-wrapper--single-row', forceSingleRowHeight);
 	}
 
 	private registerListeners(): void {

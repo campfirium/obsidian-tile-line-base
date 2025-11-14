@@ -126,6 +126,28 @@ export class BackupManager {
 		});
 	}
 
+	async readBackupContent(file: TFile, entryId: string): Promise<string> {
+		await this.initialize();
+		return this.runExclusive(async () => {
+			const record = this.index.files[file.path];
+			if (!record) {
+				throw new Error(`No backups found for ${file.path}`);
+			}
+			const target = record.entries.find((entry) => entry.id === entryId);
+			if (!target) {
+				throw new Error(`Backup entry ${entryId} not found for ${file.path}`);
+			}
+
+			const backupPath = this.getEntryPath(file.path, target);
+			try {
+				return await this.adapter.read(backupPath);
+			} catch (error) {
+				logger.error('Failed to read backup file for export', { path: backupPath, error });
+				throw error;
+			}
+		});
+	}
+
 	async restoreBackup(file: TFile, entryId: string): Promise<void> {
 		await this.initialize();
 		await this.runExclusive(async () => {

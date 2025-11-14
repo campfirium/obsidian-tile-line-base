@@ -1893,6 +1893,7 @@
 	max-width: var(--tlb-kanban-board-max-width, 100%);
 }
 
+
 .tlb-kanban-message {
 	display: flex;
 	gap: var(--size-4-2);

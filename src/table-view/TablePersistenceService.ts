@@ -157,6 +157,10 @@ export class TablePersistenceService {
 		await this.deps.configManager.save(file, this.getConfigPayload());
 	}
 
+	getMarkdownSnapshot(): string {
+		return this.deps.dataStore.blocksToMarkdown().trimEnd();
+	}
+
 	dispose(): void {
 		this.cancelScheduledSave();
 	}

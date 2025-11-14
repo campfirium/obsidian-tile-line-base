@@ -1,4 +1,4 @@
-import { Modal, Notice, Setting } from 'obsidian';
+import { Modal, Notice, Setting, normalizePath } from 'obsidian';
 import type { ButtonComponent } from 'obsidian';
 import type { TableView } from '../TableView';
 import { getPluginContext } from '../pluginContext';
@@ -28,6 +28,7 @@ class BackupRestoreModal extends Modal {
 	private readonly manager: BackupManager;
 	private listEl: HTMLElement | null = null;
 	private isRestoring = false;
+	private isExporting = false;
 
 	constructor(view: TableView, manager: BackupManager) {
 		super(view.app);
@@ -91,6 +92,15 @@ class BackupRestoreModal extends Modal {
 					});
 				button.buttonEl.setAttribute('aria-label', t('backup.restoreButtonAria', { timestamp: timestampText }));
 			});
+			setting.addButton((button) => {
+				button
+					.setButtonText(t('backup.exportButton'))
+					.setTooltip(t('backup.exportButtonAria', { timestamp: timestampText }))
+					.onClick(() => {
+						void this.handleExport(entry);
+					});
+				button.buttonEl.setAttribute('aria-label', t('backup.exportButtonAria', { timestamp: timestampText }));
+			});
 		}
 	}
 
@@ -134,9 +144,98 @@ class BackupRestoreModal extends Modal {
 		confirmModal.open();
 	}
 
+	private async handleExport(entry: BackupDescriptor): Promise<void> {
+		if (!this.view.file) {
+			new Notice(t('backup.errorNoFile'));
+			return;
+		}
+
+		if (this.isExporting) {
+			return;
+		}
+
+		const timestampLabel = this.formatTimestamp(entry.createdAt);
+		this.isExporting = true;
+		try {
+			const content = await this.manager.readBackupContent(this.view.file, entry.id);
+			const basePath = this.buildExportPath(this.view.file.path, entry);
+			const exportPath = this.getUniqueExportPath(basePath);
+			await this.view.app.vault.create(exportPath, content);
+			new Notice(t('backup.noticeExportSuccess', { file: exportPath }));
+			logger.info('Exported backup to new file', {
+				source: this.view.file.path,
+				exportPath,
+				timestampLabel
+			});
+		} catch (error) {
+			logger.error('Failed to export backup', error);
+			new Notice(t('backup.noticeExportFailed'));
+		} finally {
+			this.isExporting = false;
+		}
+	}
+
+	private buildExportPath(filePath: string, entry: BackupDescriptor): string {
+		const normalized = normalizePath(filePath);
+		const lastSlashIndex = normalized.lastIndexOf('/');
+		const dir = lastSlashIndex === -1 ? '' : normalized.slice(0, lastSlashIndex + 1);
+		const fileName = lastSlashIndex === -1 ? normalized : normalized.slice(lastSlashIndex + 1);
+
+		const lastDotIndex = fileName.lastIndexOf('.');
+		const baseName = lastDotIndex === -1 ? fileName : fileName.slice(0, lastDotIndex);
+		const extension = lastDotIndex === -1 ? '' : fileName.slice(lastDotIndex);
+
+		const timestampSuffix = this.formatExportTimestamp(entry.createdAt);
+		const exportName = `${baseName} (${timestampSuffix})${extension || '.md'}`;
+		return normalizePath(`${dir}${exportName}`);
+	}
+
+	private getUniqueExportPath(basePath: string): string {
+		const vault = this.view.app.vault;
+		let candidate = basePath;
+
+		if (!vault.getAbstractFileByPath(candidate)) {
+			return candidate;
+		}
+
+		const lastSlashIndex = candidate.lastIndexOf('/');
+		const dir = lastSlashIndex === -1 ? '' : candidate.slice(0, lastSlashIndex + 1);
+		const fileName = lastSlashIndex === -1 ? candidate : candidate.slice(lastSlashIndex + 1);
+
+		const lastDotIndex = fileName.lastIndexOf('.');
+		const baseName = lastDotIndex === -1 ? fileName : fileName.slice(0, lastDotIndex);
+		const extension = lastDotIndex === -1 ? '' : fileName.slice(lastDotIndex);
+
+		let index = 1;
+		while (true) {
+			const nextName = `${baseName} (${index})${extension}`;
+			const nextPath = normalizePath(`${dir}${nextName}`);
+			if (!vault.getAbstractFileByPath(nextPath)) {
+				return nextPath;
+			}
+			index += 1;
+		}
+	}
+
 	private formatTimestamp(value: number): string {
 		try {
 			return new Date(value).toLocaleString();
+		} catch {
+			return String(value);
+		}
+	}
+
+	private formatExportTimestamp(value: number): string {
+		try {
+			const date = new Date(value);
+			const pad = (input: number, length = 2) => input.toString().padStart(length, '0');
+			const year = date.getFullYear();
+			const month = pad(date.getMonth() + 1);
+			const day = pad(date.getDate());
+			const hours = pad(date.getHours());
+			const minutes = pad(date.getMinutes());
+			const seconds = pad(date.getSeconds());
+			return `${year}-${month}-${day}_${hours}${minutes}${seconds}`;
 		} catch {
 			return String(value);
 		}

@@ -13,6 +13,7 @@ export interface FilterViewBarCallbacks {
 	onOpenTagGroupMenu(button: HTMLElement): void;
 	onOpenTableCreation(button: HTMLElement): void;
 	onDuplicateCurrentFile(button: HTMLElement): void;
+	onExportWithConfigBlock(button: HTMLElement): void;
 	onOpenColumnSettings(button: HTMLElement): void;
 	onOpenBackupRestore(button: HTMLElement): void;
 	onExportCsv(button: HTMLElement): void;
@@ -242,6 +243,14 @@ export class FilterViewBar {
 				.setIcon('copy')
 				.onClick(() => {
 					this.options.callbacks.onDuplicateCurrentFile(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('filterViewBar.settingsMenuExportWithConfigLabel'))
+				.setIcon('share-2')
+				.onClick(() => {
+					this.options.callbacks.onExportWithConfigBlock(this.settingsButtonEl);
 				});
 		});
 		menu.addItem((item) => {

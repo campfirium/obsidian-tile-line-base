@@ -65,6 +65,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			onDuplicateCurrentFile: () => {
 				void view.fileDuplicationController.duplicateCurrentFile();
 			},
+			onExportWithConfigBlock: () => {
+				void view.fileDuplicationController.exportWithConfigBlock();
+			},
 			onOpenBackupRestore: () => {
 
 				void openBackupRestoreModal(view);

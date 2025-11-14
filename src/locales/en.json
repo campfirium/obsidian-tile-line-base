@@ -330,6 +330,7 @@
     "addButtonAriaLabel": "Create a new filter view",
     "settingsMenuAriaLabel": "Open table actions",
     "settingsMenuDuplicateFileLabel": "Duplicate current note",
+    "settingsMenuExportWithConfigLabel": "Export note with config block",
     "settingsMenuAutoWidthLabel": "Adjust column widths",
     "settingsMenuColumnLabel": "Column settings",
     "settingsMenuExportCsvLabel": "Export table as CSV",
@@ -342,10 +343,14 @@
     "errorNoFile": "Current file is unavailable.",
     "failureNotice": "Failed to duplicate the file. Please try again later.",
     "successNotice": "Duplicated file: {{fileName}}",
+    "exportSuccessNotice": "Exported file: {{fileName}}",
+    "exportFailureNotice": "Failed to export the file. Please try again later.",
     "copyNameSuffix": "copy",
-    "fallbackName": "Copied note"
+    "exportNameSuffix": "export",
+    "fallbackName": "Copied note",
+    "exportFallbackName": "Exported note"
   },
-  "backup": { "menuLabel": "Restore backup", "modalTitle": "Backups for {{file}}", "modalTitleConfirm": "Restore backup", "errorNoFile": "Current file is unavailable.", "errorUnavailable": "Backup service is not ready yet.", "errorLoadFailed": "Failed to load backups. Please try again later.", "emptyState": "No backups recorded yet.", "restoreButton": "Restore", "restoreButtonAria": "Restore backup from {{timestamp}}", "confirmRestore": "Restore the file to the version from {{timestamp}}?", "noticeRestoreSuccess": "Restored file to the backup from {{timestamp}}.", "noticeRestoreFailed": "Failed to restore backup. Check the console for details.", "restoreCancelButton": "Cancel", "sizeLabel": "Size: {{size}}" },
+  "backup": { "menuLabel": "Restore backup", "modalTitle": "Backups for {{file}}", "modalTitleConfirm": "Restore backup", "errorNoFile": "Current file is unavailable.", "errorUnavailable": "Backup service is not ready yet.", "errorLoadFailed": "Failed to load backups. Please try again later.", "emptyState": "No backups recorded yet.", "restoreButton": "Restore", "restoreButtonAria": "Restore backup from {{timestamp}}", "confirmRestore": "Restore the file to the version from {{timestamp}}?", "noticeRestoreSuccess": "Restored file to the backup from {{timestamp}}.", "noticeRestoreFailed": "Failed to restore backup. Check the console for details.", "restoreCancelButton": "Cancel", "sizeLabel": "Size: {{size}}", "exportButton": "Export", "exportButtonAria": "Export backup from {{timestamp}} as a new file", "noticeExportSuccess": "Exported backup to {{file}}.", "noticeExportFailed": "Failed to export backup. Check the console for details." },
   "filterViewController": {
     "noColumns": "Unable to fetch column information, please try again later",
     "createModalTitle": "Create filter view",

@@ -4,6 +4,7 @@ import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import type { KanbanBoardState, KanbanViewPreferenceConfig } from '../types/kanban';
 import { getLogger } from '../utils/logger';
+import { readConfigCallout, stripExistingConfigBlock } from './config/ConfigBlockIO';
 
 const logger = getLogger('table-view:config');
 
@@ -68,7 +69,11 @@ export class TableConfigManager {
 			snapshot.kanbanBoards = plugin.getKanbanBoardsForFile(filePath);
 		}
 
-		return Object.keys(snapshot).length > 0 ? snapshot : null;
+		if (Object.keys(snapshot).length > 0) {
+			return snapshot;
+		}
+
+		return await this.tryImportFromConfigBlock(file);
 	}
 
 	async save(file: TFile, data: TableConfigData): Promise<void> {
@@ -115,4 +120,92 @@ export class TableConfigManager {
 			)
 		);
 	}
+
+	private async tryImportFromConfigBlock(file: TFile): Promise<TableConfigData | null> {
+		const plugin = getPluginContext();
+		if (!plugin) {
+			return null;
+		}
+
+		try {
+			const content = await plugin.app.vault.read(file);
+			const callout = readConfigCallout(content);
+			if (!callout?.data) {
+				return null;
+			}
+			const normalized = this.normalizeConfigData(callout.data);
+			if (!normalized) {
+				return null;
+			}
+			await this.save(file, normalized);
+			const cleaned = stripExistingConfigBlock(content);
+			const finalContent =
+				cleaned.length === 0 ? '' : cleaned.endsWith('\n') ? cleaned : `${cleaned}\n`;
+			if (finalContent !== content) {
+				await plugin.app.vault.modify(file, finalContent);
+			}
+			return normalized;
+		} catch (error) {
+			logger.error('Failed to import config block', error);
+			return null;
+		}
+	}
+
+	private normalizeConfigData(source: Record<string, any>): TableConfigData | null {
+		if (!isRecord(source)) {
+			return null;
+		}
+		const result: TableConfigData = {};
+		let hasData = false;
+
+		if (isRecord(source.filterViews)) {
+			result.filterViews = source.filterViews as FileFilterViewState;
+			hasData = true;
+		}
+		if (isRecord(source.tagGroups)) {
+			result.tagGroups = source.tagGroups as FileTagGroupState;
+			hasData = true;
+		}
+		if (isRecord(source.columnWidths)) {
+			const widths: Record<string, number> = {};
+			for (const [field, value] of Object.entries(source.columnWidths)) {
+				if (typeof value === 'number' && Number.isFinite(value)) {
+					widths[field] = value;
+				}
+			}
+			if (Object.keys(widths).length > 0) {
+				result.columnWidths = widths;
+				hasData = true;
+			}
+		}
+		if (Array.isArray(source.columnConfigs)) {
+			const configs = source.columnConfigs.filter((entry: unknown): entry is string => typeof entry === 'string');
+			if (configs.length > 0) {
+				result.columnConfigs = configs;
+				hasData = true;
+			}
+		}
+		if (typeof source.copyTemplate === 'string' && source.copyTemplate.trim().length > 0) {
+			result.copyTemplate = source.copyTemplate;
+			hasData = true;
+		}
+		if (source.viewPreference === 'table' || source.viewPreference === 'kanban') {
+			result.viewPreference = source.viewPreference;
+			hasData = true;
+		}
+		if (isRecord(source.kanban)) {
+			result.kanban = source.kanban as KanbanViewPreferenceConfig;
+			hasData = true;
+		}
+		if (isRecord(source.kanbanBoards)) {
+			result.kanbanBoards = source.kanbanBoards as KanbanBoardState;
+			hasData = true;
+		}
+
+		return hasData ? result : null;
+	}
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+	return !!value && typeof value === 'object' && !Array.isArray(value);
 }

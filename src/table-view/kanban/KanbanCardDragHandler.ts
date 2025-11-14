@@ -104,5 +104,6 @@ export function applyLaneUpdates(params: ApplyLaneUpdatesParams): void {
 	}
 
 	params.view.filterOrchestrator?.refresh();
+	params.view.markUserMutation('kanban-card-drag');
 	params.view.persistenceService?.scheduleSave();
 }

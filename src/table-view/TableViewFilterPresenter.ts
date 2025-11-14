@@ -237,7 +237,7 @@ export function persistFilterViews(view: TableView): Promise<void> | void {
 		return;
 
 	}
-
+	view.markUserMutation('filter-view-change');
 	view.persistenceService.scheduleSave();
 
 	return view.filterStateStore.persist();
@@ -255,7 +255,7 @@ export function persistTagGroups(view: TableView): Promise<void> | void {
 	}
 
 	view.tagGroupController?.syncWithAvailableViews();
-
+	view.markUserMutation('tag-group-change');
 	view.persistenceService.scheduleSave();
 
 	syncTagGroupState(view);

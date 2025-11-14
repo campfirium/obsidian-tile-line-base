@@ -423,6 +423,7 @@ export class TableHistoryManager {
 		if (focus && typeof focus.rowIndex === 'number' && focus.rowIndex >= 0) {
 			this.view.focusManager?.focusRow(focus.rowIndex, focus.field ?? null);
 		}
+		this.view.markUserMutation('history-change');
 		this.view.persistenceService?.scheduleSave();
 	}
 

@@ -49,6 +49,7 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 	}
 
 	view.filterOrchestrator.refresh();
+	view.markUserMutation('status-change');
 	view.persistenceService.scheduleSave();
 }
 
@@ -96,5 +97,6 @@ export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 		return;
 	}
 	view.filterOrchestrator.refresh();
+	view.markUserMutation('cell-edit');
 	view.persistenceService.scheduleSave();
 }

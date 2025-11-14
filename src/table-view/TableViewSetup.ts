@@ -58,7 +58,8 @@ export function initializeTableView(view: TableView): void {
 			multiRow: view.kanbanMultiRowEnabled
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
-		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file)
+		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
+		shouldAllowSave: () => view.hasUserMutations()
 	});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,
@@ -78,6 +79,7 @@ export function initializeTableView(view: TableView): void {
 			view.focusManager.focusRow(rowIndex, field ?? null);
 		},
 		scheduleSave: () => {
+			view.markUserMutation('row-interaction');
 			view.persistenceService.scheduleSave();
 		},
 		getActiveFilterPrefills: () => getActiveFilterPrefills(view),
@@ -109,7 +111,10 @@ export function initializeTableView(view: TableView): void {
 		getFile: () => view.file,
 		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
 		refreshGrid: () => view.filterOrchestrator.refresh(),
-		scheduleSave: () => view.persistenceService.scheduleSave()
+		scheduleSave: () => {
+			view.markUserMutation('paragraph-promotion');
+			view.persistenceService.scheduleSave();
+		}
 	});
 	view.tableCreationController = new TableCreationController({
 		app: view.app,

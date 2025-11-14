@@ -78,18 +78,27 @@ class BackupRestoreModal extends Modal {
 
 		for (const entry of entries) {
 			const timestampText = this.formatTimestamp(entry.createdAt);
+			const isInitial = entry.isInitial === true;
+			const name = isInitial ? `${t('backup.initialEntryLabel')} · ${timestampText}` : timestampText;
 			const setting = new Setting(container)
-				.setName(timestampText)
+				.setName(name)
 				.setDesc(t('backup.sizeLabel', { size: this.formatSize(entry.size) }));
 			setting.addButton((button) => {
 				button
 					.setButtonText(t('backup.restoreButton'))
-					.setTooltip(t('backup.restoreButtonAria', { timestamp: timestampText }))
+					.setTooltip(
+						isInitial
+							? t('backup.restoreInitialTooltip', { timestamp: timestampText })
+							: t('backup.restoreButtonAria', { timestamp: timestampText })
+					)
 					.setCta()
 					.onClick(() => {
 						void this.handleRestore(entry);
 					});
-				button.buttonEl.setAttribute('aria-label', t('backup.restoreButtonAria', { timestamp: timestampText }));
+				const ariaLabel = isInitial
+					? t('backup.restoreInitialTooltip', { timestamp: timestampText })
+					: t('backup.restoreButtonAria', { timestamp: timestampText });
+				button.buttonEl.setAttribute('aria-label', ariaLabel);
 			});
 		}
 	}
@@ -123,6 +132,17 @@ class BackupRestoreModal extends Modal {
 				await this.manager.restoreBackup(this.view.file, entry.id);
 				new Notice(t('backup.noticeRestoreSuccess', { timestamp: timestampLabel }));
 				this.close();
+
+				const plugin = getPluginContext();
+				if (entry.isInitial && plugin) {
+					try {
+						await plugin.toggleLeafView(this.view.leaf);
+					} catch (error) {
+						logger.warn('Failed to toggle to markdown view after restoring initial backup', error);
+					}
+					return;
+				}
+
 				void this.view.render();
 			} catch (error) {
 				logger.error('Failed to restore backup', error);

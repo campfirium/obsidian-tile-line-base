@@ -221,6 +221,7 @@ export class ViewSwitchCoordinator {
 			const file = tableView.file;
 
 			if (file) {
+				await tableView.restoreSessionBaselineIfEligible();
 				await leaf.setViewState({
 					type: 'markdown',
 					state: {

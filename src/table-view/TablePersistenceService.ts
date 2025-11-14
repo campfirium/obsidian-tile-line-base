@@ -36,6 +36,7 @@ interface TablePersistenceDeps {
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	markSelfMutation?: (file: TFile) => void;
+	shouldAllowSave?: () => boolean;
 }
 
 /**
@@ -55,6 +56,10 @@ export class TablePersistenceService {
 	}
 
 	scheduleSave(): void {
+		if (this.deps.shouldAllowSave && !this.deps.shouldAllowSave()) {
+			logger.debug('scheduleSave:blocked');
+			return;
+		}
 		if (this.saveTimeout) {
 			clearTimeout(this.saveTimeout);
 		}
@@ -71,6 +76,12 @@ export class TablePersistenceService {
 	}
 
 	async save(): Promise<void> {
+		if (this.deps.shouldAllowSave && !this.deps.shouldAllowSave()) {
+			logger.debug('save:blocked');
+			this.cancelScheduledSave();
+			return;
+		}
+
 		const file = this.deps.getFile();
 		if (!file) {
 			return;

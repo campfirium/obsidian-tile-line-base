@@ -44,7 +44,9 @@ import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, Kanba
 import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
 import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
-import { buildTableViewTabTitle, buildTableViewTitle } from "./utils/viewTitle";
+import { buildTableViewTitle } from "./utils/viewTitle";
+import { ConversionSessionManager } from "./table-view/ConversionSessionManager";
+import { refreshTableViewDisplayText } from "./table-view/viewDisplayText";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -85,6 +87,7 @@ export class TableView extends ItemView {
 	public refreshCoordinator!: TableRefreshCoordinator;
 	public tableContainer: HTMLElement | null = null;
 	public filterViewBar: FilterViewBar | null = null;
+	private readonly conversionSession = new ConversionSessionManager(this);
 	public filterViewController!: FilterViewController;
 	public filterStateStore = new FilterStateStore(null);
 	public filterViewState: FileFilterViewState = this.filterStateStore.getState();
@@ -135,29 +138,7 @@ export class TableView extends ItemView {
 	}
 
 	public refreshDisplayText(): void {
-		const tabTitle = buildTableViewTabTitle({
-			file: this.file,
-			filePath: this.file?.path ?? null
-		});
-		const displayText = this.getDisplayText();
-		const leafWithTab = this.leaf as WorkspaceLeaf & { tabHeaderInnerTitleEl?: HTMLElement | null };
-		this.setElementText(leafWithTab?.tabHeaderInnerTitleEl ?? null, tabTitle);
-
-		const leafEl = this.containerEl.closest('.workspace-leaf');
-		const headerTitleEl = (leafEl?.querySelector('.view-header-title') as HTMLElement | null) ?? null;
-		this.setElementText(headerTitleEl, displayText);
-	}
-
-	private setElementText(element: HTMLElement | null | undefined, text: string): void {
-		if (!element) {
-			return;
-		}
-		const setText = (element as any).setText;
-		if (typeof setText === 'function') {
-			setText.call(element, text);
-			return;
-		}
-		element.textContent = text;
+		refreshTableViewDisplayText(this);
 	}
 
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
@@ -166,11 +147,13 @@ export class TableView extends ItemView {
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
 			if (file instanceof TFile) {
 				this.file = file;
+				this.conversionSession.prepare(file);
 				this.refreshCoordinator.setTrackedFile(file);
 				this.kanbanBoardsLoaded = false;
 				await this.render();
 			} else {
 				this.file = null;
+				this.conversionSession.prepare(null);
 				this.refreshCoordinator.setTrackedFile(null);
 			}
 		} catch (error) {
@@ -215,6 +198,8 @@ export class TableView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		await this.restoreSessionBaselineIfEligible();
+		this.conversionSession.prepare(null);
 		if (this.markdownToggleButton) {
 			this.markdownToggleButton.remove();
 			this.markdownToggleButton = null;
@@ -300,6 +285,7 @@ export class TableView extends ItemView {
 		if (this.kanbanController) {
 			this.kanbanController.setHeightMode(normalized);
 		}
+		this.markUserMutation('kanban-height-mode');
 		this.persistenceService?.scheduleSave();
 	}
 
@@ -311,11 +297,28 @@ export class TableView extends ItemView {
 		if (this.kanbanController) {
 			this.kanbanController.setMultiRowEnabled(enabled);
 		}
+		this.markUserMutation('kanban-multi-row');
 		this.persistenceService?.scheduleSave();
 	}
 
 	public async setActiveViewMode(mode: 'table' | 'kanban'): Promise<void> {
 		await this.kanbanManager.setActiveViewMode(mode);
+	}
+
+	public captureConversionBaseline(content: string): void {
+		this.conversionSession.captureBaseline(content);
+	}
+
+	public markUserMutation(reason?: string): void {
+		this.conversionSession.markUserMutation(reason);
+	}
+
+	public hasUserMutations(): boolean {
+		return this.conversionSession.hasUserMutations();
+	}
+
+	public async restoreSessionBaselineIfEligible(): Promise<boolean> {
+		return this.conversionSession.restoreBaselineIfEligible();
 	}
 
 }

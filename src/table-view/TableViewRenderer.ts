@@ -6,13 +6,13 @@ import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPr
 import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } from './TableViewInteractions';
 import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
 import { handleCellLinkOpen } from './LinkNavigation';
-import type { ColumnConfig } from './MarkdownBlockParser';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
+import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 
 const logger = getLogger('table-view:renderer');
 
@@ -61,6 +61,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.copyTemplate = null;
 
 	const content = await view.app.vault.read(view.file);
+	view.captureConversionBaseline(content);
 	const configBlock = await view.persistenceService.loadConfig();
 
 	view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
@@ -277,55 +278,5 @@ export async function renderTableView(view: TableView): Promise<void> {
 	} else {
 		executeMount();
 	}
-}
-
-function deserializeColumnConfigs(view: TableView, raw: unknown): ColumnConfig[] | null {
-	if (!Array.isArray(raw)) {
-		return null;
-	}
-	const result: ColumnConfig[] = [];
-	for (const entry of raw) {
-		if (typeof entry !== 'string' || entry.trim().length === 0) {
-			continue;
-		}
-		const config = view.markdownParser.parseColumnDefinition(entry);
-		if (config) {
-			result.push(config);
-		}
-	}
-	return result.length > 0 ? result : null;
-}
-
-
-function mergeColumnConfigs(
-	headerConfigs: ColumnConfig[] | null,
-	persistedConfigs: ColumnConfig[] | null
-): ColumnConfig[] | null {
-	const baseList = headerConfigs ? headerConfigs.map((config) => ({ ...config })) : [];
-	const overrideList = persistedConfigs ? persistedConfigs.map((config) => ({ ...config })) : [];
-	if (baseList.length === 0 && overrideList.length === 0) {
-		return null;
-	}
-	if (baseList.length === 0) {
-		return overrideList;
-	}
-	const overrideMap = new Map<string, ColumnConfig>();
-	for (const config of overrideList) {
-		overrideMap.set(config.name, config);
-	}
-	const merged: ColumnConfig[] = [];
-	for (const base of baseList) {
-		const override = overrideMap.get(base.name);
-		if (override) {
-			merged.push({ ...base, ...override });
-			overrideMap.delete(base.name);
-		} else {
-			merged.push(base);
-		}
-	}
-	for (const remaining of overrideMap.values()) {
-		merged.push(remaining);
-	}
-	return merged;
 }
 

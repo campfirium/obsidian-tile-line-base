@@ -31,6 +31,7 @@ const LATEST_KEEP_COUNT = 3;
 const MAX_CAPACITY_MB = 10_240; // Avoid unbounded JSON size if user inputs huge value
 const FNV32_OFFSET_BASIS = 0x811c9dc5;
 const FNV32_PRIME = 0x01000193;
+const INITIAL_BACKUP_GRACE_MS = 7 * 24 * 60 * 60 * 1000; // Keep initial snapshot for at least 7 days
 
 interface SubtleCryptoLike {
 	digest: (algorithm: string, data: ArrayBuffer | Uint8Array) => Promise<ArrayBuffer>;
@@ -107,6 +108,23 @@ export class BackupManager {
 			return this.createBackupUnsafe(file.path, content);
 		});
 	}
+	async ensureInitialBackup(file: TFile, content: string): Promise<boolean> {
+		await this.initialize();
+		const settings = this.getSettings();
+		if (!settings.enabled) {
+			logger.debug('Backups disabled, skip ensureInitialBackup', { path: file.path });
+			return false;
+		}
+
+		return this.runExclusive(async () => {
+			const record = this.getOrCreateRecord(file.path);
+			if (record.entries.some((entry) => entry.isInitial)) {
+				logger.debug('Initial backup already exists, skip ensureInitialBackup', { path: file.path });
+				return false;
+			}
+			return this.createBackupUnsafe(file.path, content, { isInitial: true });
+		});
+	}
 
 	async listBackups(file: TFile | string): Promise<BackupDescriptor[]> {
 		await this.initialize();
@@ -121,7 +139,8 @@ export class BackupManager {
 				id: entry.id,
 				createdAt: entry.createdAt,
 				size: entry.size,
-				category: resolveCategory(index, entry, now, LATEST_KEEP_COUNT, BUCKET_RULES)
+				category: resolveCategory(index, entry, now, LATEST_KEEP_COUNT, BUCKET_RULES),
+				isInitial: entry.isInitial === true
 			}));
 		});
 	}
@@ -168,7 +187,11 @@ export class BackupManager {
 		});
 	}
 
-	private async createBackupUnsafe(filePath: string, content: string): Promise<boolean> {
+	private async createBackupUnsafe(
+		filePath: string,
+		content: string,
+		options?: { isInitial?: boolean }
+	): Promise<boolean> {
 		const record = this.getOrCreateRecord(filePath);
 		const encoded = this.encoder.encode(content);
 		const size = encoded.byteLength;
@@ -180,7 +203,13 @@ export class BackupManager {
 
 		const timestamp = Date.now();
 		const id = this.generateEntryId(record, timestamp);
-		const entry: StoredBackupEntry = { id, createdAt: timestamp, size, hash };
+		const entry: StoredBackupEntry = {
+			id,
+			createdAt: timestamp,
+			size,
+			hash,
+			isInitial: options?.isInitial ? true : undefined
+		};
 		const entryPath = this.getEntryPath(filePath, entry);
 		await this.adapter.write(entryPath, content);
 		record.entries.unshift(entry);
@@ -205,6 +234,10 @@ export class BackupManager {
 
 		for (let index = 0; index < sorted.length; index++) {
 			const entry = sorted[index];
+			if (this.isInitialProtected(entry, now)) {
+				keep.set(entry.id, entry);
+				continue;
+			}
 			if (index < LATEST_KEEP_COUNT) {
 				keep.set(entry.id, entry);
 				continue;
@@ -243,27 +276,31 @@ export class BackupManager {
 		let modified = false;
 		const priority: BackupCategory[] = ['archive', 'weekly', 'daily', 'hourly', 'recent', 'latest'];
 
-		for (const category of priority) {
-			if (this.index.totalSize <= byteLimit) {
-				break;
-			}
-			const candidates = collectCandidates(this.index.files, category, now, LATEST_KEEP_COUNT, BUCKET_RULES);
-			for (const candidate of candidates) {
+		const removeByPriority = async (skipInitial: boolean): Promise<void> => {
+			for (const category of priority) {
 				if (this.index.totalSize <= byteLimit) {
-					break;
+					return;
 				}
-				const record = this.index.files[candidate.filePath];
-				if (!record) {
-					continue;
-				}
-				if (record.entries.length <= 1) {
-					continue;
-				}
-				const removed = await this.deleteEntry(candidate.filePath, record, candidate.entry);
-				if (removed) {
-					modified = true;
+				const candidates = collectCandidates(this.index.files, category, now, LATEST_KEEP_COUNT, BUCKET_RULES);
+				for (const candidate of candidates) {
+					if (this.index.totalSize <= byteLimit) {
+						return;
+					}
+					const record = this.index.files[candidate.filePath];
+					if (!record) continue;
+					if (record.entries.length <= 1) continue;
+					if (skipInitial && this.isInitialProtected(candidate.entry, now)) continue;
+					const removed = await this.deleteEntry(candidate.filePath, record, candidate.entry);
+					if (removed) {
+						modified = true;
+					}
 				}
 			}
+		};
+
+		await removeByPriority(true);
+		if (this.index.totalSize > byteLimit) {
+			await removeByPriority(false);
 		}
 
 		return modified;
@@ -350,7 +387,6 @@ export class BackupManager {
 			hashB.toString(16).padStart(8, '0')
 		);
 	}
-
 	private getOrCreateRecord(filePath: string): FileBackupRecord {
 		const record = this.index.files[filePath];
 		if (record) {
@@ -477,12 +513,10 @@ export class BackupManager {
 		this.index.totalSize = totalSize;
 		return mutated;
 	}
-
 	private async persistIndex(): Promise<void> {
 		const payload = JSON.stringify(this.index, null, 2);
 		await this.adapter.write(this.indexPath, payload);
 	}
-
 	private async ensureDirectory(path: string): Promise<void> {
 		if (await this.adapter.exists(path)) {
 			return;
@@ -495,15 +529,12 @@ export class BackupManager {
 			}
 		}
 	}
-
 	private isNotFoundError(error: unknown): boolean {
 		return this.getErrorCode(error) === 'ENOENT';
 	}
-
 	private isAlreadyExistsError(error: unknown): boolean {
 		return this.getErrorCode(error) === 'EEXIST';
 	}
-
 	private getErrorCode(error: unknown): string | null {
 		if (error && typeof error === 'object' && 'code' in error) {
 			const code = (error as { code?: unknown }).code;
@@ -513,16 +544,17 @@ export class BackupManager {
 		}
 		return null;
 	}
-
 	private formatTimestamp(timestamp: number): string {
 		const date = new Date(timestamp);
 		const pad = (value: number, length = 2) => value.toString().padStart(length, '0');
 		return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${pad(date.getMilliseconds(), 3)}`;
 	}
-
 	private runExclusive<T>(task: () => Promise<T>): Promise<T> {
 		const result = this.queue.then(task);
 		this.queue = result.then(() => undefined, () => undefined);
 		return result;
+	}
+	private isInitialProtected(entry: StoredBackupEntry, now: number): boolean {
+		return entry.isInitial === true && now - entry.createdAt < INITIAL_BACKUP_GRACE_MS;
 	}
 }

@@ -5,6 +5,7 @@ export interface StoredBackupEntry {
 	createdAt: number;
 	size: number;
 	hash: string;
+	isInitial?: boolean;
 }
 
 export interface FileBackupRecord {
@@ -23,6 +24,7 @@ export interface BackupDescriptor {
 	createdAt: number;
 	size: number;
 	category: BackupCategory;
+	isInitial?: boolean;
 }
 
 export interface BucketRule {

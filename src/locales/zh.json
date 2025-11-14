@@ -340,7 +340,7 @@
     "copyNameSuffix": "副本",
     "fallbackName": "复制的笔记"
   },
-  "backup": { "menuLabel": "恢复备份", "modalTitle": "{{file}} 的备份", "modalTitleConfirm": "恢复备份", "errorNoFile": "当前文件不可用。", "errorUnavailable": "备份服务尚未准备好。", "errorLoadFailed": "加载备份失败，请稍后再试。", "emptyState": "尚未记录任何备份。", "restoreButton": "恢复", "restoreButtonAria": "从 {{timestamp}} 的备份恢复", "confirmRestore": "是否将文件恢复到 {{timestamp}} 的版本？", "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。", "noticeRestoreFailed": "恢复备份失败，详见控制台。", "restoreCancelButton": "取消", "sizeLabel": "大小：{{size}}" },
+  "backup": { "menuLabel": "恢复备份", "modalTitle": "{{file}} 的备份", "modalTitleConfirm": "恢复备份", "errorNoFile": "当前文件不可用。", "errorUnavailable": "备份服务尚未准备好。", "errorLoadFailed": "加载备份失败，请稍后再试。", "emptyState": "尚未记录任何备份。", "restoreButton": "恢复", "restoreButtonAria": "从 {{timestamp}} 的备份恢复", "restoreInitialTooltip": "恢复为首次进入表格视图前的 Markdown（{{timestamp}}）", "initialEntryLabel": "首次进入表格视图前的原始 Markdown", "confirmRestore": "是否将文件恢复到 {{timestamp}} 的版本？", "noticeRestoreSuccess": "已恢复到 {{timestamp}} 的备份。", "noticeRestoreFailed": "恢复备份失败，详见控制台。", "restoreCancelButton": "取消", "sizeLabel": "大小：{{size}}" },
   "filterViewController": {
     "noColumns": "无法获取列信息，请稍后再试",
     "createModalTitle": "创建筛选视图",

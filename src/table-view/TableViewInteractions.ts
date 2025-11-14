@@ -65,6 +65,7 @@ export function handleHeaderEdit(view: TableView, colIndex: number, newValue: st
 	view.columnLayoutStore.rename(oldName, trimmed);
 	renameColumnInFilterViews(view, oldName, trimmed);
 	view.filterOrchestrator.refresh();
+	view.markUserMutation('column-rename');
 	view.persistenceService.scheduleSave();
 }
 
@@ -81,6 +82,7 @@ export function persistColumnStructureChange(view: TableView, options?: { notice
 	view.persistenceService.cancelScheduledSave();
 	void (async () => {
 		try {
+			view.markUserMutation('column-structure-change');
 			await view.persistenceService.save();
 			await view.render();
 		} catch (error) {
@@ -176,11 +178,13 @@ export function handleColumnResize(view: TableView, field: string, width: number
 	if (!view.columnLayoutStore.updateWidth(field, width)) {
 		return;
 	}
+	view.markUserMutation('column-width');
 	view.persistenceService.scheduleSave();
 }
 
 export function handleColumnOrderChange(view: TableView, orderedFields: string[]): void {
 	if (view.dataStore.reorderColumns(orderedFields)) {
+		view.markUserMutation('column-order');
 		view.persistenceService.scheduleSave();
 	}
 }

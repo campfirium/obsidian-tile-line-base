@@ -95,7 +95,15 @@ export class FilterViewEditorModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass('tlb-filter-editor-modal');
+		contentEl.removeClass('tlb-filter-editor-modal--dual');
 		const isDualLayout = this.layout === 'dual';
+		if (isDualLayout) {
+			this.modalEl.addClass('tlb-filter-editor-modal-container--dual');
+			this.modalEl.removeClass('tlb-filter-editor-modal-container--single');
+		} else {
+			this.modalEl.addClass('tlb-filter-editor-modal-container--single');
+			this.modalEl.removeClass('tlb-filter-editor-modal-container--dual');
+		}
 		let leftColumn = contentEl;
 		let rightColumn = contentEl;
 		if (isDualLayout) {
@@ -315,7 +323,7 @@ export class FilterViewEditorModal extends Modal {
 
 			const removeButton = row.createEl('button', {
 				type: 'button',
-				cls: 'tlb-filter-view-modal__remove-button',
+				cls: 'clickable-icon tlb-filter-view-modal__remove-button',
 				attr: { 'aria-label': t('filterViewModals.removeButton') }
 			});
 			setIcon(removeButton, 'trash-2');
@@ -501,7 +509,7 @@ export class FilterViewEditorModal extends Modal {
 
 			const removeButton = row.createEl('button', {
 				type: 'button',
-				cls: 'tlb-filter-view-modal__remove-button',
+				cls: 'clickable-icon tlb-filter-view-modal__remove-button',
 				attr: { 'aria-label': t('filterViewModals.removeButton') }
 			});
 			setIcon(removeButton, 'trash-2');

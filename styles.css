@@ -2,6 +2,7 @@
 
 :root {
 	--tlb-popup-border-color: color-mix(in srgb, var(--background-modifier-border, rgba(128, 128, 128, 0.55)) 100%, transparent);
+	--tlb-kanban-single-row-offset: 7rem;
 }
 
 .theme-dark {
@@ -1836,6 +1837,10 @@
 
 .tlb-kanban-wrapper--viewport {
 	scrollbar-gutter: stable;
+}
+
+.tlb-kanban-wrapper--single-row {
+	min-height: clamp(24rem, calc(100vh - var(--tlb-kanban-single-row-offset, 7rem)), 100vh);
 }
 
 .tlb-kanban-root {

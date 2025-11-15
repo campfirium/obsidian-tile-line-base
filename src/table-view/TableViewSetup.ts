@@ -124,7 +124,8 @@ export function initializeTableView(view: TableView): void {
 		app: view.app,
 		configManager: view.configManager,
 		persistence: view.persistenceService,
-		getCurrentFile: () => view.file
+		getCurrentFile: () => view.file,
+		getOwnerDocument: () => view.containerEl.ownerDocument ?? document
 	});
 	view.kanbanBoardController = new KanbanBoardController({
 		app: view.app,

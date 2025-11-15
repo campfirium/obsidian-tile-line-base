@@ -1,4 +1,4 @@
-import { App, Notice, TFile, normalizePath } from 'obsidian';
+import { App, Notice, TFile, TFolder, normalizePath } from 'obsidian';
 import type { Schema } from '../SchemaBuilder';
 import type { TableDataStore } from '../TableDataStore';
 import type { TableHistoryManager } from '../TableHistoryManager';
@@ -73,15 +73,20 @@ export class ParagraphPromotionController {
 			return;
 		}
 
+		const sourceFile = this.getFile();
+		const defaultFolderPath = sourceFile?.parent?.path ?? '';
 		const modalResult = await openParagraphPromotionModal(this.app, {
 			columns: availableColumns,
-			includeEmptyFields: true
+			includeEmptyFields: true,
+			defaultFolder: defaultFolderPath,
+			defaultNamePrefix: ''
 		});
 		if (!modalResult) {
 			logger.debug('promoteRows cancelled by user');
 			return;
 		}
-		const { selected, includeEmpty } = modalResult;
+		const { selected, includeEmpty, folder, fileNamePrefix } = modalResult;
+		const normalizedPrefix = fileNamePrefix?.trim() ?? '';
 		const selectedColumns = Array.from(new Set(selected));
 		const bodyColumns = availableColumns.filter((column) => !selectedColumns.includes(column));
 
@@ -98,8 +103,10 @@ export class ParagraphPromotionController {
 			return;
 		}
 
-		const sourceFile = this.getFile();
-		const folderPath = sourceFile?.parent?.path ?? '';
+		const folderPath = await this.resolveTargetFolder(folder, defaultFolderPath);
+		if (folderPath === null) {
+			return;
+		}
 		const usedPaths = new Set<string>();
 		const successes: PromotionResult[] = [];
 		let failures = 0;
@@ -113,7 +120,13 @@ export class ParagraphPromotionController {
 			}
 
 			try {
-				const { path: targetPath } = this.generateUniquePath(block, selectedColumns, folderPath, usedPaths);
+				const { path: targetPath } = this.generateUniquePath(
+					block,
+					selectedColumns,
+					folderPath,
+					usedPaths,
+					normalizedPrefix
+				);
 				const content = this.buildNoteContent(block, selectedColumns, bodyColumns, includeEmpty);
 				const createdFile = await this.app.vault.create(targetPath, content);
 				usedPaths.add(createdFile.path);
@@ -219,14 +232,17 @@ export class ParagraphPromotionController {
 		block: H2Block,
 		selectedColumns: string[],
 		folderPath: string,
-		usedPaths: Set<string>
+		usedPaths: Set<string>,
+		namePrefix: string | null | undefined
 	): { fileName: string; path: string } {
 		const baseName = this.resolveBaseName(block, selectedColumns);
+		const sanitizedPrefix = this.sanitizeFileName(namePrefix?.trim() ?? '');
+		const prefixedBase = sanitizedPrefix.length > 0 ? `${sanitizedPrefix} ${baseName}`.trim() : baseName;
 		const folderNormalized = folderPath ? normalizePath(folderPath) : '';
 
 		for (let attempt = 0; attempt < 500; attempt++) {
 			const suffix = attempt === 0 ? '' : ` ${attempt + 1}`;
-			const candidateName = `${baseName}${suffix}`.trim();
+			const candidateName = `${prefixedBase}${suffix}`.trim();
 			const fileName = candidateName.length > 0 ? candidateName : t('paragraphPromotion.noteNameFallback');
 			const rawPath = folderNormalized
 				? `${folderNormalized}/${fileName}.md`
@@ -408,5 +424,31 @@ export class ParagraphPromotionController {
 			return;
 		}
 		new Notice(t('paragraphPromotion.failureNotice'));
+	}
+
+	private async resolveTargetFolder(input: string | null | undefined, fallback: string): Promise<string | null> {
+		const trimmed = (input ?? '').trim();
+		const resolved = trimmed.length > 0 ? trimmed : fallback;
+		if (!resolved || resolved === '/' || resolved === '.') {
+			return '';
+		}
+		const normalized = normalizePath(resolved);
+		const existing = this.app.vault.getAbstractFileByPath(normalized);
+		if (!existing) {
+			try {
+				await this.app.vault.createFolder(normalized);
+				return normalized;
+			} catch (error) {
+				logger.error('Failed to create target folder for paragraph promotion', { error, path: normalized });
+				new Notice(t('paragraphPromotion.folderCreateFailed'));
+				return null;
+			}
+		}
+		if (existing instanceof TFolder) {
+			return normalized;
+		}
+		logger.warn('Paragraph promotion target is not a folder', { path: normalized });
+		new Notice(t('paragraphPromotion.folderInvalidNotice'));
+		return null;
 	}
 }

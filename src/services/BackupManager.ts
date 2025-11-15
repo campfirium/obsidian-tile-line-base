@@ -20,6 +20,7 @@ import {
 } from './backupPath';
 import { BUCKET_RULES, collectCandidates, resolveCategory, selectBucket } from './backupRetention';
 import { migrateLegacyEntry } from './backupMigration';
+import { computeBackupHash } from './backupHash';
 
 const logger = getLogger('service:backup');
 
@@ -29,17 +30,7 @@ const BACKUP_EXTENSION = '.tlbkp';
 const INDEX_VERSION = 1;
 const LATEST_KEEP_COUNT = 3;
 const MAX_CAPACITY_MB = 10_240; // Avoid unbounded JSON size if user inputs huge value
-const FNV32_OFFSET_BASIS = 0x811c9dc5;
-const FNV32_PRIME = 0x01000193;
 const INITIAL_BACKUP_GRACE_MS = 7 * 24 * 60 * 60 * 1000; // Keep initial snapshot for at least 7 days
-
-interface SubtleCryptoLike {
-	digest: (algorithm: string, data: ArrayBuffer | Uint8Array) => Promise<ArrayBuffer>;
-}
-
-interface CryptoLike {
-	subtle?: SubtleCryptoLike;
-}
 
 interface BackupManagerOptions {
 	plugin: Plugin;
@@ -177,6 +168,27 @@ export class BackupManager {
 		});
 	}
 
+	async readBackupContent(file: TFile, entryId: string): Promise<string> {
+		await this.initialize();
+		return this.runExclusive(async () => {
+			const record = this.index.files[file.path];
+			if (!record) {
+				throw new Error(`No backups found for ${file.path}`);
+			}
+			const target = record.entries.find((entry) => entry.id === entryId);
+			if (!target) {
+				throw new Error(`Backup entry ${entryId} not found for ${file.path}`);
+			}
+			const backupPath = this.getEntryPath(file.path, target);
+			try {
+				return await this.adapter.read(backupPath);
+			} catch (error) {
+				logger.error('Failed to read backup file', { path: backupPath, error });
+				throw error;
+			}
+		});
+	}
+
 	async enforceCapacity(): Promise<void> {
 		await this.initialize();
 		await this.runExclusive(async () => {
@@ -195,7 +207,7 @@ export class BackupManager {
 		const record = this.getOrCreateRecord(filePath);
 		const encoded = this.encoder.encode(content);
 		const size = encoded.byteLength;
-		const hash = await this.computeHash(encoded);
+		const hash = await computeBackupHash(encoded);
 		const latest = record.entries[0];
 		if (latest && latest.hash === hash) {
 			return false;
@@ -356,37 +368,6 @@ export class BackupManager {
 		return candidate;
 	}
 
-	private async computeHash(data: Uint8Array): Promise<string> {
-		const cryptoApi = (globalThis as { crypto?: CryptoLike }).crypto;
-		if (cryptoApi?.subtle) {
-			const digest = await cryptoApi.subtle.digest('SHA-256', data);
-			return this.arrayBufferToHex(digest);
-		}
-		return this.fallbackHash(data);
-	}
-
-	private arrayBufferToHex(buffer: ArrayBuffer): string {
-		const bytes = new Uint8Array(buffer);
-		let result = '';
-		for (let index = 0; index < bytes.length; index++) {
-			result += bytes[index].toString(16).padStart(2, '0');
-		}
-		return result;
-	}
-
-	private fallbackHash(data: Uint8Array): string {
-		let hashA = FNV32_OFFSET_BASIS;
-		let hashB = FNV32_OFFSET_BASIS;
-		for (let index = 0; index < data.length; index++) {
-			const value = data[index];
-			hashA = Math.imul(hashA ^ value, FNV32_PRIME) >>> 0;
-			hashB = Math.imul(hashB ^ ((value + index) & 0xff), FNV32_PRIME) >>> 0;
-		}
-		return (
-			hashA.toString(16).padStart(8, '0') +
-			hashB.toString(16).padStart(8, '0')
-		);
-	}
 	private getOrCreateRecord(filePath: string): FileBackupRecord {
 		const record = this.index.files[filePath];
 		if (record) {

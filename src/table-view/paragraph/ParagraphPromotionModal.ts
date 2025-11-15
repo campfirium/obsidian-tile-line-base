@@ -1,12 +1,15 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../i18n';
+import { selectFolder } from '../FolderSuggestModal';
 
 interface ParagraphPromotionModalOptions {
 	app: App;
 	columns: string[];
 	initialSelection: Set<string>;
 	includeEmptyFields: boolean;
-	onSubmit: (result: { selected: string[]; includeEmpty: boolean }) => void;
+	defaultFolder: string;
+	defaultNamePrefix?: string;
+	onSubmit: (result: { selected: string[]; includeEmpty: boolean; folder: string; fileNamePrefix: string }) => void;
 	onCancel: () => void;
 }
 
@@ -20,14 +23,19 @@ export class ParagraphPromotionModal extends Modal {
 	private readonly selectedYaml: Set<string>;
 	private toggleRefs: Map<string, TogglePair> = new Map();
 	private includeEmptyFields: boolean;
+	private targetFolder: string;
+	private namePrefix: string;
 	private suppressToggle = false;
 	private globalToggle: TogglePair | null = null;
+	private folderDisplay: HTMLSpanElement | null = null;
 
 	constructor(options: ParagraphPromotionModalOptions) {
 		super(options.app);
 		this.options = options;
 		this.selectedYaml = new Set(options.initialSelection);
 		this.includeEmptyFields = options.includeEmptyFields ?? true;
+		this.targetFolder = options.defaultFolder ?? '';
+		this.namePrefix = options.defaultNamePrefix ?? '';
 	}
 
 	onOpen(): void {
@@ -38,6 +46,9 @@ export class ParagraphPromotionModal extends Modal {
 
 		const description = contentEl.createEl('p', { cls: 'setting-item-description' });
 		description.setText(t('paragraphPromotion.modalDescription'));
+
+		this.renderFolderSelector(contentEl);
+		this.renderNamePrefixInput(contentEl);
 
 		if (this.options.columns.length === 0) {
 			const emptyState = contentEl.createDiv({ cls: 'setting-item-description' });
@@ -86,8 +97,68 @@ export class ParagraphPromotionModal extends Modal {
 
 	private submit(): void {
 		const result = Array.from(this.selectedYaml);
-		this.options.onSubmit({ selected: result, includeEmpty: this.includeEmptyFields });
+		this.options.onSubmit({
+			selected: result,
+			includeEmpty: this.includeEmptyFields,
+			folder: this.targetFolder.trim(),
+			fileNamePrefix: this.namePrefix.trim()
+		});
 		this.close();
+	}
+
+	private renderFolderSelector(container: HTMLElement): void {
+		const section = container.createDiv({ cls: 'tlb-paragraph-promotion-folder' });
+		const label = section.createDiv({ cls: 'tlb-paragraph-promotion-folder__label' });
+		label.setText(t('paragraphPromotion.folderLabel'));
+
+		const selectorRow = section.createDiv({ cls: 'tlb-paragraph-promotion-folder__selector' });
+		this.folderDisplay = selectorRow.createEl('span', { cls: 'tlb-paragraph-promotion-folder__value' });
+		this.folderDisplay.setText(this.targetFolder || t('paragraphPromotion.folderCurrentDefault'));
+
+		const chooseButton = selectorRow.createEl('button', {
+			text: t('paragraphPromotion.folderChooseButton'),
+			cls: 'tlb-paragraph-promotion-folder__button'
+		});
+		chooseButton.addEventListener('click', () => {
+			void this.openFolderSuggest();
+		});
+
+		const helper = section.createDiv({
+			cls: 'setting-item-description tlb-paragraph-promotion-folder__description'
+		});
+		helper.setText(t('paragraphPromotion.folderDescription'));
+	}
+
+	private async openFolderSuggest(): Promise<void> {
+		const selected = await selectFolder(this.app, this.targetFolder);
+		if (!selected) {
+			return;
+		}
+		this.targetFolder = selected.path;
+		if (this.folderDisplay) {
+			this.folderDisplay.setText(this.targetFolder);
+		}
+	}
+
+	private renderNamePrefixInput(container: HTMLElement): void {
+		const section = container.createDiv({ cls: 'tlb-paragraph-promotion-prefix' });
+		const label = section.createDiv({ cls: 'tlb-paragraph-promotion-prefix__label' });
+		label.setText(t('paragraphPromotion.prefixLabel'));
+
+		const input = section.createEl('input', {
+			type: 'text',
+			value: this.namePrefix,
+			placeholder: t('paragraphPromotion.prefixPlaceholder'),
+			cls: 'tlb-paragraph-promotion-prefix__input'
+		});
+		input.addEventListener('input', () => {
+			this.namePrefix = input.value;
+		});
+
+		const helper = section.createDiv({
+			cls: 'setting-item-description tlb-paragraph-promotion-prefix__description'
+		});
+		helper.setText(t('paragraphPromotion.prefixDescription'));
 	}
 
 	private renderHeaderRow(parent: HTMLElement): void {
@@ -233,14 +304,22 @@ export class ParagraphPromotionModal extends Modal {
 
 export function openParagraphPromotionModal(
 	app: App,
-	options: { columns: string[]; initialSelection?: string[]; includeEmptyFields?: boolean }
-): Promise<{ selected: string[]; includeEmpty: boolean } | null> {
+	options: {
+		columns: string[];
+		initialSelection?: string[];
+		includeEmptyFields?: boolean;
+		defaultFolder: string;
+		defaultNamePrefix?: string;
+	}
+): Promise<{ selected: string[]; includeEmpty: boolean; folder: string; fileNamePrefix: string } | null> {
 	return new Promise((resolve) => {
 		const modal = new ParagraphPromotionModal({
 			app,
 			columns: options.columns,
 			initialSelection: new Set(options.initialSelection ?? options.columns),
 			includeEmptyFields: options.includeEmptyFields ?? true,
+			defaultFolder: options.defaultFolder,
+			defaultNamePrefix: options.defaultNamePrefix ?? '',
 			onSubmit: (result) => resolve(result),
 			onCancel: () => resolve(null)
 		});

@@ -11,6 +11,7 @@ interface TableFileDuplicationControllerOptions {
 	configManager: TableConfigManager;
 	persistence: TablePersistenceService;
 	getCurrentFile(): TFile | null;
+	getOwnerDocument(): Document | null;
 }
 
 export class TableFileDuplicationController {
@@ -52,7 +53,6 @@ export class TableFileDuplicationController {
 		}
 
 		try {
-			const targetPath = await this.buildExportTargetPath(sourceFile);
 			const payload = this.options.persistence.getConfigPayload();
 			const markdown = this.options.persistence.getMarkdownSnapshot();
 			const segments: string[] = [];
@@ -61,12 +61,13 @@ export class TableFileDuplicationController {
 			}
 			segments.push(buildConfigCalloutBlock(payload));
 			const content = `${segments.join('\n\n')}\n`;
-			const exportedFile = await this.options.app.vault.create(targetPath, content);
+			const fileName = this.buildExportFileName(sourceFile);
+			this.triggerDownload(content, fileName);
 
-			new Notice(t('fileDuplication.exportSuccessNotice', { fileName: exportedFile.basename }));
+			new Notice(t('fileDuplication.exportSuccessNotice', { fileName }));
 			this.logger.info('exportWithConfigBlock:success', {
 				source: sourceFile.path,
-				target: exportedFile.path
+				fileName
 			});
 		} catch (error) {
 			this.logger.error('exportWithConfigBlock:failed', error);
@@ -81,10 +82,6 @@ export class TableFileDuplicationController {
 
 	private async buildTargetPath(file: TFile): Promise<string> {
 		return this.buildPathWithSuffix(file, this.getCopySuffix(), t('fileDuplication.fallbackName'));
-	}
-
-	private async buildExportTargetPath(file: TFile): Promise<string> {
-		return this.buildPathWithSuffix(file, this.getExportSuffix(), t('fileDuplication.exportFallbackName'));
 	}
 
 	private async buildPathWithSuffix(file: TFile, suffix: string, fallbackName: string): Promise<string> {
@@ -113,5 +110,28 @@ export class TableFileDuplicationController {
 	private getExportSuffix(): string {
 		const suffix = t('fileDuplication.exportNameSuffix').trim();
 		return suffix.length > 0 ? suffix : 'export';
+	}
+
+	private buildExportFileName(file: TFile): string {
+		const suffix = this.getExportSuffix();
+		const fallback = t('fileDuplication.exportFallbackName');
+		const baseName = file.basename.trim() || fallback;
+		const extension = file.extension ? `.${file.extension}` : '.md';
+		const candidate = suffix.length > 0 ? `${baseName} ${suffix}`.trim() : baseName;
+		return `${candidate}${extension}`;
+	}
+
+	private triggerDownload(content: string, fileName: string): void {
+		const ownerDocument = this.options.getOwnerDocument() ?? document;
+		const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const anchor = ownerDocument.createElement('a');
+		anchor.href = url;
+		anchor.download = fileName;
+		anchor.classList.add('tlb-visually-hidden');
+		ownerDocument.body.appendChild(anchor);
+		anchor.click();
+		ownerDocument.body.removeChild(anchor);
+		URL.revokeObjectURL(url);
 	}
 }

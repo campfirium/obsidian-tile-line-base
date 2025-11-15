@@ -33,6 +33,11 @@ export class TableConfigManager {
 			return null;
 		}
 
+		const imported = await this.tryImportFromConfigBlock(file);
+		if (imported) {
+			return imported;
+		}
+
 		const settingsService = plugin.getSettingsService();
 		const settings = settingsService.getSettings();
 		const filePath = file.path;
@@ -73,7 +78,7 @@ export class TableConfigManager {
 			return snapshot;
 		}
 
-		return await this.tryImportFromConfigBlock(file);
+		return null;
 	}
 
 	async save(file: TFile, data: TableConfigData): Promise<void> {

@@ -118,7 +118,7 @@ export class TagGroupStore {
 
 	getVisibleViewIds(): Set<string> | null {
 		const active = this.getActiveGroup();
-		if (!active) {
+		if (!active || active.id === DEFAULT_TAG_GROUP_ID) {
 			return null;
 		}
 		return new Set<string>(active.viewIds);

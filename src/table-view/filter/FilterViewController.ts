@@ -279,6 +279,7 @@ export class FilterViewController {
 				initialSortRules,
 				onSubmit: (result) => {
 					let inserted = false;
+					let duplicatedView: FilterViewDefinition | null = null;
 					const sanitizedSortRules: SortRule[] = this.stateStore.sanitizeSortRules(result.sortRules);
 					const clonedRule: FilterRule | null = result.filterRule
 						? {
@@ -296,21 +297,22 @@ export class FilterViewController {
 						if (sourceIndex === -1) {
 							return;
 						}
-						const duplicatedView: FilterViewDefinition = {
+						duplicatedView = {
 							id: this.generateFilterViewId(),
 							name: result.name,
 							filterRule: clonedRule,
 							sortRules: sanitizedSortRules,
 							columnState: sourceColumnState,
 							quickFilter: sourceQuickFilter,
-						icon: sanitizeIconId(result.icon)
+							icon: sanitizeIconId(result.icon)
 						};
 						state.views.splice(sourceIndex + 1, 0, duplicatedView);
 						state.activeViewId = duplicatedView.id;
 						inserted = true;
 					});
 
-					if (inserted) {
+					if (inserted && duplicatedView) {
+						this.tagGroupSupport?.onFilterViewCreated?.(duplicatedView);
 						this.runStateEffects({ persist: true, apply: true });
 						new Notice(t('filterViewController.duplicateNotice', { name: result.name }));
 					}

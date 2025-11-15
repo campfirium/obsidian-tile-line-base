@@ -236,13 +236,16 @@ export class TagGroupController {
 
 		const state = this.store.getState();
 		const activeGroupId = state.activeGroupId ?? this.defaultGroupId;
-		if (!activeGroupId || activeGroupId === this.defaultGroupId) {
+		if (!activeGroupId) {
 			return;
 		}
 
 		let added = false;
 		this.store.updateState((draft) => {
-			const target = draft.groups.find((entry) => entry.id === activeGroupId);
+			let target = draft.groups.find((entry) => entry.id === activeGroupId);
+			if (!target && activeGroupId !== this.defaultGroupId) {
+				target = draft.groups.find((entry) => entry.id === this.defaultGroupId);
+			}
 			if (!target) {
 				return;
 			}

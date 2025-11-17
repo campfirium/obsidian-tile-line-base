@@ -25,7 +25,13 @@ type LeafPaths<T, Prefix extends string = ''> =
 export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''>;
 
 const FALLBACK_LOCALE: LocaleCode = 'en';
-let activeLocale: LocaleCode = FALLBACK_LOCALE;
+const GLOBAL_LOCALE_KEY = '__TILE_LINE_BASE_ACTIVE_LOCALE__';
+const globalScope: Record<string, LocaleCode | undefined> =
+	typeof window !== 'undefined'
+		? (window as unknown as Record<string, LocaleCode | undefined>)
+		: (globalThis as unknown as Record<string, LocaleCode | undefined>);
+
+let activeLocale: LocaleCode = globalScope[GLOBAL_LOCALE_KEY] ?? FALLBACK_LOCALE;
 const hasOwn = <T extends object>(target: T, property: PropertyKey): boolean =>
 	Object.prototype.hasOwnProperty.call(target, property);
 
@@ -81,13 +87,14 @@ export function resolveLocaleCode(...candidates: Array<string | null | undefined
 }
 
 export function setLocale(locale: LocaleCode): void {
-	if (hasOwn.call(locales, locale)) {
+	if (hasOwn(locales, locale)) {
 		activeLocale = locale;
+		globalScope[GLOBAL_LOCALE_KEY] = locale;
 	}
 }
 
 export function getLocaleCode(): LocaleCode {
-	return activeLocale;
+	return globalScope[GLOBAL_LOCALE_KEY] ?? activeLocale;
 }
 
 export function getAvailableLocales(): LocaleCode[] {

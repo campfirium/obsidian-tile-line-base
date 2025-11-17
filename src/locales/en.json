@@ -67,6 +67,7 @@
   },
   "settings": {
     "generalHeading": "General",
+    "interfaceLanguageLabel": "Always use English interface", "interfaceLanguageDesc": "Default: follow Obsidian's language. Turn on to force TileLineBase UI to stay in English.",
     "hideRightSidebarLabel": "Hide right sidebar in table view",
     "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever the TileLineBase table view is active. Other views remain unaffected.",
     "loggingHeading": "Logging",

@@ -67,6 +67,7 @@
   },
   "settings": {
     "generalHeading": "常规",
+    "interfaceLanguageLabel": "始终使用英文界面", "interfaceLanguageDesc": "默认跟随 Obsidian 的界面语言，开启后强制以英文显示 TileLineBase。",
     "hideRightSidebarLabel": "表格视图时隐藏右侧边栏",
     "hideRightSidebarDesc": "当 TileLineBase 表格视图激活时自动折叠 Obsidian 的右侧边栏，其他视图不受影响。",
     "loggingHeading": "日志",

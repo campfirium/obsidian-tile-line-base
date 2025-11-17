@@ -8,6 +8,8 @@ import type {
 } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import { type KanbanBoardState, type KanbanViewPreferenceConfig } from '../types/kanban';
+import type { LocaleCode } from '../i18n';
+import { normalizeLocaleCode } from '../i18n';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
 import { getLogger } from '../utils/logger';
 import {
@@ -46,6 +48,8 @@ export interface TileLineBaseSettings {
 	logging: LoggingConfig;
 	backups: BackupSettings;
 	onboarding: OnboardingState;
+	locale: LocaleCode | null;
+	localizedLocale: LocaleCode;
 }
 
 export const DEFAULT_SETTINGS: TileLineBaseSettings = {
@@ -69,7 +73,9 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	onboarding: {
 		completed: false,
 		helpFilePath: null
-	}
+	},
+	locale: null,
+	localizedLocale: 'en'
 };
 
 export class SettingsService {
@@ -97,6 +103,14 @@ export class SettingsService {
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
 		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
 		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
+		const localeCandidate = typeof (merged as TileLineBaseSettings).locale === 'string'
+			? (merged as TileLineBaseSettings).locale
+			: null;
+		merged.locale = normalizeLocaleCode(localeCandidate);
+		const localizedCandidate = typeof (merged as TileLineBaseSettings).localizedLocale === 'string'
+			? (merged as TileLineBaseSettings).localizedLocale
+			: null;
+		merged.localizedLocale = normalizeLocaleCode(localizedCandidate) ?? DEFAULT_SETTINGS.localizedLocale;
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
@@ -110,6 +124,35 @@ export class SettingsService {
 
 		this.settings = merged;
 		return this.settings;
+	}
+
+	getLocalePreference(): LocaleCode | null {
+		return this.settings.locale ?? null;
+	}
+
+	getLocalizedLocalePreference(): LocaleCode {
+		return this.settings.localizedLocale ?? DEFAULT_SETTINGS.localizedLocale;
+	}
+
+	async setLocalePreference(locale: LocaleCode | null): Promise<boolean> {
+		if ((this.settings.locale ?? null) === (locale ?? null)) {
+			return false;
+		}
+		this.settings.locale = locale ?? null;
+		await this.persist();
+		return true;
+	}
+
+	async setLocalizedLocalePreference(locale: LocaleCode): Promise<boolean> {
+		if (!locale) {
+			return false;
+		}
+		if (this.settings.localizedLocale === locale) {
+			return false;
+		}
+		this.settings.localizedLocale = locale;
+		await this.persist();
+		return true;
 	}
 
 	getSettings(): TileLineBaseSettings {

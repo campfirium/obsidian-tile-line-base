@@ -1,7 +1,8 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { t } from '../i18n';
-import type { TranslationKey } from '../i18n';
+import { t, getLocaleCode, setLocale } from '../i18n';
+import type { LocaleCode, TranslationKey } from '../i18n';
 import type { LogLevelName } from '../utils/logger';
+import { getLogger } from '../utils/logger';
 
 type SidebarSettingHost = Plugin & {
 	isHideRightSidebarEnabled(): boolean;
@@ -12,6 +13,11 @@ type SidebarSettingHost = Plugin & {
 	setBackupEnabled(value: boolean): Promise<void>;
 	getBackupCapacityLimit(): number;
 	setBackupCapacityLimit(value: number): Promise<void>;
+	getLocaleOverride(): LocaleCode | null;
+	setLocaleOverride(value: LocaleCode | null): Promise<void>;
+	getLocalizedLocalePreference(): LocaleCode;
+	useLocalizedLocalePreference(): Promise<void>;
+	getResolvedLocale(): LocaleCode;
 };
 
 const LOG_LEVEL_OPTIONS: LogLevelName[] = ['error', 'warn', 'info', 'debug', 'trace'];
@@ -22,6 +28,7 @@ const LOG_LEVEL_LABEL_KEYS: Record<LogLevelName, TranslationKey> = {
 	debug: 'settings.loggingLevelOptionDebug',
 	trace: 'settings.loggingLevelOptionTrace'
 };
+const ENGLISH_LOCALE: LocaleCode = 'en';
 
 function isLogLevel(value: string): value is LogLevelName {
 	return (LOG_LEVEL_OPTIONS as readonly string[]).includes(value);
@@ -29,6 +36,7 @@ function isLogLevel(value: string): value is LogLevelName {
 
 export class TileLineBaseSettingTab extends PluginSettingTab {
 	private readonly plugin: SidebarSettingHost;
+	private readonly logger = getLogger('settings:tab');
 
 	constructor(app: App, plugin: SidebarSettingHost) {
 		super(app, plugin);
@@ -38,6 +46,10 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		const resolvedLocale = this.plugin.getResolvedLocale();
+		this.logger.info('apply-locale', { resolvedLocale });
+		setLocale(resolvedLocale);
+		this.logger.info('render', { locale: getLocaleCode(), heading: t('settings.generalHeading') });
 
 		this.renderGeneralSection(containerEl);
 		this.renderLoggingSection(containerEl);
@@ -48,6 +60,23 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName(t('settings.generalHeading'))
 			.setHeading();
+
+		const isForceEnglish = this.plugin.getLocaleOverride() === ENGLISH_LOCALE;
+
+		new Setting(containerEl)
+			.setName(t('settings.interfaceLanguageLabel'))
+			.setDesc(t('settings.interfaceLanguageDesc'))
+			.addToggle((toggle) => {
+				toggle.setValue(isForceEnglish);
+				toggle.onChange(async (value) => {
+					if (value) {
+						await this.plugin.setLocaleOverride(ENGLISH_LOCALE);
+					} else {
+						await this.plugin.useLocalizedLocalePreference();
+					}
+					this.display();
+				});
+			});
 
 		new Setting(containerEl)
 			.setName(t('settings.hideRightSidebarLabel'))

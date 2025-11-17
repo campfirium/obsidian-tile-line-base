@@ -22,10 +22,13 @@ import { registerKanbanViewCommand } from './plugin/commands/registerKanbanViewC
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
-import { t } from './i18n';
+import { t, type LocaleCode } from './i18n';
 import { ViewActionManager } from './plugin/ViewActionManager';
 import { OnboardingManager } from './plugin/OnboardingManager';
 import { snapshotLeaf } from './plugin/utils/snapshotLeaf';
+import { syncLocale } from './plugin/LocaleSync';
+import { RightSidebarController } from './plugin/RightSidebarController';
+import { resolveEnvironmentLocale } from './i18n/localeEnvironment';
 
 const logger = getLogger('plugin:main');
 
@@ -40,7 +43,8 @@ export default class TileLineBasePlugin extends Plugin {
 	private viewActionManager!: ViewActionManager;
 	private tableTitleRefresher!: TableViewTitleRefresher;
 	private unsubscribeLogging: (() => void) | null = null;
-	private rightSidebarState = { applied: false, wasCollapsed: false };
+	private rightSidebarController!: RightSidebarController;
+	private activeLocale: LocaleCode = 'en';
 	private onboardingManager: OnboardingManager | null = null;
 	private commandTableCreationController: TableCreationController | null = null;
 
@@ -51,7 +55,9 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
+		this.rightSidebarController = new RightSidebarController(this.app);
 		await this.loadSettings();
+		await this.updateLocalizedLocalePreferenceFromEnvironment();
 
 		this.backupManager = new BackupManager({
 			plugin: this,
@@ -100,6 +106,8 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.app.workspace.onLayoutReady(() => {
 			this.tableTitleRefresher.refreshAll();
+			void this.applyLocaleSettings();
+			void this.updateLocalizedLocalePreferenceFromEnvironment();
 		});
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
@@ -316,7 +324,7 @@ export default class TileLineBasePlugin extends Plugin {
 		setPluginContext(null);
 		this.viewActionManager.clearInjectedActions();
 		logger.info('Plugin unload: cleaning up resources');
-		this.restoreRightSidebarIfNeeded();
+		this.rightSidebarController.restoreIfNeeded();
 
 		this.onboardingManager = null;
 		this.commandTableCreationController = null;
@@ -452,6 +460,33 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settings.logging = config;
 	}
 
+	getLocaleOverride(): LocaleCode | null {
+		return this.settingsService.getLocalePreference();
+	}
+
+	getLocalizedLocalePreference(): LocaleCode {
+		return this.settingsService.getLocalizedLocalePreference();
+	}
+
+	async setLocaleOverride(locale: LocaleCode | null): Promise<void> {
+		const changed = await this.settingsService.setLocalePreference(locale);
+		if (!changed) {
+			return;
+		}
+		this.settings = this.settingsService.getSettings();
+		await this.applyLocaleSettings();
+	}
+
+	async useLocalizedLocalePreference(): Promise<void> {
+		const localized = this.settingsService.getLocalizedLocalePreference();
+		const target = localized === 'en' ? null : localized;
+		await this.setLocaleOverride(target);
+	}
+
+	getResolvedLocale(): LocaleCode {
+		return this.activeLocale;
+	}
+
 	private getCommandTableCreationController(): TableCreationController {
 		if (!this.commandTableCreationController) {
 			this.commandTableCreationController = new TableCreationController({
@@ -476,98 +511,70 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private applyRightSidebarForLeaf(leaf: WorkspaceLeaf | null | undefined): void {
-		if (!this.isHideRightSidebarEnabled()) {
-			this.restoreRightSidebarIfNeeded();
-			return;
-		}
-
-		const isTableView = leaf?.view instanceof TableView;
-		if (isTableView) {
-			this.hideRightSidebar();
-		} else {
-			this.restoreRightSidebarIfNeeded();
-		}
-	}
-
-	private hideRightSidebar(): void {
-		const split = this.getRightSplit();
-		if (!split) {
-			return;
-		}
-		const wasCollapsed = this.isRightSplitCollapsed(split);
-		if (wasCollapsed) {
-			this.rightSidebarState = { applied: false, wasCollapsed: true };
-			return;
-		}
-
-		if (typeof split.collapse === 'function') {
-			try {
-				split.collapse();
-				this.rightSidebarState = { applied: true, wasCollapsed };
-				return;
-			} catch (error) {
-				logger.warn('Failed to collapse right sidebar via API', error);
-			}
-		}
-
-		const toggled = this.toggleRightSidebarViaCommand();
-		this.rightSidebarState = { applied: toggled, wasCollapsed };
-	}
-
-	private restoreRightSidebarIfNeeded(): void {
-		if (!this.rightSidebarState.applied) {
-			return;
-		}
-		const split = this.getRightSplit();
-		if (!split) {
-			this.rightSidebarState = { applied: false, wasCollapsed: false };
-			return;
-		}
-		if (!this.rightSidebarState.wasCollapsed) {
-			if (typeof split.expand === 'function') {
-				try {
-					split.expand();
-				} catch (error) {
-					logger.warn('Failed to expand right sidebar via API', error);
-					this.toggleRightSidebarViaCommand();
-				}
-			} else {
-				this.toggleRightSidebarViaCommand();
-			}
-		}
-		this.rightSidebarState = { applied: false, wasCollapsed: false };
-	}
-
-	private getRightSplit(): { collapsed?: boolean; collapse?: () => void; expand?: () => void } | null {
-		const workspaceAny = this.app.workspace as unknown as { rightSplit?: { collapsed?: boolean; collapse?: () => void; expand?: () => void } };
-		return workspaceAny?.rightSplit ?? null;
-	}
-
-	private isRightSplitCollapsed(split: { collapsed?: boolean }): boolean {
-		if (typeof split?.collapsed === 'boolean') {
-			return split.collapsed;
-		}
-		return false;
-	}
-
-	private toggleRightSidebarViaCommand(): boolean {
-		const beforeSplit = this.getRightSplit();
-		const before = beforeSplit ? this.isRightSplitCollapsed(beforeSplit) : undefined;
-		const commandManager = (this.app as any).commands;
-		const executed = typeof commandManager?.executeCommandById === 'function'
-			? commandManager.executeCommandById('workspace:toggle-right-sidebar')
-			: false;
-		const afterSplit = this.getRightSplit();
-		const after = afterSplit ? this.isRightSplitCollapsed(afterSplit) : undefined;
-		if (executed) {
-			return true;
-		}
-		return before !== after;
+		this.rightSidebarController.applyForLeaf(leaf, this.isHideRightSidebarEnabled());
 	}
 
 	private async loadSettings(): Promise<void> {
 		const loaded = await this.settingsService.load();
 		this.settings = loaded;
+		await this.applyLocaleSettings();
 	}
 
+	private async applyLocaleSettings(): Promise<void> {
+		const result = syncLocale({
+			app: this.app,
+			settings: this.settings,
+			titleRefresher: this.tableTitleRefresher ?? null,
+			viewActionManager: this.viewActionManager ?? null
+		});
+		if (result.locale !== this.activeLocale) {
+			this.activeLocale = result.locale;
+			await this.refreshLocaleForOpenViews();
+		}
+		void this.updateLocalizedLocalePreferenceFromEnvironment();
+	}
+
+	private async refreshLocaleForOpenViews(): Promise<void> {
+		const leaves = this.app.workspace.getLeavesOfType(TABLE_VIEW_TYPE);
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (view instanceof TableView) {
+				try {
+					await view.render();
+				} catch (error) {
+					logger.warn('Failed to refresh table view after locale change', {
+						error,
+						file: view.file?.path ?? null
+					});
+				}
+			}
+		}
+	}
+
+	private async updateLocalizedLocalePreferenceFromEnvironment(): Promise<void> {
+		const autoLocale = this.getAutoLocaleCode();
+		logger.info('localized-locale-update', {
+			autoLocale,
+			activeLocale: this.activeLocale,
+			override: this.settings.locale ?? null
+		});
+		if (autoLocale === 'en') {
+			return;
+		}
+		const changed = await this.settingsService.setLocalizedLocalePreference(autoLocale);
+		if (changed) {
+			this.settings = this.settingsService.getSettings();
+		}
+	}
+
+	getAutoLocaleCode(): LocaleCode {
+		const snapshot = { ...this.settings, locale: null };
+		const result = resolveEnvironmentLocale(this.app, snapshot);
+		logger.info('auto-locale-resolution', {
+			settingsLocale: snapshot.locale ?? null,
+			resolved: result.locale,
+			candidates: result.candidates
+		});
+		return result.locale;
+	}
 }

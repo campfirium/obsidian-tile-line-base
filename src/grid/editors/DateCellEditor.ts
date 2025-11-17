@@ -4,6 +4,16 @@ import { Notice, setIcon } from 'obsidian';
 import { normalizeDateInput } from '../../utils/datetime';
 import { t } from '../../i18n';
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function createSvgElement(doc: Document, tag: string, attrs: Record<string, string>): SVGElement {
+	const element = doc.createElementNS(SVG_NS, tag);
+	for (const [key, value] of Object.entries(attrs)) {
+		element.setAttribute(key, value);
+	}
+	return element;
+}
+
 function createWrapper(doc: Document): HTMLDivElement {
 	const wrapper = doc.createElement('div');
 	wrapper.classList.add('tlb-date-editor');
@@ -19,8 +29,42 @@ function createTextInput(doc: Document, value: string): HTMLInputElement {
 }
 
 function injectCalendarGlyph(button: HTMLButtonElement): void {
-	button.innerHTML =
-		'<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><rect x="8" y="14" width="4" height="4" rx="1"></rect></svg>';
+	const doc = button.ownerDocument || document;
+	const svg = createSvgElement(doc, 'svg', {
+		viewBox: '0 0 24 24',
+		width: '16',
+		height: '16',
+		stroke: 'currentColor',
+		'stroke-width': '1.5',
+		fill: 'none',
+		'stroke-linecap': 'round',
+		'stroke-linejoin': 'round',
+		'aria-hidden': 'true'
+	});
+
+	const outerRect = createSvgElement(doc, 'rect', {
+		x: '3',
+		y: '4',
+		width: '18',
+		height: '18',
+		rx: '2',
+		ry: '2'
+	});
+	const topRightLine = createSvgElement(doc, 'line', { x1: '16', y1: '2', x2: '16', y2: '6' });
+	const topLeftLine = createSvgElement(doc, 'line', { x1: '8', y1: '2', x2: '8', y2: '6' });
+	const headerLine = createSvgElement(doc, 'line', { x1: '3', y1: '10', x2: '21', y2: '10' });
+	const dayRect = createSvgElement(doc, 'rect', { x: '8', y: '14', width: '4', height: '4', rx: '1' });
+
+	svg.appendChild(outerRect);
+	svg.appendChild(topRightLine);
+	svg.appendChild(topLeftLine);
+	svg.appendChild(headerLine);
+	svg.appendChild(dayRect);
+
+	while (button.firstChild) {
+		button.removeChild(button.firstChild);
+	}
+	button.appendChild(svg);
 }
 
 function createTriggerButton(doc: Document): HTMLButtonElement {

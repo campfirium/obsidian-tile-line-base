@@ -194,7 +194,9 @@ export class StatusCellRenderer implements ICellRendererComp {
 		const label = getStatusLabel(status);
 
 		// ������ݣ�ʹ��?Obsidian �� Lucide ͼ��
-		this.eGui.innerHTML = '';
+		while (this.eGui.firstChild) {
+			this.eGui.removeChild(this.eGui.firstChild);
+		}
 		setIcon(this.eGui, iconId);
 
 		// ��ӿɷ�����֧��?

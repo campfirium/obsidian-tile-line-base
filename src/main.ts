@@ -478,9 +478,7 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	async useLocalizedLocalePreference(): Promise<void> {
-		const localized = this.settingsService.getLocalizedLocalePreference();
-		const target = localized === 'en' ? null : localized;
-		await this.setLocaleOverride(target);
+		await this.setLocaleOverride(null);
 	}
 
 	getResolvedLocale(): LocaleCode {

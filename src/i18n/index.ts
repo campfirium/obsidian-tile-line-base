@@ -1,14 +1,35 @@
+import de from '../locales/de.json';
 import en from '../locales/en.json';
-import zh from '../locales/zh.json';
+import es from '../locales/es.json';
+import fr from '../locales/fr.json';
+import it from '../locales/it.json';
+import ja from '../locales/ja.json';
+import ko from '../locales/ko.json';
+import nl from '../locales/nl.json';
+import pl from '../locales/pl.json';
+import pt from '../locales/pt.json';
+import zhHans from '../locales/zh-hans.json';
+import zhHant from '../locales/zh-hant.json';
 
 const locales = {
 	en,
-	zh
+	de,
+	es,
+	fr,
+	it,
+	nl,
+	pl,
+	pt,
+	ja,
+	ko,
+	'zh-hans': zhHans,
+	'zh-hant': zhHant
 } as const;
 
 type LocaleMap = typeof locales;
 export type LocaleCode = keyof LocaleMap;
 type LocaleTree = LocaleMap[LocaleCode];
+type LocaleAliasMap = Partial<Record<string, LocaleCode>>;
 
 type LeafPaths<T, Prefix extends string = ''> =
 	T extends string
@@ -25,6 +46,14 @@ type LeafPaths<T, Prefix extends string = ''> =
 export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''>;
 
 const FALLBACK_LOCALE: LocaleCode = 'en';
+const LOCALE_ALIASES: LocaleAliasMap = {
+	zh: 'zh-hans',
+	'zh-cn': 'zh-hans',
+	'zh-sg': 'zh-hans',
+	'zh-tw': 'zh-hant',
+	'zh-hk': 'zh-hant',
+	'zh-mo': 'zh-hant'
+};
 const GLOBAL_LOCALE_KEY = '__TILE_LINE_BASE_ACTIVE_LOCALE__';
 const globalScope: Record<string, LocaleCode | undefined> =
 	typeof window !== 'undefined'
@@ -66,10 +95,18 @@ export function normalizeLocaleCode(localeLike: string | null | undefined): Loca
 	if (!normalized) {
 		return null;
 	}
+	const alias = LOCALE_ALIASES[normalized];
+	if (alias) {
+		return alias;
+	}
 	if (hasOwn(locales, normalized as PropertyKey)) {
 		return normalized as LocaleCode;
 	}
 	const primary = normalized.split('-')[0];
+	const primaryAlias = LOCALE_ALIASES[primary];
+	if (primaryAlias) {
+		return primaryAlias;
+	}
 	if (hasOwn(locales, primary as PropertyKey)) {
 		return primary as LocaleCode;
 	}

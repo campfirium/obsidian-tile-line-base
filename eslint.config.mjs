@@ -156,6 +156,9 @@ export default [
 		languageOptions: {
 			parser: jsoncParser,
 		},
+		rules: {
+			'max-lines': 'off',
+		},
 	},
 	{
 		files: CORE_COORDINATION_FILES,

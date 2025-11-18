@@ -2,7 +2,7 @@ const CHINESE_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', 
 
 export function composeBoardName(base: string, index: number, locale: string): string {
 	const normalizedBase = base.length > 0 ? base : 'Board';
-	if (locale === 'zh') {
+	if (locale === 'zh-hans' || locale === 'zh-hant') {
 		return `${normalizedBase}${toChineseNumeral(index)}`;
 	}
 	return normalizedBase.length > 0 ? `${normalizedBase} ${index}` : `Board ${index}`;

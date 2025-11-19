@@ -1,7 +1,14 @@
 import { App, Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
-import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, sanitizeKanbanFontScale, sanitizeKanbanInitialVisibleCount, type KanbanBoardDefinition } from '../../types/kanban';
+import {
+	DEFAULT_KANBAN_FONT_SCALE,
+	DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT,
+	DEFAULT_KANBAN_SORT_DIRECTION,
+	sanitizeKanbanFontScale,
+	sanitizeKanbanInitialVisibleCount,
+	type KanbanBoardDefinition
+} from '../../types/kanban';
 import { KanbanBoardStore } from './KanbanBoardStore';
 import { cloneKanbanContentConfig } from './KanbanContentConfig';
 import { DEFAULT_KANBAN_LANE_WIDTH, sanitizeKanbanLaneWidth } from './kanbanWidth';
@@ -10,6 +17,7 @@ import { KanbanLaneFieldRepair } from './KanbanLaneFieldRepair';
 import { openKanbanLanePresetModal } from './KanbanLanePresetModal';
 import { isStatusLaneField } from './statusLaneHelpers';
 import { KanbanBoardDialogService } from './KanbanBoardDialogService';
+import { createDefaultStatusBoard } from './defaultStatusBoard';
 interface KanbanBoardControllerOptions { app: App; view: TableView; store: KanbanBoardStore; }
 export class KanbanBoardController {
 	private readonly app: App;
@@ -360,10 +368,38 @@ export class KanbanBoardController {
 			return;
 		}
 
+		this.ensureDefaultLaneField();
 		this.autoCreateInProgress = true;
-		void this.createBoard().catch(() => undefined).finally(() => {
-			this.autoCreateInProgress = false;
+		void this.handleAutoBoardCreation()
+			.catch(() => undefined)
+			.finally(() => {
+				this.autoCreateInProgress = false;
+			});
+	}
+
+	private async handleAutoBoardCreation(): Promise<void> {
+		const defaultBoard = await createDefaultStatusBoard({
+			view: this.view,
+			store: this.store,
+			laneFieldCandidates: this.dialogs.getLaneFieldCandidates()
 		});
+		if (defaultBoard) {
+			this.applyBoardContext(defaultBoard, { persist: true, rerender: true });
+			this.refreshToolbar();
+			return;
+		}
+		await this.createBoard();
+	}
+
+	private ensureDefaultLaneField(): void {
+		if (this.view.kanbanLaneField) {
+			return;
+		}
+		const schema = this.view.schema;
+		const statusField = schema?.columnNames?.find((column) => column?.trim().toLowerCase() === 'status');
+		if (statusField) {
+			this.view.kanbanLaneField = statusField;
+		}
 	}
 	private isLaneFieldAvailable(field: string): boolean {
 		const candidates = this.dialogs.getLaneFieldCandidates();

@@ -23,7 +23,10 @@
     "emptyLanePlaceholder": "Drop cards here",
     "untitledCardFallback": "Untitled card",
     "moreFieldsLabel": "+{{count}} more",
-    "laneNotConfigured": "Choose a kanban column from the toolbar to start using the board.",
+		"laneNotConfigured": "Choose a kanban column from the toolbar to start using the board.",
+    "defaultBoard": {
+      "name": "Status board"
+    },
     "actions": {
       "openFromMarkdown": "Open TileLineBase kanban view",
       "switchToKanban": "Switch to kanban view",

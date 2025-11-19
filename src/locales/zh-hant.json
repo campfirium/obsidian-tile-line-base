@@ -24,6 +24,9 @@
     "untitledCardFallback": "未命名卡片",
     "moreFieldsLabel": "+{{count}} 項",
     "laneNotConfigured": "請先透過工具列選擇看板欄，才能使用看板視圖。",
+    "defaultBoard": {
+      "name": "預設狀態看板"
+    },
     "actions": {
       "openFromMarkdown": "開啟 TileLineBase 看板視圖",
       "switchToKanban": "切換到看板視圖",

@@ -1,4 +1,3 @@
-const MAX_LANE_ROWS = 2;
 const MIN_LANE_COUNT_FOR_MULTIROW = 4;
 
 interface KanbanLaneWrapControllerOptions {
@@ -79,27 +78,37 @@ export class KanbanLaneWrapController {
 			return;
 		}
 		const board = this.options.board;
-		if (!this.laneWidthPx || this.laneCount === 0) {
+		if (!this.laneWidthPx || this.laneCount < MIN_LANE_COUNT_FOR_MULTIROW) {
 			this.resetLayout();
 			return;
 		}
-		const targetRows = this.computeRows();
-		if (targetRows <= 1) {
+		const wrapperWidth = this.options.wrapper.getBoundingClientRect().width;
+		if (!Number.isFinite(wrapperWidth) || wrapperWidth <= 0) {
 			this.resetLayout();
 			return;
 		}
-		const columns = Math.max(1, Math.ceil(this.laneCount / targetRows));
+		const laneSlotWidth = this.laneWidthPx + this.gapPx;
+		if (!Number.isFinite(laneSlotWidth) || laneSlotWidth <= 0) {
+			this.resetLayout();
+			return;
+		}
+		// Use the available wrapper width to decide how many lanes fit on the first row.
+		const columns = Math.max(
+			1,
+			Math.min(
+				this.laneCount,
+				Math.floor((wrapperWidth + this.gapPx) / laneSlotWidth)
+			)
+		);
+		const rows = Math.ceil(this.laneCount / columns);
+		if (rows <= 1) {
+			this.resetLayout();
+			return;
+		}
 		const maxWidth =
 			columns * this.laneWidthPx + Math.max(0, columns - 1) * this.gapPx;
 		board.style.setProperty('--tlb-kanban-board-max-width', `${Math.round(maxWidth)}px`);
 		board.classList.add('tlb-kanban-board--wrapped');
-	}
-
-	private computeRows(): number {
-		if (this.laneCount < MIN_LANE_COUNT_FOR_MULTIROW) {
-			return 1;
-		}
-		return MAX_LANE_ROWS;
 	}
 
 	private resetLayout(): void {

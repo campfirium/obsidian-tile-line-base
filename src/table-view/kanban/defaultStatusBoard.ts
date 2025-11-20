@@ -53,8 +53,8 @@ export async function createDefaultStatusBoard(
 function resolveStatusLaneField(
 	columns: string[] | null | undefined,
 	candidates: string[]
-): string {
-	const seek = (values: Iterable<string>) => {
+): string | null {
+	const seek = (values: Iterable<string>): string | null => {
 		for (const column of values) {
 			if (isStatusLaneField(column)) {
 				return column;
@@ -75,7 +75,7 @@ function resolveStatusLaneField(
 		return candidate;
 	}
 
-	return 'status';
+	return null;
 }
 
 function buildDefaultStatusLanePresets(): string[] {

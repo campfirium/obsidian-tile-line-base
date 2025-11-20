@@ -1,6 +1,7 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
 import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
+import { isStatusLaneField, normalizeStatusLaneValue } from './statusLaneHelpers';
 
 export interface KanbanCardField {
 	name: string;
@@ -67,6 +68,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
 	const laneNameToId = new Map<string, string>();
 	const usedLaneIds = new Set<string>();
+	const isStatusLane = isStatusLaneField(laneField);
 	let totalCards = 0;
 
 	for (const row of rows) {
@@ -75,7 +77,10 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			continue;
 		}
 
-		const laneName = normalizeString(row[laneField]) || fallbackLane;
+		const laneValue = normalizeString(row[laneField]) || fallbackLane;
+		const laneNormalization = isStatusLane ? normalizeStatusLaneValue(laneValue) : null;
+		const laneName = laneNormalization?.label || laneValue;
+		const laneKey = laneNormalization?.key || laneName;
 
 		const title = renderTitle(content.titleTemplate, row, primaryField);
 		const body = renderBody(content.bodyTemplate, row);
@@ -90,7 +95,7 @@ export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): Kanb
 			continue;
 		}
 
-		const laneId = resolveLaneId(laneName, laneNameToId, usedLaneIds, laneMap.size);
+		const laneId = resolveLaneId(laneKey, laneNameToId, usedLaneIds, laneMap.size);
 
 		let lane = laneMap.get(laneId);
 		if (!lane) {

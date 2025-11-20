@@ -125,6 +125,23 @@ function extractStatusFilterPreferences(rule: FilterRule | null, laneField: stri
 	};
 }
 
+export function normalizeStatusLaneValue(value: string): { key: string; label: string } {
+	const trimmed = typeof value === 'string' ? value.trim() : '';
+	if (!trimmed) {
+		return { key: '', label: '' };
+	}
+	const normalized = normalizeStatusKey(trimmed);
+	const compact = normalized.replace(/\s+/g, '');
+	const baseline = STATUS_BASELINE_VALUES.find(
+		(candidate) => candidate === normalized || candidate === compact
+	);
+	const canonicalKey = baseline ?? (compact.length > 0 ? compact : normalized);
+	const label = getStatusDisplayLabel(baseline ?? normalized ?? trimmed).trim();
+	const display = label.length > 0 ? label : trimmed;
+	const key = canonicalKey.length > 0 ? canonicalKey : normalizeStatusKey(display);
+	return { key, label: display };
+}
+
 export function isStatusLaneField(laneField: string): boolean {
 	return normalizeStatusKey(laneField) === 'status';
 }

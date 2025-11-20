@@ -1,5 +1,5 @@
 import type { FilterRule } from '../../types/filterView';
-import { resolveExpectedStatusLanes } from './statusLaneHelpers';
+import { resolveExpectedStatusLanes, isStatusLaneField, normalizeStatusLaneValue } from './statusLaneHelpers';
 
 interface BuildExpectedLaneNamesOptions {
 	laneField: string;
@@ -11,17 +11,22 @@ interface BuildExpectedLaneNamesOptions {
 export function buildExpectedLaneNames(options: BuildExpectedLaneNamesOptions): string[] | null {
 	const result: string[] = [];
 	const seen = new Set<string>();
+	const isStatusLane = isStatusLaneField(options.laneField);
 	const push = (value: string | null | undefined) => {
 		const label = typeof value === 'string' ? value.trim() : '';
 		if (!label) {
 			return;
 		}
-		const normalized = label.toLowerCase();
-		if (seen.has(normalized)) {
+		const statusNormalized = isStatusLane ? normalizeStatusLaneValue(label) : null;
+		const normalizedKey = statusNormalized?.key ?? label.toLowerCase();
+		if (!normalizedKey) {
 			return;
 		}
-		seen.add(normalized);
-		result.push(label);
+		if (seen.has(normalizedKey)) {
+			return;
+		}
+		seen.add(normalizedKey);
+		result.push(statusNormalized?.label ?? label);
 	};
 
 	if (Array.isArray(options.laneOrder)) {

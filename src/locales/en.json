@@ -425,7 +425,8 @@
     "iconMatchAriaLabel": "Use icon {{icon}}",
     "iconNavPrev": "Previous icons",
     "iconNavNext": "Next icons",
-    "iconStatusEmpty": "No icon selected"
+    "iconStatusEmpty": "No icon selected",
+    "iconPickerAdd": "Add icon"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Unable to reset caret during compositionstart",

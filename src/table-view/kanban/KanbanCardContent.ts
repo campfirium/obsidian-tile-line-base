@@ -6,7 +6,7 @@ import {
 } from '../../types/kanban';
 
 const PLACEHOLDER_PATTERN = /\{\s*([^{}]+?)\s*\}/g;
-const TAG_SPLIT_PATTERN = /[\s,;]+/;
+const TAG_SPLIT_PATTERN = /[,，;；、]+/; // Only split on delimiter characters to allow spaces inside tag names.
 
 export function buildDefaultContentSettings(options: {
 	availableFields: string[];
@@ -24,13 +24,13 @@ export function buildDefaultContentSettings(options: {
 		titleTemplate: titleField ? wrapPlaceholder(titleField) : DEFAULT_KANBAN_CARD_CONTENT.titleTemplate,
 		bodyTemplate: bodyFields.length > 0
 			? bodyFields.map((field) => wrapPlaceholder(field)).join(' ')
-		: DEFAULT_KANBAN_CARD_CONTENT.bodyTemplate,
-	tagsTemplate: tagFields.length > 0
-		? tagFields.map((field) => wrapPlaceholder(field)).join(' ')
-		: DEFAULT_KANBAN_CARD_CONTENT.tagsTemplate,
-	showBody: true,
-	tagsBelowBody: DEFAULT_KANBAN_CARD_CONTENT.tagsBelowBody
-};
+			: DEFAULT_KANBAN_CARD_CONTENT.bodyTemplate,
+		tagsTemplate: tagFields.length > 0
+			? tagFields.map((field) => wrapPlaceholder(field)).join(', ')
+			: DEFAULT_KANBAN_CARD_CONTENT.tagsTemplate,
+		showBody: true,
+		tagsBelowBody: DEFAULT_KANBAN_CARD_CONTENT.tagsBelowBody
+	};
 }
 
 export function toRuntimeContent(

@@ -39,7 +39,7 @@
 			"noColumns": "カンバンのレーンに使える列がありません。"
 		},
 		"lanePresetModal": { "title": "レーンを作成", "description": "「{{field}}」列のためのレーンに名前を付けます。カードがまだなくても表示されます。", "fieldLabel": "レーン名", "fieldDescription": "ここにドロップされたカードが再利用できるよう一意の値を使用してください。", "placeholder": "例: レビュー待ち", "confirmLabel": "レーンを追加", "cancelLabel": "キャンセル", "emptyError": "続行する前にレーン名を入力してください。", "duplicateError": "そのレーンはすでに存在します。", "successNotice": "レーン「{{name}}」を作成しました。", "statusFieldBlocked": "ステータスレーンはステータス列をすでにカバーしています。テーブルでステータスのオプションを編集してください。", "missingLaneField": "新しいレーンを作成する前にカンバン列を選択してください。" },
-		"content": { "sectionTitle": "カードの内容", "insertFieldButton": "フィールドを挿入", "titleLabel": "タイトルテンプレート", "titlePlaceholder": "例: {Title}", "bodyLabel": "本文テンプレート", "bodyPlaceholder": "例: {Description}\\n{Notes}", "tagsLabel": "タグテンプレート", "tagsPlaceholder": "プレースホルダーは空白またはカンマで区切ります。例: {Tags}", "showBodyToggle": "本文をカード内に表示", "showBodyToggleDesc": "オフにすると本文はホバー時のツールチップとして表示されます。", "tagsBelowBodyToggle": "本文の下にタグを表示", "tagsBelowBodyToggleDesc": "オフのままにするとタグはタイトルの横に表示されます。", "noFieldOption": "使用できるフィールドがありません" },
+		"content": { "sectionTitle": "カードの内容", "insertFieldButton": "フィールドを挿入", "titleLabel": "タイトルテンプレート", "titlePlaceholder": "例: {Title}", "bodyLabel": "本文テンプレート", "bodyPlaceholder": "例: {Description}\\n{Notes}", "tagsLabel": "タグテンプレート", "tagsPlaceholder": "プレースホルダーはカンマで区切ります。例: {Tag1}, {Tag2}", "showBodyToggle": "本文をカード内に表示", "showBodyToggleDesc": "オフにすると本文はホバー時のツールチップとして表示されます。", "tagsBelowBodyToggle": "本文の下にタグを表示", "tagsBelowBodyToggleDesc": "オフのままにするとタグはタイトルの横に表示されます。", "noFieldOption": "使用できるフィールドがありません" },
 		"toolbar": {
 			"defaultBoardLabel": "デフォルトボード", "unnamedBoardLabel": "無題のボード",
 			"addBoardButtonAriaLabel": "カンバンボードを追加", "createBoardTitle": "新しいカンバンボード",

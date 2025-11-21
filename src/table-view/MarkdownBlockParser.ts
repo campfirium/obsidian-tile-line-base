@@ -192,6 +192,16 @@ export class MarkdownBlockParser {
 }
 
 function resolveColonIndex(text: string): number {
+	const asciiIndex = text.indexOf(':');
 	const fullWidthIndex = text.indexOf(FULL_WIDTH_COLON);
-	return fullWidthIndex >= 0 ? fullWidthIndex : text.indexOf(':');
+
+	if (asciiIndex === -1) {
+		return fullWidthIndex;
+	}
+
+	if (fullWidthIndex === -1) {
+		return asciiIndex;
+	}
+
+	return Math.min(asciiIndex, fullWidthIndex);
 }

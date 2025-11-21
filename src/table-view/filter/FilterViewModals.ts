@@ -4,7 +4,8 @@ import { t } from '../../i18n';
 import type { FilterColumnOption } from '../TableViewFilterPresenter';
 import { getStatusDisplayLabel } from './statusDefaults';
 import { getOperatorLabelKey, getOperatorsForOption, VALUELESS_OPERATORS } from './FilterOperatorUtils';
-import { FALLBACK_LUCIDE_ICON_IDS } from './IconCatalog';
+import { createIconPicker, type IconPickerHandle } from '../icon/IconPicker';
+import { sanitizeIconId } from '../icon/IconUtils';
 
 export interface FilterViewEditorResult {
 	name: string;
@@ -39,13 +40,8 @@ export class FilterViewEditorModal extends Modal {
 	private readonly options: FilterViewEditorModalOptions;
 	private readonly layout: 'single' | 'dual';
 	private nameInputEl!: HTMLInputElement;
-	private iconInputEl!: HTMLInputElement;
-	private iconMatchesEl: HTMLElement | null = null;
-	private iconPage = 0;
-	private iconQueryNormalized = '';
+	private iconPicker: IconPickerHandle | null = null;
 	private iconValue: string | null = null;
-	private iconSelectionId: string | null = null;
-	private iconOptions: string[] = [];
 	private readonly allowFilterEditing: boolean;
 	private readonly allowSortEditing: boolean;
 	private readonly minimumConditionCount: number;
@@ -74,11 +70,7 @@ export class FilterViewEditorModal extends Modal {
 		this.additionalControlsRenderer =
 			typeof options.renderAdditionalControls === 'function' ? options.renderAdditionalControls : null;
 		this.layout = options.layout === 'dual' ? 'dual' : 'single';
-		this.iconValue = this.sanitizeIconId(options.initialIcon);
-		this.iconSelectionId = this.iconValue ? this.resolveCanonicalIconId(this.iconValue) : null;
-		if (this.iconSelectionId) {
-			this.iconValue = this.iconSelectionId;
-		}
+		this.iconValue = sanitizeIconId(options.initialIcon);
 		if (options.initialRule && this.allowFilterEditing) {
 			this.conditions = [...options.initialRule.conditions];
 			this.combineMode = options.initialRule.combineMode;
@@ -118,49 +110,43 @@ export class FilterViewEditorModal extends Modal {
 		}
 		this.titleEl.setText(this.options.title);
 
-		const nameSetting = new Setting(isDualLayout ? leftColumn : contentEl);
-		nameSetting.setName(t('filterViewModals.viewNameLabel'));
-		nameSetting.addText((text) => {
-			text.setPlaceholder(t('filterViewModals.viewNamePlaceholder'));
-			if (this.options.initialName) {
-				text.setValue(this.options.initialName);
+		const inlineControls = (isDualLayout ? leftColumn : contentEl).createDiv({
+			cls: 'tlb-filter-inline-controls'
+		});
+
+		// Left column: Icon selector
+		const iconColumn = inlineControls.createDiv({ cls: 'tlb-inline-icon-col' });
+		iconColumn.createSpan({ cls: 'tlb-inline-field-label', text: t('filterViewModals.iconLabel') });
+		const iconPickerHost = iconColumn.createDiv({ cls: 'tlb-icon-picker-host' });
+		const pickerSlot = iconPickerHost.createDiv({ cls: 'tlb-icon-picker-slot' });
+		const iconHint = iconPickerHost.createSpan({ cls: 'tlb-icon-picker-hint', text: '' });
+		const updateIconHint = (value: string | null) => {
+			iconHint.setText(value ? t('filterViewModals.iconPickerTooltip') : t('filterViewModals.iconPickerAdd'));
+		};
+		this.iconPicker = createIconPicker({
+			app: this.app,
+			container: pickerSlot,
+			initialIcon: this.iconValue,
+			onChange: (value) => {
+				this.iconValue = value;
+				updateIconHint(value);
 			}
-			this.nameInputEl = text.inputEl;
 		});
+		this.iconValue = this.iconPicker.getValue();
+		updateIconHint(this.iconValue);
 
-		const iconSetting = new Setting(isDualLayout ? leftColumn : contentEl);
-		iconSetting.setName('');
-		iconSetting.setDesc('');
-		if (iconSetting.descEl) {
-			iconSetting.descEl.remove();
-		}
-		if (iconSetting.nameEl) {
-			iconSetting.nameEl.remove();
-		}
-		iconSetting.settingEl.addClass('tlb-filter-view-icon-setting');
-		iconSetting.controlEl.empty();
-		iconSetting.controlEl.addClass('tlb-filter-view-icon-control');
-
-		const searchRow = iconSetting.controlEl.createDiv({ cls: 'tlb-filter-view-icon-header-row' });
-		searchRow.createSpan({
-			cls: 'tlb-filter-view-icon-title',
-			text: t('filterViewModals.iconLabel')
-		});
-		const searchField = searchRow.createDiv({ cls: 'tlb-filter-view-icon-search-field' });
-		const searchIcon = searchField.createSpan({ cls: 'tlb-filter-view-icon-search-field__icon' });
-		setIcon(searchIcon, 'search');
-		searchIcon.setAttribute('aria-hidden', 'true');
-		this.iconInputEl = searchField.createEl('input', {
+		// Right column: View name
+		const nameColumn = inlineControls.createDiv({ cls: 'tlb-inline-name-col' });
+		nameColumn.createSpan({ cls: 'tlb-inline-field-label', text: t('filterViewModals.viewNameLabel') });
+		const nameInputWrapper = nameColumn.createDiv({ cls: 'tlb-inline-name-input' });
+		this.nameInputEl = nameInputWrapper.createEl('input', {
 			type: 'text',
-			cls: 'tlb-filter-view-icon-search-field__input',
-			placeholder: t('filterViewModals.iconPlaceholder')
+			cls: 'tlb-inline-input',
+			placeholder: t('filterViewModals.viewNamePlaceholder')
 		});
-		this.iconInputEl.value = this.iconValue ?? '';
-		this.iconInputEl.addEventListener('input', () => this.handleIconInput(this.iconInputEl!.value));
-
-		this.iconMatchesEl = iconSetting.controlEl.createDiv({ cls: 'tlb-filter-view-icon-matches' });
-
-		this.renderIconMatches(this.iconInputEl.value);
+		if (this.options.initialName) {
+			this.nameInputEl.value = this.options.initialName;
+		}
 
 		if (this.additionalControlsRenderer) {
 			const extraContainer = (isDualLayout ? leftColumn : contentEl).createDiv({
@@ -532,230 +518,6 @@ export class FilterViewEditorModal extends Modal {
 		this.renderSortRules();
 	}
 
-	private handleIconInput(value: string): void {
-		const sanitized = this.sanitizeIconId(value);
-		this.iconValue = sanitized;
-		if (!sanitized) {
-			this.iconSelectionId = null;
-		} else {
-			const canonical = this.resolveCanonicalIconId(sanitized);
-			if (canonical) {
-				this.iconSelectionId = canonical;
-				this.iconValue = canonical;
-				if (this.iconInputEl && this.iconInputEl.value !== canonical) {
-					this.iconInputEl.value = canonical;
-				}
-			} else {
-				this.iconSelectionId = null;
-			}
-		}
-		this.renderIconMatches(value);
-	}
-
-	private setIconValue(value: string | null): void {
-		const sanitized = this.sanitizeIconId(value);
-		const canonical = sanitized ? this.resolveCanonicalIconId(sanitized) : null;
-		this.iconSelectionId = canonical ?? null;
-		this.iconValue = canonical ?? sanitized;
-		if (this.iconInputEl) {
-			this.iconInputEl.value = this.iconValue ?? '';
-		}
-		this.renderIconMatches(this.iconInputEl?.value ?? '');
-	}
-
-	private ensureIconOptions(): string[] {
-		if (this.iconOptions.length === 0) {
-			this.iconOptions = collectLucideIconIds(this.app);
-		}
-		return this.iconOptions;
-	}
-
-	private renderIconMatches(query: string): boolean {
-		if (!this.iconMatchesEl) {
-			return false;
-		}
-		const icons = this.ensureIconOptions();
-		const normalizedQuery = normalizeIconQuery(query) ?? '';
-		if (normalizedQuery !== this.iconQueryNormalized) {
-			this.iconPage = 0;
-			this.iconQueryNormalized = normalizedQuery;
-		}
-
-		type IconMatch = { iconId: string; score: number };
-		const matches: IconMatch[] = [];
-		if (!normalizedQuery) {
-			icons.forEach((iconId, index) => {
-				matches.push({ iconId, score: index });
-			});
-		} else {
-			for (const iconId of icons) {
-				const normalizedIcon = normalizeIconQuery(iconId);
-				if (normalizedIcon === normalizedQuery) {
-					matches.push({ iconId, score: -100 });
-					continue;
-				}
-				const directIndex = normalizedIcon.indexOf(normalizedQuery);
-				if (directIndex !== -1) {
-					matches.push({ iconId, score: directIndex });
-					continue;
-				}
-				const fuzzyScore = getFuzzyMatchScore(normalizedIcon, normalizedQuery);
-				if (fuzzyScore !== null) {
-					matches.push({ iconId, score: 1000 + fuzzyScore });
-				}
-			}
-		}
-
-		matches.sort((a, b) => a.score - b.score || a.iconId.localeCompare(b.iconId));
-		const results = matches.map((match) => match.iconId);
-
-		this.iconMatchesEl.empty();
-		if (results.length === 0) {
-			this.iconMatchesEl.createSpan({
-				cls: 'tlb-filter-view-icon-matches__empty',
-				text: t('filterViewModals.iconMatchesEmpty')
-			});
-			return false;
-		}
-
-		const pageCount = Math.max(1, Math.ceil(results.length / ICON_MATCHES_PER_PAGE));
-		if (this.iconPage >= pageCount) {
-			this.iconPage = pageCount - 1;
-		}
-		const row = this.iconMatchesEl.createDiv({ cls: 'tlb-filter-view-icon-matches-row' });
-		const grid = row.createDiv({ cls: 'tlb-filter-view-icon-matches-grid' });
-			const start = this.iconPage * ICON_MATCHES_PER_PAGE;
-			const visible = results.slice(start, start + ICON_MATCHES_PER_PAGE);
-			const selectedNormalized = this.iconSelectionId ? normalizeIconQuery(this.iconSelectionId) : null;
-			const iconSlotPositions: Array<{ row: number; column: number }> = [];
-			const gapSlotPositions: Array<{ row: number; column: number }> = [];
-			for (let rowIndex = 0; rowIndex < ICON_GRID_ROWS; rowIndex += 1) {
-				for (let columnIndex = 0; columnIndex < ICON_GRID_COLUMNS; columnIndex += 1) {
-					const isLastRow = rowIndex === ICON_GRID_ROWS - 1;
-					const isNavSlot = isLastRow && columnIndex >= ICON_NAV_FIRST_COLUMN;
-					const isGapSlot =
-						isLastRow &&
-						columnIndex >= Math.max(0, ICON_NAV_FIRST_COLUMN - ICON_NAV_GAP_COLUMNS) &&
-						columnIndex < ICON_NAV_FIRST_COLUMN;
-					if (isNavSlot) {
-						continue;
-					}
-					if (isGapSlot) {
-						gapSlotPositions.push({ row: rowIndex, column: columnIndex });
-						continue;
-					}
-					iconSlotPositions.push({ row: rowIndex, column: columnIndex });
-				}
-			}
-			const applyGridPosition = (element: HTMLElement, position: { row: number; column: number }): void => {
-				element.classList.add(
-					`tlb-filter-view-icon-cell-row-${position.row + 1}`,
-					`tlb-filter-view-icon-cell-col-${position.column + 1}`
-				);
-			};
-
-			for (let slotIndex = 0; slotIndex < iconSlotPositions.length; slotIndex += 1) {
-				const position = iconSlotPositions[slotIndex];
-				if (slotIndex < visible.length) {
-					const iconId = visible[slotIndex];
-					const button = grid.createEl('button', {
-						type: 'button',
-						cls: 'tlb-filter-view-icon-match'
-					});
-					button.setAttribute('aria-label', t('filterViewModals.iconMatchAriaLabel', { icon: iconId }));
-					const iconSpan = button.createSpan({ cls: 'tlb-filter-view-icon-match__icon' });
-					setIcon(iconSpan, iconId);
-					if (selectedNormalized && normalizeIconQuery(iconId) === selectedNormalized) {
-						button.classList.add('is-active');
-					}
-					button.addEventListener('click', () => {
-						this.setIconValue(iconId);
-						this.iconInputEl?.focus();
-					});
-					applyGridPosition(button, position);
-				} else {
-					const placeholder = grid.createSpan({ cls: 'tlb-filter-view-icon-placeholder' });
-					applyGridPosition(placeholder, position);
-				}
-			}
-
-			for (const gapPosition of gapSlotPositions) {
-				const gap = grid.createSpan({
-					cls: 'tlb-filter-view-icon-placeholder tlb-filter-view-icon-placeholder--gap'
-				});
-				applyGridPosition(gap, gapPosition);
-			}
-
-			const prev = grid.createEl('button', {
-				type: 'button',
-				cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--prev'
-		});
-		prev.setAttribute('aria-label', t('filterViewModals.iconNavPrev'));
-			const prevIcon = prev.createSpan({
-				cls: 'tlb-filter-view-icon-match__icon tlb-filter-view-icon-match__icon--nav'
-			});
-			setIcon(prevIcon, 'chevron-left');
-			applyGridPosition(prev, {
-				row: ICON_GRID_ROWS - 1,
-				column: ICON_NAV_FIRST_COLUMN
-			});
-		prev.disabled = pageCount <= 1 || this.iconPage === 0;
-		prev.addEventListener('click', () => {
-			if (this.iconPage > 0) {
-				this.iconPage -= 1;
-				this.renderIconMatches(this.iconInputEl?.value ?? '');
-			}
-		});
-
-		const next = grid.createEl('button', {
-			type: 'button',
-			cls: 'tlb-filter-view-icon-match tlb-filter-view-icon-nav tlb-filter-view-icon-nav--right'
-		});
-		next.setAttribute('aria-label', t('filterViewModals.iconNavNext'));
-			const nextIcon = next.createSpan({
-				cls: 'tlb-filter-view-icon-match__icon tlb-filter-view-icon-match__icon--nav'
-			});
-			setIcon(nextIcon, 'chevron-right');
-			applyGridPosition(next, {
-				row: ICON_GRID_ROWS - 1,
-				column: ICON_GRID_COLUMNS - 1
-			});
-		next.disabled = pageCount <= 1 || this.iconPage >= pageCount - 1;
-		next.addEventListener('click', () => {
-			if (this.iconPage < pageCount - 1) {
-				this.iconPage += 1;
-				this.renderIconMatches(this.iconInputEl?.value ?? '');
-			}
-		});
-
-		return true;
-	}
-
-	private resolveCanonicalIconId(value: string | null): string | null {
-		if (!value) {
-			return null;
-		}
-		const normalized = normalizeIconQuery(value);
-		if (!normalized) {
-			return null;
-		}
-		const icons = this.ensureIconOptions();
-		for (const iconId of icons) {
-			if (normalizeIconQuery(iconId) === normalized) {
-				return iconId;
-			}
-		}
-		return null;
-	}
-
-	private sanitizeIconId(value: unknown): string | null {
-		if (typeof value !== 'string') {
-			return null;
-		}
-		const trimmed = value.trim();
-		return trimmed.length > 0 ? trimmed : null;
-	}
-
 	private onSortDragStart(event: DragEvent, index: number): void {
 		this.draggingSortIndex = index;
 		if (event.dataTransfer) {
@@ -823,7 +585,7 @@ export class FilterViewEditorModal extends Modal {
 		const sortRules = this.allowSortEditing ? this.sortRules.map((rule) => ({ ...rule })) : [];
 		this.options.onSubmit({
 			name,
-			icon: this.iconSelectionId,
+			icon: this.iconValue ?? null,
 			filterRule,
 			sortRules
 		});
@@ -832,86 +594,8 @@ export class FilterViewEditorModal extends Modal {
 	}
 
 	onClose(): void {
+		this.iconPicker?.destroy();
+		this.iconPicker = null;
 		this.options.onCancel();
 	}
 }
-
-function collectLucideIconIds(app: App): string[] {
-	const iconIds = new Set<string>();
-	try {
-		const manager = (app as unknown as { dom?: { appIconManager?: unknown } })?.dom?.appIconManager as {
-			getIconIds?: () => string[] | undefined;
-			icons?: Record<string, unknown>;
-		} | undefined;
-		const pushIds = (ids: Iterable<string> | undefined) => {
-			if (!ids) {
-				return;
-			}
-			for (const id of ids) {
-				if (typeof id === 'string') {
-					const trimmed = id.trim();
-					if (trimmed) {
-						iconIds.add(trimmed);
-					}
-				}
-			}
-		};
-		if (manager) {
-			const managerIds = manager.getIconIds?.();
-			pushIds(managerIds);
-			if (!managerIds && manager.icons) {
-				pushIds(Object.keys(manager.icons));
-			}
-		}
-		const appWindow = window as unknown as {
-			app?: { dom?: { appIconManager?: { getIconIds?: () => string[]; icons?: Record<string, unknown> } } };
-			getIconIds?: () => string[];
-		};
-		const globalManager = appWindow?.app?.dom?.appIconManager;
-		if (globalManager && globalManager !== manager) {
-			pushIds(globalManager.getIconIds?.());
-			if (globalManager.icons) {
-				pushIds(Object.keys(globalManager.icons));
-			}
-		}
-		if (typeof appWindow.getIconIds === 'function') {
-			pushIds(appWindow.getIconIds());
-		}
-	} catch {
-		// ignore
-	}
-
-	if (iconIds.size === 0) {
-		FALLBACK_LUCIDE_ICON_IDS.forEach((id) => iconIds.add(id));
-	}
-	return Array.from(iconIds).sort();
-}
-
-function normalizeIconQuery(value: string): string {
-	return value.trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '');
-}
-
-function getFuzzyMatchScore(value: string, query: string): number | null {
-	if (!query) {
-		return 0;
-	}
-	let score = 0;
-	let searchIndex = 0;
-	for (const char of query) {
-		const foundIndex = value.indexOf(char, searchIndex);
-		if (foundIndex === -1) {
-			return null;
-		}
-		score += foundIndex - searchIndex;
-		searchIndex = foundIndex + 1;
-	}
-	score += Math.max(0, value.length - searchIndex);
-	return score;
-}
-
-const ICON_GRID_COLUMNS = 10;
-const ICON_GRID_ROWS = 3;
-const ICON_NAV_SLOT_COUNT = 2;
-const ICON_NAV_GAP_COLUMNS = 1;
-const ICON_NAV_FIRST_COLUMN = ICON_GRID_COLUMNS - ICON_NAV_SLOT_COUNT;
-const ICON_MATCHES_PER_PAGE = ICON_GRID_COLUMNS * ICON_GRID_ROWS - ICON_NAV_SLOT_COUNT - ICON_NAV_GAP_COLUMNS;

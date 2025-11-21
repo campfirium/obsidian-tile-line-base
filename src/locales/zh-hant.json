@@ -42,7 +42,7 @@
       "noColumns": "目前沒有可用欄位可做為看板泳道。"
     },
 		"lanePresetModal": { "title": "新增泳道", "description": "替「{{field}}」欄加入泳道名稱，即使尚無卡片也會預先顯示。", "fieldLabel": "泳道名稱", "fieldDescription": "請使用唯一值，拖入卡片時會自動寫入該欄位。", "placeholder": "範例：待審查", "confirmLabel": "新增泳道", "cancelLabel": "取消", "emptyError": "請先輸入泳道名稱。", "duplicateError": "該泳道已存在。", "successNotice": "已建立泳道「{{name}}」。", "statusFieldBlocked": "狀態欄已有內建泳道，請在表格中調整狀態選項。", "missingLaneField": "請先選擇看板欄再建立泳道。" },
-		"content": { "sectionTitle": "卡片內容", "insertFieldButton": "插入欄位", "titleLabel": "標題範本", "titlePlaceholder": "範例：{標題}", "bodyLabel": "正文範本", "bodyPlaceholder": "範例：{描述}\\n{備註}", "tagsLabel": "標籤範本", "tagsPlaceholder": "以空白或逗號分隔欄位占位符，如 {標籤}", "showBodyToggle": "在卡片內顯示正文", "showBodyToggleDesc": "停用後，正文會改為滑鼠懸停提示。", "tagsBelowBodyToggle": "標籤顯示在正文下方", "tagsBelowBodyToggleDesc": "若不勾選，標籤會與標題並排顯示。", "noFieldOption": "暫無可用欄位" },
+		"content": { "sectionTitle": "卡片內容", "insertFieldButton": "插入欄位", "titleLabel": "標題範本", "titlePlaceholder": "範例：{標題}", "bodyLabel": "正文範本", "bodyPlaceholder": "範例：{描述}\\n{備註}", "tagsLabel": "標籤範本", "tagsPlaceholder": "以逗號分隔欄位占位符，例如 {標籤1}, {標籤2}", "showBodyToggle": "在卡片內顯示正文", "showBodyToggleDesc": "停用後，正文會改為滑鼠懸停提示。", "tagsBelowBodyToggle": "標籤顯示在正文下方", "tagsBelowBodyToggleDesc": "若不勾選，標籤會與標題並排顯示。", "noFieldOption": "暫無可用欄位" },
     "toolbar": {
       "defaultBoardLabel": "預設看板", "unnamedBoardLabel": "未命名看板",
       "addBoardButtonAriaLabel": "新增看板", "createBoardTitle": "新增看板",

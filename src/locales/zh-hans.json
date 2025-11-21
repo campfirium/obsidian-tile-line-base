@@ -42,7 +42,7 @@
       "noColumns": "当前没有可用列用于看板泳道。"
     },
 		"lanePresetModal": { "title": "新建泳道", "description": "为「{{field}}」列添加一个泳道名称，即使还没有卡片也会提前显示。", "fieldLabel": "泳道名称", "fieldDescription": "请使用唯一值，拖入卡片时会自动写入该字段。", "placeholder": "例如：待评审", "confirmLabel": "添加泳道", "cancelLabel": "取消", "emptyError": "请先输入泳道名称。", "duplicateError": "该泳道已存在。", "successNotice": "已创建泳道「{{name}}」。", "statusFieldBlocked": "状态列已有内置泳道，请在表格中调整状态值。", "missingLaneField": "请先选择看板列再创建泳道。" },
-		"content": { "sectionTitle": "卡片内容", "insertFieldButton": "插入字段", "titleLabel": "标题模板", "titlePlaceholder": "示例：{标题}", "bodyLabel": "正文模板", "bodyPlaceholder": "示例：{描述}\\n{备注}", "tagsLabel": "标签模板", "tagsPlaceholder": "使用空格或逗号分隔占位符，例如 {标签}", "showBodyToggle": "在卡片内显示正文", "showBodyToggleDesc": "取消后，正文会作为鼠标悬停提示显示。", "tagsBelowBodyToggle": "标签显示在正文下方", "tagsBelowBodyToggleDesc": "不勾选时，标签与标题同行显示。", "noFieldOption": "暂无可用字段" },
+		"content": { "sectionTitle": "卡片内容", "insertFieldButton": "插入字段", "titleLabel": "标题模板", "titlePlaceholder": "示例：{标题}", "bodyLabel": "正文模板", "bodyPlaceholder": "示例：{描述}\\n{备注}", "tagsLabel": "标签模板", "tagsPlaceholder": "使用逗号分隔占位符，例如 {标签1}, {标签2}", "showBodyToggle": "在卡片内显示正文", "showBodyToggleDesc": "取消后，正文会作为鼠标悬停提示显示。", "tagsBelowBodyToggle": "标签显示在正文下方", "tagsBelowBodyToggleDesc": "不勾选时，标签与标题同行显示。", "noFieldOption": "暂无可用字段" },
     "toolbar": {
       "defaultBoardLabel": "默认看板", "unnamedBoardLabel": "未命名看板",
       "addBoardButtonAriaLabel": "新建看板", "createBoardTitle": "新建看板",

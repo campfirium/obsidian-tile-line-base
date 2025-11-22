@@ -7,13 +7,15 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	container.classList.add('tlb-slide-mode');
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
-	const slideConfig = normalizeSlideViewConfig(view.slideConfig);
+	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
+	const effectiveConfig = applyDefaultTemplates(baseConfig, view.schema?.columnNames ?? []);
+	view.slideConfig = effectiveConfig;
 
 	view.slideController = renderSlideView({
 		container: slideContainer,
 		rows: slideRows,
 		fields: view.schema?.columnNames ?? [],
-		config: slideConfig,
+		config: effectiveConfig,
 		onExit: () => {
 			void view.setActiveViewMode(view.previousNonSlideMode ?? 'table');
 		},
@@ -21,10 +23,10 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			const modal = new SlideTemplateModal({
 				app: view.app,
 				fields: view.schema?.columnNames ?? [],
-				initial: slideConfig.template,
+				initial: effectiveConfig.template,
 				onSave: (nextTemplate) => {
 					view.slideConfig = {
-						...slideConfig,
+						...effectiveConfig,
 						template: nextTemplate
 					};
 					view.slideController?.controller.updateConfig(view.slideConfig);
@@ -35,4 +37,23 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			modal.open();
 		}
 	});
+}
+
+function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfig>, fields: string[]): typeof config {
+	const available = fields.filter((field) => field && field !== '#' && field !== '__tlb_row_id');
+	const defaultTitle = available[0] ? `{${available[0]}}` : '';
+	const defaultBody = available.slice(1).map((field) => `{${field}}`).join('\n');
+	const titleTemplate = config.template.titleTemplate && config.template.titleTemplate.trim().length > 0
+		? config.template.titleTemplate
+		: defaultTitle;
+	const bodyTemplate = config.template.bodyTemplate && config.template.bodyTemplate.trim().length > 0
+		? config.template.bodyTemplate
+		: defaultBody;
+	return {
+		...config,
+		template: {
+			titleTemplate,
+			bodyTemplate
+		}
+	};
 }

@@ -2695,6 +2695,18 @@
 	min-width: 160px;
 }
 
+.tlb-slide-template__textarea {
+	width: 100%;
+}
+
+.tlb-slide-template__textarea--title {
+	min-height: 64px;
+}
+
+.tlb-slide-template__textarea--body {
+	min-height: 120px;
+}
+
 .tlb-slide-template__list {
 	margin-top: 8px;
 	display: flex;

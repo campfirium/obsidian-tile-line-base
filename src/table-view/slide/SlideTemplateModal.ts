@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import { DropdownComponent, Modal, Setting, TextAreaComponent, TextComponent } from 'obsidian';
+import { DropdownComponent, Modal, Setting, TextAreaComponent } from 'obsidian';
 import { t } from '../../i18n';
 import type { SlideTemplateConfig } from '../../types/slide';
 
@@ -62,9 +62,9 @@ export class SlideTemplateModal extends Modal {
 		const setting = new Setting(this.contentEl)
 			.setName(t('slideView.templateModal.titleFieldLabel'))
 			.setDesc(t('slideView.templateModal.titleFieldDesc'));
-		const input = new TextComponent(setting.controlEl);
+		const input = new TextAreaComponent(setting.controlEl);
 		input.setValue(this.titleTemplate);
-		input.inputEl.addClass('tlb-slide-template__input');
+		input.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--title');
 		input.onChange((value) => {
 			this.titleTemplate = value;
 		});
@@ -76,7 +76,7 @@ export class SlideTemplateModal extends Modal {
 			.setDesc(t('slideView.templateModal.bodyFieldsDesc'));
 		const textarea = new TextAreaComponent(setting.controlEl);
 		textarea.setValue(this.bodyTemplate);
-		textarea.inputEl.addClass('tlb-slide-template__textarea');
+		textarea.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--body');
 		textarea.onChange((value) => {
 			this.bodyTemplate = value;
 		});

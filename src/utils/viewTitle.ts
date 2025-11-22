@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 import { t } from '../i18n';
 
-export type TableViewMode = 'table' | 'kanban';
+export type TableViewMode = 'table' | 'kanban' | 'slide';
 
 export interface TableViewTitleBaseOptions {
 	file: TFile | null;
@@ -42,5 +42,12 @@ function resolveFileBaseName(file: TFile | null, filePath: string | null): strin
 }
 
 function resolveModeLabel(mode: TableViewMode | null | undefined): string {
-	return mode === 'kanban' ? t('tableView.mode.kanban') : t('tableView.mode.table');
+	switch (mode) {
+		case 'kanban':
+			return t('tableView.mode.kanban');
+		case 'slide':
+			return t('tableView.mode.slide');
+		default:
+			return t('tableView.mode.table');
+	}
 }

@@ -2593,15 +2593,20 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0;
+	position: fixed;
+	inset: 0;
 	height: 100vh;
+	width: 100vw;
 	overflow: hidden;
+	background: transparent;
 }
 
 .tlb-slide-container {
 	display: flex;
 	flex-direction: column;
 	gap: 0;
-	height: 100vh;
+	height: 100%;
+	width: 100%;
 	overflow: hidden;
 }
 
@@ -2629,6 +2634,7 @@
 .tlb-slide-full--fullscreen .tlb-slide-full__stage {
 	min-height: 100vh;
 	height: 100vh;
+	width: 100vw;
 }
 
 .tlb-slide-full__controls {

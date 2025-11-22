@@ -17,6 +17,9 @@ export class SlideTemplateModal extends Modal {
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private titleTemplate: string;
 	private bodyTemplate: string;
+	private activeTarget: 'title' | 'body' = 'title';
+	private titleInputEl: HTMLTextAreaElement | null = null;
+	private bodyInputEl: HTMLTextAreaElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
@@ -27,6 +30,8 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.contentEl.empty();
+		this.contentEl.addClass('tlb-slide-template');
 		this.titleEl.setText(t('slideView.templateModal.title'));
 		this.renderInsertRow();
 		this.renderTitleInput();
@@ -36,12 +41,16 @@ export class SlideTemplateModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
+		this.titleInputEl = null;
+		this.bodyInputEl = null;
 	}
 
 	private renderInsertRow(): void {
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
-		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.insertField') });
-		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.insertFieldDesc') });
+		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
+		const left = block.createDiv({ cls: 'tlb-slide-template__header-text' });
+		left.createDiv({ cls: 'tlb-slide-template__label', text: t('slideView.templateModal.insertField') });
+		left.createDiv({ cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.insertFieldDesc') });
+
 		const dropdown = new DropdownComponent(block);
 		dropdown.selectEl.addClass('tlb-slide-template__dropdown');
 		dropdown.addOption('', t('slideView.templateModal.addFieldPlaceholder'));
@@ -65,9 +74,13 @@ export class SlideTemplateModal extends Modal {
 		input.setValue(this.titleTemplate);
 		input.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--title');
 		input.inputEl.setAttr('rows', '2');
+		input.inputEl.addEventListener('focus', () => {
+			this.activeTarget = 'title';
+		});
 		input.onChange((value) => {
 			this.titleTemplate = value;
 		});
+		this.titleInputEl = input.inputEl;
 	}
 
 	private renderBodyInput(): void {
@@ -78,9 +91,13 @@ export class SlideTemplateModal extends Modal {
 		textarea.setValue(this.bodyTemplate);
 		textarea.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--body');
 		textarea.inputEl.setAttr('rows', '4');
+		textarea.inputEl.addEventListener('focus', () => {
+			this.activeTarget = 'body';
+		});
 		textarea.onChange((value) => {
 			this.bodyTemplate = value;
 		});
+		this.bodyInputEl = textarea.inputEl;
 	}
 
 	private renderActions(): void {
@@ -104,10 +121,27 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private insertPlaceholder(placeholder: string): void {
-		// Insert into body by default; user can copy to title manually
-		this.bodyTemplate = (this.bodyTemplate + (this.bodyTemplate ? ' ' : '') + placeholder).trim();
-		this.contentEl.querySelectorAll('.tlb-slide-template__textarea').forEach((el) => {
-			(el as HTMLTextAreaElement).value = this.bodyTemplate;
-		});
+		const target =
+			this.activeTarget === 'title'
+				? this.titleInputEl
+				: this.bodyInputEl ?? this.titleInputEl;
+		if (!target) {
+			return;
+		}
+		const currentValue = target.value;
+		const selectionStart = target.selectionStart ?? currentValue.length;
+		const selectionEnd = target.selectionEnd ?? currentValue.length;
+		const next =
+			currentValue.slice(0, selectionStart) +
+			placeholder +
+			currentValue.slice(selectionEnd);
+		target.value = next;
+		if (target === this.titleInputEl) {
+			this.titleTemplate = next;
+		} else {
+			this.bodyTemplate = next;
+		}
+		target.focus();
+		target.setSelectionRange(selectionStart + placeholder.length, selectionStart + placeholder.length);
 	}
 }

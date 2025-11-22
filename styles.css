@@ -2691,11 +2691,29 @@
 	background: var(--background-secondary);
 }
 
+.tlb-slide-template {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.tlb-slide-template__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.tlb-slide-template__header-text {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
 .tlb-slide-template__block {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
-	margin-top: 12px;
 }
 
 .tlb-slide-template__label {

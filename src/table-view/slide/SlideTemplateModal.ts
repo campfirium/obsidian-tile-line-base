@@ -182,7 +182,7 @@ export class SlideTemplateModal extends Modal {
 		config: { label: string; value: string; onChange: (value: string) => void }
 	): void {
 		const row = container.createDiv({ cls: 'tlb-slide-template__color-row' });
-		row.createEl('div', { cls: 'tlb-slide-template__label', text: config.label });
+		row.createEl('div', { cls: 'tlb-slide-template__color-label', text: config.label });
 		const picker = row.createEl('input', {
 			attr: {
 				type: 'color',
@@ -279,7 +279,7 @@ export class SlideTemplateModal extends Modal {
 			return;
 		}
 		this.insertButtonEl.disabled = false;
-	}
+      	}
 
 	private resolveInsertionTarget(): HTMLTextAreaElement | null {
 		const active = this.resolveActiveInput();

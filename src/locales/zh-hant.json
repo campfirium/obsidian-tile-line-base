@@ -82,7 +82,7 @@
       "bodyFieldsDesc": "使用 {描述} 等占位符，分行書寫；空行會自動跳過。",
       "textColorLabel": "文字顏色",
       "backgroundColorLabel": "背景顏色",
-      "resetColorLabel": "使用主題預設",
+      "resetColorLabel": "預設",
       "addFieldPlaceholder": "選擇欄位",
       "insertField": "插入欄位",
       "insertFieldDesc": "插入如 {標題} 的占位符到模板。",

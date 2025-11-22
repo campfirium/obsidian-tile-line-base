@@ -1,12 +1,8 @@
 export type SlideThemeId = 'basic';
 
 export interface SlideTemplateConfig {
-	titleField: string | null;
-	bodyFields: string[];
-	tagFields: string[];
-	includeEmptyFields: boolean;
-	showIndex: boolean;
-	fieldClassNames?: Record<string, string>;
+	titleTemplate: string;
+	bodyTemplate: string;
 }
 
 export interface SlideViewConfig {
@@ -17,12 +13,8 @@ export interface SlideViewConfig {
 export const DEFAULT_SLIDE_THEME: SlideThemeId = 'basic';
 
 export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
-	titleField: null,
-	bodyFields: [],
-	tagFields: [],
-	includeEmptyFields: false,
-	showIndex: true,
-	fieldClassNames: {}
+	titleTemplate: '',
+	bodyTemplate: ''
 };
 
 export const DEFAULT_SLIDE_VIEW_CONFIG: SlideViewConfig = {
@@ -30,122 +22,29 @@ export const DEFAULT_SLIDE_VIEW_CONFIG: SlideViewConfig = {
 	theme: DEFAULT_SLIDE_THEME
 };
 
-const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'statusChanged']);
-
-const normalizeFieldList = (source: unknown, availableFields?: string[]): string[] => {
-	if (!Array.isArray(source)) {
-		return [];
+const normalizeTemplateString = (value: unknown): string => {
+	if (typeof value !== 'string') {
+		return '';
 	}
-	const allowed = new Set(
-		(availableFields ?? []).filter((field) => typeof field === 'string' && field.trim().length > 0)
-	);
-	const result: string[] = [];
-	const seen = new Set<string>();
-	for (const entry of source) {
-		if (typeof entry !== 'string') {
-			continue;
-		}
-		const trimmed = entry.trim();
-		if (!trimmed || RESERVED_FIELDS.has(trimmed)) {
-			continue;
-		}
-		if (allowed.size > 0 && !allowed.has(trimmed)) {
-			continue;
-		}
-		if (seen.has(trimmed)) {
-			continue;
-		}
-		seen.add(trimmed);
-		result.push(trimmed);
-	}
-	return result;
+	return value.replace(/\r\n/g, '\n').trimEnd();
 };
 
-const normalizeFieldClassNames = (
-	source: unknown,
-	allowedFields: Set<string>
-): Record<string, string> | undefined => {
-	if (!source || typeof source !== 'object') {
-		return undefined;
-	}
-	const entries: Array<[string, string]> = [];
-	for (const [rawKey, rawValue] of Object.entries(source as Record<string, unknown>)) {
-		if (typeof rawKey !== 'string' || typeof rawValue !== 'string') {
-			continue;
-		}
-		const key = rawKey.trim();
-		const value = rawValue.trim();
-		if (!key || !value || RESERVED_FIELDS.has(key)) {
-			continue;
-		}
-		if (allowedFields.size > 0 && !allowedFields.has(key)) {
-			continue;
-		}
-		entries.push([key, value]);
-	}
-	if (entries.length === 0) {
-		return undefined;
-	}
-	return Object.fromEntries(entries);
-};
-
-export function sanitizeSlideTemplateConfig(
-	config: unknown,
-	availableFields?: string[]
-): SlideTemplateConfig {
-	const template: SlideTemplateConfig = { ...DEFAULT_SLIDE_TEMPLATE, fieldClassNames: {} };
+export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfig {
 	if (!config || typeof config !== 'object') {
-		return template;
+		return { ...DEFAULT_SLIDE_TEMPLATE };
 	}
-
-	const allowedSet = new Set(
-		(availableFields ?? []).filter((field) => typeof field === 'string' && field.trim().length > 0)
-	);
-
-	if (typeof (config as Record<string, unknown>).titleField === 'string') {
-		const titleCandidate = (config as Record<string, unknown>).titleField as string;
-		const trimmed = titleCandidate.trim();
-		if (trimmed && !RESERVED_FIELDS.has(trimmed) && (allowedSet.size === 0 || allowedSet.has(trimmed))) {
-			template.titleField = trimmed;
-		}
-	}
-
-	template.bodyFields = normalizeFieldList((config as Record<string, unknown>).bodyFields, availableFields);
-	template.tagFields = normalizeFieldList((config as Record<string, unknown>).tagFields, availableFields);
-
-	if (typeof (config as Record<string, unknown>).includeEmptyFields === 'boolean') {
-		template.includeEmptyFields = (config as Record<string, unknown>).includeEmptyFields as boolean;
-	}
-	if (typeof (config as Record<string, unknown>).showIndex === 'boolean') {
-		template.showIndex = (config as Record<string, unknown>).showIndex as boolean;
-	}
-
-	const allowedForClass = new Set<string>([
-		...template.bodyFields,
-		...template.tagFields,
-		template.titleField ?? ''
-	].filter(Boolean));
-	const classNames = normalizeFieldClassNames(
-		(config as Record<string, unknown>).fieldClassNames,
-		allowedForClass
-	);
-	template.fieldClassNames = classNames ?? {};
-
-	return template;
+	return {
+		titleTemplate: normalizeTemplateString((config as Record<string, unknown>).titleTemplate),
+		bodyTemplate: normalizeTemplateString((config as Record<string, unknown>).bodyTemplate)
+	};
 }
 
-export function normalizeSlideViewConfig(
-	config: unknown,
-	availableFields?: string[]
-): SlideViewConfig {
+export function normalizeSlideViewConfig(config: unknown): SlideViewConfig {
 	if (!config || typeof config !== 'object') {
-		return { ...DEFAULT_SLIDE_VIEW_CONFIG, template: { ...DEFAULT_SLIDE_TEMPLATE, fieldClassNames: {} } };
+		return { ...DEFAULT_SLIDE_VIEW_CONFIG, template: { ...DEFAULT_SLIDE_TEMPLATE } };
 	}
 
-	const template = sanitizeSlideTemplateConfig(
-		(config as Record<string, unknown>).template,
-		availableFields
-	);
+	const template = sanitizeSlideTemplateConfig((config as Record<string, unknown>).template);
 	const theme =
 		(config as Record<string, unknown>).theme === 'basic'
 			? 'basic'
@@ -162,15 +61,9 @@ export function isDefaultSlideViewConfig(config: SlideViewConfig | null | undefi
 		return true;
 	}
 	const template = config.template ?? DEFAULT_SLIDE_TEMPLATE;
-	const classNames = template.fieldClassNames ?? {};
-	const classNameKeys = Object.keys(classNames);
 	return (
 		(config.theme ?? DEFAULT_SLIDE_THEME) === DEFAULT_SLIDE_THEME &&
-		(template.titleField ?? null) === DEFAULT_SLIDE_TEMPLATE.titleField &&
-		(template.includeEmptyFields ?? false) === DEFAULT_SLIDE_TEMPLATE.includeEmptyFields &&
-		(template.showIndex ?? true) === DEFAULT_SLIDE_TEMPLATE.showIndex &&
-		(template.bodyFields?.length ?? 0) === 0 &&
-		(template.tagFields?.length ?? 0) === 0 &&
-		classNameKeys.length === 0
+		(template.titleTemplate ?? '') === DEFAULT_SLIDE_TEMPLATE.titleTemplate &&
+		(template.bodyTemplate ?? '') === DEFAULT_SLIDE_TEMPLATE.bodyTemplate
 	);
 }

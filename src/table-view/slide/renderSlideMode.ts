@@ -7,7 +7,7 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	container.classList.add('tlb-slide-mode');
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
-	const slideConfig = normalizeSlideViewConfig(view.slideConfig, view.schema?.columnNames ?? []);
+	const slideConfig = normalizeSlideViewConfig(view.slideConfig);
 
 	view.slideController = renderSlideView({
 		container: slideContainer,

@@ -170,44 +170,31 @@ export class SlideViewController {
 	private resolveContent(row: RowData): { title: string; contents: string[] } {
 		const orderedFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		const template = this.config.template;
-
-		const titleField = template.titleField && orderedFields.includes(template.titleField)
-			? template.titleField
-			: orderedFields[0] ?? null;
-
-		const bodyFields = template.bodyFields.length > 0
-			? template.bodyFields.filter((field) => orderedFields.includes(field) && field !== titleField)
-			: orderedFields.filter((field) => field !== titleField);
-
-		const values: Array<{ field: string; value: string }> = [];
+		const values: Record<string, string> = {};
 		for (const field of orderedFields) {
 			if (field === 'status') continue;
 			const raw = row[field];
-			if (raw == null) continue;
-			const text = String(raw).trim();
+			const text = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
 			if (!text) continue;
-			values.push({ field, value: text });
+			values[field] = text;
 		}
 
-		const titleValue = titleField
-			? (values.find((entry) => entry.field === titleField)?.value ?? '')
-			: '';
-		const title = titleValue.length > 0
-			? titleValue
-			: t('slideView.untitledSlide', { index: String(this.activeIndex + 1) });
+		const renderTemplate = (templateText: string): string => {
+			const input = templateText.replace(/\r\n/g, '\n');
+			return input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
+				const field = key.trim();
+				if (!field || RESERVED_FIELDS.has(field)) {
+					return '';
+				}
+				return values[field] ?? '';
+			}).trim();
+		};
 
-		const contents: string[] = [];
-		for (const field of bodyFields) {
-			const value = values.find((entry) => entry.field === field)?.value ?? '';
-			if (!value && !template.includeEmptyFields) {
-				continue;
-			}
-			if (!value) {
-				contents.push(t('slideView.emptyValue'));
-			} else {
-				contents.push(value);
-			}
-		}
+		const titleTemplate = template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
+		const title = renderTemplate(titleTemplate) || t('slideView.untitledSlide', { index: String(this.activeIndex + 1) });
+
+		const body = renderTemplate(template.bodyTemplate);
+		const contents = body ? body.split('\n').filter((line) => line.trim().length > 0) : [];
 		return { title, contents };
 	}
 

@@ -139,9 +139,7 @@ export class TablePersistenceService {
 			kanbanBoards.boards.length > 0;
 
 		const slideConfig = this.deps.getSlideConfig?.() ?? null;
-		const normalizedSlideConfig = slideConfig
-			? normalizeSlideViewConfig(slideConfig, schema?.columnNames ?? [])
-			: null;
+		const normalizedSlideConfig = slideConfig ? normalizeSlideViewConfig(slideConfig) : null;
 		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig);
 
 		return {

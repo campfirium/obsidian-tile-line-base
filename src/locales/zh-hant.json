@@ -88,6 +88,8 @@
       "addFieldLabel": "新增欄位",
       "addFieldDesc": "選擇更多欄位加入正文。",
       "addFieldPlaceholder": "選擇欄位",
+      "insertField": "插入欄位",
+      "insertFieldDesc": "插入如 {標題} 的占位符到模板。",
       "saveLabel": "保存模板",
       "cancelLabel": "取消"
     }

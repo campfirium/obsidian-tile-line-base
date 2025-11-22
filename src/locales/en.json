@@ -88,6 +88,8 @@
       "addFieldLabel": "Add field",
       "addFieldDesc": "Select more fields to show in the slide body.",
       "addFieldPlaceholder": "Select a field",
+      "insertField": "Insert field",
+      "insertFieldDesc": "Insert placeholders like {Title} into templates.",
       "saveLabel": "Save template",
       "cancelLabel": "Cancel"
     }

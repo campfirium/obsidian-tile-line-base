@@ -102,7 +102,11 @@ export class SlideViewController {
 
 	private attachKeyboard(): void {
 		const handler = (evt: KeyboardEvent) => {
-			if (evt.defaultPrevented) return;
+			const target = evt.target as HTMLElement | null;
+			const tag = target?.tagName?.toLowerCase();
+			if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+				return;
+			}
 			if (evt.key === 'ArrowRight' || evt.key === ' ') {
 				this.next();
 				evt.preventDefault();

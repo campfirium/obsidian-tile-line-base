@@ -65,9 +65,11 @@ export class SlideTemplateModal extends Modal {
 		const input = new TextAreaComponent(setting.controlEl);
 		input.setValue(this.titleTemplate);
 		input.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--title');
+		input.inputEl.setAttr('rows', '2');
 		input.onChange((value) => {
 			this.titleTemplate = value;
 		});
+		setting.controlEl.addClass('tlb-slide-template__control');
 	}
 
 	private renderBodyInput(): void {
@@ -77,9 +79,11 @@ export class SlideTemplateModal extends Modal {
 		const textarea = new TextAreaComponent(setting.controlEl);
 		textarea.setValue(this.bodyTemplate);
 		textarea.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--body');
+		textarea.inputEl.setAttr('rows', '4');
 		textarea.onChange((value) => {
 			this.bodyTemplate = value;
 		});
+		setting.controlEl.addClass('tlb-slide-template__control');
 	}
 
 	private renderActions(): void {

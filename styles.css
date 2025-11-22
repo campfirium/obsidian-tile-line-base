@@ -2697,6 +2697,7 @@
 
 .tlb-slide-template__textarea {
 	width: 100%;
+	resize: vertical;
 }
 
 .tlb-slide-template__textarea--title {
@@ -2704,7 +2705,7 @@
 }
 
 .tlb-slide-template__textarea--body {
-	min-height: 120px;
+	min-height: 140px;
 }
 
 .tlb-slide-template__list {
@@ -2773,4 +2774,8 @@
 
 .tlb-slide-template__primary {
 	min-width: 96px;
+}
+
+.tlb-slide-template__control {
+	width: 100%;
 }

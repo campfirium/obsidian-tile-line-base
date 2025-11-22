@@ -36,6 +36,14 @@ export interface SortModelEntry {
 	direction: 'asc' | 'desc';
 }
 
+export interface RowDragEndPayload {
+	draggedRow: RowData | null;
+	targetRow: RowData | null;
+	direction: 'up' | 'down' | null;
+	overIndex: number | null;
+	displayedRowOrder?: Array<string | number> | null;
+}
+
 /**
  * 单元格编辑事件
  */
@@ -179,4 +187,6 @@ export interface GridAdapter {
 	 * 调整列宽以填充当前容器
 	 */
 	fillColumnsToMinimumWidth?(): void;
+
+	onRowDragEnd?(callback: (event: RowDragEndPayload) => void): void;
 }

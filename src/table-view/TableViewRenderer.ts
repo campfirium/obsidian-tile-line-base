@@ -260,6 +260,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 				onEnterAtLastRow: (field) => {
 					const oldRowCount = view.blocks.length;
 					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });
+				},
+				onRowDragEnd: (payload) => {
+					view.rowInteractionController.reorderRowsByDrag(payload);
 				}
 			}
 		});

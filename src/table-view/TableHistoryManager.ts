@@ -335,6 +335,36 @@ export class TableHistoryManager {
 		});
 	}
 
+	recordRowMove(move: { ref: H2Block; fromIndex: number; toIndex: number }, focus?: HistoryFocusOptions): void {
+		const undoFocus =
+			focus?.undo ??
+			({
+				rowIndex: move.fromIndex,
+				field: null
+			} as FocusTarget);
+		const redoFocus =
+			focus?.redo ??
+			({
+				rowIndex: move.toIndex,
+				field: null
+			} as FocusTarget);
+
+		this.record({
+			undo: () => {
+				logger.debug('recordRowMove:undo', { from: move.fromIndex, to: move.toIndex });
+				this.applyChange(() => {
+					this.moveBlockToIndex(move.ref, move.fromIndex);
+				}, undoFocus);
+			},
+			redo: () => {
+				logger.debug('recordRowMove:redo', { from: move.fromIndex, to: move.toIndex });
+				this.applyChange(() => {
+					this.moveBlockToIndex(move.ref, move.toIndex);
+				}, redoFocus);
+			}
+		});
+	}
+
 	snapshotBlock(block: H2Block): BlockSnapshot {
 		return {
 			title: block.title,
@@ -429,6 +459,21 @@ export class TableHistoryManager {
 
 	private getBlocks(): H2Block[] {
 		return this.view.dataStore.getBlocks();
+	}
+
+	private moveBlockToIndex(ref: H2Block, targetIndex: number): void {
+		const blocks = this.getBlocks();
+		const currentIndex = blocks.indexOf(ref);
+		if (currentIndex === -1) {
+			logger.warn('moveBlockToIndex:ref-missing', { targetIndex });
+			return;
+		}
+		const [block] = blocks.splice(currentIndex, 1);
+		if (!block) {
+			return;
+		}
+		const insertionIndex = clampIndex(targetIndex, 0, blocks.length);
+		blocks.splice(insertionIndex, 0, block);
 	}
 }
 

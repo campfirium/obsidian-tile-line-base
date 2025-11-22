@@ -1,5 +1,12 @@
 import { AgGridAdapter } from '../grid/AgGridAdapter';
-import type { GridAdapter, ColumnDef, RowData, CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
+import type {
+	GridAdapter,
+	ColumnDef,
+	RowData,
+	CellEditEvent,
+	HeaderEditEvent,
+	RowDragEndPayload
+} from '../grid/GridAdapter';
 import type { CellLinkClickContext } from '../types/cellLinks';
 import type { TaskStatus } from '../renderers/StatusCellRenderer';
 
@@ -15,6 +22,7 @@ export interface GridControllerHandlers {
 	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow?: (field: string | null) => void;
 	onOpenCellLink?: (context: CellLinkClickContext) => void;
+	onRowDragEnd?: (event: RowDragEndPayload) => void;
 }
 
 export interface GridMountResult {
@@ -82,6 +90,12 @@ export class GridController {
 		if (handlers.onModelUpdated && adapter.onModelUpdated) {
 			adapter.onModelUpdated(() => {
 				handlers.onModelUpdated?.();
+			});
+		}
+
+		if (handlers.onRowDragEnd && adapter.onRowDragEnd) {
+			adapter.onRowDragEnd((event) => {
+				handlers.onRowDragEnd?.(event);
 			});
 		}
 

@@ -160,6 +160,18 @@ export class SlideViewController {
 			cls: 'tlb-slide-full__slide',
 			attr: { 'data-tlb-slide-index': String(this.activeIndex) }
 		});
+		const bgColor = (this.config.template.backgroundColor ?? '').trim();
+		const titleColor = (this.config.template.titleColor ?? '').trim();
+		const bodyColor = (this.config.template.bodyColor ?? '').trim();
+		if (bgColor) {
+			slide.style.background = bgColor;
+		}
+		if (titleColor) {
+			slide.style.setProperty('--tlb-slide-title-color', titleColor);
+		}
+		if (bodyColor) {
+			slide.style.setProperty('--tlb-slide-body-color', bodyColor);
+		}
 		slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
 		const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
 		if (contents.length === 0) {

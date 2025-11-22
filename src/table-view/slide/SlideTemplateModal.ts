@@ -17,6 +17,9 @@ export class SlideTemplateModal extends Modal {
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private titleTemplate: string;
 	private bodyTemplate: string;
+	private titleColor: string;
+	private bodyColor: string;
+	private backgroundColor: string;
 	private titleInputEl: HTMLTextAreaElement | null = null;
 	private bodyInputEl: HTMLTextAreaElement | null = null;
 	private insertButtonEl: HTMLButtonElement | null = null;
@@ -28,6 +31,9 @@ export class SlideTemplateModal extends Modal {
 		this.onSave = opts.onSave;
 		this.titleTemplate = opts.initial.titleTemplate ?? '';
 		this.bodyTemplate = opts.initial.bodyTemplate ?? '';
+		this.titleColor = opts.initial.titleColor ?? '';
+		this.bodyColor = opts.initial.bodyColor ?? '';
+		this.backgroundColor = opts.initial.backgroundColor ?? '';
 	}
 
 	onOpen(): void {
@@ -38,6 +44,7 @@ export class SlideTemplateModal extends Modal {
 		this.renderTitleInput();
 		this.renderBodyInput();
 		this.ensureBodyInputExists();
+		this.renderColorInputs();
 		this.renderActions();
 	}
 
@@ -154,6 +161,49 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
+	private renderColorInputs(): void {
+		const group = this.contentEl.createDiv({ cls: 'tlb-slide-template__color-group' });
+		this.renderColorInput(group, {
+			label: t('slideView.templateModal.titleColorLabel'),
+			value: this.titleColor,
+			onChange: (value) => {
+				this.titleColor = value;
+			}
+		});
+		this.renderColorInput(group, {
+			label: t('slideView.templateModal.bodyColorLabel'),
+			value: this.bodyColor,
+			onChange: (value) => {
+				this.bodyColor = value;
+			}
+		});
+		this.renderColorInput(group, {
+			label: t('slideView.templateModal.backgroundColorLabel'),
+			value: this.backgroundColor,
+			onChange: (value) => {
+				this.backgroundColor = value;
+			}
+		});
+	}
+
+	private renderColorInput(
+		container: HTMLElement,
+		config: { label: string; value: string; onChange: (value: string) => void }
+	): void {
+		const row = container.createDiv({ cls: 'tlb-slide-template__color-row' });
+		row.createEl('div', { cls: 'tlb-slide-template__label', text: config.label });
+		const input = row.createEl('input', {
+			attr: {
+				type: 'color',
+				value:
+					config.value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.value) ? config.value : '#000000'
+			}
+		}) as HTMLInputElement;
+		input.addEventListener('input', () => {
+			config.onChange(input.value);
+		});
+	}
+
 	private renderActions(): void {
 		const footer = this.contentEl.createDiv({ cls: 'tlb-slide-template__footer' });
 		const saveButton = footer.createEl('button', {
@@ -163,7 +213,10 @@ export class SlideTemplateModal extends Modal {
 		saveButton.addEventListener('click', () => {
 			this.onSave({
 				titleTemplate: this.titleTemplate,
-				bodyTemplate: this.bodyTemplate
+				bodyTemplate: this.bodyTemplate,
+				titleColor: this.titleColor,
+				bodyColor: this.bodyColor,
+				backgroundColor: this.backgroundColor
 			});
 			this.close();
 		});

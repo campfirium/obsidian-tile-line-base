@@ -2607,6 +2607,7 @@
 	align-items: center;
 	justify-content: center;
 	position: relative;
+	padding: 12px;
 }
 
 .tlb-slide-full__stage {
@@ -2645,36 +2646,46 @@
 }
 
 .tlb-slide-full__slide {
-	width: min(960px, 100%);
-	padding: 32px 36px;
-	background: linear-gradient(160deg, var(--background-primary) 0%, var(--background-secondary) 100%);
+	width: min(96vw, 1200px);
+	aspect-ratio: 16 / 9;
+	max-height: 80vh;
+	padding: 36px 48px;
+	background: var(--tlb-slide-card-bg, color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary) 10%));
 	border: 1px solid var(--background-modifier-border);
-	border-radius: 16px;
-	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+	border-radius: 18px;
+	box-shadow: none;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 20px;
+	overflow: hidden;
 }
 
 .tlb-slide-full__title {
-	font-size: 28px;
+	font-size: 32px;
 	line-height: 1.25;
 	text-align: center;
 	font-weight: 800;
-	margin-bottom: 20px;
+	margin: 0;
 	word-break: break-word;
+	color: var(--tlb-slide-title-color, var(--text-normal));
 }
 
 .tlb-slide-full__content {
-	display: grid;
-	gap: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
 }
 
 .tlb-slide-full__block {
-	padding: 12px 14px;
-	background: var(--background-secondary);
-	border-radius: 10px;
-	font-size: 16px;
+	padding: 14px 16px;
+	background: color-mix(in srgb, var(--background-secondary) 80%, transparent 20%);
+	border-radius: 12px;
+	font-size: 17px;
 	line-height: 1.5;
 	word-break: break-word;
 	white-space: pre-wrap;
+	color: var(--tlb-slide-body-color, var(--text-normal));
 }
 
 .tlb-slide-full__block--empty {
@@ -2751,6 +2762,28 @@
 
 .tlb-slide-template__textarea--body {
 	min-height: 112px;
+}
+
+.tlb-slide-template__color-group {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 12px;
+}
+
+.tlb-slide-template__color-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.tlb-slide-template__color-row input[type="color"] {
+	width: 48px;
+	height: 32px;
+	padding: 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: transparent;
 }
 
 .tlb-slide-template__footer {

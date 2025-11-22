@@ -165,8 +165,10 @@ export class SlideViewController {
 		const textColor = (this.config.template.textColor ?? '').trim();
 		if (bgColor) {
 			slide.style.setProperty('--tlb-slide-card-bg', bgColor);
+			this.root.style.setProperty('--tlb-slide-full-bg', bgColor);
 		} else {
 			slide.style.removeProperty('--tlb-slide-card-bg');
+			this.root.style.removeProperty('--tlb-slide-full-bg');
 		}
 		if (textColor) {
 			slide.style.setProperty('--tlb-slide-text-color', textColor);

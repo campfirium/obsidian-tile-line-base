@@ -4,6 +4,7 @@ import type {
 	CellFocusedEvent,
 	CellKeyDownEvent,
 	GridOptions,
+	RowDragEndEvent,
 	PasteEndEvent
 } from 'ag-grid-community';
 import { normalizeStatus } from '../../renderers/StatusCellRenderer';
@@ -25,6 +26,7 @@ interface GridOptionsParams {
 	onCellEditingStopped: (event: CellEditingStoppedEvent) => void;
 	getColumnHeaderContextMenu: () => ((event: { field: string; domEvent: MouseEvent }) => void) | undefined;
 	resizeColumns: () => void;
+	onRowDragEnd: (event: RowDragEndEvent) => void;
 }
 
 export function createAgGridOptions({
@@ -35,11 +37,15 @@ export function createAgGridOptions({
 	getGridContext,
 	onCellEditingStopped,
 	getColumnHeaderContextMenu,
-	resizeColumns
+	resizeColumns,
+	onRowDragEnd
 }: GridOptionsParams): GridOptions {
 	return {
 		popupParent: popupParent ?? ownerDocument?.body ?? document.body,
 		rowHeight: DEFAULT_ROW_HEIGHT,
+		rowDragManaged: true,
+		rowDragMultiRow: false,
+		rowDragEntireRow: true,
 		undoRedoCellEditing: false,
 		undoRedoCellEditingLimit: 0,
 		onFirstDataRendered: () => {
@@ -107,6 +113,9 @@ export function createAgGridOptions({
 			}
 			const callback = getColumnHeaderContextMenu();
 			callback?.({ field, domEvent });
+		},
+		onRowDragEnd: (event: RowDragEndEvent) => {
+			onRowDragEnd(event);
 		},
 		defaultColDef: {
 			tooltipValueGetter: () => null,

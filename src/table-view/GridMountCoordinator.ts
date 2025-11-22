@@ -1,4 +1,4 @@
-import type { ColumnDef, GridAdapter, RowData } from '../grid/GridAdapter';
+import type { ColumnDef, GridAdapter, RowData, RowDragEndPayload } from '../grid/GridAdapter';
 import type { CellLinkClickContext } from '../types/cellLinks';
 import type { Schema } from './SchemaBuilder';
 import type { ColumnConfig } from './MarkdownBlockParser';
@@ -123,6 +123,7 @@ interface GridMountHandlers {
 	onColumnHeaderContextMenu: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow: (field: string | null) => void;
 	onOpenCellLink: (context: CellLinkClickContext) => void;
+	onRowDragEnd?: (event: RowDragEndPayload) => void;
 }
 
 interface GridMountParams {
@@ -148,7 +149,8 @@ export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; 
 		onHeaderEdit: handlers.onHeaderEdit,
 		onColumnHeaderContextMenu: handlers.onColumnHeaderContextMenu,
 		onEnterAtLastRow: handlers.onEnterAtLastRow,
-		onOpenCellLink: handlers.onOpenCellLink
+		onOpenCellLink: handlers.onOpenCellLink,
+		onRowDragEnd: handlers.onRowDragEnd
 	}, {
 		sideBarVisible: sideBarVisible !== false
 	});

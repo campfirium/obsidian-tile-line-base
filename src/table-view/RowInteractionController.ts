@@ -3,6 +3,7 @@ import type { TableDataStore } from './TableDataStore';
 import { getLogger } from '../utils/logger';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
+import { ROW_ID_FIELD, type RowDragEndPayload } from '../grid/GridAdapter';
 
 const logger = getLogger('table-view:row-interaction');
 
@@ -333,6 +334,55 @@ export class RowInteractionController {
 		this.scheduleSave();
 	}
 
+	reorderRowsByDrag(event: RowDragEndPayload): void {
+		if (!this.ensureSchema()) {
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		const sourceIndex = this.dataStore.getBlockIndexFromRow(event.draggedRow ?? undefined);
+		let targetIndex = this.dataStore.getBlockIndexFromRow(event.targetRow ?? undefined);
+
+		const displayedOrder = Array.isArray(event.displayedRowOrder) ? event.displayedRowOrder : null;
+		if (displayedOrder && displayedOrder.length > 0 && sourceIndex !== null) {
+			const sourceId =
+				event.draggedRow && Object.prototype.hasOwnProperty.call(event.draggedRow, ROW_ID_FIELD)
+					? String((event.draggedRow as any)[ROW_ID_FIELD])
+					: String(sourceIndex);
+			const destination = displayedOrder
+				.map((value) => parseInt(String(value), 10))
+				.findIndex((value) => !Number.isNaN(value) && String(value) === sourceId);
+			if (destination >= 0) {
+				const clampedDestination = this.clampIndex(destination, 0, blocks.length - 1);
+				if (clampedDestination !== sourceIndex) {
+					const placeAfter = clampedDestination > sourceIndex;
+					this.reorderRow(sourceIndex, clampedDestination, placeAfter ? 'after' : 'before');
+					return;
+				}
+			}
+		}
+
+		if (targetIndex === null) {
+			if (typeof event.overIndex === 'number' && event.overIndex >= 0) {
+				targetIndex = this.clampIndex(event.overIndex, 0, blocks.length - 1);
+			} else if (blocks.length > 0) {
+				// 当拖拽到空白区域时，AG Grid 可能不给出 targetRow/overIndex，默认落到末尾
+				targetIndex = blocks.length - 1;
+			}
+		}
+
+		if (sourceIndex === null || targetIndex === null) {
+			return;
+		}
+
+		if (sourceIndex === targetIndex) {
+			return;
+		}
+
+		const placeAfter = this.shouldPlaceAfter(event.direction, sourceIndex, targetIndex);
+		this.reorderRow(sourceIndex, targetIndex, placeAfter ? 'after' : 'before');
+	}
+
 	private ensureSchema(): Schema | null {
 		const schema = this.getSchema();
 		if (!schema) {
@@ -347,6 +397,66 @@ export class RowInteractionController {
 			return options.focusField ?? null;
 		}
 		return this.getFocusedField();
+	}
+
+	private reorderRow(sourceIndex: number, targetIndex: number, position: 'before' | 'after'): number | null {
+		const blocks = this.dataStore.getBlocks();
+		if (sourceIndex === targetIndex) {
+			return null;
+		}
+		if (sourceIndex < 0 || sourceIndex >= blocks.length || targetIndex < 0 || targetIndex >= blocks.length) {
+			return null;
+		}
+
+		const focusField = this.resolveFocusField();
+		const [extracted] = blocks.splice(sourceIndex, 1);
+		if (!extracted) {
+			return null;
+		}
+
+		const normalizedTarget = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+		const insertionIndex = this.clampIndex(
+			position === 'after' ? normalizedTarget + 1 : normalizedTarget,
+			0,
+			blocks.length
+		);
+
+		blocks.splice(insertionIndex, 0, extracted);
+
+		this.refreshGridData();
+		this.focusRow(insertionIndex, focusField);
+		this.scheduleSave();
+
+		this.history.recordRowMove(
+			{
+				ref: extracted,
+				fromIndex: sourceIndex,
+				toIndex: insertionIndex
+			},
+			{
+				undo: { rowIndex: sourceIndex, field: focusField ?? null },
+				redo: { rowIndex: insertionIndex, field: focusField ?? null }
+			}
+		);
+
+		return insertionIndex;
+	}
+
+	private shouldPlaceAfter(direction: 'up' | 'down' | null, sourceIndex: number, targetIndex: number): boolean {
+		if (direction === 'down') {
+			return true;
+		}
+		if (direction === 'up') {
+			return false;
+		}
+		return targetIndex > sourceIndex;
+	}
+
+	private clampIndex(value: number, min: number, max: number): number {
+		if (Number.isNaN(value)) {
+			return min;
+		}
+		return Math.max(min, Math.min(max, value));
 	}
 
 }

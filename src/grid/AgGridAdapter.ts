@@ -9,9 +9,19 @@ import {
 	CellEditingStoppedEvent,
 	ColumnState,
 	GridApi,
+	RowDragEndEvent,
 	ModuleRegistry
 } from 'ag-grid-community';
-import { CellEditEvent, ColumnDef, GridAdapter, HeaderEditEvent, RowData, SortModelEntry } from './GridAdapter';
+import {
+	CellEditEvent,
+	ColumnDef,
+	GridAdapter,
+	HeaderEditEvent,
+	ROW_ID_FIELD,
+	RowData,
+	RowDragEndPayload,
+	SortModelEntry
+} from './GridAdapter';
 import { t } from '../i18n';
 import { AgGridColumnService } from './column/AgGridColumnService';
 import { AgGridInteractionController } from './interactions/AgGridInteractionController';
@@ -29,6 +39,7 @@ export class AgGridAdapter implements GridAdapter {
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
+	private rowDragEndCallback?: (event: RowDragEndPayload) => void;
 	private gridContext?: GridInteractionContext;
 	private containerEl: HTMLElement | null = null;
 	private sideBarVisible = true;
@@ -124,7 +135,8 @@ export class AgGridAdapter implements GridAdapter {
 			getGridContext: () => this.gridContext,
 			onCellEditingStopped: (event: CellEditingStoppedEvent) => this.handleCellEdit(event),
 			getColumnHeaderContextMenu: () => this.columnHeaderContextMenuCallback,
-			resizeColumns: () => this.resizeColumns()
+			resizeColumns: () => this.resizeColumns(),
+			onRowDragEnd: (event) => this.handleRowDragEnd(event)
 		});
 
 		this.lifecycle.mountGrid(container, colDefs, rows, gridOptions);
@@ -210,6 +222,7 @@ export class AgGridAdapter implements GridAdapter {
 		this.cellEditCallback = undefined;
 		this.enterAtLastRowCallback = undefined;
 		this.columnHeaderContextMenuCallback = undefined;
+		this.rowDragEndCallback = undefined;
 		this.gridContext = undefined;
 		this.containerEl = null;
 	}
@@ -242,6 +255,10 @@ export class AgGridAdapter implements GridAdapter {
 		this.enterAtLastRowCallback = callback;
 	}
 
+	onRowDragEnd(callback: (event: RowDragEndPayload) => void): void {
+		this.rowDragEndCallback = callback;
+	}
+
 	private handleCellEdit(event: CellEditingStoppedEvent): void {
 		this.interaction.handleCellEditingStopped();
 
@@ -268,6 +285,41 @@ export class AgGridAdapter implements GridAdapter {
 				});
 			}
 		}
+	}
+
+	private handleRowDragEnd(event: RowDragEndEvent): void {
+		if (!this.rowDragEndCallback) {
+			return;
+		}
+
+		const payload: RowDragEndPayload = {
+			draggedRow: (event.node?.data as RowData | undefined) ?? null,
+			targetRow: (event.overNode?.data as RowData | undefined) ?? null,
+			direction: event.vDirection ?? null,
+			overIndex: typeof event.overIndex === 'number' ? event.overIndex : null,
+			displayedRowOrder: this.collectDisplayedRowOrder(event.api as GridApi | null)
+		};
+
+		this.rowDragEndCallback(payload);
+	}
+
+	private collectDisplayedRowOrder(api: GridApi | null): Array<string | number> | null {
+		if (!api || typeof api.getDisplayedRowCount !== 'function' || typeof api.getDisplayedRowAtIndex !== 'function') {
+			return null;
+		}
+		const count = api.getDisplayedRowCount();
+		if (typeof count !== 'number' || count <= 0) {
+			return null;
+		}
+		const order: Array<string | number> = [];
+		for (let i = 0; i < count; i++) {
+			const node = api.getDisplayedRowAtIndex(i);
+			const data = (node?.data as RowData | undefined) ?? null;
+			if (data && Object.prototype.hasOwnProperty.call(data, ROW_ID_FIELD)) {
+				order.push((data as any)[ROW_ID_FIELD]);
+			}
+		}
+		return order.length > 0 ? order : null;
 	}
 
 	private ensurePopupParent(doc: Document): HTMLElement {

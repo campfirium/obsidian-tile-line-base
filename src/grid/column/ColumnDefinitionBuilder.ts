@@ -1,4 +1,4 @@
-import { ColDef } from 'ag-grid-community';
+import { ColDef, type ICellRendererParams } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
@@ -42,6 +42,13 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 		lockPinned: true,
 		lockPosition: true,
 		suppressMovable: true,
+		cellRenderer: (params: ICellRendererParams) => {
+			const value = params.value ?? '';
+			const container = document.createElement('span');
+			container.classList.add('tlb-row-drag-handle');
+			container.textContent = String(value);
+			return container;
+		},
 		width: 60,
 		maxWidth: 80,
 		sortable: true,

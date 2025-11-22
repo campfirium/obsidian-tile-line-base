@@ -16,6 +16,16 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 		rows: slideRows,
 		fields: view.schema?.columnNames ?? [],
 		config: effectiveConfig,
+		onSaveRow: async (row, values) => {
+			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
+			if (rowIndex == null) return;
+			for (const [field, value] of Object.entries(values)) {
+				view.dataStore.updateCell(rowIndex, field, value);
+			}
+			view.markUserMutation('slide-inline-edit');
+			view.persistenceService.scheduleSave();
+			return view.dataStore.extractRowData();
+		},
 		onEditTemplate: () => {
 			const freshConfig = applyDefaultTemplates(
 				normalizeSlideViewConfig(view.slideConfig),

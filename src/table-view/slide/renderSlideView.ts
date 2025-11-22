@@ -12,6 +12,7 @@ interface RenderSlideViewOptions {
 	rows: RowData[];
 	fields: string[];
 	config: SlideViewConfig;
+	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onEditTemplate: () => void;
 }
 
@@ -21,6 +22,7 @@ export function renderSlideView(options: RenderSlideViewOptions): SlideViewInsta
 		rows: options.rows,
 		fields: options.fields,
 		config: options.config,
+		onSaveRow: options.onSaveRow,
 		onEditTemplate: options.onEditTemplate
 	});
 

@@ -8,6 +8,7 @@ interface SlideControllerOptions {
 	rows: RowData[];
 	fields: string[];
 	config: SlideViewConfig;
+	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onEditTemplate: () => void;
 }
 
@@ -22,16 +23,21 @@ export class SlideViewController {
 	private config: SlideViewConfig;
 	private activeIndex = 0;
 	private readonly cleanup: Array<() => void> = [];
+	private readonly onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	private readonly onEditTemplate: () => void;
 	private fullscreenTarget: HTMLElement | null = null;
 	private isFullscreen = false;
 	private fullscreenBtn: HTMLElement | null = null;
 	private fullscreenCleanup: (() => void) | null = null;
+	private editingIndex: number | null = null;
+	private editingValues: Record<string, string> = {};
+	private saving = false;
 
 	constructor(options: SlideControllerOptions) {
 		this.rows = options.rows;
 		this.fields = options.fields;
 		this.config = options.config;
+		this.onSaveRow = options.onSaveRow;
 		this.onEditTemplate = options.onEditTemplate;
 		this.root = options.container;
 		this.root.empty();
@@ -47,6 +53,7 @@ export class SlideViewController {
 
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
+		this.editingIndex = null;
 		if (this.activeIndex >= this.rows.length) {
 			this.activeIndex = Math.max(0, this.rows.length - 1);
 		}
@@ -146,6 +153,7 @@ export class SlideViewController {
 
 	private next(): void {
 		if (this.rows.length === 0) return;
+		this.editingIndex = null;
 		const nextIndex = Math.min(this.rows.length - 1, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
@@ -155,6 +163,7 @@ export class SlideViewController {
 
 	private prev(): void {
 		if (this.rows.length === 0) return;
+		this.editingIndex = null;
 		const nextIndex = Math.max(0, this.activeIndex - 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
@@ -177,6 +186,11 @@ export class SlideViewController {
 			cls: 'tlb-slide-full__slide',
 			attr: { 'data-tlb-slide-index': String(this.activeIndex) }
 		});
+		slide.addEventListener('click', () => {
+			if (this.editingIndex !== this.activeIndex) {
+				this.beginEdit(row);
+			}
+		});
 		const bgColor = (this.config.template.backgroundColor ?? '').trim();
 		const textColor = (this.config.template.textColor ?? '').trim();
 		if (bgColor) {
@@ -191,13 +205,17 @@ export class SlideViewController {
 		} else {
 			slide.style.removeProperty('--tlb-slide-text-color');
 		}
-		slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
-		const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
-		if (contents.length === 0) {
-			content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
+		if (this.editingIndex === this.activeIndex) {
+			this.renderEditForm(slide, row);
 		} else {
-			for (const value of contents) {
-				content.createDiv({ cls: 'tlb-slide-full__block', text: value });
+			slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
+			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
+			if (contents.length === 0) {
+				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
+			} else {
+				for (const value of contents) {
+					content.createDiv({ cls: 'tlb-slide-full__block', text: value });
+				}
 			}
 		}
 	}
@@ -265,6 +283,65 @@ export class SlideViewController {
 		} else {
 			setIcon(this.fullscreenBtn, 'maximize-2');
 			this.fullscreenBtn.setAttr('aria-label', t('slideView.actions.enterFullscreen'));
+		}
+	}
+
+	private beginEdit(row: RowData): void {
+		const editableFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
+		const values: Record<string, string> = {};
+		for (const field of editableFields) {
+			const raw = row[field];
+			values[field] = typeof raw === 'string' ? raw : String(raw ?? '');
+		}
+		this.editingIndex = this.activeIndex;
+		this.editingValues = values;
+		this.renderActive();
+	}
+
+	private renderEditForm(container: HTMLElement, row: RowData): void {
+		container.createDiv({ cls: 'tlb-slide-full__title', text: t('slideView.edit.heading') });
+		const form = container.createDiv({ cls: 'tlb-slide-full__editor' });
+		const editableFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
+		for (const field of editableFields) {
+			const fieldRow = form.createDiv({ cls: 'tlb-slide-full__field' });
+			fieldRow.createDiv({ cls: 'tlb-slide-full__field-label', text: field });
+			const input = fieldRow.createEl('textarea', {
+				cls: 'tlb-slide-full__field-input',
+				attr: { rows: '2' }
+			});
+			input.value = this.editingValues[field] ?? '';
+			input.addEventListener('input', () => {
+				this.editingValues[field] = input.value;
+			});
+		}
+		const actions = form.createDiv({ cls: 'tlb-slide-full__actions' });
+		const cancel = actions.createEl('button', { text: t('slideView.templateModal.cancelLabel') });
+		cancel.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			this.editingIndex = null;
+			this.editingValues = {};
+			this.renderActive();
+		});
+		const save = actions.createEl('button', { cls: 'mod-cta', text: t('slideView.templateModal.saveLabel') });
+		save.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			void this.persistEdit(row);
+		});
+	}
+
+	private async persistEdit(row: RowData): Promise<void> {
+		if (this.saving) return;
+		this.saving = true;
+		try {
+			const nextRows = await this.onSaveRow(row, this.editingValues);
+			if (nextRows) {
+				this.updateRows(nextRows);
+			}
+			this.editingIndex = null;
+			this.editingValues = {};
+			this.renderActive();
+		} finally {
+			this.saving = false;
 		}
 	}
 }

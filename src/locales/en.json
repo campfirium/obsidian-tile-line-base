@@ -74,6 +74,7 @@
     "untitledSlide": "Untitled slide {{index}}",
     "emptyValue": "(empty)",
     "nav": { "prev": "Previous slide", "next": "Next slide" },
+    "edit": { "heading": "Edit slide" },
     "templateModal": {
       "title": "Slide template",
       "titleFieldLabel": "Title template",

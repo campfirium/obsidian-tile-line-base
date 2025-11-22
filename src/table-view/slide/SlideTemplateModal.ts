@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import { DropdownComponent, Modal, Setting, TextAreaComponent } from 'obsidian';
+import { DropdownComponent, Modal, TextAreaComponent } from 'obsidian';
 import { t } from '../../i18n';
 import type { SlideTemplateConfig } from '../../types/slide';
 
@@ -39,11 +39,10 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderInsertRow(): void {
-		const setting = new Setting(this.contentEl)
-			.setName(t('slideView.templateModal.insertField'))
-			.setDesc(t('slideView.templateModal.insertFieldDesc'));
-
-		const dropdown = new DropdownComponent(setting.controlEl);
+		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.insertField') });
+		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.insertFieldDesc') });
+		const dropdown = new DropdownComponent(block);
 		dropdown.selectEl.addClass('tlb-slide-template__dropdown');
 		dropdown.addOption('', t('slideView.templateModal.addFieldPlaceholder'));
 		for (const field of this.fields) {
@@ -59,31 +58,29 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderTitleInput(): void {
-		const setting = new Setting(this.contentEl)
-			.setName(t('slideView.templateModal.titleFieldLabel'))
-			.setDesc(t('slideView.templateModal.titleFieldDesc'));
-		const input = new TextAreaComponent(setting.controlEl);
+		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.titleFieldLabel') });
+		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.titleFieldDesc') });
+		const input = new TextAreaComponent(block);
 		input.setValue(this.titleTemplate);
 		input.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--title');
 		input.inputEl.setAttr('rows', '2');
 		input.onChange((value) => {
 			this.titleTemplate = value;
 		});
-		setting.controlEl.addClass('tlb-slide-template__control');
 	}
 
 	private renderBodyInput(): void {
-		const setting = new Setting(this.contentEl)
-			.setName(t('slideView.templateModal.bodyFieldsLabel'))
-			.setDesc(t('slideView.templateModal.bodyFieldsDesc'));
-		const textarea = new TextAreaComponent(setting.controlEl);
+		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
+		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
+		const textarea = new TextAreaComponent(block);
 		textarea.setValue(this.bodyTemplate);
 		textarea.inputEl.addClass('tlb-slide-template__textarea tlb-slide-template__textarea--body');
 		textarea.inputEl.setAttr('rows', '4');
 		textarea.onChange((value) => {
 			this.bodyTemplate = value;
 		});
-		setting.controlEl.addClass('tlb-slide-template__control');
 	}
 
 	private renderActions(): void {

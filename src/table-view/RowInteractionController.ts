@@ -344,7 +344,12 @@ export class RowInteractionController {
 		let targetIndex = this.dataStore.getBlockIndexFromRow(event.targetRow ?? undefined);
 
 		const displayedOrder = Array.isArray(event.displayedRowOrder) ? event.displayedRowOrder : null;
-		if (displayedOrder && displayedOrder.length > 0 && sourceIndex !== null) {
+		const hasFullDisplayedOrder = Array.isArray(displayedOrder) && displayedOrder.length === blocks.length;
+		if (!hasFullDisplayedOrder) {
+			// 过滤/排序视图下不处理拖拽，避免影响隐藏行顺序
+			return;
+		}
+		if (hasFullDisplayedOrder && sourceIndex !== null) {
 			const sourceId =
 				event.draggedRow && Object.prototype.hasOwnProperty.call(event.draggedRow, ROW_ID_FIELD)
 					? String((event.draggedRow as any)[ROW_ID_FIELD])

@@ -3,6 +3,7 @@ import { getPluginContext } from '../pluginContext';
 import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import type { KanbanBoardState, KanbanViewPreferenceConfig } from '../types/kanban';
+import type { SlideViewConfig } from '../types/slide';
 import { getLogger } from '../utils/logger';
 import { readConfigCallout, stripExistingConfigBlock } from './config/ConfigBlockIO';
 
@@ -13,10 +14,11 @@ export interface TableConfigData {
 	tagGroups?: FileTagGroupState | null;
 	columnWidths?: Record<string, number>;
 	columnConfigs?: string[] | null;
-	viewPreference?: 'table' | 'kanban';
+	viewPreference?: 'table' | 'kanban' | 'slide';
 	copyTemplate?: string | null;
 	kanban?: KanbanViewPreferenceConfig | null;
 	kanbanBoards?: KanbanBoardState | null;
+	slide?: SlideViewConfig | null;
 }
 
 export class TableConfigManager {
@@ -62,12 +64,16 @@ export class TableConfigManager {
 			snapshot.copyTemplate = copyTemplate;
 		}
 		const viewPreference = settingsService.getFileViewPreference(filePath);
-		if (viewPreference === 'table' || viewPreference === 'kanban') {
+		if (viewPreference === 'table' || viewPreference === 'kanban' || viewPreference === 'slide') {
 			snapshot.viewPreference = viewPreference;
 		}
 		const kanbanPrefs = settingsService.getKanbanPreferencesForFile(filePath);
 		if (kanbanPrefs) {
 			snapshot.kanban = kanbanPrefs;
+		}
+		const slidePrefs = settingsService.getSlidePreferencesForFile(filePath);
+		if (slidePrefs) {
+			snapshot.slide = slidePrefs;
 		}
 		const storedBoards = settings.kanbanBoards[filePath];
 		if (storedBoards && storedBoards.boards.length > 0) {
@@ -116,6 +122,7 @@ export class TableConfigManager {
 		if (data.kanbanBoards && data.kanbanBoards.boards.length > 0) {
 			tasks.push(plugin.saveKanbanBoardsForFile(filePath, data.kanbanBoards));
 		}
+		tasks.push(settingsService.saveSlidePreferencesForFile(filePath, data.slide));
 
 		await Promise.all(
 			tasks.map((task) =>
@@ -194,7 +201,7 @@ export class TableConfigManager {
 			result.copyTemplate = source.copyTemplate;
 			hasData = true;
 		}
-		if (source.viewPreference === 'table' || source.viewPreference === 'kanban') {
+		if (source.viewPreference === 'table' || source.viewPreference === 'kanban' || source.viewPreference === 'slide') {
 			result.viewPreference = source.viewPreference;
 			hasData = true;
 		}
@@ -204,6 +211,10 @@ export class TableConfigManager {
 		}
 		if (isRecord(source.kanbanBoards)) {
 			result.kanbanBoards = source.kanbanBoards as KanbanBoardState;
+			hasData = true;
+		}
+		if (isRecord(source.slide)) {
+			result.slide = source.slide as SlideViewConfig;
 			hasData = true;
 		}
 

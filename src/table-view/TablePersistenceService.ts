@@ -10,7 +10,13 @@ import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
 import type { KanbanBoardState, KanbanHeightMode, KanbanSortDirection } from '../types/kanban';
-import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
+import {
+	DEFAULT_KANBAN_FONT_SCALE,
+	DEFAULT_KANBAN_HEIGHT_MODE,
+	DEFAULT_KANBAN_SORT_DIRECTION
+} from '../types/kanban';
+import type { SlideViewConfig } from '../types/slide';
+import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
 
 const logger = getLogger('table-view:persistence');
 
@@ -25,7 +31,7 @@ interface TablePersistenceDeps {
 	getTagGroupState: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
-	getViewPreference: () => 'table' | 'kanban';
+	getViewPreference: () => 'table' | 'kanban' | 'slide';
 	getKanbanConfig: () => {
 		laneField: string | null;
 		sortField: string | null;
@@ -35,6 +41,7 @@ interface TablePersistenceDeps {
 		multiRow: boolean | null;
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
+	getSlideConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
 }
@@ -131,6 +138,12 @@ export class TablePersistenceService {
 			Array.isArray(kanbanBoards.boards) &&
 			kanbanBoards.boards.length > 0;
 
+		const slideConfig = this.deps.getSlideConfig?.() ?? null;
+		const normalizedSlideConfig = slideConfig
+			? normalizeSlideViewConfig(slideConfig, schema?.columnNames ?? [])
+			: null;
+		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig);
+
 		return {
 			filterViews: this.deps.getFilterViewState(),
 			tagGroups: this.deps.getTagGroupState(),
@@ -155,7 +168,8 @@ export class TablePersistenceService {
 						multiRow: multiRow === false ? false : undefined
 						}
 					: undefined,
-			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined
+			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined,
+			slide: hasSlideConfig ? normalizedSlideConfig : undefined
 		};
 	}
 

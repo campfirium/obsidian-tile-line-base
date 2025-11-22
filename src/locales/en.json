@@ -3,10 +3,15 @@
     "displayName": "TileLineBase Table",
     "mode": {
       "table": "Table",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Slide"
     }
   },
-  "viewControls": { "openTableView": "Switch to TileLineBase table view", "openMarkdownView": "Switch back to Markdown editor" },
+  "viewControls": {
+    "openTableView": "Switch to TileLineBase table view",
+    "openMarkdownView": "Switch back to Markdown editor",
+    "switchViewMenu": "Switch view (current: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
 		"missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
@@ -55,7 +60,17 @@
     "settings": { "multiRowToggle": "Allow lanes to wrap into multiple rows" },
     "showAllButtonLabel": "Show all ({{count}} more)"
   },
-  "commands": { "undoTableHistory": "Undo last table change", "redoTableHistory": "Redo table change", "openHelpDocument": "Open TileLineBase help document", "createTable": "Create TileLineBase table note", "exportCsv": "Export current table as CSV", "importCsv": "Import CSV into current table", "importCsvAsTable": "Import CSV as new table", "toggleTableView": "Toggle table view", "openKanbanView": "Open TileLineBase kanban view" },
+  "slideView": {
+    "actions": { "switchToSlide": "Switch to slide view" },
+    "emptyState": "No slides yet. Add H2 headings to this note.",
+    "filteredCountLabel": "{{count}} slides match the current filters",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Slide {{current}} of {{total}}",
+    "untitledSlide": "Untitled slide {{index}}",
+    "emptyValue": "(empty)",
+    "nav": { "prev": "Previous slide", "next": "Next slide" }
+  },
+  "commands": { "undoTableHistory": "Undo last table change", "redoTableHistory": "Redo table change", "openHelpDocument": "Open TileLineBase help document", "createTable": "Create TileLineBase table note", "exportCsv": "Export current table as CSV", "importCsv": "Import CSV into current table", "importCsvAsTable": "Import CSV as new table", "toggleTableView": "Toggle table view", "openKanbanView": "Open TileLineBase kanban view", "openSlideView": "Open TileLineBase slide view" },
   "csv": {
     "errorNoFile": "Save the note before exporting; the current file could not be found.",
     "exportFailure": "Failed to export CSV. Check the console for details.",

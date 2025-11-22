@@ -12,6 +12,8 @@ import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
+import { renderSlideView } from './slide/renderSlideView';
+import { normalizeSlideViewConfig } from '../types/slide';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 
 const logger = getLogger('table-view:renderer');
@@ -26,6 +28,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	container.classList.add('tlb-table-view-content');
 	container.classList.remove('tlb-has-grid');
 	container.classList.remove('tlb-kanban-mode');
+	container.classList.remove('tlb-slide-mode');
 
 	if (view.gridAdapter) {
 		view.gridController.destroy();
@@ -35,6 +38,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (view.kanbanController) {
 		view.kanbanController.destroy();
 		view.kanbanController = null;
+	}
+	if (view.slideController) {
+		view.slideController.destroy();
+		view.slideController = null;
 	}
 
 	const ownerDoc = container.ownerDocument;
@@ -82,9 +89,14 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 	}
 
+	if (!view.slidePreferencesLoaded) {
+		view.slideConfig = normalizeSlideViewConfig(configBlock?.slide ?? view.slideConfig ?? null);
+		view.slidePreferencesLoaded = true;
+	}
+
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table') view.activeViewMode = preference;
+		if (preference === 'kanban' || preference === 'table' || preference === 'slide') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
 		view.kanbanMultiRowEnabled = kanbanConfig?.multiRow !== false;
@@ -164,6 +176,20 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (view.kanbanToolbar) {
 		view.kanbanToolbar.destroy();
 		view.kanbanToolbar = null;
+	}
+	if (view.activeViewMode === 'slide') {
+		container.classList.add('tlb-slide-mode');
+		const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
+		const slideRows = view.dataStore.extractRowData();
+		view.slideController = renderSlideView({
+			container: slideContainer,
+			rows: slideRows,
+			fields: view.schema.columnNames,
+			onExit: () => {
+				void view.setActiveViewMode(view.previousNonSlideMode ?? 'table');
+			}
+		});
+		return;
 	}
 	if (view.activeViewMode === 'kanban') {
 		renderKanbanToolbar(view, container);

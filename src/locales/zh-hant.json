@@ -3,10 +3,15 @@
     "displayName": "TileLineBase 表格",
     "mode": {
       "table": "表格",
-      "kanban": "看板"
+      "kanban": "看板",
+      "slide": "投影片"
     }
   },
-  "viewControls": { "openTableView": "切換至 TileLineBase 表格視圖", "openMarkdownView": "切換回 Markdown 編輯器" },
+  "viewControls": {
+    "openTableView": "切換至 TileLineBase 表格視圖",
+    "openMarkdownView": "切換回 Markdown 編輯器",
+    "switchViewMenu": "切換視圖（當前：{{mode}}）"
+  },
   "kanbanView": {
     "schemaUnavailable": "看板視圖需要有效的表格結構，請重新載入後再試。",
     "missingLaneField": "看板視圖需要「{{field}}」欄，請在表格視圖新增該欄或切換回表格。",
@@ -55,7 +60,17 @@
     "settings": { "multiRowToggle": "允許泳道自動換行" },
     "showAllButtonLabel": "顯示全部（剩餘 {{count}} 筆）"
   },
-  "commands": { "undoTableHistory": "復原上一筆表格變更", "redoTableHistory": "重做表格變更", "openHelpDocument": "開啟 TileLineBase 說明文件", "createTable": "建立 TileLineBase 表格筆記", "exportCsv": "將目前表格匯出為 CSV", "importCsv": "將 CSV 匯入目前表格", "toggleTableView": "切換表格視圖", "importCsvAsTable": "匯入 CSV 並建立新表格", "openKanbanView": "開啟 TileLineBase 看板視圖" },
+  "slideView": {
+    "actions": { "switchToSlide": "切換到投影片視圖" },
+    "emptyState": "暫無投影片，請先加入 H2 區塊。",
+    "filteredCountLabel": "{{count}} 頁符合目前的篩選",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "第 {{current}} / {{total}} 頁",
+    "untitledSlide": "未命名投影片 {{index}}",
+    "emptyValue": "（空）",
+    "nav": { "prev": "上一頁", "next": "下一頁" }
+  },
+  "commands": { "undoTableHistory": "復原上一筆表格變更", "redoTableHistory": "重做表格變更", "openHelpDocument": "開啟 TileLineBase 說明文件", "createTable": "建立 TileLineBase 表格筆記", "exportCsv": "將目前表格匯出為 CSV", "importCsv": "將 CSV 匯入目前表格", "toggleTableView": "切換表格視圖", "importCsvAsTable": "匯入 CSV 並建立新表格", "openKanbanView": "開啟 TileLineBase 看板視圖", "openSlideView": "開啟 TileLineBase 投影片視圖" },
   "csv": {
     "errorNoFile": "請先儲存目前筆記或選擇有效的 CSV 檔案後再試。",
     "exportFailure": "匯出 CSV 失敗，請查看主控台記錄。",

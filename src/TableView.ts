@@ -36,7 +36,7 @@ import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
 import { TableFileDuplicationController } from "./table-view/TableFileDuplicationController";
 import type { KanbanViewController } from "./table-view/kanban/KanbanViewController";
-import { KanbanViewModeManager } from "./table-view/kanban/KanbanViewModeManager";
+import { ViewModeManager } from "./table-view/ViewModeManager";
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
@@ -47,6 +47,10 @@ import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
 import { buildTableViewTitle } from "./utils/viewTitle";
 import { ConversionSessionManager } from "./table-view/ConversionSessionManager";
 import { refreshTableViewDisplayText } from "./table-view/viewDisplayText";
+import type { SlideViewConfig } from "./types/slide";
+import { normalizeSlideViewConfig } from "./types/slide";
+import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
+import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -56,12 +60,9 @@ export interface TableViewState extends Record<string, unknown> {
 }
 
 export class TableView extends ItemView {
-	public file: TFile | null = null;
-	public blocks: H2Block[] = [];
-	public schema: Schema | null = null;
-	public schemaDirty = false;
-	public sparseCleanupRequired = false;
-	public hiddenSortableFields: Set<string> = new Set();
+	public file: TFile | null = null; public blocks: H2Block[] = [];
+	public schema: Schema | null = null; public schemaDirty = false;
+	public sparseCleanupRequired = false; public hiddenSortableFields: Set<string> = new Set();
 	public copyTemplate: string | null = null;
 	public gridAdapter: GridAdapter | null = null;
 	public gridController = new GridController();
@@ -85,50 +86,41 @@ export class TableView extends ItemView {
 	public fileDuplicationController!: TableFileDuplicationController;
 	public historyManager = new TableHistoryManager(this);
 	public refreshCoordinator!: TableRefreshCoordinator;
-	public tableContainer: HTMLElement | null = null;
-	public filterViewBar: FilterViewBar | null = null;
+	public tableContainer: HTMLElement | null = null; public filterViewBar: FilterViewBar | null = null;
 	private readonly conversionSession = new ConversionSessionManager(this);
 	public filterViewController!: FilterViewController;
-	public filterStateStore = new FilterStateStore(null);
-	public filterViewState: FileFilterViewState = this.filterStateStore.getState();
-	public tagGroupStore = new TagGroupStore(null);
-	public tagGroupController!: TagGroupController;
-	public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
-	public initialColumnState: ColumnState[] | null = null;
-	private markdownToggleButton: HTMLElement | null = null;
-	public activeViewMode: 'table' | 'kanban' = 'table';
+	public filterStateStore = new FilterStateStore(null); public filterViewState: FileFilterViewState = this.filterStateStore.getState();
+	public tagGroupStore = new TagGroupStore(null); public tagGroupController!: TagGroupController; public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
+	public initialColumnState: ColumnState[] | null = null; private markdownToggleButton: HTMLElement | null = null;
+	public activeViewMode: 'table' | 'kanban' | 'slide' = 'table';
 	public kanbanController: KanbanViewController | null = null;
-	public kanbanLaneField: string | null = null;
-	public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
-	public kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE;
-	public kanbanSortField: string | null = null;
+	public kanbanLaneField: string | null = null; public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
+	public kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE; public kanbanSortField: string | null = null;
 	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
-	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE;
-	public kanbanMultiRowEnabled = true;
+	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE; public kanbanMultiRowEnabled = true;
 	public kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;
 	public kanbanCardContentConfig: KanbanCardContentConfig | null = null;
-	public kanbanLanePresets: string[] = [];
-	public kanbanLaneOrder: string[] = [];
-	public kanbanPreferencesLoaded = false;
-	public kanbanToolbar: KanbanToolbar | null = null;
-	public activeKanbanBoardId: string | null = null;
-	public activeKanbanBoardFilter: FilterRule | null = null;
+	public kanbanLanePresets: string[] = []; public kanbanLaneOrder: string[] = [];
+	public kanbanPreferencesLoaded = false; public kanbanToolbar: KanbanToolbar | null = null;
+	public activeKanbanBoardId: string | null = null; public activeKanbanBoardFilter: FilterRule | null = null;
 	public kanbanBoardStore = new KanbanBoardStore(null);
 	public kanbanBoardController!: KanbanBoardController;
 	public kanbanBoardsLoaded = false;
 	public pendingKanbanBoardState: KanbanBoardState | null = null;
-	private kanbanManager!: KanbanViewModeManager;
+	public slideConfig: SlideViewConfig = normalizeSlideViewConfig(null);
+	public slideController: SlideViewInstance | null = null;
+	public slidePreferencesLoaded = false;
+	private viewModeManager!: ViewModeManager;
+	public previousNonSlideMode: 'table' | 'kanban' = 'table';
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		initializeTableView(this);
-		this.kanbanManager = new KanbanViewModeManager(this);
+		this.viewModeManager = new ViewModeManager(this);
 	}
-
 	getViewType(): string {
 		return TABLE_VIEW_TYPE;
 	}
-
 	getDisplayText(): string {
 		return buildTableViewTitle({
 			file: this.file,
@@ -136,7 +128,6 @@ export class TableView extends ItemView {
 			mode: this.activeViewMode
 		});
 	}
-
 	public refreshDisplayText(): void {
 		refreshTableViewDisplayText(this);
 	}
@@ -150,6 +141,9 @@ export class TableView extends ItemView {
 				this.conversionSession.prepare(file);
 				this.refreshCoordinator.setTrackedFile(file);
 				this.kanbanBoardsLoaded = false;
+				this.kanbanPreferencesLoaded = false;
+				this.slidePreferencesLoaded = false;
+				this.slideConfig = normalizeSlideViewConfig(null);
 				await this.render();
 			} else {
 				this.file = null;
@@ -176,25 +170,24 @@ export class TableView extends ItemView {
 		const snapshot = this.refreshCoordinator ? this.refreshCoordinator.captureViewSnapshot() : null;
 		await renderTableView(this);
 
-		const rerenderMode = await this.kanbanManager.handleAfterRender();
+		const rerenderMode = await this.viewModeManager.handleAfterRender();
 		if (rerenderMode) {
 			await renderTableView(this);
 			if (rerenderMode === 'kanban') {
-				await this.kanbanManager.handleAfterRender();
+				await this.viewModeManager.handleAfterRender();
 			}
 		}
 
 		if (this.refreshCoordinator) {
 			await this.refreshCoordinator.finalizeRender(snapshot);
 		}
-		this.kanbanManager.updateToggleButton();
+		this.viewModeManager.updateButtons();
 		this.refreshDisplayText();
 	}
-
 	async onOpen(): Promise<void> {
 		this.ensureMarkdownToggle();
-		this.kanbanManager.ensureToggle();
-		this.kanbanManager.updateToggleButton();
+		this.viewModeManager.ensureActions();
+		this.viewModeManager.updateButtons();
 	}
 
 	async onClose(): Promise<void> {
@@ -204,10 +197,14 @@ export class TableView extends ItemView {
 			this.markdownToggleButton.remove();
 			this.markdownToggleButton = null;
 		}
-		this.kanbanManager.detachToggle();
+		this.viewModeManager.detachActions();
 		if (this.kanbanController) {
 			this.kanbanController.destroy();
 			this.kanbanController = null;
+		}
+		if (this.slideController) {
+			this.slideController.destroy();
+			this.slideController = null;
 		}
 		if (this.kanbanToolbar) {
 			this.kanbanToolbar.destroy();
@@ -226,27 +223,7 @@ export class TableView extends ItemView {
 	}
 
 	onMoreOptions(menu: Menu): void {
-		const plugin = getPluginContext();
-		if (!plugin) {
-			return;
-		}
-		const isKanban = this.activeViewMode === "kanban";
-		menu.addItem((item) => {
-			item
-				.setTitle(isKanban ? t("kanbanView.actions.switchToTable") : t("kanbanView.actions.switchToKanban"))
-				.setIcon(isKanban ? "table" : "layout-kanban")
-				.onClick(() => {
-					void this.setActiveViewMode(isKanban ? "table" : "kanban");
-				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t("commands.openHelpDocument"))
-				.setIcon("info")
-				.onClick(() => {
-					void plugin.openHelpDocument();
-				});
-		});
+		populateMoreOptionsMenu(this, menu);
 	}
 
 	private ensureMarkdownToggle(): void {
@@ -301,8 +278,8 @@ export class TableView extends ItemView {
 		this.persistenceService?.scheduleSave();
 	}
 
-	public async setActiveViewMode(mode: 'table' | 'kanban'): Promise<void> {
-		await this.kanbanManager.setActiveViewMode(mode);
+	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide'): Promise<void> {
+		await this.viewModeManager.setActiveViewMode(mode);
 	}
 
 	public captureConversionBaseline(content: string): void {
@@ -320,5 +297,4 @@ export class TableView extends ItemView {
 	public async restoreSessionBaselineIfEligible(): Promise<boolean> {
 		return this.conversionSession.restoreBaselineIfEligible();
 	}
-
 }

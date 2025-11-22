@@ -1,6 +1,16 @@
 import type { TileLineBaseSettings } from './SettingsService';
 import type { KanbanViewPreferenceConfig } from '../types/kanban';
-import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, sanitizeKanbanFontScale } from '../types/kanban';
+import {
+	DEFAULT_KANBAN_FONT_SCALE,
+	DEFAULT_KANBAN_HEIGHT_MODE,
+	sanitizeKanbanFontScale
+} from '../types/kanban';
+import type { SlideViewConfig } from '../types/slide';
+import {
+	DEFAULT_SLIDE_VIEW_CONFIG,
+	isDefaultSlideViewConfig,
+	normalizeSlideViewConfig
+} from '../types/slide';
 
 type PersistFn = () => Promise<void>;
 
@@ -126,6 +136,33 @@ function sanitizeColumnConfigList(source: string[] | null | undefined): string[]
 		.map((entry) => (typeof entry === 'string' ? entry : ''))
 		.filter((entry) => entry.length > 0);
 	return sanitized.length > 0 ? sanitized : null;
+}
+
+export function getSlidePreferences(settings: TileLineBaseSettings, filePath: string): SlideViewConfig | null {
+	const stored = settings.slidePreferences[filePath];
+	if (!stored) {
+		return null;
+	}
+	return normalizeSlideViewConfig(stored);
+}
+
+export async function saveSlidePreferences(
+	settings: TileLineBaseSettings,
+	filePath: string,
+	preferences: SlideViewConfig | null | undefined,
+	persist: PersistFn
+): Promise<SlideViewConfig | null> {
+	const normalized = normalizeSlideViewConfig(preferences ?? DEFAULT_SLIDE_VIEW_CONFIG);
+	if (isDefaultSlideViewConfig(normalized)) {
+		if (settings.slidePreferences[filePath]) {
+			delete settings.slidePreferences[filePath];
+			await persist();
+		}
+		return null;
+	}
+	settings.slidePreferences[filePath] = normalized;
+	await persist();
+	return normalized;
 }
 
 function sanitizeKanbanPreferences(

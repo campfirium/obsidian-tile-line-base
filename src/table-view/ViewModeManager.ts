@@ -1,54 +1,65 @@
 import { Notice, setIcon } from 'obsidian';
-import { t } from '../../i18n';
-import { KanbanFieldModal } from './KanbanFieldModal';
-import { DEFAULT_KANBAN_SORT_DIRECTION } from '../../types/kanban';
-import type { TableView } from '../../TableView';
-type ViewMode = 'table' | 'kanban';
+import { t } from '../i18n';
+import { KanbanFieldModal } from './kanban/KanbanFieldModal';
+import { DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
+import type { TableView } from '../TableView';
 
-export class KanbanViewModeManager {
-	private readonly actionId = 'toggle-kanban-view';
-	private toggleButton: HTMLElement | null = null;
-	private toggleIconEl: HTMLElement | SVGElement | null = null;
+export type ViewMode = 'table' | 'kanban' | 'slide';
+
+const MODE_ICONS: Record<ViewMode, string[]> = {
+	table: ['tilelinebase-table', 'table', 'layout-grid'],
+	kanban: ['layout-kanban', 'layout-grid'],
+	slide: ['presentation', 'slideshow', 'play', 'monitor']
+};
+
+export class ViewModeManager {
+	private readonly actionIds: Record<ViewMode, string> = {
+		table: 'switch-table-view',
+		kanban: 'switch-kanban-view',
+		slide: 'switch-slide-view'
+	};
+	private buttons: Partial<Record<ViewMode, HTMLElement>> = {};
 	private isSwitching = false;
 
 	constructor(private readonly view: TableView) {}
 
-	ensureToggle(): void {
-		if (this.toggleButton) {
-			return;
-		}
-		const label = this.getToggleLabel();
-		const button = this.view.addAction('layout-kanban', label, async (evt) => {
-			const targetMode: ViewMode = this.view.activeViewMode === 'kanban' ? 'table' : 'kanban';
-			evt?.preventDefault();
-			evt?.stopPropagation();
-			await this.setActiveViewMode(targetMode);
+	ensureActions(): void {
+		(['table', 'kanban', 'slide'] as ViewMode[]).forEach((mode) => {
+			if (this.buttons[mode]) {
+				return;
+			}
+			const label = this.getModeLabel(mode);
+			const button = this.view.addAction(MODE_ICONS[mode][0] ?? 'layout-grid', label, (evt) => {
+				evt?.preventDefault();
+				evt?.stopPropagation();
+				void this.setActiveViewMode(mode);
+			});
+			const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
+			for (const icon of MODE_ICONS[mode]) {
+				setIcon(iconEl, icon);
+				if (iconEl?.querySelector?.('svg')) break;
+			}
+			button.setAttribute('data-tlb-action', this.actionIds[mode]);
+			button.setAttribute('aria-label', label);
+			button.setAttribute('title', label);
+			this.buttons[mode] = button;
 		});
-		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
-		this.toggleButton = button;
-		this.toggleIconEl = iconEl ?? null;
-		this.applyToggleIcon();
-		button.setAttribute('data-tlb-action', this.actionId);
-		button.setAttribute('aria-label', label);
-		button.setAttribute('title', label);
+		this.updateButtons();
 	}
 
-	detachToggle(): void {
-		if (this.toggleButton) {
-			this.toggleButton.remove();
-			this.toggleButton = null;
-		}
-		this.toggleIconEl = null;
+	detachActions(): void {
+		Object.values(this.buttons).forEach((button) => button?.remove());
+		this.buttons = {};
 	}
 
-	updateToggleButton(): void {
-		if (!this.toggleButton) {
-			return;
-		}
-		const label = this.getToggleLabel();
-		this.toggleButton.setAttribute('aria-label', label);
-		this.toggleButton.setAttribute('title', label);
-		this.applyToggleIcon();
+	updateButtons(): void {
+		(['table', 'kanban', 'slide'] as ViewMode[]).forEach((mode) => {
+			const button = this.buttons[mode];
+			if (!button) return;
+			const isActive = this.view.activeViewMode === mode;
+			button.toggleClass('is-active', isActive);
+			button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+		});
 	}
 
 	async setActiveViewMode(mode: ViewMode): Promise<void> {
@@ -56,8 +67,12 @@ export class KanbanViewModeManager {
 			return;
 		}
 		if (mode === this.view.activeViewMode) {
-			this.updateToggleButton();
+			this.updateButtons();
 			return;
+		}
+
+		if (mode === 'slide' && this.view.activeViewMode !== 'slide') {
+			this.view.previousNonSlideMode = this.view.activeViewMode;
 		}
 
 		if (mode === 'kanban' && this.view.schema) {
@@ -65,7 +80,7 @@ export class KanbanViewModeManager {
 			if (!this.hasValidLaneField() && hasBoards) {
 				const configured = await this.promptForLaneField();
 				if (!configured) {
-					this.updateToggleButton();
+					this.updateButtons();
 					return;
 				}
 			}
@@ -76,7 +91,7 @@ export class KanbanViewModeManager {
 		try {
 			this.view.activeViewMode = mode;
 			this.view.refreshDisplayText();
-			this.updateToggleButton();
+			this.updateButtons();
 			void this.view.persistenceService?.saveConfig();
 			await this.view.render();
 		} finally {
@@ -104,7 +119,7 @@ export class KanbanViewModeManager {
 			}
 			this.view.activeViewMode = 'table';
 			this.view.refreshDisplayText();
-			this.updateToggleButton();
+			this.updateButtons();
 			void this.view.persistenceService?.saveConfig();
 			return 'table';
 		}
@@ -112,32 +127,6 @@ export class KanbanViewModeManager {
 		this.ensureSortConfiguration();
 		this.view.kanbanBoardController?.ensureBoardForActiveKanbanView();
 		return null;
-	}
-
-	private getToggleLabel(): string {
-		return this.view.activeViewMode === 'kanban'
-			? t('kanbanView.actions.switchToTable')
-			: t('kanbanView.actions.switchToKanban');
-	}
-
-	private applyToggleIcon(): void {
-		const iconEl = this.toggleIconEl;
-		if (!iconEl) {
-			return;
-		}
-		const target = iconEl as HTMLElement;
-
-		const iconCandidates =
-			this.view.activeViewMode === 'kanban'
-				? ['tilelinebase-table', 'table', 'layout-grid']
-				: ['layout-kanban', 'layout-grid'];
-
-		for (const iconId of iconCandidates) {
-			setIcon(target, iconId);
-			if (target.querySelector?.('svg')) {
-				break;
-			}
-		}
 	}
 
 	private hasValidLaneField(): boolean {
@@ -190,7 +179,7 @@ export class KanbanViewModeManager {
 		}
 
 		this.view.kanbanLaneField = selected;
-		this.updateToggleButton();
+		this.updateButtons();
 		void this.view.persistenceService?.saveConfig();
 		return true;
 	}
@@ -205,4 +194,14 @@ export class KanbanViewModeManager {
 		}
 	}
 
+	private getModeLabel(mode: ViewMode): string {
+		switch (mode) {
+			case 'kanban':
+				return t('tableView.mode.kanban');
+			case 'slide':
+				return t('tableView.mode.slide');
+			default:
+				return t('tableView.mode.table');
+		}
+	}
 }

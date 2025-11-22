@@ -8,7 +8,6 @@ interface SlideControllerOptions {
 	rows: RowData[];
 	fields: string[];
 	config: SlideViewConfig;
-	onExit: () => void;
 	onEditTemplate: () => void;
 }
 
@@ -23,16 +22,15 @@ export class SlideViewController {
 	private config: SlideViewConfig;
 	private activeIndex = 0;
 	private readonly cleanup: Array<() => void> = [];
-	private readonly onExit: () => void;
 	private readonly onEditTemplate: () => void;
 	private fullscreenTarget: HTMLElement | null = null;
 	private isFullscreen = false;
+	private fullscreenBtn: HTMLElement | null = null;
 
 	constructor(options: SlideControllerOptions) {
 		this.rows = options.rows;
 		this.fields = options.fields;
 		this.config = options.config;
-		this.onExit = options.onExit;
 		this.onEditTemplate = options.onEditTemplate;
 		this.root = options.container;
 		this.root.empty();
@@ -85,18 +83,16 @@ export class SlideViewController {
 			cls: 'tlb-slide-full__btn',
 			attr: { 'aria-label': t('slideView.actions.enterFullscreen') }
 		});
+		this.fullscreenBtn = fullscreenBtn;
 		setIcon(fullscreenBtn, 'maximize-2');
 		fullscreenBtn.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			if (this.isFullscreen) {
 				this.exitFullscreen();
-				setIcon(fullscreenBtn, 'maximize-2');
-				fullscreenBtn.setAttr('aria-label', t('slideView.actions.enterFullscreen'));
 			} else {
 				void this.enterFullscreen();
-				setIcon(fullscreenBtn, 'minimize-2');
-				fullscreenBtn.setAttr('aria-label', t('slideView.actions.exitFullscreen'));
 			}
+			this.updateFullscreenButton();
 		});
 	}
 
@@ -113,13 +109,18 @@ export class SlideViewController {
 			} else if (evt.key === 'ArrowLeft') {
 				this.prev();
 				evt.preventDefault();
+			} else if (evt.key === 'Enter') {
+				if (!this.isFullscreen) {
+					void this.enterFullscreen();
+					this.updateFullscreenButton();
+					evt.preventDefault();
+				}
 			} else if (evt.key === 'Escape') {
-				evt.preventDefault();
 				if (this.isFullscreen) {
 					this.exitFullscreen();
-					return;
+					this.updateFullscreenButton();
+					evt.preventDefault();
 				}
-				this.onExit();
 			}
 		};
 		const owner = this.root.ownerDocument ?? document;
@@ -220,6 +221,7 @@ export class SlideViewController {
 			if (this.fullscreenTarget.requestFullscreen) {
 				await this.fullscreenTarget.requestFullscreen();
 				this.isFullscreen = true;
+				this.root.addClass('tlb-slide-full--fullscreen');
 			}
 		} catch {
 			// ignore fullscreen errors
@@ -232,5 +234,17 @@ export class SlideViewController {
 			void document.exitFullscreen();
 		}
 		this.isFullscreen = false;
+		this.root.removeClass('tlb-slide-full--fullscreen');
+	}
+
+	private updateFullscreenButton(): void {
+		if (!this.fullscreenBtn) return;
+		if (this.isFullscreen) {
+			setIcon(this.fullscreenBtn, 'minimize-2');
+			this.fullscreenBtn.setAttr('aria-label', t('slideView.actions.exitFullscreen'));
+		} else {
+			setIcon(this.fullscreenBtn, 'maximize-2');
+			this.fullscreenBtn.setAttr('aria-label', t('slideView.actions.enterFullscreen'));
+		}
 	}
 }

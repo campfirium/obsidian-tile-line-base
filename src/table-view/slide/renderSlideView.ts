@@ -12,7 +12,6 @@ interface RenderSlideViewOptions {
 	rows: RowData[];
 	fields: string[];
 	config: SlideViewConfig;
-	onExit: () => void;
 	onEditTemplate: () => void;
 }
 
@@ -22,7 +21,6 @@ export function renderSlideView(options: RenderSlideViewOptions): SlideViewInsta
 		rows: options.rows,
 		fields: options.fields,
 		config: options.config,
-		onExit: options.onExit,
 		onEditTemplate: options.onEditTemplate
 	});
 

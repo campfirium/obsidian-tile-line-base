@@ -16,9 +16,6 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 		rows: slideRows,
 		fields: view.schema?.columnNames ?? [],
 		config: effectiveConfig,
-		onExit: () => {
-			void view.setActiveViewMode(view.previousNonSlideMode ?? 'table');
-		},
 		onEditTemplate: () => {
 			const freshConfig = applyDefaultTemplates(
 				normalizeSlideViewConfig(view.slideConfig),

@@ -2603,20 +2603,24 @@
 
 .tlb-slide-full {
 	min-height: 100vh;
+	height: 100vh;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	position: relative;
 	padding: 0;
 	background: var(--tlb-slide-full-bg, transparent);
+	overflow: hidden;
 }
 
 .tlb-slide-full__stage {
 	width: 100%;
 	min-height: 100vh;
+	height: 100vh;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	overflow: hidden;
 }
 .tlb-slide-full--fullscreen .tlb-slide-full__stage {
 	min-height: 100vh;
@@ -2655,9 +2659,9 @@
 
 .tlb-slide-full__slide {
 	width: min(92vw, 1200px, calc(80vh * 16 / 9));
-	height: auto;
+	height: min(80vh, calc(92vw * 9 / 16));
+	max-height: min(80vh, calc(92vw * 9 / 16));
 	aspect-ratio: 16 / 9;
-	max-height: 80vh;
 	padding: 36px 48px;
 	background: var(--tlb-slide-card-bg, color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary) 10%));
 	border: 1px solid var(--background-modifier-border);
@@ -2671,9 +2675,9 @@
 }
 .tlb-slide-full--fullscreen .tlb-slide-full__slide {
 	width: min(100vw, calc(100vh * 16 / 9));
-	height: auto;
+	height: min(100vh, calc(100vw * 9 / 16));
+	max-height: min(100vh, calc(100vw * 9 / 16));
 	aspect-ratio: 16 / 9;
-	max-height: 100vh;
 	padding: 48px;
 	box-shadow: none;
 	border: none;

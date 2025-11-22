@@ -20,6 +20,7 @@ export class SlideTemplateModal extends Modal {
 	private activeTarget: 'title' | 'body' = 'title';
 	private titleInputEl: HTMLTextAreaElement | null = null;
 	private bodyInputEl: HTMLTextAreaElement | null = null;
+	private rootEl: HTMLElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
@@ -33,6 +34,7 @@ export class SlideTemplateModal extends Modal {
 		this.contentEl.empty();
 		this.contentEl.addClass('tlb-slide-template');
 		this.titleEl.setText(t('slideView.templateModal.title'));
+		this.rootEl = this.contentEl.createDiv({ cls: 'tlb-slide-template__stack' });
 		this.renderInsertRow();
 		this.renderTitleInput();
 		this.renderBodyInput();
@@ -43,10 +45,12 @@ export class SlideTemplateModal extends Modal {
 		this.contentEl.empty();
 		this.titleInputEl = null;
 		this.bodyInputEl = null;
+		this.rootEl = null;
 	}
 
 	private renderInsertRow(): void {
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
+		const host = this.rootEl ?? this.contentEl;
+		const block = host.createDiv({ cls: 'tlb-slide-template__header' });
 		const left = block.createDiv({ cls: 'tlb-slide-template__header-text' });
 		left.createDiv({ cls: 'tlb-slide-template__label', text: t('slideView.templateModal.insertField') });
 		left.createDiv({ cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.insertFieldDesc') });
@@ -67,7 +71,8 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderTitleInput(): void {
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+		const host = this.rootEl ?? this.contentEl;
+		const block = host.createDiv({ cls: 'tlb-slide-template__block' });
 		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.titleFieldLabel') });
 		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.titleFieldDesc') });
 		const input = new TextAreaComponent(block);
@@ -84,7 +89,8 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderBodyInput(): void {
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+		const host = this.rootEl ?? this.contentEl;
+		const block = host.createDiv({ cls: 'tlb-slide-template__block' });
 		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
 		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
 		const textarea = new TextAreaComponent(block);
@@ -101,7 +107,8 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderActions(): void {
-		const footer = this.contentEl.createDiv({ cls: 'tlb-slide-template__footer' });
+		const host = this.rootEl ?? this.contentEl;
+		const footer = host.createDiv({ cls: 'tlb-slide-template__footer' });
 		const saveButton = footer.createEl('button', {
 			cls: 'mod-cta tlb-slide-template__primary',
 			text: t('slideView.templateModal.saveLabel')

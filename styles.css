@@ -2592,13 +2592,17 @@
 .tlb-slide-mode {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 0;
+	height: 100vh;
+	overflow: hidden;
 }
 
 .tlb-slide-container {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 0;
+	height: 100vh;
+	overflow: hidden;
 }
 
 .tlb-slide-full {

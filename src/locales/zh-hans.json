@@ -61,14 +61,36 @@
     "showAllButtonLabel": "显示全部（剩余 {{count}} 条）"
   },
   "slideView": {
-    "actions": { "switchToSlide": "切换到幻灯片视图" },
+    "actions": {
+      "switchToSlide": "切换到幻灯片视图",
+      "openTemplate": "编辑幻灯片模板",
+      "enterFullscreen": "进入全屏",
+      "exitFullscreen": "退出全屏"
+    },
     "emptyState": "暂无幻灯片，请先添加 H2 段落。",
     "filteredCountLabel": "{{count}} 页符合当前筛选",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "第 {{current}} / {{total}} 页",
     "untitledSlide": "未命名幻灯片 {{index}}",
     "emptyValue": "（空）",
-    "nav": { "prev": "上一页", "next": "下一页" }
+    "nav": { "prev": "上一页", "next": "下一页" },
+    "templateModal": {
+      "title": "幻灯片模板",
+      "titleFieldLabel": "标题字段",
+      "titleFieldDesc": "选择作为幻灯片标题的字段，不选则默认使用首个可用字段。",
+      "autoOption": "自动",
+      "bodyFieldsLabel": "正文字段",
+      "bodyFieldsDesc": "选择标题下方展示的字段，并可调整顺序。",
+      "emptyBodyFields": "未选择正文字段。",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "removeField": "移除",
+      "addFieldLabel": "添加字段",
+      "addFieldDesc": "选择更多字段加入正文。",
+      "addFieldPlaceholder": "选择字段",
+      "saveLabel": "保存模板",
+      "cancelLabel": "取消"
+    }
   },
   "commands": { "undoTableHistory": "撤销上一次表格更改", "redoTableHistory": "重做表格更改", "openHelpDocument": "打开 TileLineBase 帮助文档", "createTable": "新建 TileLineBase 表格笔记", "exportCsv": "导出当前表格为 CSV", "importCsv": "将 CSV 导入当前表格", "toggleTableView": "切换表格视图", "importCsvAsTable": "导入 CSV 并创建新表格", "openKanbanView": "打开 TileLineBase 看板视图", "openSlideView": "打开 TileLineBase 幻灯片视图" },
   "csv": {

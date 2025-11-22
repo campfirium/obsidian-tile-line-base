@@ -2606,6 +2606,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	position: relative;
 }
 
 .tlb-slide-full__stage {
@@ -2614,6 +2615,33 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.tlb-slide-full__controls {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	display: inline-flex;
+	gap: 8px;
+	z-index: 2;
+}
+
+.tlb-slide-full__btn {
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	border: 1px solid var(--background-modifier-border);
+	background: color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary) 10%);
+	color: var(--text-normal);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.tlb-slide-full__btn:hover,
+.tlb-slide-full__btn:focus-visible {
+	background: var(--background-modifier-hover);
 }
 
 .tlb-slide-full__slide {
@@ -2661,4 +2689,76 @@
 	border: 1px dashed var(--background-modifier-border);
 	border-radius: 10px;
 	background: var(--background-secondary);
+}
+
+.tlb-slide-template__dropdown {
+	min-width: 160px;
+}
+
+.tlb-slide-template__list {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.tlb-slide-template__list-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.tlb-slide-template__hint {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+.tlb-slide-template__items {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.tlb-slide-template__item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+}
+
+.tlb-slide-template__item-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.tlb-slide-template__icon-button {
+	width: 28px;
+	height: 28px;
+	border-radius: 6px;
+}
+
+.tlb-slide-template__item-label {
+	font-weight: 600;
+}
+
+.tlb-slide-template__empty {
+	padding: 8px;
+	color: var(--text-muted);
+	font-size: 13px;
+}
+
+.tlb-slide-template__footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.tlb-slide-template__primary {
+	min-width: 96px;
 }

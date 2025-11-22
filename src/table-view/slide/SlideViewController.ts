@@ -1,11 +1,15 @@
+import { setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
+import type { SlideViewConfig } from '../../types/slide';
 
 interface SlideControllerOptions {
 	container: HTMLElement;
 	rows: RowData[];
 	fields: string[];
+	config: SlideViewConfig;
 	onExit: () => void;
+	onEditTemplate: () => void;
 }
 
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
@@ -13,20 +17,30 @@ const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_ind
 export class SlideViewController {
 	private readonly root: HTMLElement;
 	private readonly stage: HTMLElement;
+	private readonly controls: HTMLElement;
 	private rows: RowData[] = [];
 	private fields: string[] = [];
+	private config: SlideViewConfig;
 	private activeIndex = 0;
 	private readonly cleanup: Array<() => void> = [];
 	private readonly onExit: () => void;
+	private readonly onEditTemplate: () => void;
+	private fullscreenTarget: HTMLElement | null = null;
+	private isFullscreen = false;
 
 	constructor(options: SlideControllerOptions) {
 		this.rows = options.rows;
 		this.fields = options.fields;
+		this.config = options.config;
 		this.onExit = options.onExit;
+		this.onEditTemplate = options.onEditTemplate;
 		this.root = options.container;
 		this.root.empty();
 		this.root.addClass('tlb-slide-full');
+		this.controls = this.root.createDiv({ cls: 'tlb-slide-full__controls' });
 		this.stage = this.root.createDiv({ cls: 'tlb-slide-full__stage' });
+		this.fullscreenTarget = this.root;
+		this.renderControls();
 		this.attachKeyboard();
 		this.renderActive();
 	}
@@ -39,6 +53,11 @@ export class SlideViewController {
 		this.renderActive();
 	}
 
+	updateConfig(config: SlideViewConfig): void {
+		this.config = config;
+		this.renderActive();
+	}
+
 	destroy(): void {
 		for (const dispose of this.cleanup) {
 			try {
@@ -47,7 +66,38 @@ export class SlideViewController {
 				// ignore
 			}
 		}
+		this.exitFullscreen();
 		this.root.empty();
+	}
+
+	private renderControls(): void {
+		const templateBtn = this.controls.createEl('button', {
+			cls: 'tlb-slide-full__btn',
+			attr: { 'aria-label': t('slideView.actions.openTemplate') }
+		});
+		setIcon(templateBtn, 'settings');
+		templateBtn.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			this.onEditTemplate();
+		});
+
+		const fullscreenBtn = this.controls.createEl('button', {
+			cls: 'tlb-slide-full__btn',
+			attr: { 'aria-label': t('slideView.actions.enterFullscreen') }
+		});
+		setIcon(fullscreenBtn, 'maximize-2');
+		fullscreenBtn.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			if (this.isFullscreen) {
+				this.exitFullscreen();
+				setIcon(fullscreenBtn, 'maximize-2');
+				fullscreenBtn.setAttr('aria-label', t('slideView.actions.enterFullscreen'));
+			} else {
+				void this.enterFullscreen();
+				setIcon(fullscreenBtn, 'minimize-2');
+				fullscreenBtn.setAttr('aria-label', t('slideView.actions.exitFullscreen'));
+			}
+		});
 	}
 
 	private attachKeyboard(): void {
@@ -61,6 +111,10 @@ export class SlideViewController {
 				evt.preventDefault();
 			} else if (evt.key === 'Escape') {
 				evt.preventDefault();
+				if (this.isFullscreen) {
+					this.exitFullscreen();
+					return;
+				}
 				this.onExit();
 			}
 		};
@@ -115,16 +169,65 @@ export class SlideViewController {
 
 	private resolveContent(row: RowData): { title: string; contents: string[] } {
 		const orderedFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
+		const template = this.config.template;
+
+		const titleField = template.titleField && orderedFields.includes(template.titleField)
+			? template.titleField
+			: orderedFields[0] ?? null;
+
+		const bodyFields = template.bodyFields.length > 0
+			? template.bodyFields.filter((field) => orderedFields.includes(field) && field !== titleField)
+			: orderedFields.filter((field) => field !== titleField);
+
 		const values: Array<{ field: string; value: string }> = [];
 		for (const field of orderedFields) {
+			if (field === 'status') continue;
 			const raw = row[field];
 			if (raw == null) continue;
 			const text = String(raw).trim();
 			if (!text) continue;
 			values.push({ field, value: text });
 		}
-		const title = values.length > 0 ? values[0].value : t('slideView.untitledSlide', { index: String(this.activeIndex + 1) });
-		const contents = values.slice(1).map((entry) => entry.value);
+
+		const titleValue = titleField
+			? (values.find((entry) => entry.field === titleField)?.value ?? '')
+			: '';
+		const title = titleValue.length > 0
+			? titleValue
+			: t('slideView.untitledSlide', { index: String(this.activeIndex + 1) });
+
+		const contents: string[] = [];
+		for (const field of bodyFields) {
+			const value = values.find((entry) => entry.field === field)?.value ?? '';
+			if (!value && !template.includeEmptyFields) {
+				continue;
+			}
+			if (!value) {
+				contents.push(t('slideView.emptyValue'));
+			} else {
+				contents.push(value);
+			}
+		}
 		return { title, contents };
+	}
+
+	private async enterFullscreen(): Promise<void> {
+		if (!this.fullscreenTarget || this.isFullscreen) return;
+		try {
+			if (this.fullscreenTarget.requestFullscreen) {
+				await this.fullscreenTarget.requestFullscreen();
+				this.isFullscreen = true;
+			}
+		} catch {
+			// ignore fullscreen errors
+		}
+	}
+
+	private exitFullscreen(): void {
+		if (!this.isFullscreen) return;
+		if (document.fullscreenElement) {
+			void document.exitFullscreen();
+		}
+		this.isFullscreen = false;
 	}
 }

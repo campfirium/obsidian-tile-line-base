@@ -1,4 +1,5 @@
 import type { RowData } from '../../grid/GridAdapter';
+import type { SlideViewConfig } from '../../types/slide';
 import { SlideViewController } from './SlideViewController';
 
 export interface SlideViewInstance {
@@ -10,7 +11,9 @@ interface RenderSlideViewOptions {
 	container: HTMLElement;
 	rows: RowData[];
 	fields: string[];
+	config: SlideViewConfig;
 	onExit: () => void;
+	onEditTemplate: () => void;
 }
 
 export function renderSlideView(options: RenderSlideViewOptions): SlideViewInstance {
@@ -18,7 +21,9 @@ export function renderSlideView(options: RenderSlideViewOptions): SlideViewInsta
 		container: options.container,
 		rows: options.rows,
 		fields: options.fields,
-		onExit: options.onExit
+		config: options.config,
+		onExit: options.onExit,
+		onEditTemplate: options.onEditTemplate
 	});
 
 	return {

@@ -61,14 +61,36 @@
     "showAllButtonLabel": "Show all ({{count}} more)"
   },
   "slideView": {
-    "actions": { "switchToSlide": "Switch to slide view" },
+    "actions": {
+      "switchToSlide": "Switch to slide view",
+      "openTemplate": "Edit slide template",
+      "enterFullscreen": "Enter fullscreen",
+      "exitFullscreen": "Exit fullscreen"
+    },
     "emptyState": "No slides yet. Add H2 headings to this note.",
     "filteredCountLabel": "{{count}} slides match the current filters",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "Slide {{current}} of {{total}}",
     "untitledSlide": "Untitled slide {{index}}",
     "emptyValue": "(empty)",
-    "nav": { "prev": "Previous slide", "next": "Next slide" }
+    "nav": { "prev": "Previous slide", "next": "Next slide" },
+    "templateModal": {
+      "title": "Slide template",
+      "titleFieldLabel": "Title field",
+      "titleFieldDesc": "Pick the field to display as the slide title. Leave empty to use the first available field.",
+      "autoOption": "Auto",
+      "bodyFieldsLabel": "Body fields",
+      "bodyFieldsDesc": "Choose fields to show below the title and adjust their order.",
+      "emptyBodyFields": "No body fields selected.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeField": "Remove field",
+      "addFieldLabel": "Add field",
+      "addFieldDesc": "Select more fields to show in the slide body.",
+      "addFieldPlaceholder": "Select a field",
+      "saveLabel": "Save template",
+      "cancelLabel": "Cancel"
+    }
   },
   "commands": { "undoTableHistory": "Undo last table change", "redoTableHistory": "Redo table change", "openHelpDocument": "Open TileLineBase help document", "createTable": "Create TileLineBase table note", "exportCsv": "Export current table as CSV", "importCsv": "Import CSV into current table", "importCsvAsTable": "Import CSV as new table", "toggleTableView": "Toggle table view", "openKanbanView": "Open TileLineBase kanban view", "openSlideView": "Open TileLineBase slide view" },
   "csv": {

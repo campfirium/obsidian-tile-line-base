@@ -61,14 +61,36 @@
     "showAllButtonLabel": "顯示全部（剩餘 {{count}} 筆）"
   },
   "slideView": {
-    "actions": { "switchToSlide": "切換到投影片視圖" },
+    "actions": {
+      "switchToSlide": "切換到投影片視圖",
+      "openTemplate": "編輯投影片模板",
+      "enterFullscreen": "進入全屏",
+      "exitFullscreen": "退出全屏"
+    },
     "emptyState": "暫無投影片，請先加入 H2 區塊。",
     "filteredCountLabel": "{{count}} 頁符合目前的篩選",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "第 {{current}} / {{total}} 頁",
     "untitledSlide": "未命名投影片 {{index}}",
     "emptyValue": "（空）",
-    "nav": { "prev": "上一頁", "next": "下一頁" }
+    "nav": { "prev": "上一頁", "next": "下一頁" },
+    "templateModal": {
+      "title": "投影片模板",
+      "titleFieldLabel": "標題欄位",
+      "titleFieldDesc": "選擇作為投影片標題的欄位，不選則使用第一個可用欄位。",
+      "autoOption": "自動",
+      "bodyFieldsLabel": "正文欄位",
+      "bodyFieldsDesc": "選擇標題下方顯示的欄位並調整順序。",
+      "emptyBodyFields": "未選擇正文欄位。",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "removeField": "移除",
+      "addFieldLabel": "新增欄位",
+      "addFieldDesc": "選擇更多欄位加入正文。",
+      "addFieldPlaceholder": "選擇欄位",
+      "saveLabel": "保存模板",
+      "cancelLabel": "取消"
+    }
   },
   "commands": { "undoTableHistory": "復原上一筆表格變更", "redoTableHistory": "重做表格變更", "openHelpDocument": "開啟 TileLineBase 說明文件", "createTable": "建立 TileLineBase 表格筆記", "exportCsv": "將目前表格匯出為 CSV", "importCsv": "將 CSV 匯入目前表格", "toggleTableView": "切換表格視圖", "importCsvAsTable": "匯入 CSV 並建立新表格", "openKanbanView": "開啟 TileLineBase 看板視圖", "openSlideView": "開啟 TileLineBase 投影片視圖" },
   "csv": {

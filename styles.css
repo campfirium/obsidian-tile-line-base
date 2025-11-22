@@ -2655,8 +2655,9 @@
 
 .tlb-slide-full__slide {
 	width: min(92vw, 1200px, calc(80vh * 16 / 9));
-	height: min(80vh, calc(92vw * 9 / 16));
+	height: auto;
 	aspect-ratio: 16 / 9;
+	max-height: 80vh;
 	padding: 36px 48px;
 	background: var(--tlb-slide-card-bg, color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary) 10%));
 	border: 1px solid var(--background-modifier-border);
@@ -2670,9 +2671,9 @@
 }
 .tlb-slide-full--fullscreen .tlb-slide-full__slide {
 	width: min(100vw, calc(100vh * 16 / 9));
-	height: min(100vh, calc(100vw * 9 / 16));
+	height: auto;
 	aspect-ratio: 16 / 9;
-	max-height: none;
+	max-height: 100vh;
 	padding: 48px;
 	box-shadow: none;
 	border: none;

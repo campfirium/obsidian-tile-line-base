@@ -26,6 +26,7 @@ export class SlideViewController {
 	private fullscreenTarget: HTMLElement | null = null;
 	private isFullscreen = false;
 	private fullscreenBtn: HTMLElement | null = null;
+	private fullscreenCleanup: (() => void) | null = null;
 
 	constructor(options: SlideControllerOptions) {
 		this.rows = options.rows;
@@ -39,6 +40,7 @@ export class SlideViewController {
 		this.stage = this.root.createDiv({ cls: 'tlb-slide-full__stage' });
 		this.fullscreenTarget = this.root;
 		this.renderControls();
+		this.attachFullscreenWatcher();
 		this.attachKeyboard();
 		this.renderActive();
 	}
@@ -126,6 +128,20 @@ export class SlideViewController {
 		const owner = this.root.ownerDocument ?? document;
 		owner.addEventListener('keydown', handler);
 		this.cleanup.push(() => owner.removeEventListener('keydown', handler));
+	}
+
+	private attachFullscreenWatcher(): void {
+		const doc = this.root.ownerDocument ?? document;
+		const listener = () => {
+			if (!doc.fullscreenElement && this.isFullscreen) {
+				this.isFullscreen = false;
+				this.root.removeClass('tlb-slide-full--fullscreen');
+				this.updateFullscreenButton();
+			}
+		};
+		doc.addEventListener('fullscreenchange', listener);
+		this.fullscreenCleanup = () => doc.removeEventListener('fullscreenchange', listener);
+		this.cleanup.push(() => this.fullscreenCleanup?.());
 	}
 
 	private next(): void {
@@ -224,6 +240,7 @@ export class SlideViewController {
 				await this.fullscreenTarget.requestFullscreen();
 				this.isFullscreen = true;
 				this.root.addClass('tlb-slide-full--fullscreen');
+				this.updateFullscreenButton();
 			}
 		} catch {
 			// ignore fullscreen errors
@@ -237,6 +254,7 @@ export class SlideViewController {
 		}
 		this.isFullscreen = false;
 		this.root.removeClass('tlb-slide-full--fullscreen');
+		this.updateFullscreenButton();
 	}
 
 	private updateFullscreenButton(): void {

@@ -20,15 +20,18 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			void view.setActiveViewMode(view.previousNonSlideMode ?? 'table');
 		},
 		onEditTemplate: () => {
+			const freshConfig = applyDefaultTemplates(
+				normalizeSlideViewConfig(view.slideConfig),
+				view.schema?.columnNames ?? []
+			);
+			view.slideConfig = freshConfig;
 			const modal = new SlideTemplateModal({
 				app: view.app,
 				fields: view.schema?.columnNames ?? [],
-				initial: effectiveConfig.template,
+				initial: freshConfig.template,
 				onSave: (nextTemplate) => {
-					view.slideConfig = {
-						...effectiveConfig,
-						template: nextTemplate
-					};
+					const nextConfig = { ...freshConfig, template: nextTemplate };
+					view.slideConfig = nextConfig;
 					view.slideController?.controller.updateConfig(view.slideConfig);
 					view.markUserMutation('slide-template');
 					view.persistenceService.scheduleSave();

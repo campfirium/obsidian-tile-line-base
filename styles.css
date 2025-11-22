@@ -2697,12 +2697,6 @@
 	gap: 12px;
 }
 
-.tlb-slide-template__stack {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
 .tlb-slide-template__header {
 	display: flex;
 	align-items: center;

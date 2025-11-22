@@ -57,8 +57,7 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 		template: {
 			titleTemplate,
 			bodyTemplate,
-			titleColor: config.template.titleColor ?? '',
-			bodyColor: config.template.bodyColor ?? '',
+			textColor: config.template.textColor ?? '',
 			backgroundColor: config.template.backgroundColor ?? ''
 		}
 	};

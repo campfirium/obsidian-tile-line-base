@@ -3,8 +3,7 @@ export type SlideThemeId = 'basic';
 export interface SlideTemplateConfig {
 	titleTemplate: string;
 	bodyTemplate: string;
-	titleColor?: string;
-	bodyColor?: string;
+	textColor?: string;
 	backgroundColor?: string;
 }
 
@@ -18,8 +17,7 @@ export const DEFAULT_SLIDE_THEME: SlideThemeId = 'basic';
 export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
 	titleTemplate: '',
 	bodyTemplate: '',
-	titleColor: '',
-	bodyColor: '',
+	textColor: '',
 	backgroundColor: ''
 };
 
@@ -49,8 +47,7 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 	return {
 		titleTemplate: normalizeTemplateString((config as Record<string, unknown>).titleTemplate),
 		bodyTemplate: normalizeTemplateString((config as Record<string, unknown>).bodyTemplate),
-		titleColor: normalizeColorString((config as Record<string, unknown>).titleColor),
-		bodyColor: normalizeColorString((config as Record<string, unknown>).bodyColor),
+		textColor: normalizeColorString((config as Record<string, unknown>).textColor),
 		backgroundColor: normalizeColorString((config as Record<string, unknown>).backgroundColor)
 	};
 }
@@ -81,8 +78,7 @@ export function isDefaultSlideViewConfig(config: SlideViewConfig | null | undefi
 		(config.theme ?? DEFAULT_SLIDE_THEME) === DEFAULT_SLIDE_THEME &&
 		(template.titleTemplate ?? '') === DEFAULT_SLIDE_TEMPLATE.titleTemplate &&
 		(template.bodyTemplate ?? '') === DEFAULT_SLIDE_TEMPLATE.bodyTemplate &&
-		(template.titleColor ?? '') === DEFAULT_SLIDE_TEMPLATE.titleColor &&
-		(template.bodyColor ?? '') === DEFAULT_SLIDE_TEMPLATE.bodyColor &&
+		(template.textColor ?? '') === DEFAULT_SLIDE_TEMPLATE.textColor &&
 		(template.backgroundColor ?? '') === DEFAULT_SLIDE_TEMPLATE.backgroundColor
 	);
 }

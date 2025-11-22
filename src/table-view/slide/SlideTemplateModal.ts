@@ -17,8 +17,7 @@ export class SlideTemplateModal extends Modal {
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private titleTemplate: string;
 	private bodyTemplate: string;
-	private titleColor: string;
-	private bodyColor: string;
+	private textColor: string;
 	private backgroundColor: string;
 	private titleInputEl: HTMLTextAreaElement | null = null;
 	private bodyInputEl: HTMLTextAreaElement | null = null;
@@ -31,8 +30,7 @@ export class SlideTemplateModal extends Modal {
 		this.onSave = opts.onSave;
 		this.titleTemplate = opts.initial.titleTemplate ?? '';
 		this.bodyTemplate = opts.initial.bodyTemplate ?? '';
-		this.titleColor = opts.initial.titleColor ?? '';
-		this.bodyColor = opts.initial.bodyColor ?? '';
+		this.textColor = opts.initial.textColor ?? '';
 		this.backgroundColor = opts.initial.backgroundColor ?? '';
 	}
 
@@ -164,17 +162,10 @@ export class SlideTemplateModal extends Modal {
 	private renderColorInputs(): void {
 		const group = this.contentEl.createDiv({ cls: 'tlb-slide-template__color-group' });
 		this.renderColorInput(group, {
-			label: t('slideView.templateModal.titleColorLabel'),
-			value: this.titleColor,
+			label: t('slideView.templateModal.textColorLabel'),
+			value: this.textColor,
 			onChange: (value) => {
-				this.titleColor = value;
-			}
-		});
-		this.renderColorInput(group, {
-			label: t('slideView.templateModal.bodyColorLabel'),
-			value: this.bodyColor,
-			onChange: (value) => {
-				this.bodyColor = value;
+				this.textColor = value;
 			}
 		});
 		this.renderColorInput(group, {
@@ -192,15 +183,51 @@ export class SlideTemplateModal extends Modal {
 	): void {
 		const row = container.createDiv({ cls: 'tlb-slide-template__color-row' });
 		row.createEl('div', { cls: 'tlb-slide-template__label', text: config.label });
-		const input = row.createEl('input', {
+		const picker = row.createEl('input', {
 			attr: {
 				type: 'color',
 				value:
 					config.value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.value) ? config.value : '#000000'
 			}
 		}) as HTMLInputElement;
-		input.addEventListener('input', () => {
-			config.onChange(input.value);
+		const textInput = row.createEl('input', {
+			attr: {
+				type: 'text',
+				value: config.value ?? '',
+				placeholder: '#RRGGBB'
+			},
+			cls: 'tlb-slide-template__color-text'
+		}) as HTMLInputElement;
+		const resetBtn = row.createEl('button', {
+			text: t('slideView.templateModal.resetColorLabel'),
+			cls: 'tlb-slide-template__color-reset',
+			attr: { type: 'button' }
+		});
+
+		const applyValue = (value: string) => {
+			const normalized = value.trim();
+			if (normalized) {
+				config.onChange(normalized);
+				if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalized)) {
+					picker.value = normalized;
+				}
+				textInput.value = normalized;
+			} else {
+				config.onChange('');
+				textInput.value = '';
+			}
+		};
+
+		picker.addEventListener('input', () => {
+			applyValue(picker.value);
+		});
+		textInput.addEventListener('input', () => {
+			applyValue(textInput.value);
+		});
+		resetBtn.addEventListener('click', () => {
+			config.onChange('');
+			textInput.value = '';
+			picker.value = '#000000';
 		});
 	}
 
@@ -214,8 +241,7 @@ export class SlideTemplateModal extends Modal {
 			this.onSave({
 				titleTemplate: this.titleTemplate,
 				bodyTemplate: this.bodyTemplate,
-				titleColor: this.titleColor,
-				bodyColor: this.bodyColor,
+				textColor: this.textColor,
 				backgroundColor: this.backgroundColor
 			});
 			this.close();

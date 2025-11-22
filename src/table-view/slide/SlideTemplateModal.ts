@@ -188,8 +188,11 @@ export class SlideTemplateModal extends Modal {
 	): void {
 		const row = container.createDiv({ cls: 'tlb-slide-template__color-row' });
 		row.createEl('div', { cls: 'tlb-slide-template__color-label', text: config.label });
+		const defaultColor = config.defaultColor && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.defaultColor)
+			? config.defaultColor
+			: '#000000';
 		const fallbackColor =
-			config.value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.value) ? config.value : config.defaultColor || '#000000';
+			config.value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.value) ? config.value : defaultColor;
 		const picker = row.createEl('input', {
 			attr: {
 				type: 'color',
@@ -210,10 +213,8 @@ export class SlideTemplateModal extends Modal {
 			attr: { type: 'button' }
 		});
 		const resetDot = resetBtn.createSpan({ cls: 'tlb-slide-template__color-reset-dot' });
-		if (config.defaultColor) {
-			resetDot.style.backgroundColor = config.defaultColor;
-			resetDot.style.borderColor = config.defaultColor;
-		}
+		resetDot.style.backgroundColor = defaultColor;
+		resetDot.style.borderColor = defaultColor;
 
 		const applyValue = (value: string) => {
 			const normalized = value.trim();
@@ -238,8 +239,7 @@ export class SlideTemplateModal extends Modal {
 		resetBtn.addEventListener('click', () => {
 			config.onChange('');
 			textInput.value = '';
-			const defaultVal = config.defaultColor || '#000000';
-			picker.value = defaultVal;
+			picker.value = defaultColor;
 		});
 	}
 

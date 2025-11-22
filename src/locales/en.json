@@ -81,7 +81,7 @@
       "bodyFieldsLabel": "Body template",
       "bodyFieldsDesc": "Use placeholders like {Description} on separate lines; empty lines are skipped.",
       "textColorLabel": "Text color",
-      "backgroundColorLabel": "Slide background",
+      "backgroundColorLabel": "Background",
       "resetColorLabel": "Default",
       "addFieldPlaceholder": "Select a field",
       "insertField": "Insert field",

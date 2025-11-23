@@ -2734,39 +2734,42 @@
 	border: 1px dashed var(--background-modifier-border);
 }
 
-.tlb-slide-full__editor {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	max-height: 100%;
-	overflow: auto;
+.tlb-slide-full__editable-title {
+	margin-bottom: 12px;
 }
 
-.tlb-slide-full__field {
+.tlb-slide-full__editable-body {
 	display: flex;
 	flex-direction: column;
+	gap: 10px;
+}
+
+.tlb-slide-full__editable-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
 	gap: 6px;
 }
 
-.tlb-slide-full__field-label {
-	font-weight: 700;
-	color: var(--text-muted);
+.tlb-slide-full__editable-text {
+	white-space: pre-wrap;
 }
 
-.tlb-slide-full__field-input {
-	width: 100%;
-	border-radius: 10px;
+.tlb-slide-full__editable-input {
+	min-width: 120px;
+	max-width: 100%;
+	padding: 8px 10px;
+	border-radius: 8px;
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
 	color: var(--text-normal);
-	padding: 10px 12px;
-	resize: vertical;
 }
 
 .tlb-slide-full__actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;
+	margin-top: 16px;
 }
 .tlb-slide-full__empty {
 	padding: 16px;

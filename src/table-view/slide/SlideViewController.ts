@@ -12,6 +12,8 @@ interface SlideControllerOptions {
 	onEditTemplate: () => void;
 }
 
+type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field: string; value: string };
+
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
 export class SlideViewController {
@@ -32,6 +34,8 @@ export class SlideViewController {
 	private editingIndex: number | null = null;
 	private editingValues: Record<string, string> = {};
 	private saving = false;
+	private fieldInputs: Record<string, HTMLInputElement[]> = {};
+	private editingTemplate: { title: TemplateSegment[]; body: TemplateSegment[][] } | null = null;
 
 	constructor(options: SlideControllerOptions) {
 		this.rows = options.rows;
@@ -54,6 +58,7 @@ export class SlideViewController {
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
 		this.editingIndex = null;
+		this.editingTemplate = null;
 		if (this.activeIndex >= this.rows.length) {
 			this.activeIndex = Math.max(0, this.rows.length - 1);
 		}
@@ -295,50 +300,147 @@ export class SlideViewController {
 		}
 		this.editingIndex = this.activeIndex;
 		this.editingValues = values;
+		this.fieldInputs = {};
+		this.editingTemplate = null;
 		this.renderActive();
 	}
 
 	private renderEditForm(container: HTMLElement, row: RowData): void {
-		container.createDiv({ cls: 'tlb-slide-full__title', text: t('slideView.edit.heading') });
-		const form = container.createDiv({ cls: 'tlb-slide-full__editor' });
-		const editableFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
-		for (const field of editableFields) {
-			const fieldRow = form.createDiv({ cls: 'tlb-slide-full__field' });
-			fieldRow.createDiv({ cls: 'tlb-slide-full__field-label', text: field });
-			const input = fieldRow.createEl('textarea', {
-				cls: 'tlb-slide-full__field-input',
-				attr: { rows: '2' }
-			});
-			input.value = this.editingValues[field] ?? '';
-			input.addEventListener('input', () => {
-				this.editingValues[field] = input.value;
-			});
+		this.editingTemplate = { title: [], body: [] };
+		const titleLine = container.createDiv({
+			cls: 'tlb-slide-full__editable-line tlb-slide-full__editable-title tlb-slide-full__title'
+		});
+		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, this.editingTemplate.title);
+
+		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__editable-body' });
+		const bodyLines = this.config.template.bodyTemplate.split(/\r?\n/);
+		if (bodyLines.length === 0) {
+			bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
+		} else {
+			for (const line of bodyLines) {
+				const lineEl = bodyContainer.createDiv({ cls: 'tlb-slide-full__editable-line tlb-slide-full__block' });
+				const segments: TemplateSegment[] = [];
+				this.renderTemplateSegments(lineEl, line, row, segments);
+				this.editingTemplate.body.push(segments);
+			}
 		}
-		const actions = form.createDiv({ cls: 'tlb-slide-full__actions' });
-		const cancel = actions.createEl('button', { text: t('slideView.templateModal.cancelLabel') });
+
+		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });
+		const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });
 		cancel.addEventListener('click', (evt) => {
 			evt.preventDefault();
+			evt.stopPropagation();
 			this.editingIndex = null;
 			this.editingValues = {};
+			this.editingTemplate = null;
 			this.renderActive();
 		});
-		const save = actions.createEl('button', { cls: 'mod-cta', text: t('slideView.templateModal.saveLabel') });
+		const save = actions.createEl('button', { cls: 'mod-cta', attr: { type: 'button' }, text: t('slideView.templateModal.saveLabel') });
 		save.addEventListener('click', (evt) => {
 			evt.preventDefault();
+			evt.stopPropagation();
 			void this.persistEdit(row);
 		});
+	}
+
+	private renderTemplateSegments(
+		container: HTMLElement,
+		template: string,
+		row: RowData,
+		collect: TemplateSegment[]
+	): void {
+		const orderedFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
+		const values: Record<string, string> = {};
+		for (const field of orderedFields) {
+			if (field === 'status') continue;
+			const raw = row[field];
+			values[field] = typeof raw === 'string' ? raw : String(raw ?? '');
+		}
+
+		const segments: TemplateSegment[] = [];
+		const regex = /\{([^{}]+)\}/g;
+		let lastIndex = 0;
+		let match: RegExpExecArray | null;
+		while ((match = regex.exec(template)) !== null) {
+			const before = template.slice(lastIndex, match.index);
+			if (before) {
+				segments.push({ type: 'text', value: before });
+			}
+			const fieldName = match[1].trim();
+			if (fieldName && !RESERVED_FIELDS.has(fieldName)) {
+				const value = this.editingValues[fieldName] ?? values[fieldName] ?? '';
+				segments.push({ type: 'field', field: fieldName, value });
+			} else {
+				segments.push({ type: 'text', value: '' });
+			}
+			lastIndex = regex.lastIndex;
+		}
+		if (lastIndex < template.length) {
+			segments.push({ type: 'text', value: template.slice(lastIndex) });
+		}
+
+		for (const segment of segments) {
+			if (segment.type === 'text') {
+				if (segment.value) {
+					const input = container.createEl('input', {
+						type: 'text',
+						value: segment.value,
+						cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-text'
+					});
+					input.addEventListener('input', () => {
+						segment.value = input.value;
+					});
+					collect.push(segment);
+				}
+			} else {
+				const input = container.createEl('input', {
+					type: 'text',
+					value: segment.value,
+					cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-input--field'
+				});
+				const field = segment.field;
+				if (!this.fieldInputs[field]) {
+					this.fieldInputs[field] = [];
+				}
+				this.fieldInputs[field].push(input);
+				input.addEventListener('input', () => {
+					this.editingValues[field] = input.value;
+					for (const peer of this.fieldInputs[field]) {
+						if (peer !== input) {
+							peer.value = input.value;
+						}
+					}
+				});
+				collect.push({ type: 'field', field, value: this.editingValues[field] ?? '' });
+			}
+		}
 	}
 
 	private async persistEdit(row: RowData): Promise<void> {
 		if (this.saving) return;
 		this.saving = true;
 		try {
+			if (this.editingTemplate) {
+				const renderSegments = (segments: TemplateSegment[]): string =>
+					segments.map((seg) => (seg.type === 'text' ? seg.value : `{${seg.field}}`)).join('');
+				const titleTemplate = renderSegments(this.editingTemplate.title);
+				const bodyTemplate = this.editingTemplate.body.map(renderSegments).join('\n');
+				this.config = {
+					...this.config,
+					template: {
+						...this.config.template,
+						titleTemplate,
+						bodyTemplate
+					}
+				};
+			}
 			const nextRows = await this.onSaveRow(row, this.editingValues);
 			if (nextRows) {
 				this.updateRows(nextRows);
 			}
 			this.editingIndex = null;
 			this.editingValues = {};
+			this.editingTemplate = null;
 			this.renderActive();
 		} finally {
 			this.saving = false;

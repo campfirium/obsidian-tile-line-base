@@ -34,7 +34,7 @@ export class SlideViewController {
 	private editingIndex: number | null = null;
 	private editingValues: Record<string, string> = {};
 	private saving = false;
-	private fieldInputs: Record<string, HTMLInputElement[]> = {};
+	private fieldInputs: Record<string, HTMLElement[]> = {};
 	private editingTemplate: { title: TemplateSegment[]; body: TemplateSegment[][] } | null = null;
 
 	constructor(options: SlideControllerOptions) {
@@ -382,21 +382,21 @@ export class SlideViewController {
 		for (const segment of segments) {
 			if (segment.type === 'text') {
 				if (segment.value) {
-					const input = container.createEl('input', {
-						type: 'text',
-						value: segment.value,
-						cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-text'
+					const input = container.createEl('span', {
+						text: segment.value,
+						cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-text',
+						attr: { contenteditable: 'true' }
 					});
 					input.addEventListener('input', () => {
-						segment.value = input.value;
+						segment.value = input.textContent ?? '';
 					});
 					collect.push(segment);
 				}
 			} else {
-				const input = container.createEl('input', {
-					type: 'text',
-					value: segment.value,
-					cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-input--field'
+				const input = container.createEl('span', {
+					text: segment.value,
+					cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-input--field',
+					attr: { contenteditable: 'true' }
 				});
 				const field = segment.field;
 				if (!this.fieldInputs[field]) {
@@ -404,10 +404,10 @@ export class SlideViewController {
 				}
 				this.fieldInputs[field].push(input);
 				input.addEventListener('input', () => {
-					this.editingValues[field] = input.value;
+					this.editingValues[field] = input.textContent ?? '';
 					for (const peer of this.fieldInputs[field]) {
 						if (peer !== input) {
-							peer.value = input.value;
+							peer.textContent = input.textContent;
 						}
 					}
 				});

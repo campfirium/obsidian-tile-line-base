@@ -199,18 +199,17 @@ export class SlideTemplateModal extends Modal {
 		layoutGroup.createEl('h4', { cls: 'tlb-slide-template__layout-title', text: t('slideView.templateModal.layoutTitle') });
 		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.titleLayoutLabel'), this.titleLayout, (next) => {
 			this.titleLayout = next;
-		}, false);
+		});
 		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.bodyLayoutLabel'), this.bodyLayout, (next) => {
 			this.bodyLayout = next;
-		}, true);
+		});
 	}
 
 	private renderLayoutRow(
 		container: HTMLElement,
 		label: string,
 		value: SlideLayoutConfig,
-		onChange: (next: SlideLayoutConfig) => void,
-		withMaxLines: boolean
+		onChange: (next: SlideLayoutConfig) => void
 	): void {
 		const row = container.createDiv({ cls: 'tlb-slide-template__layout-row' });
 		row.createDiv({ cls: 'tlb-slide-template__layout-label', text: label });
@@ -259,12 +258,6 @@ export class SlideTemplateModal extends Modal {
 		numberInput(t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, (v) => (value.lineHeight = v));
 		numberInput(t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.5, 5, (v) => (value.fontSize = v));
 		numberInput(t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, (v) => (value.fontWeight = v));
-		if (withMaxLines) {
-			numberInput(t('slideView.templateModal.maxLinesLabel'), value.maxLines ?? 0, 0, 50, (v) => {
-				value.maxLines = Math.max(0, Math.floor(v));
-				onChange({ ...value });
-			});
-		}
 	}
 
 	private renderColorInput(

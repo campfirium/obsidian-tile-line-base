@@ -16,7 +16,6 @@ export interface SlideLayoutConfig {
 	lineHeight: number;
 	fontSize: number;
 	fontWeight: number;
-	maxLines?: number;
 }
 
 export interface SlideViewConfig {
@@ -76,8 +75,7 @@ const DEFAULT_BODY_LAYOUT: SlideLayoutConfig = {
 	align: 'left',
 	lineHeight: 1.5,
 	fontSize: 1,
-	fontWeight: 400,
-	maxLines: 8
+	fontWeight: 400
 };
 
 export function getDefaultTitleLayout(): SlideLayoutConfig {
@@ -99,18 +97,13 @@ const normalizeLayout = (value: unknown, defaults: SlideLayoutConfig): SlideLayo
 	const lineHeight = normalizeNumber(raw.lineHeight, defaults.lineHeight);
 	const fontSize = normalizeNumber(raw.fontSize, defaults.fontSize);
 	const fontWeight = normalizeNumber(raw.fontWeight, defaults.fontWeight);
-	const maxLines =
-		raw.maxLines === undefined || raw.maxLines === null
-			? defaults.maxLines
-			: Math.max(0, Math.floor(normalizeNumber(raw.maxLines, defaults.maxLines ?? 0)));
 	return {
 		widthPct,
 		topPct,
 		align,
 		lineHeight,
 		fontSize,
-		fontWeight,
-		maxLines
+		fontWeight
 	};
 };
 

@@ -96,7 +96,6 @@
       "lineHeightLabel": "行高",
       "fontSizeLabel": "字級（rem）",
       "fontWeightLabel": "字重",
-      "maxLinesLabel": "最多行數",
       "addFieldPlaceholder": "選擇欄位",
       "insertField": "插入欄位",
       "insertFieldDesc": "插入如 {標題} 的占位符到模板。",

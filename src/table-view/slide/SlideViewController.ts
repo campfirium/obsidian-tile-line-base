@@ -24,7 +24,6 @@ interface ComputedLayout {
 	lineHeight: number;
 	fontSize: number;
 	fontWeight: number;
-	maxLines?: number;
 }
 
 export class SlideViewController {
@@ -231,17 +230,13 @@ export class SlideViewController {
 		titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
 		titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
 		titleEl.style.fontWeight = String(titleLayout.fontWeight);
-		const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
-		this.applyLayoutStyles(content, bodyLayout);
+			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
+			this.applyLayoutStyles(content, bodyLayout);
 			if (contents.length === 0) {
 				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
 			} else {
 				const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
 				bodyBlock.textContent = contents.join('\n');
-				if (bodyLayout.maxLines && bodyLayout.maxLines > 0) {
-					bodyBlock.style.setProperty('--tlb-slide-max-lines', String(bodyLayout.maxLines));
-					bodyBlock.addClass('tlb-slide-full__block--clamped');
-				}
 				bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
 				bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
 				bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
@@ -293,13 +288,7 @@ export class SlideViewController {
 		const lineHeight = Number.isFinite(source.lineHeight) ? Number(source.lineHeight) : defaults.lineHeight;
 		const fontSize = Number.isFinite(source.fontSize) ? Number(source.fontSize) : defaults.fontSize;
 		const fontWeight = Number.isFinite(source.fontWeight) ? Number(source.fontWeight) : defaults.fontWeight;
-		const maxLines =
-			kind === 'body' && source.maxLines !== undefined && source.maxLines !== null
-				? Math.max(0, Math.floor(Number(source.maxLines)))
-				: kind === 'body'
-					? defaults.maxLines
-					: undefined;
-		return { widthPct, topPct, align, lineHeight, fontSize, fontWeight, maxLines };
+		return { widthPct, topPct, align, lineHeight, fontSize, fontWeight };
 	}
 
 	private applyLayoutStyles(el: HTMLElement, layout: ComputedLayout): void {

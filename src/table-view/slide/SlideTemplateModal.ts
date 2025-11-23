@@ -148,11 +148,9 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderLayoutTwoColumn(container: HTMLElement, _heading: string, value: SlideLayoutConfig, onChange: (next: SlideLayoutConfig) => void): void {
-		if (_heading) container.createDiv({ cls: 'tlb-slide-template__cell-head', text: _heading });
-		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-two-col' });
-		const left = layout.createDiv({ cls: 'tlb-slide-template__layout-col' });
-		const right = layout.createDiv({ cls: 'tlb-slide-template__layout-col' });
+	private renderLayoutTwoColumn(container: HTMLElement, heading: string, value: SlideLayoutConfig, onChange: (next: SlideLayoutConfig) => void): void {
+		if (heading) container.createDiv({ cls: 'tlb-slide-template__cell-head', text: heading });
+		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
 
 		const addSelectRow = (parent: HTMLElement, label: string, update: (val: string) => void) => {
 			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
@@ -161,9 +159,50 @@ export class SlideTemplateModal extends Modal {
 			return { select, field, update };
 		};
 
-		const alignRow = addSelectRow(left, t('slideView.templateModal.alignLabel'), (next) => {
+		const numberRow = (
+			parent: HTMLElement,
+			labelText: string,
+			current: number,
+			min: number,
+			max: number,
+			step: number,
+			assign: (val: number) => void,
+			disabled = false
+		) => {
+			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
+			const labelEl = field.createDiv({ cls: 'tlb-slide-template__mini-label', text: labelText });
+			const input = field.createEl('input', {
+				type: 'number',
+				value: String(current),
+				attr: { min: String(min), max: String(max), step: String(step) },
+				cls: 'tlb-slide-template__layout-number'
+			});
+			input.disabled = disabled;
+			input.addEventListener('input', () => {
+				const next = Number(input.value);
+				if (Number.isFinite(next)) {
+					assign(next);
+					onChange({ ...value });
+				}
+			});
+			return { input, labelEl, field };
+		};
+
+		const layoutRow = (kind: 'two' | 'three') =>
+			layout.createDiv({ cls: `tlb-slide-template__layout-line tlb-slide-template__layout-line--${kind}` });
+
+		const row1 = layoutRow('two');
+		const insetLabel = () =>
+			value.align === 'right'
+				? `${t('slideView.templateModal.alignRight')} inset (%)`
+				: `${t('slideView.templateModal.alignLeft')} inset (%)`;
+
+		const alignRow = addSelectRow(row1, t('slideView.templateModal.alignLabel'), (next) => {
 			value.align = next as SlideLayoutConfig['align'];
 			onChange({ ...value });
+			insetInput.disabled = value.align === 'center';
+			insetInput.dataset.label = insetLabel();
+			insetInput.previousElementSibling?.setText?.(insetLabel());
 		});
 		const align = alignRow.select;
 		[
@@ -174,43 +213,40 @@ export class SlideTemplateModal extends Modal {
 			const opt = align.createEl('option', { value: key, text });
 			if (value.align === key) opt.selected = true;
 		});
+		const insetField = numberRow(
+			row1,
+			insetLabel(),
+			value.insetPct,
+			0,
+			100,
+			1,
+			(v) => (value.insetPct = clampPct(v)),
+			value.align === 'center'
+		);
+		const insetInput = insetField.input;
+		const insetLabelEl = insetField.labelEl;
+		const insetFieldEl = insetField.field;
+		const syncInsetVisibility = () => {
+			const shouldHide = value.align === 'center';
+			insetInput.disabled = shouldHide;
+			insetFieldEl.classList.toggle('is-hidden', shouldHide);
+			insetLabelEl.textContent = insetLabel();
+		};
+		syncInsetVisibility();
 		align.addEventListener('change', () => {
 			value.align = align.value as SlideLayoutConfig['align'];
+			syncInsetVisibility();
 			onChange({ ...value });
 		});
 
-		const numberRow = (
-			parent: HTMLElement,
-			labelText: string,
-			current: number,
-			min: number,
-			max: number,
-			step: number,
-			assign: (val: number) => void
-		) => {
-			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
-			field.createDiv({ cls: 'tlb-slide-template__mini-label', text: labelText });
-			const input = field.createEl('input', {
-				type: 'number',
-				value: String(current),
-				attr: { min: String(min), max: String(max), step: String(step) },
-				cls: 'tlb-slide-template__layout-number'
-			});
-			input.addEventListener('input', () => {
-				const next = Number(input.value);
-				if (Number.isFinite(next)) {
-					assign(next);
-					onChange({ ...value });
-				}
-			});
-		};
+		const row2 = layoutRow('two');
+		numberRow(row2, t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, 1, (v) => (value.topPct = clampPct(v)));
+		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
 
-		numberRow(left, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
-		numberRow(left, t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, 50, (v) => (value.fontWeight = v));
-
-		numberRow(right, t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, 1, (v) => (value.topPct = clampPct(v)));
-		numberRow(right, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
-		numberRow(right, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
+		const row3 = layoutRow('three');
+		numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
+		numberRow(row3, t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, 50, (v) => (value.fontWeight = v));
+		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
 	}
 
 	private renderColorRow(container: HTMLElement, kind: 'text' | 'background'): void {

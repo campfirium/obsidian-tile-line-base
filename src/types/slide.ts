@@ -12,6 +12,7 @@ export interface SlideTemplateConfig {
 export interface SlideLayoutConfig {
 	widthPct: number;
 	topPct: number;
+	insetPct: number;
 	align: 'left' | 'center' | 'right';
 	lineHeight: number;
 	fontSize: number;
@@ -63,6 +64,7 @@ const normalizeNumber = (value: unknown, fallback: number): number => {
 const DEFAULT_TITLE_LAYOUT: SlideLayoutConfig = {
 	widthPct: 80,
 	topPct: 12,
+	insetPct: 0,
 	align: 'center',
 	lineHeight: 1.2,
 	fontSize: 1.8,
@@ -72,6 +74,7 @@ const DEFAULT_TITLE_LAYOUT: SlideLayoutConfig = {
 const DEFAULT_BODY_LAYOUT: SlideLayoutConfig = {
 	widthPct: 90,
 	topPct: 38,
+	insetPct: 0,
 	align: 'left',
 	lineHeight: 1.5,
 	fontSize: 1,
@@ -94,12 +97,14 @@ const normalizeLayout = (value: unknown, defaults: SlideLayoutConfig): SlideLayo
 	const align = raw.align === 'left' || raw.align === 'right' || raw.align === 'center' ? raw.align : defaults.align;
 	const widthPct = clampPct(normalizeNumber(raw.widthPct, defaults.widthPct));
 	const topPct = clampPct(normalizeNumber(raw.topPct, defaults.topPct));
+	const insetPct = clampPct(normalizeNumber(raw.insetPct, defaults.insetPct));
 	const lineHeight = normalizeNumber(raw.lineHeight, defaults.lineHeight);
 	const fontSize = normalizeNumber(raw.fontSize, defaults.fontSize);
 	const fontWeight = normalizeNumber(raw.fontWeight, defaults.fontWeight);
 	return {
 		widthPct,
 		topPct,
+		insetPct,
 		align,
 		lineHeight,
 		fontSize,

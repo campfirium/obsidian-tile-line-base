@@ -20,6 +20,7 @@ const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_ind
 interface ComputedLayout {
 	widthPct: number;
 	topPct: number;
+	insetPct: number;
 	align: 'left' | 'center' | 'right';
 	lineHeight: number;
 	fontSize: number;
@@ -226,12 +227,11 @@ export class SlideViewController {
 			this.renderEditForm(slide, row, titleLayout, bodyLayout);
 		} else {
 			const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
-		this.applyLayoutStyles(titleEl, titleLayout);
-		titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
-		titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
-		titleEl.style.fontWeight = String(titleLayout.fontWeight);
+			titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
+			titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
+			titleEl.style.fontWeight = String(titleLayout.fontWeight);
+			this.applyLayoutStyles(titleEl, titleLayout, slide);
 			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
-			this.applyLayoutStyles(content, bodyLayout);
 			if (contents.length === 0) {
 				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
 			} else {
@@ -242,6 +242,7 @@ export class SlideViewController {
 				bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
 				bodyBlock.style.textAlign = bodyLayout.align;
 			}
+			this.applyLayoutStyles(content, bodyLayout, slide);
 		}
 	}
 
@@ -281,6 +282,7 @@ export class SlideViewController {
 		const source = layout && typeof layout === 'object' ? (layout as any) : {};
 		const widthPct = Math.min(100, Math.max(0, Number(source.widthPct ?? defaults.widthPct)));
 		const topPct = Math.min(100, Math.max(0, Number(source.topPct ?? defaults.topPct)));
+		const insetPct = Math.min(100, Math.max(0, Number(source.insetPct ?? defaults.insetPct)));
 		const align: ComputedLayout['align'] =
 			source.align === 'left' || source.align === 'right' || source.align === 'center'
 				? source.align
@@ -288,16 +290,38 @@ export class SlideViewController {
 		const lineHeight = Number.isFinite(source.lineHeight) ? Number(source.lineHeight) : defaults.lineHeight;
 		const fontSize = Number.isFinite(source.fontSize) ? Number(source.fontSize) : defaults.fontSize;
 		const fontWeight = Number.isFinite(source.fontWeight) ? Number(source.fontWeight) : defaults.fontWeight;
-		return { widthPct, topPct, align, lineHeight, fontSize, fontWeight };
+		return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight };
 	}
 
-	private applyLayoutStyles(el: HTMLElement, layout: ComputedLayout): void {
+	/* eslint-disable obsidianmd/no-static-styles-assignment */
+	private applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement): void {
 		el.classList.add('tlb-slide-layout');
-		el.classList.remove('tlb-align-left', 'tlb-align-center', 'tlb-align-right');
-		el.classList.add(`tlb-align-${layout.align}`);
 		el.style.setProperty('--tlb-layout-width', `${layout.widthPct}%`);
-		el.style.setProperty('--tlb-layout-top', `${layout.topPct}%`);
+		el.style.setProperty('--tlb-layout-text-align', layout.align);
+
+		// Horizontal alignment with inset.
+		if (layout.align === 'center') {
+			el.style.setProperty('--tlb-layout-left', '50%');
+			el.style.setProperty('--tlb-layout-right', 'auto');
+			el.style.setProperty('--tlb-layout-transform', 'translateX(-50%)');
+		} else if (layout.align === 'right') {
+			el.style.setProperty('--tlb-layout-left', 'auto');
+			el.style.setProperty('--tlb-layout-right', `${layout.insetPct}%`);
+			el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
+		} else {
+			el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
+			el.style.setProperty('--tlb-layout-right', 'auto');
+			el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
+		}
+
+		// Vertical positioning: topPct is absolute from the top, clamped to keep block in view.
+		const usableHeight = Math.max(0, slideEl.clientHeight);
+		const blockHeight = el.offsetHeight;
+		const topPx = (usableHeight * layout.topPct) / 100;
+		const maxTop = Math.max(0, usableHeight - blockHeight);
+		el.style.setProperty('--tlb-layout-top', `${Math.min(topPx, maxTop)}px`);
 	}
+	/* eslint-enable obsidianmd/no-static-styles-assignment */
 
 	private async enterFullscreen(): Promise<void> {
 		if (!this.fullscreenTarget || this.isFullscreen) return;
@@ -353,14 +377,13 @@ export class SlideViewController {
 		const titleLine = container.createDiv({
 			cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
 		});
-		this.applyLayoutStyles(titleLine, titleLayout);
 		titleLine.style.lineHeight = `${titleLayout.lineHeight}`;
 		titleLine.style.fontSize = `${titleLayout.fontSize}rem`;
 		titleLine.style.fontWeight = String(titleLayout.fontWeight);
+		this.applyLayoutStyles(titleLine, titleLayout, container);
 		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, this.editingTemplate.title);
 
 		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__editable-body' });
-		this.applyLayoutStyles(bodyContainer, bodyLayout);
 		const bodyLines = this.config.template.bodyTemplate.split(/\r?\n/);
 		if (bodyLines.length === 0) {
 			bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
@@ -375,6 +398,7 @@ export class SlideViewController {
 				this.editingTemplate.body.push(segments);
 			}
 		}
+		this.applyLayoutStyles(bodyContainer, bodyLayout, container);
 
 		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });
 		const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });

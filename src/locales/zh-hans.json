@@ -93,6 +93,8 @@
       "alignCenter": "居中",
       "alignRight": "居右",
       "alignLabel": "对齐",
+      "titleContentLabel": "标题内容",
+      "bodyContentLabel": "正文内容",
       "lineHeightLabel": "行高",
       "fontSizeLabel": "字号（rem）",
       "fontWeightLabel": "字重",

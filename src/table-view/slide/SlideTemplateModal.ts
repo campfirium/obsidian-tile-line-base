@@ -44,35 +44,13 @@ export class SlideTemplateModal extends Modal {
 	onOpen(): void {
 		this.contentEl.empty();
 		this.contentEl.addClass('tlb-slide-template');
-		this.titleEl.setText(t('slideView.templateModal.title'));
 		this.resolveThemeDefaults();
-		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
-
-		// Header with insert
-		const headerRow = grid.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--single' });
-		const headerCol = headerRow.createDiv({ cls: 'tlb-slide-template__col' });
-		this.renderInsertRow(headerCol);
-
-		// Title row
-		const titleRow = grid.createDiv({ cls: 'tlb-slide-template__row' });
-		const titleCol = titleRow.createDiv({ cls: 'tlb-slide-template__col' });
-		const titleLayoutCol = titleRow.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--layout' });
-		this.renderTitleInput(titleCol);
-		this.renderLayoutInputs(titleLayoutCol, 'title');
-
-		// Body row
-		const bodyRow = grid.createDiv({ cls: 'tlb-slide-template__row' });
-		const bodyCol = bodyRow.createDiv({ cls: 'tlb-slide-template__col' });
-		const bodyLayoutCol = bodyRow.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--layout' });
-		this.renderBodyInput(bodyCol);
-		this.ensureBodyInputExists(bodyCol);
-		this.renderLayoutInputs(bodyLayoutCol, 'body');
-
-		// Colors row
-		const colorsRow = grid.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--single' });
-		const colorsCol = colorsRow.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--colors' });
-		this.renderColorInputs(colorsCol);
-
+		this.renderTitleSection();
+		this.renderTitleLayoutSection();
+		this.renderBodySection();
+		this.renderBodyLayoutSection();
+		this.renderColorRow('text');
+		this.renderColorRow('background');
 		this.renderActions();
 	}
 
@@ -84,10 +62,8 @@ export class SlideTemplateModal extends Modal {
 		this.lastFocusedInput = null;
 	}
 
-	private renderInsertRow(parent?: HTMLElement): void {
-		const container = parent ?? this.contentEl;
-		const header = container.createDiv({ cls: 'tlb-slide-template__header' });
-		const insertButton = header.createEl('button', {
+	private renderInsertButton(container: HTMLElement): void {
+		const insertButton = container.createEl('button', {
 			cls: 'tlb-slide-template__insert',
 			text: t('slideView.templateModal.insertField'),
 			attr: { type: 'button' }
@@ -95,7 +71,6 @@ export class SlideTemplateModal extends Modal {
 		this.insertButtonEl = insertButton;
 		insertButton.disabled = false;
 		insertButton.addEventListener('mousedown', (event) => {
-			// Preserve textarea focus so insertion target stays accurate.
 			event.preventDefault();
 		});
 		insertButton.addEventListener('click', (event) => {
@@ -114,9 +89,7 @@ export class SlideTemplateModal extends Modal {
 					item.setTitle(field);
 					item.onClick(() => {
 						const target = this.resolveInsertionTarget();
-						if (!target) {
-							return;
-						}
+						if (!target) return;
 						this.insertPlaceholder(target, `{${field}}`);
 					});
 				});
@@ -126,110 +99,92 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderTitleInput(parent?: HTMLElement): void {
-		const block = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__block' });
-		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.titleFieldLabel') });
-		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.titleFieldDesc') });
-		const input = block.createEl('textarea', {
+	private renderTitleSection(): void {
+		const section = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
+		const head = section.createDiv({ cls: 'tlb-slide-template__section-head' });
+		head.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.titleFieldLabel') });
+		head.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.titleFieldDesc') });
+		this.renderInsertButton(head);
+		const input = section.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--title',
-			attr: {
-				rows: '2',
-				placeholder: t('slideView.templateModal.titleFieldDesc')
-			}
+			attr: { rows: '3' }
 		}) as HTMLTextAreaElement;
 		input.value = this.titleTemplate;
 		this.registerFocusTracking(input);
-		input.addEventListener('input', () => {
-			this.titleTemplate = input.value;
-		});
+		input.addEventListener('input', () => (this.titleTemplate = input.value));
 		this.titleInputEl = input;
 		this.lastFocusedInput = this.titleInputEl;
-		this.refreshInsertButton();
+		section.createDiv({ cls: 'tlb-slide-template__sublabel', text: t('slideView.templateModal.titleContentLabel') });
 	}
 
-	private renderBodyInput(parent?: HTMLElement): void {
-		const block = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__block' });
-		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
-		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
-		const textarea = block.createEl('textarea', {
+	private renderTitleLayoutSection(): void {
+		const section = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
+		section.createDiv({ cls: 'tlb-slide-template__label', text: t('slideView.templateModal.titleLayoutLabel') });
+		this.renderLayoutTwoColumn(section, this.titleLayout, (next) => {
+			this.titleLayout = next;
+		});
+	}
+
+	private renderBodySection(): void {
+		const section = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
+		const head = section.createDiv({ cls: 'tlb-slide-template__section-head' });
+		head.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
+		head.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
+		const input = section.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
-			attr: {
-				rows: '4',
-				placeholder: t('slideView.templateModal.bodyFieldsDesc')
-			}
+			attr: { rows: '4' }
 		}) as HTMLTextAreaElement;
-		textarea.value = this.bodyTemplate;
-		this.registerFocusTracking(textarea);
-		textarea.addEventListener('input', () => {
-			this.bodyTemplate = textarea.value;
-		});
-		this.bodyInputEl = textarea;
+		input.value = this.bodyTemplate;
+		this.registerFocusTracking(input);
+		input.addEventListener('input', () => (this.bodyTemplate = input.value));
+		this.bodyInputEl = input;
 		this.refreshInsertButton();
+		section.createDiv({ cls: 'tlb-slide-template__sublabel', text: t('slideView.templateModal.bodyContentLabel') });
 	}
 
-	private ensureBodyInputExists(parent?: HTMLElement): void {
-		if (this.bodyInputEl && this.contentEl.contains(this.bodyInputEl)) {
-			return;
-		}
-		this.renderBodyInput(parent ?? this.contentEl);
-	}
-
-	private renderColorInputs(parent?: HTMLElement): void {
-		const group = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__color-group' });
-		this.renderColorInput(group, {
-			label: t('slideView.templateModal.textColorLabel'),
-			value: this.textColor,
-			defaultColor: this.defaultTextColor,
-			onChange: (value) => {
-				this.textColor = value;
-			}
-		});
-		this.renderColorInput(group, {
-			label: t('slideView.templateModal.backgroundColorLabel'),
-			value: this.backgroundColor,
-			defaultColor: this.defaultBackgroundColor,
-			onChange: (value) => {
-				this.backgroundColor = value;
-			}
+	private renderBodyLayoutSection(): void {
+		const section = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
+		section.createDiv({ cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyLayoutLabel') });
+		this.renderLayoutTwoColumn(section, this.bodyLayout, (next) => {
+			this.bodyLayout = next;
 		});
 	}
 
-	private renderLayoutInputs(parent?: HTMLElement, scope: 'title' | 'body' = 'title'): void {
-		const layoutGroup = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__layout-group' });
-		layoutGroup.createEl('div', {
-			cls: 'tlb-slide-template__layout-title',
-			text:
-				scope === 'title'
-					? t('slideView.templateModal.titleLayoutLabel')
-					: t('slideView.templateModal.bodyLayoutLabel')
+	private renderLayoutTwoColumn(container: HTMLElement, value: SlideLayoutConfig, onChange: (next: SlideLayoutConfig) => void): void {
+		// Align row
+		const alignRow = container.createDiv({ cls: 'tlb-slide-template__layout-row' });
+		alignRow.createSpan({ cls: 'tlb-slide-template__layout-sublabel', text: t('slideView.templateModal.alignLabel') });
+		const align = alignRow.createEl('select', { cls: 'tlb-slide-template__layout-select' });
+		[
+			['left', t('slideView.templateModal.alignLeft')],
+			['center', t('slideView.templateModal.alignCenter')],
+			['right', t('slideView.templateModal.alignRight')]
+		].forEach(([key, text]) => {
+			const opt = align.createEl('option', { value: key, text });
+			if (value.align === key) opt.selected = true;
 		});
-		const current = scope === 'title' ? this.titleLayout : this.bodyLayout;
-		this.renderLayoutRow(layoutGroup, current, (next) => {
-			if (scope === 'title') {
-				this.titleLayout = next;
-			} else {
-				this.bodyLayout = next;
-			}
+		align.addEventListener('change', () => {
+			value.align = align.value as SlideLayoutConfig['align'];
+			onChange({ ...value });
 		});
-	}
 
-	private renderLayoutRow(
-		container: HTMLElement,
-		value: SlideLayoutConfig,
-		onChange: (next: SlideLayoutConfig) => void
-	): void {
-		const row = container.createDiv({ cls: 'tlb-slide-template__layout-row' });
-		row.createDiv({ cls: 'tlb-slide-template__layout-label', text: t('slideView.templateModal.layoutTitle') });
-		const inputs = row.createDiv({ cls: 'tlb-slide-template__layout-fields' });
-
-		const numberInput = (labelText: string, current: number, min: number, max: number, assign: (val: number) => void) => {
-			const field = inputs.createDiv({ cls: 'tlb-slide-template__layout-field' });
-			field.createDiv({ cls: 'tlb-slide-template__layout-sublabel', text: labelText });
+		// two-column grid
+		const grid = container.createDiv({ cls: 'tlb-slide-template__layout-grid' });
+		const numberInput = (
+			labelText: string,
+			current: number,
+			min: number,
+			max: number,
+			step: number,
+			assign: (val: number) => void,
+			placement: 'left' | 'right'
+		) => {
+			const field = grid.createDiv({ cls: `tlb-slide-template__mini-field tlb-slide-template__mini-field--${placement}` });
+			field.createDiv({ cls: 'tlb-slide-template__mini-label', text: labelText });
 			const input = field.createEl('input', {
 				type: 'number',
 				value: String(current),
-				attr: { min: String(min), max: String(max), step: '1' },
-				cls: 'tlb-slide-template__layout-number'
+				attr: { min: String(min), max: String(max), step: String(step) }
 			});
 			input.addEventListener('input', () => {
 				const next = Number(input.value);
@@ -240,91 +195,70 @@ export class SlideTemplateModal extends Modal {
 			});
 		};
 
-		numberInput(t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, (v) => (value.widthPct = clampPct(v)));
-		numberInput(t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, (v) => (value.topPct = clampPct(v)));
-
-		const alignField = inputs.createDiv({ cls: 'tlb-slide-template__layout-field' });
-		alignField.createDiv({ cls: 'tlb-slide-template__layout-sublabel', text: t('slideView.templateModal.alignLabel') });
-		const align = alignField.createEl('select', { cls: 'tlb-slide-template__layout-select' });
-		[
-			['left', t('slideView.templateModal.alignLeft')],
-			['center', t('slideView.templateModal.alignCenter')],
-			['right', t('slideView.templateModal.alignRight')]
-		].forEach(([key, text]) => {
-			const opt = align.createEl('option', { value: key, text });
-			if (value.align === key) {
-				opt.selected = true;
-			}
-		});
-		align.addEventListener('change', () => {
-			const next = align.value as SlideLayoutConfig['align'];
-			value.align = next;
-			onChange({ ...value });
-		});
-
-		numberInput(t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, (v) => (value.lineHeight = v));
-		numberInput(t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.5, 5, (v) => (value.fontSize = v));
-		numberInput(t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, (v) => (value.fontWeight = v));
+		numberInput(t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)), 'left');
+		numberInput(t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, 1, (v) => (value.topPct = clampPct(v)), 'right');
+		numberInput(t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, 50, (v) => (value.fontWeight = v), 'left');
+		numberInput(t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v), 'right');
+		numberInput(t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v), 'right');
 	}
 
-	private renderColorInput(
-		container: HTMLElement,
-		config: { label: string; value: string; defaultColor: string; onChange: (value: string) => void }
-	): void {
-		const row = container.createDiv({ cls: 'tlb-slide-template__color-row' });
-		row.createEl('div', { cls: 'tlb-slide-template__color-label', text: config.label });
-		const defaultColor = config.defaultColor && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.defaultColor)
-			? config.defaultColor
-			: '#000000';
-		const fallbackColor =
-			config.value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(config.value) ? config.value : defaultColor;
+	private renderColorRow(kind: 'text' | 'background'): void {
+		const row = this.contentEl.createDiv({ cls: 'tlb-slide-template__color-row' });
+		const labelText =
+			kind === 'text' ? t('slideView.templateModal.textColorLabel') : t('slideView.templateModal.backgroundColorLabel');
+		row.createDiv({ cls: 'tlb-slide-template__color-label', text: labelText });
+		const toggle = row.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
+		const defaultColor = kind === 'text' ? this.defaultTextColor || '#000000' : this.defaultBackgroundColor || '#000000';
+		const current = kind === 'text' ? this.textColor : this.backgroundColor;
+		toggle.checked = current.trim().length > 0;
 		const picker = row.createEl('input', {
-			attr: {
-				type: 'color',
-				value: fallbackColor
-			}
+			attr: { type: 'color', value: current || defaultColor },
+			cls: 'tlb-slide-template__color-picker'
 		}) as HTMLInputElement;
 		const textInput = row.createEl('input', {
-			attr: {
-				type: 'text',
-				value: config.value ?? '',
-				placeholder: '#RRGGBB'
-			},
+			attr: { type: 'text', value: current ?? '', placeholder: '#RRGGBB' },
 			cls: 'tlb-slide-template__color-text'
 		}) as HTMLInputElement;
-		const resetBtn = row.createEl('button', {
-			text: t('slideView.templateModal.resetColorLabel'),
-			cls: 'tlb-slide-template__color-reset',
-			attr: { type: 'button' }
-		});
-		const resetDot = resetBtn.createSpan({ cls: 'tlb-slide-template__color-reset-dot' });
-		resetDot.style.backgroundColor = defaultColor;
-		resetDot.style.borderColor = defaultColor;
+		const resetBtn = row.createEl('button', { cls: 'tlb-slide-template__color-reset', text: t('slideView.templateModal.resetColorLabel') });
 
-		const applyValue = (value: string) => {
-			const normalized = value.trim();
-			if (normalized) {
-				config.onChange(normalized);
-				if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalized)) {
-					picker.value = normalized;
-				}
-				textInput.value = normalized;
+		const apply = (value: string, clear?: boolean) => {
+			const normalized = clear ? '' : value.trim();
+			if (kind === 'text') {
+				this.textColor = normalized;
 			} else {
-				config.onChange('');
+				this.backgroundColor = normalized;
+			}
+			if (normalized) {
+				picker.value = normalized;
+				textInput.value = normalized;
+				toggle.checked = true;
+			} else {
+				picker.value = defaultColor;
 				textInput.value = '';
+				toggle.checked = false;
 			}
 		};
 
-		picker.addEventListener('input', () => {
-			applyValue(picker.value);
+		const syncEnabled = (enabled: boolean) => {
+			picker.disabled = !enabled;
+			textInput.disabled = !enabled;
+			resetBtn.disabled = !enabled;
+		};
+		syncEnabled(toggle.checked);
+
+		toggle.addEventListener('change', () => {
+			if (!toggle.checked) {
+				apply('', true);
+			}
+			syncEnabled(toggle.checked);
 		});
-		textInput.addEventListener('input', () => {
-			applyValue(textInput.value);
-		});
-		resetBtn.addEventListener('click', () => {
-			config.onChange('');
-			textInput.value = '';
-			picker.value = defaultColor;
+
+		picker.addEventListener('input', () => apply(picker.value));
+		textInput.addEventListener('input', () => apply(textInput.value));
+		resetBtn.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			apply('', true);
+			syncEnabled(false);
 		});
 	}
 

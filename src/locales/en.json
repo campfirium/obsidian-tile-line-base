@@ -93,6 +93,8 @@
       "alignCenter": "Center",
       "alignRight": "Right",
       "alignLabel": "Align",
+      "titleContentLabel": "Title content",
+      "bodyContentLabel": "Body content",
       "lineHeightLabel": "Line height",
       "fontSizeLabel": "Font size (rem)",
       "fontWeightLabel": "Font weight",

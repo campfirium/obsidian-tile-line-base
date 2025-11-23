@@ -47,16 +47,32 @@ export class SlideTemplateModal extends Modal {
 		this.titleEl.setText(t('slideView.templateModal.title'));
 		this.resolveThemeDefaults();
 		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
-		const leftCol = grid.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--content' });
-		const rightCol = grid.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--layout' });
 
-		this.renderInsertRow(leftCol);
-		this.renderTitleInput(leftCol);
-		this.renderBodyInput(leftCol);
-		this.ensureBodyInputExists();
+		// Header with insert
+		const headerRow = grid.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--single' });
+		const headerCol = headerRow.createDiv({ cls: 'tlb-slide-template__col' });
+		this.renderInsertRow(headerCol);
 
-		this.renderLayoutInputs(rightCol);
-		this.renderColorInputs(rightCol);
+		// Title row
+		const titleRow = grid.createDiv({ cls: 'tlb-slide-template__row' });
+		const titleCol = titleRow.createDiv({ cls: 'tlb-slide-template__col' });
+		const titleLayoutCol = titleRow.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--layout' });
+		this.renderTitleInput(titleCol);
+		this.renderLayoutInputs(titleLayoutCol, 'title');
+
+		// Body row
+		const bodyRow = grid.createDiv({ cls: 'tlb-slide-template__row' });
+		const bodyCol = bodyRow.createDiv({ cls: 'tlb-slide-template__col' });
+		const bodyLayoutCol = bodyRow.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--layout' });
+		this.renderBodyInput(bodyCol);
+		this.ensureBodyInputExists(bodyCol);
+		this.renderLayoutInputs(bodyLayoutCol, 'body');
+
+		// Colors row
+		const colorsRow = grid.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--single' });
+		const colorsCol = colorsRow.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--colors' });
+		this.renderColorInputs(colorsCol);
+
 		this.renderActions();
 	}
 
@@ -155,23 +171,7 @@ export class SlideTemplateModal extends Modal {
 		if (this.bodyInputEl && this.contentEl.contains(this.bodyInputEl)) {
 			return;
 		}
-		const block = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__block' });
-		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
-		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
-		const textarea = block.createEl('textarea', {
-			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
-			attr: {
-				rows: '4',
-				placeholder: t('slideView.templateModal.bodyFieldsDesc')
-			}
-		}) as HTMLTextAreaElement;
-		textarea.value = this.bodyTemplate;
-		this.registerFocusTracking(textarea);
-		textarea.addEventListener('input', () => {
-			this.bodyTemplate = textarea.value;
-		});
-		this.bodyInputEl = textarea;
-		this.refreshInsertButton();
+		this.renderBodyInput(parent ?? this.contentEl);
 	}
 
 	private renderColorInputs(parent?: HTMLElement): void {
@@ -194,25 +194,32 @@ export class SlideTemplateModal extends Modal {
 		});
 	}
 
-	private renderLayoutInputs(parent?: HTMLElement): void {
+	private renderLayoutInputs(parent?: HTMLElement, scope: 'title' | 'body' = 'title'): void {
 		const layoutGroup = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__layout-group' });
-		layoutGroup.createEl('h4', { cls: 'tlb-slide-template__layout-title', text: t('slideView.templateModal.layoutTitle') });
-		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.titleLayoutLabel'), this.titleLayout, (next) => {
-			this.titleLayout = next;
+		layoutGroup.createEl('div', {
+			cls: 'tlb-slide-template__layout-title',
+			text:
+				scope === 'title'
+					? t('slideView.templateModal.titleLayoutLabel')
+					: t('slideView.templateModal.bodyLayoutLabel')
 		});
-		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.bodyLayoutLabel'), this.bodyLayout, (next) => {
-			this.bodyLayout = next;
+		const current = scope === 'title' ? this.titleLayout : this.bodyLayout;
+		this.renderLayoutRow(layoutGroup, current, (next) => {
+			if (scope === 'title') {
+				this.titleLayout = next;
+			} else {
+				this.bodyLayout = next;
+			}
 		});
 	}
 
 	private renderLayoutRow(
 		container: HTMLElement,
-		label: string,
 		value: SlideLayoutConfig,
 		onChange: (next: SlideLayoutConfig) => void
 	): void {
 		const row = container.createDiv({ cls: 'tlb-slide-template__layout-row' });
-		row.createDiv({ cls: 'tlb-slide-template__layout-label', text: label });
+		row.createDiv({ cls: 'tlb-slide-template__layout-label', text: t('slideView.templateModal.layoutTitle') });
 		const inputs = row.createDiv({ cls: 'tlb-slide-template__layout-fields' });
 
 		const numberInput = (labelText: string, current: number, min: number, max: number, assign: (val: number) => void) => {

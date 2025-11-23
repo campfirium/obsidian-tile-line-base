@@ -24,6 +24,8 @@
 - 提交流程：每次提交前必须通过 `npm run build`，确保 `git status -sb` 仅含本次任务改动；不要添加 AI 协作者信息。
 - PR 规范：提供摘要、构建和操作系统信息、关联任务编号；若涉及 UI，附截图或 GIF，并标注主要入口和受影响文件。
 - 工作区（git worktree）：统一放置在仓库根目录的 `trees/` 目录下，例如执行 `git worktree add .\\trees\\feat-T000X-topic feat/T000X-topic` 创建，完成后使用 `git worktree remove .\\trees\\feat-T000X-topic` 清理；`trees/` 已加入 `.gitignore`，请勿提交其中的内容。新工作区建成后，请将仓库根目录的 .vscode/tasks.json 复制到工作区的 .vscode/ 目录，以沿用 Ctrl+Shift+B 的默认任务（注意不要提交复制出的 .vscode/）。
+- 所有语言文件（如 en.json、zh.json、ja.json 等 i18n 文件）在未收到明确指令前一律视为只读（read-only）。
+除非用户明确提出“翻译 / 修改语言文件”，否则禁止生成、修改或同步任何语言文件内容
 
 ## 构建与验证
 - `npm install`：安装依赖，更新 `package.json` 后必须重新执行。

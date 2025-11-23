@@ -14,6 +14,7 @@ export function hasColumnConfigContent(config: ColumnConfig): boolean {
 		config.type === 'date' ||
 		config.type === 'time' ||
 		config.type === 'text' ||
+		config.type === 'image' ||
 		(preset && preset !== 'iso') ||
 		(timePreset && timePreset !== 'hh_mm')
 	);
@@ -48,6 +49,8 @@ export function serializeColumnConfig(config: ColumnConfig): string {
 		}
 	} else if (config.type === 'text') {
 		segments.push('type: text');
+	} else if (config.type === 'image') {
+		segments.push('type: image');
 	}
 	if (config.hide) {
 		segments.push('hide');

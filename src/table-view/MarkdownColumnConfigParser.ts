@@ -86,6 +86,8 @@ function applyColumnConfigSegment(config: ColumnConfig, segment: string): void {
 				config.type = 'time';
 			} else if (normalizedType === 'text') {
 				config.type = 'text';
+			} else if (normalizedType === 'image') {
+				config.type = 'image';
 			}
 			break;
 		}

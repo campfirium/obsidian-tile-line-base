@@ -242,7 +242,9 @@ export class ColumnInteractionController {
 				? 'date'
 				: existing?.type === 'time'
 					? 'time'
-					: 'text';
+					: existing?.type === 'image'
+						? 'image'
+						: 'text';
 		const initialFormula = existing?.formula ?? '';
 		const initialFormulaFormat = existing?.formulaFormat;
 		const initialDateFormat = existing?.type === 'date' ? existing.dateFormat ?? 'iso' : undefined;
@@ -344,6 +346,12 @@ export class ColumnInteractionController {
 			} else {
 				config.timeFormat = preset;
 			}
+		} else if (result.type === 'image') {
+			delete config.formula;
+			delete config.formulaFormat;
+			delete config.dateFormat;
+			delete config.timeFormat;
+			config.type = 'image';
 		} else {
 			delete config.formula;
 			delete config.formulaFormat;
@@ -355,6 +363,8 @@ export class ColumnInteractionController {
 				previousConfig?.type === 'text'
 			) {
 				config.type = 'text';
+			} else if (previousConfig?.type === 'image') {
+				config.type = 'image';
 			} else {
 				delete config.type;
 			}

@@ -16,7 +16,7 @@ import {
 	type FormulaFormatPreset
 } from './formulaFormatPresets';
 
-export type ColumnFieldType = 'text' | 'date' | 'time' | 'formula';
+export type ColumnFieldType = 'text' | 'date' | 'time' | 'image' | 'formula';
 
 export interface ColumnEditorResult {
 	name: string;
@@ -104,6 +104,8 @@ export class ColumnEditorModal extends Modal {
 			dropdown.addOption('text', t('columnEditorModal.typeTextOption'));
 			dropdown.addOption('date', t('columnEditorModal.typeDateOption'));
 			dropdown.addOption('time', t('columnEditorModal.typeTimeOption'));
+			const imageLabel = t('columnEditorModal.typeImageOption' as any);
+			dropdown.addOption('image', imageLabel === 'columnEditorModal.typeImageOption' ? 'Image' : imageLabel);
 			dropdown.addOption('formula', t('columnEditorModal.typeFormulaOption'));
 			dropdown.setValue(this.type);
 			dropdown.onChange((value) => {
@@ -113,6 +115,8 @@ export class ColumnEditorModal extends Modal {
 					this.type = 'date';
 				} else if (value === 'time') {
 					this.type = 'time';
+				} else if (value === 'image') {
+					this.type = 'image';
 				} else {
 					this.type = 'text';
 				}
@@ -358,6 +362,13 @@ export class ColumnEditorModal extends Modal {
 		if (this.type === 'time') {
 			const preset = normalizeTimeFormatPreset(this.timeFormat);
 			this.options.onSubmit({ name: trimmedName, type: 'time', formula: '', timeFormat: preset });
+			this.submitted = true;
+			this.close();
+			return;
+		}
+
+		if (this.type === 'image') {
+			this.options.onSubmit({ name: trimmedName, type: 'image', formula: '' });
 			this.submitted = true;
 			this.close();
 			return;

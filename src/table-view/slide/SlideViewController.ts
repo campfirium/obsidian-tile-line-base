@@ -308,7 +308,7 @@ export class SlideViewController {
 	private renderEditForm(container: HTMLElement, row: RowData): void {
 		this.editingTemplate = { title: [], body: [] };
 		const titleLine = container.createDiv({
-			cls: 'tlb-slide-full__editable-line tlb-slide-full__editable-title tlb-slide-full__title'
+			cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
 		});
 		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, this.editingTemplate.title);
 

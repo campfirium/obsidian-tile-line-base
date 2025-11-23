@@ -2736,6 +2736,8 @@
 
 .tlb-slide-full__editable-title {
 	margin-bottom: 12px;
+	justify-content: center;
+	text-align: center;
 }
 
 .tlb-slide-full__editable-body {

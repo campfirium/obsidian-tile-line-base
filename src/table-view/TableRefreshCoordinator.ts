@@ -107,6 +107,7 @@ export class TableRefreshCoordinator {
 	private dirtyWhileInactive = false;
 	private refreshTimer: number | null = null;
 	private disposed = false;
+	private deferredExternalRefresh: RefreshRequest | null = null;
 
 	constructor(private readonly view: TableView) {
 		TableRefreshCoordinator.ensureInitialized(view.app);
@@ -121,6 +122,7 @@ export class TableRefreshCoordinator {
 		if (this.trackedPathKey === nextKey) {
 			return;
 		}
+		this.deferredExternalRefresh = null;
 		if (this.trackedPathKey) {
 			const currentSet = TableRefreshCoordinator.coordinatorsByPath.get(this.trackedPathKey);
 			if (currentSet) {
@@ -171,6 +173,17 @@ export class TableRefreshCoordinator {
 		}
 	}
 
+	hasSiblingForTrackedFile(): boolean {
+		if (!this.trackedPathKey) {
+			return false;
+		}
+		const set = TableRefreshCoordinator.coordinatorsByPath.get(this.trackedPathKey);
+		if (!set) {
+			return false;
+		}
+		return set.size > 1;
+	}
+
 	handleVaultModify(file: TFile): void {
 		if (!this.trackedPathKey || normalisePath(file.path) !== this.trackedPathKey) {
 			return;
@@ -178,6 +191,17 @@ export class TableRefreshCoordinator {
 		if (this.mutationBudget > 0) {
 			this.mutationBudget -= 1;
 			this.logger.trace("Skipping refresh due to self mutation", { file: file.path, budget: this.mutationBudget });
+			return;
+		}
+		if (this.view.persistenceService?.hasPendingSave?.()) {
+			// Avoid blowing away in-memory edits if another view modifies the file first.
+			this.logger.warn("Deferring refresh due to pending save", { file: file.path });
+			this.deferredExternalRefresh = mergeContext(this.deferredExternalRefresh, {
+				source: "external",
+				structural: true,
+				reason: "vault-modify",
+				immediate: true
+			});
 			return;
 		}
 		this.requestRefresh({
@@ -272,6 +296,7 @@ export class TableRefreshCoordinator {
 		this.inactiveContext = null;
 		this.dirtyWhileInactive = false;
 		this.mutationBudget = 0;
+		this.deferredExternalRefresh = null;
 	}
 
 	private scheduleRefresh(): void {
@@ -285,6 +310,19 @@ export class TableRefreshCoordinator {
 			this.refreshTimer = null;
 			this.flushPendingRefresh();
 		}, 250);
+	}
+
+	handleSaveSettled(): void {
+		if (this.disposed) {
+			this.deferredExternalRefresh = null;
+			return;
+		}
+		if (!this.deferredExternalRefresh) {
+			return;
+		}
+		const context = this.deferredExternalRefresh;
+		this.deferredExternalRefresh = null;
+		this.requestRefresh({ ...context, immediate: true });
 	}
 
 	private flushPendingRefresh(): void {

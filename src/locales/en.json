@@ -397,6 +397,11 @@
     "settingsMenuHelpLabel": "Open help note",
     "unnamedViewLabel": "Unnamed view"
   },
+  "rowOrder": {
+    "menuLabel": "Reorder rows (physical)",
+    "modalTitle": "Reorder rows",
+    "modalWarning": "This rewrites row order in the file."
+  },
   "fileDuplication": {
     "errorNoFile": "Current file is unavailable.",
     "failureNotice": "Failed to duplicate the file. Please try again later.",
@@ -466,8 +471,8 @@
     "addSortButton": "+ Add sort",
     "sortsEmptyHint": "No sort rules yet. Use Add sort to configure.",
     "sortsNoColumnsHint": "No available columns. Sorting cannot be configured.",
-    "sortDirectionAsc": "Ascending (A 閿熸枻鎷?Z)",
-    "sortDirectionDesc": "Descending (Z 閿熸枻鎷?A)",
+    "sortDirectionAsc": "Ascending (A -> Z)",
+    "sortDirectionDesc": "Descending (Z -> A)",
     "iconLabel": "Icon",
     "iconDescription": "Pick a Lucide icon (for example: table, filter).",
     "iconPlaceholder": "Pick a Lucide icon (e.g. table, filter)",

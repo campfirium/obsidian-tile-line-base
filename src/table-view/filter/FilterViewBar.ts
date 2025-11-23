@@ -23,6 +23,7 @@ export interface FilterViewBarCallbacks {
 	onOpenHelp(): void;
 	onDefaultViewMenu(button: HTMLElement, event?: MouseEvent): void;
 	onEditDefaultView(): void;
+	onOpenRowOrder(button: HTMLElement): void;
 }
 
 interface FilterViewBarOptions {
@@ -291,6 +292,14 @@ export class FilterViewBar {
 				.setIcon('layout-grid')
 				.onClick(() => {
 					this.options.callbacks.onOpenColumnSettings(this.settingsButtonEl);
+				});
+		});
+		menu.addItem((item) => {
+			item
+				.setTitle(t('rowOrder.menuLabel'))
+				.setIcon('arrow-up-down')
+				.onClick(() => {
+					this.options.callbacks.onOpenRowOrder(this.settingsButtonEl);
 				});
 		});
 		menu.addItem((item) => {

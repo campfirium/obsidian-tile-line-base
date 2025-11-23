@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- pending refactor to smaller helpers */
 import type { TableView } from '../TableView';
 import type { H2Block } from './MarkdownBlockParser';
 import { getLogger } from '../utils/logger';
@@ -365,6 +366,34 @@ export class TableHistoryManager {
 		});
 	}
 
+	applyRowOrderChange(order: H2Block[], focus?: HistoryFocusOptions): void {
+		if (!Array.isArray(order) || order.length === 0) {
+			return;
+		}
+		const beforeEntries = this.buildRowOrderEntries(this.getBlocks());
+		const afterEntries = this.buildRowOrderEntries(order);
+		const defaultFocus = focus?.redo ?? focus?.undo ?? ({ rowIndex: 0, field: null } as FocusTarget);
+
+		this.applyChange(() => {
+			this.applyRowOrder(afterEntries);
+		}, defaultFocus);
+
+		this.record({
+			undo: () => {
+				logger.debug('recordRowOrderChange:undo', { count: beforeEntries.length });
+				this.applyChange(() => {
+					this.applyRowOrder(beforeEntries);
+				}, focus?.undo ?? defaultFocus);
+			},
+			redo: () => {
+				logger.debug('recordRowOrderChange:redo', { count: afterEntries.length });
+				this.applyChange(() => {
+					this.applyRowOrder(afterEntries);
+				}, focus?.redo ?? defaultFocus);
+			}
+		});
+	}
+
 	snapshotBlock(block: H2Block): BlockSnapshot {
 		return {
 			title: block.title,
@@ -444,6 +473,56 @@ export class TableHistoryManager {
 		}
 
 		return null;
+	}
+
+	private buildRowOrderEntries(order: H2Block[]): RowEntry[] {
+		return order.map((block, index) => ({
+			ref: block,
+			index,
+			snapshot: this.snapshotBlock(block)
+		}));
+	}
+
+	private applyRowOrder(entries: RowEntry[]): void {
+		const blocks = this.getBlocks();
+		if (entries.length === 0 || blocks.length === 0) {
+			return;
+		}
+		const resolved: H2Block[] = [];
+		const seen = new Set<H2Block>();
+
+		for (const entry of entries) {
+			const resolvedEntry = this.resolveRowEntry(entry);
+			if (!resolvedEntry) {
+				continue;
+			}
+			entry.ref = resolvedEntry.block;
+			entry.index = resolvedEntry.index;
+			if (seen.has(resolvedEntry.block)) {
+				continue;
+			}
+			seen.add(resolvedEntry.block);
+			resolved.push(resolvedEntry.block);
+		}
+
+		if (resolved.length !== blocks.length) {
+			logger.warn('applyRowOrder:incomplete-resolution', {
+				entryCount: entries.length,
+				resolvedCount: resolved.length,
+				blockCount: blocks.length
+			});
+			for (const block of blocks) {
+				if (!seen.has(block)) {
+					resolved.push(block);
+					seen.add(block);
+				}
+			}
+		}
+
+		blocks.length = 0;
+		for (const block of resolved) {
+			blocks.push(block);
+		}
 	}
 
 	private applyChange(mutator: () => void, focus?: FocusTarget): void {

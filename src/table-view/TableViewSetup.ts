@@ -28,6 +28,7 @@ import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { TableCreationController } from './TableCreationController';
 import { TableFileDuplicationController } from './TableFileDuplicationController';
 import { KanbanBoardController } from './kanban/KanbanBoardController';
+import { RowOrderController } from './row-sort/RowOrderController';
 
 const logger = getLogger('table-view:setup');
 
@@ -94,6 +95,14 @@ export function initializeTableView(view: TableView): void {
 		persistence: view.persistenceService,
 		rowInteraction: view.rowInteractionController,
 		getCurrentFile: () => view.file
+	});
+	view.rowOrderController = new RowOrderController({
+		app: view.app,
+		dataStore: view.dataStore,
+		history: view.historyManager,
+		filterStateStore: view.filterStateStore,
+		getSchema: () => view.schema,
+		getAvailableColumns: () => getAvailableColumns(view)
 	});
 	view.copyTemplateController = new CopyTemplateController({
 		app: view.app,

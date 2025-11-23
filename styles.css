@@ -1268,6 +1268,14 @@
   padding: 20px;
 }
 
+.tlb-row-order-warning {
+  text-align: left;
+  border: 1px solid var(--interactive-accent);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+
 .modal-button-container {
   display: flex;
   justify-content: flex-end;
@@ -2648,6 +2656,70 @@
 	display: none;
 }
 
+.tlb-slide-thumbs {
+	position: absolute;
+	bottom: 16px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	box-shadow: var(--shadow-s);
+	padding: 10px 12px;
+	max-width: min(90vw, 1200px);
+	display: none;
+	z-index: 6;
+}
+
+.tlb-slide-thumbs.is-open {
+	display: block;
+}
+
+.tlb-slide-thumbs__list {
+	display: flex;
+	gap: 8px;
+	align-items: stretch;
+	overflow-x: auto;
+	max-width: 100%;
+}
+
+.tlb-slide-thumbs__item {
+	min-width: 140px;
+	border-radius: 10px;
+	border: 1px solid var(--background-modifier-border);
+	background: color-mix(in srgb, var(--background-primary) 90%, var(--background-secondary) 10%);
+	color: var(--text-muted);
+	padding: 8px 10px;
+	text-align: left;
+	cursor: pointer;
+}
+
+.tlb-slide-thumbs__item.is-active {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.tlb-slide-thumbs__title {
+	font-weight: 600;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tlb-slide-thumbs__preview {
+	font-size: 12px;
+	opacity: 0.85;
+	margin-top: 4px;
+	max-height: 2.4em;
+	overflow: hidden;
+}
+
+.tlb-slide-thumbs__empty {
+	padding: 6px 4px;
+	color: var(--text-muted);
+}
+
 .tlb-slide-full__btn {
 	width: 34px;
 	height: 34px;
@@ -2872,6 +2944,19 @@
 .tlb-slide-template__mode-toggle:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.tlb-slide-template__set-default {
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent, #fff);
+	margin-left: 0;
+}
+
+.tlb-slide-template__set-default:not(:disabled):hover,
+.tlb-slide-template__set-default:not(:disabled):focus-visible {
+	background-color: var(--interactive-accent-hover, var(--interactive-accent));
+	color: var(--text-on-accent, #fff);
 }
 
 .tlb-slide-template__block {

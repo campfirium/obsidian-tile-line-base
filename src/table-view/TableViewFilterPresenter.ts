@@ -62,6 +62,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 					adapter.fillColumnsToMinimumWidth();
 				}
 			},
+			onOpenRowOrder: () => {
+				view.rowOrderController.openSortModal();
+			},
 			onDuplicateCurrentFile: () => {
 				void view.fileDuplicationController.duplicateCurrentFile();
 			},

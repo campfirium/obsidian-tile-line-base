@@ -51,6 +51,7 @@ import type { SlideViewConfig } from "./types/slide";
 import { normalizeSlideViewConfig } from "./types/slide";
 import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
 import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
+import { RowOrderController } from "./table-view/row-sort/RowOrderController";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -75,6 +76,7 @@ export class TableView extends ItemView {
 	public columnInteractionController!: ColumnInteractionController;
 	public rowInteractionController!: RowInteractionController;
 	public rowMigrationController!: RowMigrationController;
+	public rowOrderController!: RowOrderController;
 	public gridInteractionController!: GridInteractionController;
 	public filterOrchestrator!: FilterViewOrchestrator;
 	public gridLayoutController!: GridLayoutController;

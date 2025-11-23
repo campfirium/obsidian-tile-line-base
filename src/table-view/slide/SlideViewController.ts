@@ -2,7 +2,8 @@ import { setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
-import { getDefaultBodyLayout, getDefaultTitleLayout } from '../../types/slide';
+import { SlideScaleManager } from './SlideScaleManager';
+import { applyLayoutStyles, computeLayout, type ComputedLayout } from './slideLayout';
 
 interface SlideControllerOptions {
 	container: HTMLElement;
@@ -17,20 +18,11 @@ type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field:
 
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
-interface ComputedLayout {
-	widthPct: number;
-	topPct: number;
-	insetPct: number;
-	align: 'left' | 'center' | 'right';
-	lineHeight: number;
-	fontSize: number;
-	fontWeight: number;
-}
-
 export class SlideViewController {
 	private readonly root: HTMLElement;
 	private readonly stage: HTMLElement;
 	private readonly controls: HTMLElement;
+	private readonly scaleManager: SlideScaleManager;
 	private rows: RowData[] = [];
 	private fields: string[] = [];
 	private config: SlideViewConfig;
@@ -60,6 +52,8 @@ export class SlideViewController {
 		this.controls = this.root.createDiv({ cls: 'tlb-slide-full__controls' });
 		this.stage = this.root.createDiv({ cls: 'tlb-slide-full__stage' });
 		this.fullscreenTarget = this.root;
+		this.scaleManager = new SlideScaleManager(this.stage, () => this.isFullscreen);
+		this.cleanup.push(() => this.scaleManager.dispose());
 		this.renderControls();
 		this.attachFullscreenWatcher();
 		this.attachKeyboard();
@@ -160,6 +154,9 @@ export class SlideViewController {
 				this.isFullscreen = false;
 				this.root.removeClass('tlb-slide-full--fullscreen');
 				this.updateFullscreenButton();
+				this.scaleManager.requestScale();
+			} else if (doc.fullscreenElement && this.isFullscreen) {
+				this.scaleManager.requestScale();
 			}
 		};
 		doc.addEventListener('fullscreenchange', listener);
@@ -194,6 +191,7 @@ export class SlideViewController {
 				cls: 'tlb-slide-full__empty',
 				text: t('slideView.emptyState')
 			});
+			this.scaleManager.setSlide(null);
 			return;
 		}
 		const row = this.rows[this.activeIndex];
@@ -221,8 +219,8 @@ export class SlideViewController {
 		} else {
 			slide.style.removeProperty('--tlb-slide-text-color');
 		}
-		const titleLayout = this.getComputedLayout(this.config.template.titleLayout, 'title');
-		const bodyLayout = this.getComputedLayout(this.config.template.bodyLayout, 'body');
+		const titleLayout = computeLayout(this.config.template.titleLayout, 'title');
+		const bodyLayout = computeLayout(this.config.template.bodyLayout, 'body');
 		if (this.editingIndex === this.activeIndex) {
 			this.renderEditForm(slide, row, titleLayout, bodyLayout);
 		} else {
@@ -230,7 +228,7 @@ export class SlideViewController {
 			titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
 			titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
 			titleEl.style.fontWeight = String(titleLayout.fontWeight);
-			this.applyLayoutStyles(titleEl, titleLayout, slide);
+			applyLayoutStyles(titleEl, titleLayout, slide);
 			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
 			if (contents.length === 0) {
 				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
@@ -242,8 +240,9 @@ export class SlideViewController {
 				bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
 				bodyBlock.style.textAlign = bodyLayout.align;
 			}
-			this.applyLayoutStyles(content, bodyLayout, slide);
+			applyLayoutStyles(content, bodyLayout, slide);
 		}
+		this.scaleManager.setSlide(slide);
 	}
 
 	private resolveContent(row: RowData): { title: string; contents: string[] } {
@@ -277,52 +276,6 @@ export class SlideViewController {
 		return { title, contents };
 	}
 
-	private getComputedLayout(layout: unknown, kind: 'title' | 'body'): ComputedLayout {
-		const defaults = kind === 'title' ? getDefaultTitleLayout() : getDefaultBodyLayout();
-		const source = layout && typeof layout === 'object' ? (layout as any) : {};
-		const widthPct = Math.min(100, Math.max(0, Number(source.widthPct ?? defaults.widthPct)));
-		const topPct = Math.min(100, Math.max(0, Number(source.topPct ?? defaults.topPct)));
-		const insetPct = Math.min(100, Math.max(0, Number(source.insetPct ?? defaults.insetPct)));
-		const align: ComputedLayout['align'] =
-			source.align === 'left' || source.align === 'right' || source.align === 'center'
-				? source.align
-				: defaults.align;
-		const lineHeight = Number.isFinite(source.lineHeight) ? Number(source.lineHeight) : defaults.lineHeight;
-		const fontSize = Number.isFinite(source.fontSize) ? Number(source.fontSize) : defaults.fontSize;
-		const fontWeight = Number.isFinite(source.fontWeight) ? Number(source.fontWeight) : defaults.fontWeight;
-		return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight };
-	}
-
-	/* eslint-disable obsidianmd/no-static-styles-assignment */
-	private applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement): void {
-		el.classList.add('tlb-slide-layout');
-		el.style.setProperty('--tlb-layout-width', `${layout.widthPct}%`);
-		el.style.setProperty('--tlb-layout-text-align', layout.align);
-
-		// Horizontal alignment with inset.
-		if (layout.align === 'center') {
-			el.style.setProperty('--tlb-layout-left', '50%');
-			el.style.setProperty('--tlb-layout-right', 'auto');
-			el.style.setProperty('--tlb-layout-transform', 'translateX(-50%)');
-		} else if (layout.align === 'right') {
-			el.style.setProperty('--tlb-layout-left', 'auto');
-			el.style.setProperty('--tlb-layout-right', `${layout.insetPct}%`);
-			el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
-		} else {
-			el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
-			el.style.setProperty('--tlb-layout-right', 'auto');
-			el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
-		}
-
-		// Vertical positioning: topPct is absolute from the top, clamped to keep block in view.
-		const usableHeight = Math.max(0, slideEl.clientHeight);
-		const blockHeight = el.offsetHeight;
-		const topPx = (usableHeight * layout.topPct) / 100;
-		const maxTop = Math.max(0, usableHeight - blockHeight);
-		el.style.setProperty('--tlb-layout-top', `${Math.min(topPx, maxTop)}px`);
-	}
-	/* eslint-enable obsidianmd/no-static-styles-assignment */
-
 	private async enterFullscreen(): Promise<void> {
 		if (!this.fullscreenTarget || this.isFullscreen) return;
 		try {
@@ -331,6 +284,7 @@ export class SlideViewController {
 				this.isFullscreen = true;
 				this.root.addClass('tlb-slide-full--fullscreen');
 				this.updateFullscreenButton();
+				this.scaleManager.requestScale();
 			}
 		} catch {
 			// ignore fullscreen errors
@@ -345,6 +299,7 @@ export class SlideViewController {
 		this.isFullscreen = false;
 		this.root.removeClass('tlb-slide-full--fullscreen');
 		this.updateFullscreenButton();
+		this.scaleManager.requestScale();
 	}
 
 	private updateFullscreenButton(): void {
@@ -380,7 +335,7 @@ export class SlideViewController {
 		titleLine.style.lineHeight = `${titleLayout.lineHeight}`;
 		titleLine.style.fontSize = `${titleLayout.fontSize}rem`;
 		titleLine.style.fontWeight = String(titleLayout.fontWeight);
-		this.applyLayoutStyles(titleLine, titleLayout, container);
+		applyLayoutStyles(titleLine, titleLayout, container);
 		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, this.editingTemplate.title);
 
 		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__editable-body' });
@@ -398,7 +353,7 @@ export class SlideViewController {
 				this.editingTemplate.body.push(segments);
 			}
 		}
-		this.applyLayoutStyles(bodyContainer, bodyLayout, container);
+		applyLayoutStyles(bodyContainer, bodyLayout, container);
 
 		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });
 		const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });

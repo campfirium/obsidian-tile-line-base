@@ -272,7 +272,7 @@ async function applyParsedCsvToView(view: TableView, parsed: ParsedCsv): Promise
 	view.schemaDirty = dirtyFlags.schemaDirty;
 	view.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;
 
-	view.persistenceService.cancelScheduledSave();
+	view.persistenceService.cancelScheduledSave({ resolvePending: false });
 	view.markUserMutation('csv-import');
 	await view.persistenceService.save();
 	view.schemaDirty = false;

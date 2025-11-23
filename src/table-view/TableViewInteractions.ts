@@ -79,7 +79,7 @@ export function persistColumnStructureChange(view: TableView, options?: { notice
 	if (options?.notice) {
 		new Notice(options.notice);
 	}
-	view.persistenceService.cancelScheduledSave();
+	view.persistenceService.cancelScheduledSave({ resolvePending: false });
 	void (async () => {
 		try {
 			view.markUserMutation('column-structure-change');
@@ -167,7 +167,7 @@ export async function handleOnClose(view: TableView): Promise<void> {
 	view.gridController.destroy();
 	view.gridAdapter = null;
 	view.tableContainer = null;
-	view.persistenceService.cancelScheduledSave();
+	view.persistenceService.cancelScheduledSave({ suppressCallback: true });
 	view.persistenceService.dispose();
 }
 

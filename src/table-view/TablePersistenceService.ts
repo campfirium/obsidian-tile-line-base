@@ -44,13 +44,16 @@ interface TablePersistenceDeps {
 	getSlideConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
+	onSaveSettled?: () => void;
+	getSaveDelayMs?: () => number;
 }
 
 /**
  * 统一管理 Markdown 与配置块的加载/保存，并提供去抖写入能力。
  */
 export class TablePersistenceService {
-	private saveTimeout: ReturnType<typeof setTimeout> | null = null;
+	private saveTimeout: number | null = null;
+	private pendingSave = false;
 
 	constructor(private readonly deps: TablePersistenceDeps) {}
 
@@ -67,19 +70,35 @@ export class TablePersistenceService {
 			logger.debug('scheduleSave:blocked');
 			return;
 		}
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout);
+		if (this.saveTimeout !== null) {
+			window.clearTimeout(this.saveTimeout);
 		}
-		this.saveTimeout = setTimeout(() => {
+		this.pendingSave = true;
+		const delay = this.deps.getSaveDelayMs?.() ?? 500;
+		this.saveTimeout = window.setTimeout(() => {
+			this.saveTimeout = null;
 			void this.save();
-		}, 500);
+		}, delay);
 	}
 
-	cancelScheduledSave(): void {
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout);
+	cancelScheduledSave(options?: { resolvePending?: boolean; suppressCallback?: boolean }): void {
+		if (this.saveTimeout !== null) {
+			window.clearTimeout(this.saveTimeout);
 			this.saveTimeout = null;
 		}
+		if (options?.resolvePending === false) {
+			return;
+		}
+		if (this.pendingSave) {
+			this.pendingSave = false;
+			if (!options?.suppressCallback) {
+				this.deps.onSaveSettled?.();
+			}
+		}
+	}
+
+	hasPendingSave(): boolean {
+		return this.pendingSave;
 	}
 
 	async save(): Promise<void> {
@@ -88,9 +107,11 @@ export class TablePersistenceService {
 			this.cancelScheduledSave();
 			return;
 		}
+		this.pendingSave = true;
 
 		const file = this.deps.getFile();
 		if (!file) {
+			this.cancelScheduledSave();
 			return;
 		}
 
@@ -185,6 +206,6 @@ export class TablePersistenceService {
 	}
 
 	dispose(): void {
-		this.cancelScheduledSave();
+		this.cancelScheduledSave({ suppressCallback: true });
 	}
 }

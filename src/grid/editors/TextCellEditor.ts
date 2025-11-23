@@ -33,6 +33,7 @@ export function createTextCellEditor() {
 		private usePopup = false;
 		private cleanupTasks: Array<() => void> = [];
 		private wrapperChrome = 0;
+		private removeGridPropagationBlock?: () => void;
 
 		init(params: ICellEditorParams): void {
 			this.params = params;
@@ -105,9 +106,10 @@ export function createTextCellEditor() {
 
 		afterGuiAttached(): void {
 			this.eInput.focus();
-			if (this.initialValue) {
+			if (this.initialValue.length > 0) {
 				this.eInput.select();
 			}
+			this.stopGridMousePropagation();
 
 			if (!this.usePopup) {
 				return;
@@ -260,6 +262,26 @@ export function createTextCellEditor() {
 				return;
 			}
 			this.eInput.classList.toggle('tlb-text-editor-input--scrollable', isScrollable);
+		}
+
+		private stopGridMousePropagation(): void {
+			if (this.removeGridPropagationBlock) {
+				return;
+			}
+			const stop = (event: Event) => {
+				event.stopPropagation();
+			};
+			this.eInput.addEventListener('mousedown', stop);
+			this.eInput.addEventListener('mouseup', stop);
+			this.eInput.addEventListener('click', stop);
+			this.eInput.addEventListener('dblclick', stop);
+			this.removeGridPropagationBlock = () => {
+				this.eInput.removeEventListener('mousedown', stop);
+				this.eInput.removeEventListener('mouseup', stop);
+				this.eInput.removeEventListener('click', stop);
+				this.eInput.removeEventListener('dblclick', stop);
+			};
+			this.cleanupTasks.push(() => this.removeGridPropagationBlock?.());
 		}
 
 		private measureWrapperChrome(): void {

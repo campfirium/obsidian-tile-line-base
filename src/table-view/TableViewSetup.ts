@@ -60,7 +60,9 @@ export function initializeTableView(view: TableView): void {
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		getSlideConfig: () => view.slideConfig ?? null,
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
-		shouldAllowSave: () => view.hasUserMutations()
+		shouldAllowSave: () => view.hasUserMutations(),
+		onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),
+		getSaveDelayMs: () => (view.refreshCoordinator.hasSiblingForTrackedFile() ? 120 : 500)
 	});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,

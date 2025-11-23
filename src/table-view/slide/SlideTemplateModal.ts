@@ -52,13 +52,13 @@ export class SlideTemplateModal extends Modal {
 
 		const titleRow = this.createRow(grid);
 		this.renderTitleContent(titleRow.left);
-		this.renderLayoutTwoColumn(titleRow.right, t('slideView.templateModal.titleStyleLabel'), this.titleLayout, (next) => {
+		this.renderLayoutTwoColumn(titleRow.right, t('slideView.templateModal.titleLayoutLabel'), this.titleLayout, (next) => {
 			this.titleLayout = next;
 		});
 
 		const bodyRow = this.createRow(grid);
 		this.renderBodyContent(bodyRow.left);
-		this.renderLayoutTwoColumn(bodyRow.right, t('slideView.templateModal.bodyStyleLabel'), this.bodyLayout, (next) => {
+		this.renderLayoutTwoColumn(bodyRow.right, t('slideView.templateModal.bodyLayoutLabel'), this.bodyLayout, (next) => {
 			this.bodyLayout = next;
 		});
 

@@ -258,23 +258,25 @@ export class SlideViewController {
 			values[field] = text;
 		}
 
-		const renderTemplate = (templateText: string): string => {
+		const renderTemplate = (templateText: string, trimResult = true): string => {
 			const input = templateText.replace(/\r\n/g, '\n');
-			return input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
+			const replaced = input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
 				const field = key.trim();
 				if (!field || RESERVED_FIELDS.has(field)) {
 					return '';
 				}
 				return values[field] ?? '';
-			}).trim();
+			});
+			return trimResult ? replaced.trim() : replaced;
 		};
 
 		const titleTemplate = template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
 		const title = renderTemplate(titleTemplate) || t('slideView.untitledSlide', { index: String(this.activeIndex + 1) });
 
-		const body = renderTemplate(template.bodyTemplate);
-		const contents = body ? body.split('\n').filter((line) => line.trim().length > 0) : [];
-		return { title, contents };
+		const body = renderTemplate(template.bodyTemplate, false);
+		const lines = body.split('\n');
+		const hasContent = lines.some((line) => line.trim().length > 0);
+		return { title, contents: hasContent ? lines : [] };
 	}
 
 	private getComputedLayout(layout: unknown, kind: 'title' | 'body'): ComputedLayout {

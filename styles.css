@@ -2635,11 +2635,6 @@
 	justify-content: center;
 	overflow: hidden;
 }
-.tlb-slide-full--fullscreen .tlb-slide-full__stage {
-	min-height: 100%;
-	height: 100%;
-	width: 100vw;
-}
 
 .tlb-slide-full__controls {
 	position: absolute;
@@ -2682,15 +2677,8 @@
 	box-shadow: none;
 	position: relative;
 	overflow: hidden;
-}
-.tlb-slide-full--fullscreen .tlb-slide-full__slide {
-	width: min(100vw, calc(100vh * 16 / 9));
-	max-height: 100vh;
-	aspect-ratio: 16 / 9;
-	padding: 48px;
-	box-shadow: none;
-	border: none;
-	border-radius: 0;
+	transform-origin: center center;
+	transform: scale(var(--tlb-slide-scale, 1));
 }
 
 .tlb-slide-full__title {
@@ -2701,9 +2689,6 @@
 	margin: 0;
 	word-break: break-word;
 	color: var(--tlb-slide-text-color, var(--text-normal));
-}
-.tlb-slide-full--fullscreen .tlb-slide-full__title {
-	font-size: 44px;
 }
 
 .tlb-slide-full__content {
@@ -2732,9 +2717,6 @@
 	white-space: pre-wrap;
 	color: var(--tlb-slide-text-color, var(--text-normal));
 }
-.tlb-slide-full--fullscreen .tlb-slide-full__block {
-	font-size: 20px;
-}
 
 .tlb-slide-full__block--empty {
 	color: var(--text-muted);
@@ -2757,34 +2739,41 @@
 .tlb-slide-full__editable-body {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-}
-
-.tlb-slide-full__editable-line {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 6px;
+	gap: 0;
+	align-items: stretch;
 }
 
 .tlb-slide-full__editable-input {
-	min-width: 40px;
+	min-width: 0;
 	max-width: 100%;
-	font-size: inherit;
+	font: inherit;
 	font-weight: inherit;
 	line-height: inherit;
-	padding: 2px 4px;
-	border-radius: 4px;
-	border: 1px dashed color-mix(in srgb, var(--text-muted) 70%, transparent 30%);
+	padding: 0;
+	border-radius: 0;
+	border: none;
 	background: transparent;
 	box-shadow: none;
 	color: var(--tlb-slide-text-color, var(--text-normal));
-	display: inline-block;
+	display: inline;
 	appearance: none;
+	white-space: pre-wrap;
+	outline: none;
 }
 
 .tlb-slide-full__editable-input--field {
-	border-style: dashed;
+	border-bottom: 1px dashed color-mix(in srgb, var(--text-muted) 60%, transparent 40%);
+	padding-bottom: 1px;
+}
+
+.tlb-slide-full__editable-input:hover {
+	outline: 1px dashed color-mix(in srgb, var(--text-muted) 55%, transparent 45%);
+	outline-offset: 2px;
+}
+
+.tlb-slide-full__editable-input:focus-visible {
+	outline: 1px dashed color-mix(in srgb, var(--text-accent) 65%, transparent 35%);
+	outline-offset: 2px;
 }
 
 .tlb-slide-full__actions {

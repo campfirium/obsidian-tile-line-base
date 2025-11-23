@@ -85,8 +85,6 @@
       "backgroundColorLabel": "Background",
       "resetColorLabel": "Default",
       "layoutTitle": "Layout",
-      "titleStyleLabel": "Title layout",
-      "bodyStyleLabel": "Body layout",
       "titleLayoutLabel": "Title layout",
       "bodyLayoutLabel": "Body layout",
       "widthPctLabel": "Width (%)",
@@ -107,7 +105,7 @@
       "backToFormLabel": "Back to form",
       "yamlViewLabel": "Slide template YAML",
       "yamlViewDesc": "Copy or paste YAML to migrate or reuse this slide template.",
-      "saveLabel": "Save template",
+      "saveLabel": "Save",
       "cancelLabel": "Cancel"
     }
   },

@@ -376,6 +376,7 @@ export class SlideViewController {
 
 	private renderEditForm(container: HTMLElement, row: RowData, titleLayout: ComputedLayout, bodyLayout: ComputedLayout): void {
 		this.editingTemplate = { title: [], body: [] };
+		const editingTemplate = this.editingTemplate;
 		const titleLine = container.createDiv({
 			cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
 		});
@@ -383,23 +384,26 @@ export class SlideViewController {
 		titleLine.style.fontSize = `${titleLayout.fontSize}rem`;
 		titleLine.style.fontWeight = String(titleLayout.fontWeight);
 		this.applyLayoutStyles(titleLine, titleLayout, container);
-		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, this.editingTemplate.title);
+		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, editingTemplate.title);
 
-		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__editable-body' });
+		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
+		const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' });
+		bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
+		bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
+		bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
+		bodyBlock.style.textAlign = bodyLayout.align;
 		const bodyLines = this.config.template.bodyTemplate.split(/\r?\n/);
 		if (bodyLines.length === 0) {
-			bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
-		} else {
-			for (const line of bodyLines) {
-				const lineEl = bodyContainer.createDiv({ cls: 'tlb-slide-full__editable-line tlb-slide-full__block' });
-				lineEl.style.lineHeight = `${bodyLayout.lineHeight}`;
-				lineEl.style.fontSize = `${bodyLayout.fontSize}rem`;
-				lineEl.style.fontWeight = String(bodyLayout.fontWeight);
-				const segments: TemplateSegment[] = [];
-				this.renderTemplateSegments(lineEl, line, row, segments);
-				this.editingTemplate.body.push(segments);
-			}
+			bodyLines.push('');
 		}
+		bodyLines.forEach((line, index) => {
+			const segments: TemplateSegment[] = [];
+			this.renderTemplateSegments(bodyBlock, line, row, segments);
+			editingTemplate.body.push(segments);
+			if (index < bodyLines.length - 1) {
+				bodyBlock.createEl('br');
+			}
+		});
 		this.applyLayoutStyles(bodyContainer, bodyLayout, container);
 
 		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });

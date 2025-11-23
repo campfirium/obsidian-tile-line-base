@@ -2757,34 +2757,41 @@
 .tlb-slide-full__editable-body {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-}
-
-.tlb-slide-full__editable-line {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 6px;
+	gap: 0;
+	align-items: stretch;
 }
 
 .tlb-slide-full__editable-input {
-	min-width: 40px;
+	min-width: 0;
 	max-width: 100%;
-	font-size: inherit;
+	font: inherit;
 	font-weight: inherit;
 	line-height: inherit;
-	padding: 2px 4px;
-	border-radius: 4px;
-	border: 1px dashed color-mix(in srgb, var(--text-muted) 70%, transparent 30%);
+	padding: 0;
+	border-radius: 0;
+	border: none;
 	background: transparent;
 	box-shadow: none;
 	color: var(--tlb-slide-text-color, var(--text-normal));
-	display: inline-block;
+	display: inline;
 	appearance: none;
+	white-space: pre-wrap;
+	outline: none;
 }
 
 .tlb-slide-full__editable-input--field {
-	border-style: dashed;
+	border-bottom: 1px dashed color-mix(in srgb, var(--text-muted) 60%, transparent 40%);
+	padding-bottom: 1px;
+}
+
+.tlb-slide-full__editable-input:hover {
+	outline: 1px dashed color-mix(in srgb, var(--text-muted) 55%, transparent 45%);
+	outline-offset: 2px;
+}
+
+.tlb-slide-full__editable-input:focus-visible {
+	outline: 1px dashed color-mix(in srgb, var(--text-accent) 65%, transparent 35%);
+	outline-offset: 2px;
 }
 
 .tlb-slide-full__actions {

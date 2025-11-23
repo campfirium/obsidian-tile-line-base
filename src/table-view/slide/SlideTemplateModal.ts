@@ -151,11 +151,11 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private ensureBodyInputExists(): void {
+	private ensureBodyInputExists(parent?: HTMLElement): void {
 		if (this.bodyInputEl && this.contentEl.contains(this.bodyInputEl)) {
 			return;
 		}
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+		const block = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__block' });
 		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
 		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
 		const textarea = block.createEl('textarea', {
@@ -216,11 +216,13 @@ export class SlideTemplateModal extends Modal {
 		row.createDiv({ cls: 'tlb-slide-template__layout-label', text: label });
 		const inputs = row.createDiv({ cls: 'tlb-slide-template__layout-fields' });
 
-		const numberInput = (placeholder: string, current: number, min: number, max: number, assign: (val: number) => void) => {
-			const input = inputs.createEl('input', {
+		const numberInput = (labelText: string, current: number, min: number, max: number, assign: (val: number) => void) => {
+			const field = inputs.createDiv({ cls: 'tlb-slide-template__layout-field' });
+			field.createDiv({ cls: 'tlb-slide-template__layout-sublabel', text: labelText });
+			const input = field.createEl('input', {
 				type: 'number',
 				value: String(current),
-				attr: { min: String(min), max: String(max), step: '1', placeholder },
+				attr: { min: String(min), max: String(max), step: '1' },
 				cls: 'tlb-slide-template__layout-number'
 			});
 			input.addEventListener('input', () => {
@@ -234,7 +236,10 @@ export class SlideTemplateModal extends Modal {
 
 		numberInput(t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, (v) => (value.widthPct = clampPct(v)));
 		numberInput(t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, (v) => (value.topPct = clampPct(v)));
-		const align = inputs.createEl('select', { cls: 'tlb-slide-template__layout-select' });
+
+		const alignField = inputs.createDiv({ cls: 'tlb-slide-template__layout-field' });
+		alignField.createDiv({ cls: 'tlb-slide-template__layout-sublabel', text: t('slideView.templateModal.alignLabel') });
+		const align = alignField.createEl('select', { cls: 'tlb-slide-template__layout-select' });
 		[
 			['left', t('slideView.templateModal.alignLeft')],
 			['center', t('slideView.templateModal.alignCenter')],

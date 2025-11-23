@@ -92,6 +92,7 @@
       "alignLeft": "Left",
       "alignCenter": "Center",
       "alignRight": "Right",
+      "alignLabel": "Align",
       "lineHeightLabel": "Line height",
       "fontSizeLabel": "Font size (rem)",
       "fontWeightLabel": "Font weight",

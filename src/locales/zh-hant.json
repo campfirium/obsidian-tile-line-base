@@ -92,6 +92,7 @@
       "alignLeft": "靠左",
       "alignCenter": "置中",
       "alignRight": "靠右",
+      "alignLabel": "對齊",
       "lineHeightLabel": "行高",
       "fontSizeLabel": "字級（rem）",
       "fontWeightLabel": "字重",

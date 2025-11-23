@@ -2993,6 +2993,17 @@
 	align-items: center;
 }
 
+.tlb-slide-template__layout-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.tlb-slide-template__layout-sublabel {
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
 .tlb-slide-template__layout-number,
 .tlb-slide-template__layout-select {
 	width: 100%;

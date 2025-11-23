@@ -1,0 +1,73 @@
+import type { TableView } from '../../TableView';
+import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig } from '../../types/slide';
+import { renderSlideView } from './renderSlideView';
+import { SlideTemplateModal } from './SlideTemplateModal';
+
+export function renderSlideMode(view: TableView, container: HTMLElement): void {
+	container.classList.add('tlb-slide-mode');
+	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
+	const slideRows = view.dataStore.extractRowData();
+	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
+	const effectiveConfig = applyDefaultTemplates(baseConfig, view.schema?.columnNames ?? []);
+	view.slideConfig = effectiveConfig;
+
+	view.slideController = renderSlideView({
+		container: slideContainer,
+		rows: slideRows,
+		fields: view.schema?.columnNames ?? [],
+		config: effectiveConfig,
+		onSaveRow: async (row, values) => {
+			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
+			if (rowIndex == null) return;
+			for (const [field, value] of Object.entries(values)) {
+				view.dataStore.updateCell(rowIndex, field, value);
+			}
+			view.markUserMutation('slide-inline-edit');
+			view.persistenceService.scheduleSave();
+			return view.dataStore.extractRowData();
+		},
+		onEditTemplate: () => {
+			const freshConfig = applyDefaultTemplates(
+				normalizeSlideViewConfig(view.slideConfig),
+				view.schema?.columnNames ?? []
+			);
+			view.slideConfig = freshConfig;
+			const modal = new SlideTemplateModal({
+				app: view.app,
+				fields: view.schema?.columnNames ?? [],
+				initial: freshConfig.template,
+				onSave: (nextTemplate) => {
+					const nextConfig = { ...freshConfig, template: nextTemplate };
+					view.slideConfig = nextConfig;
+					view.slideController?.controller.updateConfig(view.slideConfig);
+					view.markUserMutation('slide-template');
+					view.persistenceService.scheduleSave();
+				}
+			});
+			modal.open();
+		}
+	});
+}
+
+function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfig>, fields: string[]): typeof config {
+	const available = fields.filter((field) => field && field !== '#' && field !== '__tlb_row_id');
+	const defaultTitle = available[0] ? `{${available[0]}}` : '';
+	const defaultBody = available.slice(1).map((field) => `{${field}}`).join('\n');
+	const titleTemplate = config.template.titleTemplate && config.template.titleTemplate.trim().length > 0
+		? config.template.titleTemplate
+		: defaultTitle;
+	const bodyTemplate = config.template.bodyTemplate && config.template.bodyTemplate.trim().length > 0
+		? config.template.bodyTemplate
+		: defaultBody;
+	return {
+		...config,
+		template: {
+			titleTemplate,
+			bodyTemplate,
+			textColor: config.template.textColor ?? '',
+			backgroundColor: config.template.backgroundColor ?? '',
+			titleLayout: config.template.titleLayout ?? getDefaultTitleLayout(),
+			bodyLayout: config.template.bodyLayout ?? getDefaultBodyLayout()
+		}
+	};
+}

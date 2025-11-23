@@ -10,7 +10,7 @@ export interface ViewOpenContext {
 	leaf?: WorkspaceLeaf | null;
 	preferredWindow?: Window | null;
 	workspace?: Workspace | null;
-	mode?: 'table' | 'kanban';
+	mode?: 'table' | 'kanban' | 'slide';
 }
 
 export class ViewSwitchCoordinator {
@@ -111,7 +111,7 @@ export class ViewSwitchCoordinator {
 		const preferredWindow = options?.preferredWindow ?? this.windowContextManager.getLeafWindow(requestedLeaf);
 		const workspace = options?.workspace ?? this.windowContextManager.getWorkspaceForLeaf(requestedLeaf) ?? this.app.workspace;
 		const requestedMode = options?.mode;
-		const preferenceToSet: 'markdown' | 'table' | 'kanban' = requestedMode ?? 'table';
+		const preferenceToSet: 'markdown' | 'table' | 'kanban' | 'slide' = requestedMode ?? 'table';
 
 		if (requestedLeaf?.view instanceof TableView && requestedLeaf.view.file?.path === file.path) {
 			logger.debug('openTableView reuse requested table leaf', this.describeLeaf(requestedLeaf));
@@ -202,7 +202,7 @@ export class ViewSwitchCoordinator {
 		logger.debug('openTableView finish');
 	}
 
-	private async applyViewMode(leaf: WorkspaceLeaf | null, mode?: 'table' | 'kanban'): Promise<void> {
+	private async applyViewMode(leaf: WorkspaceLeaf | null, mode?: 'table' | 'kanban' | 'slide'): Promise<void> {
 		if (!leaf || !mode) {
 			return;
 		}

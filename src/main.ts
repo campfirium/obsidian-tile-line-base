@@ -18,7 +18,7 @@ import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './servi
 import { BackupManager } from './services/BackupManager';
 import { WindowContextManager } from './plugin/WindowContextManager';
 import type { WindowContext } from './plugin/WindowContextManager';
-import { registerKanbanViewCommand } from './plugin/commands/registerKanbanViewCommand';
+import { registerViewCommands } from './plugin/registerViewCommands';
 import { ViewSwitchCoordinator } from './plugin/ViewSwitchCoordinator';
 import type { LogLevelName } from './utils/logger';
 import { TileLineBaseSettingTab } from './settings/TileLineBaseSettingTab';
@@ -196,21 +196,21 @@ export default class TileLineBasePlugin extends Plugin {
 				return true;
 			}
 		});
-		registerKanbanViewCommand({
+		registerViewCommands({
 			addCommand: (config) => { this.addCommand(config); },
 			getActiveTableView: () => this.getActiveTableView(),
 			getActiveContext: () => ({
 				leaf: this.getMostRecentLeaf(),
 				activeFile: this.app.workspace.getActiveFile()
 			}),
-			openKanbanView: (file, leaf) => {
+			openWithMode: (mode, file, leaf) => {
 				const preferredWindow = this.windowContextManager.getLeafWindow(leaf ?? null);
 				const workspace = this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace;
 				return this.viewCoordinator.openTableView(file, {
 					leaf: leaf ?? undefined,
 					preferredWindow,
 					workspace,
-					mode: 'kanban'
+					mode
 				});
 			}
 		});

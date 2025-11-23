@@ -58,6 +58,7 @@ export function initializeTableView(view: TableView): void {
 			multiRow: view.kanbanMultiRowEnabled
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
+		getSlideConfig: () => view.slideConfig ?? null,
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
 		shouldAllowSave: () => view.hasUserMutations()
 	});

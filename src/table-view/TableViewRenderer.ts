@@ -12,10 +12,11 @@ import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
+import { renderSlideMode } from './slide/renderSlideMode';
+import { normalizeSlideViewConfig } from '../types/slide';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 
 const logger = getLogger('table-view:renderer');
-
 export async function renderTableView(view: TableView): Promise<void> {
 	const rootEl = view.containerEl;
 	rootEl.classList.add('tile-line-base-view');
@@ -26,6 +27,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	container.classList.add('tlb-table-view-content');
 	container.classList.remove('tlb-has-grid');
 	container.classList.remove('tlb-kanban-mode');
+	container.classList.remove('tlb-slide-mode');
 
 	if (view.gridAdapter) {
 		view.gridController.destroy();
@@ -35,6 +37,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (view.kanbanController) {
 		view.kanbanController.destroy();
 		view.kanbanController = null;
+	}
+	if (view.slideController) {
+		view.slideController.destroy();
+		view.slideController = null;
 	}
 
 	const ownerDoc = container.ownerDocument;
@@ -82,9 +88,14 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 	}
 
+	if (!view.slidePreferencesLoaded) {
+		view.slideConfig = normalizeSlideViewConfig(configBlock?.slide ?? view.slideConfig ?? null);
+		view.slidePreferencesLoaded = true;
+	}
+
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table') view.activeViewMode = preference;
+		if (preference === 'kanban' || preference === 'table' || preference === 'slide') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
 		view.kanbanMultiRowEnabled = kanbanConfig?.multiRow !== false;
@@ -103,10 +114,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.kanbanPreferencesLoaded = true;
 	}
 
-	view.filterViewState = view.filterStateStore.getState();
-	syncTagGroupState(view);
+view.filterViewState = view.filterStateStore.getState();
+syncTagGroupState(view);
 
-	const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
+const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	const persistedColumnConfigs = configBlock?.columnConfigs
 		? deserializeColumnConfigs(view, configBlock.columnConfigs)
 		: null;
@@ -164,6 +175,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (view.kanbanToolbar) {
 		view.kanbanToolbar.destroy();
 		view.kanbanToolbar = null;
+	}
+	if (view.activeViewMode === 'slide') {
+		renderSlideMode(view, container);
+		return;
 	}
 	if (view.activeViewMode === 'kanban') {
 		renderKanbanToolbar(view, container);

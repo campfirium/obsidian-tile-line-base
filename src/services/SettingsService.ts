@@ -8,6 +8,7 @@ import type {
 } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import { type KanbanBoardState, type KanbanViewPreferenceConfig } from '../types/kanban';
+import type { SlideViewConfig } from '../types/slide';
 import type { LocaleCode } from '../i18n';
 import { normalizeLocaleCode } from '../i18n';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
@@ -17,9 +18,11 @@ import {
 	getColumnConfigs,
 	getCopyTemplate,
 	getKanbanPreferences,
+	getSlidePreferences,
 	saveColumnConfigs,
 	saveCopyTemplate,
-	saveKanbanPreferences
+	saveKanbanPreferences,
+	saveSlidePreferences
 } from './fileConfigStore';
 import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelpers';
 
@@ -36,7 +39,7 @@ export interface OnboardingState {
 }
 
 export interface TileLineBaseSettings {
-	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban'>;
+	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban' | 'slide'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
@@ -44,6 +47,7 @@ export interface TileLineBaseSettings {
 	columnConfigs: Record<string, string[]>;
 	copyTemplates: Record<string, string>;
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
+	slidePreferences: Record<string, SlideViewConfig>;
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
 	backups: BackupSettings;
@@ -61,6 +65,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	columnConfigs: {},
 	copyTemplates: {},
 	kanbanPreferences: {},
+	slidePreferences: {},
 	hideRightSidebar: false,
 	logging: {
 		globalLevel: 'warn',
@@ -97,6 +102,7 @@ export class SettingsService {
 		merged.columnConfigs = { ...DEFAULT_SETTINGS.columnConfigs, ...(merged.columnConfigs ?? {}) };
 		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
 		merged.kanbanPreferences = { ...DEFAULT_SETTINGS.kanbanPreferences, ...(merged.kanbanPreferences ?? {}) };
+		merged.slidePreferences = { ...DEFAULT_SETTINGS.slidePreferences, ...(merged.slidePreferences ?? {}) };
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -182,15 +188,18 @@ export class SettingsService {
 
 	shouldAutoOpen(filePath: string): boolean {
 		const pref = this.settings.fileViewPrefs[filePath];
-		return pref === 'table' || pref === 'kanban';
+		return pref === 'table' || pref === 'kanban' || pref === 'slide';
 	}
 
-	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | null {
+	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | 'slide' | null {
 		const pref = this.settings.fileViewPrefs[filePath];
 		return typeof pref === 'string' ? pref : null;
 	}
 
-	async setFileViewPreference(filePath: string, view: 'markdown' | 'table' | 'kanban'): Promise<boolean> {
+	async setFileViewPreference(
+		filePath: string,
+		view: 'markdown' | 'table' | 'kanban' | 'slide'
+	): Promise<boolean> {
 		const current = this.settings.fileViewPrefs[filePath];
 		if (current === view) {
 			return false;
@@ -300,6 +309,17 @@ export class SettingsService {
 		this.settings.kanbanBoards[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
+	}
+
+	getSlidePreferencesForFile(filePath: string): SlideViewConfig | null {
+		return getSlidePreferences(this.settings, filePath);
+	}
+
+	async saveSlidePreferencesForFile(
+		filePath: string,
+		preferences: SlideViewConfig | null | undefined
+	): Promise<SlideViewConfig | null> {
+		return saveSlidePreferences(this.settings, filePath, preferences, () => this.persist());
 	}
 
 	private cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {

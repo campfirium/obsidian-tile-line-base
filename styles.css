@@ -2756,13 +2756,29 @@
 }
 
 .tlb-slide-full__editable-input {
-	min-width: 120px;
+	min-width: 40px;
 	max-width: 100%;
-	padding: 8px 10px;
-	border-radius: 8px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
-	color: var(--text-normal);
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	padding: 2px 4px;
+	border-radius: 6px;
+	border: 1px dashed var(--text-muted);
+	background: transparent;
+	color: var(--tlb-slide-text-color, var(--text-normal));
+}
+
+.tlb-slide-full__editable-input--field {
+	border-color: var(--text-muted);
+}
+
+.tlb-slide-full__editable-text {
+	border: 1px dashed transparent;
+}
+
+.tlb-slide-full__editable-input:focus-visible {
+	outline: 1px dashed var(--text-normal);
+	outline-offset: 1px;
 }
 
 .tlb-slide-full__actions {

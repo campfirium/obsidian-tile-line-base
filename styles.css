@@ -2824,6 +2824,22 @@
 	gap: 12px;
 }
 
+.tlb-slide-template__grid {
+	display: grid;
+	grid-template-columns: 1.2fr 0.9fr;
+	gap: 16px;
+}
+
+.tlb-slide-template__col {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.tlb-slide-template__col--layout {
+	padding-left: 4px;
+}
+
 .tlb-slide-template__header {
 	display: flex;
 	align-items: center;
@@ -2961,9 +2977,9 @@
 
 .tlb-slide-template__layout-row {
 	display: grid;
-	grid-template-columns: 140px 1fr;
-	gap: 6px 10px;
-	align-items: center;
+	grid-template-columns: 1fr;
+	gap: 6px;
+	align-items: flex-start;
 }
 
 .tlb-slide-template__layout-label {
@@ -2972,8 +2988,8 @@
 
 .tlb-slide-template__layout-fields {
 	display: grid;
-	grid-template-columns: repeat(6, minmax(80px, 1fr));
-	gap: 6px;
+	grid-template-columns: repeat(3, minmax(90px, 1fr));
+	gap: 8px;
 	align-items: center;
 }
 
@@ -2981,6 +2997,15 @@
 .tlb-slide-template__layout-select {
 	width: 100%;
 	box-sizing: border-box;
+}
+
+@media (max-width: 1080px) {
+	.tlb-slide-template__grid {
+		grid-template-columns: 1fr;
+	}
+	.tlb-slide-template__col--layout {
+		padding-left: 0;
+	}
 }
 
 .tlb-slide-template__footer {

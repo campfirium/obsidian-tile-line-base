@@ -46,12 +46,17 @@ export class SlideTemplateModal extends Modal {
 		this.contentEl.addClass('tlb-slide-template');
 		this.titleEl.setText(t('slideView.templateModal.title'));
 		this.resolveThemeDefaults();
-		this.renderInsertRow();
-		this.renderTitleInput();
-		this.renderBodyInput();
+		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
+		const leftCol = grid.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--content' });
+		const rightCol = grid.createDiv({ cls: 'tlb-slide-template__col tlb-slide-template__col--layout' });
+
+		this.renderInsertRow(leftCol);
+		this.renderTitleInput(leftCol);
+		this.renderBodyInput(leftCol);
 		this.ensureBodyInputExists();
-		this.renderLayoutInputs();
-		this.renderColorInputs();
+
+		this.renderLayoutInputs(rightCol);
+		this.renderColorInputs(rightCol);
 		this.renderActions();
 	}
 
@@ -63,8 +68,9 @@ export class SlideTemplateModal extends Modal {
 		this.lastFocusedInput = null;
 	}
 
-	private renderInsertRow(): void {
-		const header = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
+	private renderInsertRow(parent?: HTMLElement): void {
+		const container = parent ?? this.contentEl;
+		const header = container.createDiv({ cls: 'tlb-slide-template__header' });
 		const insertButton = header.createEl('button', {
 			cls: 'tlb-slide-template__insert',
 			text: t('slideView.templateModal.insertField'),
@@ -104,8 +110,8 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderTitleInput(): void {
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+	private renderTitleInput(parent?: HTMLElement): void {
+		const block = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__block' });
 		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.titleFieldLabel') });
 		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.titleFieldDesc') });
 		const input = block.createEl('textarea', {
@@ -125,8 +131,8 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderBodyInput(): void {
-		const block = this.contentEl.createDiv({ cls: 'tlb-slide-template__block' });
+	private renderBodyInput(parent?: HTMLElement): void {
+		const block = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__block' });
 		block.createEl('div', { cls: 'tlb-slide-template__label', text: t('slideView.templateModal.bodyFieldsLabel') });
 		block.createEl('div', { cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.bodyFieldsDesc') });
 		const textarea = block.createEl('textarea', {
@@ -168,8 +174,8 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderColorInputs(): void {
-		const group = this.contentEl.createDiv({ cls: 'tlb-slide-template__color-group' });
+	private renderColorInputs(parent?: HTMLElement): void {
+		const group = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__color-group' });
 		this.renderColorInput(group, {
 			label: t('slideView.templateModal.textColorLabel'),
 			value: this.textColor,
@@ -188,8 +194,8 @@ export class SlideTemplateModal extends Modal {
 		});
 	}
 
-	private renderLayoutInputs(): void {
-		const layoutGroup = this.contentEl.createDiv({ cls: 'tlb-slide-template__layout-group' });
+	private renderLayoutInputs(parent?: HTMLElement): void {
+		const layoutGroup = (parent ?? this.contentEl).createDiv({ cls: 'tlb-slide-template__layout-group' });
 		layoutGroup.createEl('h4', { cls: 'tlb-slide-template__layout-title', text: t('slideView.templateModal.layoutTitle') });
 		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.titleLayoutLabel'), this.titleLayout, (next) => {
 			this.titleLayout = next;

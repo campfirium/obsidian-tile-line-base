@@ -1,7 +1,13 @@
 import type { App } from 'obsidian';
-import { Menu, Modal } from 'obsidian';
+import { Menu, Modal, parseYaml, stringifyYaml } from 'obsidian';
 import { t } from '../../i18n';
-import { getDefaultBodyLayout, getDefaultTitleLayout, type SlideLayoutConfig, type SlideTemplateConfig } from '../../types/slide';
+import {
+	getDefaultBodyLayout,
+	getDefaultTitleLayout,
+	sanitizeSlideTemplateConfig,
+	type SlideLayoutConfig,
+	type SlideTemplateConfig
+} from '../../types/slide';
 
 interface SlideTemplateModalOptions {
 	app: App;
@@ -28,6 +34,8 @@ export class SlideTemplateModal extends Modal {
 	private bodyInputEl: HTMLTextAreaElement | null = null;
 	private insertButtonEl: HTMLButtonElement | null = null;
 	private lastFocusedInput: HTMLTextAreaElement | null = null;
+	private isYamlMode = false;
+	private yamlInputEl: HTMLTextAreaElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
@@ -43,10 +51,28 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.renderModalContent();
+	}
+
+	private renderModalContent(): void {
 		this.contentEl.empty();
+		this.titleInputEl = null;
+		this.bodyInputEl = null;
+		this.insertButtonEl = null;
+		this.lastFocusedInput = null;
+		this.yamlInputEl = null;
 		this.contentEl.addClass('tlb-slide-template');
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.titleEl.setText(t('slideView.templateModal.title'));
+
+		const header = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
+		this.renderModeToggle(header);
+
+		if (this.isYamlMode) {
+			this.renderYamlView();
+			return;
+		}
+
 		this.resolveThemeDefaults();
 		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
 
@@ -74,6 +100,8 @@ export class SlideTemplateModal extends Modal {
 		this.bodyInputEl = null;
 		this.insertButtonEl = null;
 		this.lastFocusedInput = null;
+		this.isYamlMode = false;
+		this.yamlInputEl = null;
 	}
 
 	private createRow(parent: HTMLElement): { row: HTMLElement; left: HTMLElement; right: HTMLElement } {
@@ -81,6 +109,25 @@ export class SlideTemplateModal extends Modal {
 		const left = row.createDiv({ cls: 'tlb-slide-template__cell' });
 		const right = row.createDiv({ cls: 'tlb-slide-template__cell' });
 		return { row, left, right };
+	}
+
+	private renderModeToggle(container: HTMLElement): void {
+		const label = this.isYamlMode
+			? t('slideView.templateModal.backToFormLabel')
+			: t('slideView.templateModal.showYamlLabel');
+		const toggleButton = container.createEl('button', {
+			cls: 'tlb-slide-template__mode-toggle',
+			text: label,
+			attr: { type: 'button' }
+		});
+		toggleButton.addEventListener('click', (event) => {
+			event.preventDefault();
+			if (this.isYamlMode) {
+				this.applyYamlInput();
+			}
+			this.isYamlMode = !this.isYamlMode;
+			this.renderModalContent();
+		});
 	}
 
 	private renderInsertButton(container: HTMLElement): void {
@@ -350,7 +397,7 @@ export class SlideTemplateModal extends Modal {
 			return;
 		}
 		this.insertButtonEl.disabled = false;
-      	}
+	}
 
 	private resolveInsertionTarget(): HTMLTextAreaElement | null {
 		const active = this.resolveActiveInput();
@@ -393,5 +440,55 @@ export class SlideTemplateModal extends Modal {
 		const bgDefault = styles?.getPropertyValue('--background-primary')?.trim();
 		this.defaultTextColor = textDefault || '#dddddd';
 		this.defaultBackgroundColor = bgDefault || '#000000';
+	}
+
+	private renderYamlView(): void {
+		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--yaml' });
+		const row = grid.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--full' });
+		const cell = row.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
+		const wrapper = cell.createDiv({ cls: 'tlb-slide-template__yaml' });
+		wrapper.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.yamlViewLabel') });
+		wrapper.createDiv({ cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.yamlViewDesc') });
+		const textarea = wrapper.createEl('textarea', {
+			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--yaml',
+			attr: { rows: '16', spellcheck: 'false' }
+		}) as HTMLTextAreaElement;
+		textarea.value = this.buildTemplateYaml();
+		this.yamlInputEl = textarea;
+		textarea.addEventListener('focus', () => textarea.select());
+	}
+
+	private buildTemplateYaml(): string {
+		const template: SlideTemplateConfig = {
+			titleTemplate: this.titleTemplate ?? '',
+			bodyTemplate: this.bodyTemplate ?? '',
+			textColor: this.textColor ?? '',
+			backgroundColor: this.backgroundColor ?? '',
+			titleLayout: { ...this.titleLayout },
+			bodyLayout: { ...this.bodyLayout }
+		};
+		return stringifyYaml(template).trimEnd();
+	}
+
+	private applyYamlInput(): void {
+		if (!this.yamlInputEl) {
+			return;
+		}
+		const raw = this.yamlInputEl.value;
+		try {
+			const parsed = parseYaml(raw) as unknown;
+			if (!parsed || typeof parsed !== 'object') {
+				return;
+			}
+			const sanitized = sanitizeSlideTemplateConfig(parsed);
+			this.titleTemplate = sanitized.titleTemplate ?? '';
+			this.bodyTemplate = sanitized.bodyTemplate ?? '';
+			this.textColor = sanitized.textColor ?? '';
+			this.backgroundColor = sanitized.backgroundColor ?? '';
+			this.titleLayout = sanitized.titleLayout ? { ...sanitized.titleLayout } : getDefaultTitleLayout();
+			this.bodyLayout = sanitized.bodyLayout ? { ...sanitized.bodyLayout } : getDefaultBodyLayout();
+		} catch (error) {
+			console.warn('[SlideTemplateModal] Failed to parse YAML template', error);
+		}
 	}
 }

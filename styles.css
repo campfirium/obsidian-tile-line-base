@@ -2860,7 +2860,8 @@
 	gap: 8px;
 }
 
-.tlb-slide-template__insert {
+.tlb-slide-template__insert,
+.tlb-slide-template__mode-toggle {
 	margin-left: auto;
 	padding: 0.35rem 0.75rem;
 	border-radius: 6px;
@@ -2870,12 +2871,16 @@
 	cursor: pointer;
 }
 
-.tlb-slide-template__insert:not(:disabled):hover {
+.tlb-slide-template__insert:not(:disabled):hover,
+.tlb-slide-template__insert:not(:disabled):focus-visible,
+.tlb-slide-template__mode-toggle:not(:disabled):hover,
+.tlb-slide-template__mode-toggle:not(:disabled):focus-visible {
 	background-color: var(--background-modifier-form-field-highlighted);
 	color: var(--text-normal);
 }
 
-.tlb-slide-template__insert:disabled {
+.tlb-slide-template__insert:disabled,
+.tlb-slide-template__mode-toggle:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
 }
@@ -2933,6 +2938,18 @@
 
 .tlb-slide-template__textarea--body {
 	min-height: 120px;
+}
+
+.tlb-slide-template__textarea--yaml {
+	min-height: 280px;
+	font-family: var(--font-monospace);
+	white-space: pre;
+}
+
+.tlb-slide-template__yaml {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
 
 .tlb-slide-template__sublabel {

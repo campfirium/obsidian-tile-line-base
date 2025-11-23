@@ -1,5 +1,5 @@
 import type { TableView } from '../../TableView';
-import { normalizeSlideViewConfig } from '../../types/slide';
+import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig } from '../../types/slide';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
 
@@ -65,7 +65,9 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 			titleTemplate,
 			bodyTemplate,
 			textColor: config.template.textColor ?? '',
-			backgroundColor: config.template.backgroundColor ?? ''
+			backgroundColor: config.template.backgroundColor ?? '',
+			titleLayout: config.template.titleLayout ?? getDefaultTitleLayout(),
+			bodyLayout: config.template.bodyLayout ?? getDefaultBodyLayout()
 		}
 	};
 }

@@ -2,6 +2,7 @@ import { setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
+import { getDefaultBodyLayout, getDefaultTitleLayout } from '../../types/slide';
 
 interface SlideControllerOptions {
 	container: HTMLElement;
@@ -15,6 +16,16 @@ interface SlideControllerOptions {
 type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field: string; value: string };
 
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
+
+interface ComputedLayout {
+	widthPct: number;
+	topPct: number;
+	align: 'left' | 'center' | 'right';
+	lineHeight: number;
+	fontSize: number;
+	fontWeight: number;
+	maxLines?: number;
+}
 
 export class SlideViewController {
 	private readonly root: HTMLElement;
@@ -210,17 +221,31 @@ export class SlideViewController {
 		} else {
 			slide.style.removeProperty('--tlb-slide-text-color');
 		}
+		const titleLayout = this.getComputedLayout(this.config.template.titleLayout, 'title');
+		const bodyLayout = this.getComputedLayout(this.config.template.bodyLayout, 'body');
 		if (this.editingIndex === this.activeIndex) {
-			this.renderEditForm(slide, row);
+			this.renderEditForm(slide, row, titleLayout, bodyLayout);
 		} else {
-			slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
-			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
+			const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
+		this.applyLayoutStyles(titleEl, titleLayout);
+		titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
+		titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
+		titleEl.style.fontWeight = String(titleLayout.fontWeight);
+		const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
+		this.applyLayoutStyles(content, bodyLayout);
 			if (contents.length === 0) {
 				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
 			} else {
-				for (const value of contents) {
-					content.createDiv({ cls: 'tlb-slide-full__block', text: value });
+				const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
+				bodyBlock.textContent = contents.join('\n');
+				if (bodyLayout.maxLines && bodyLayout.maxLines > 0) {
+					bodyBlock.style.setProperty('--tlb-slide-max-lines', String(bodyLayout.maxLines));
+					bodyBlock.addClass('tlb-slide-full__block--clamped');
 				}
+				bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
+				bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
+				bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
+				bodyBlock.style.textAlign = bodyLayout.align;
 			}
 		}
 	}
@@ -254,6 +279,35 @@ export class SlideViewController {
 		const body = renderTemplate(template.bodyTemplate);
 		const contents = body ? body.split('\n').filter((line) => line.trim().length > 0) : [];
 		return { title, contents };
+	}
+
+	private getComputedLayout(layout: unknown, kind: 'title' | 'body'): ComputedLayout {
+		const defaults = kind === 'title' ? getDefaultTitleLayout() : getDefaultBodyLayout();
+		const source = layout && typeof layout === 'object' ? (layout as any) : {};
+		const widthPct = Math.min(100, Math.max(0, Number(source.widthPct ?? defaults.widthPct)));
+		const topPct = Math.min(100, Math.max(0, Number(source.topPct ?? defaults.topPct)));
+		const align: ComputedLayout['align'] =
+			source.align === 'left' || source.align === 'right' || source.align === 'center'
+				? source.align
+				: defaults.align;
+		const lineHeight = Number.isFinite(source.lineHeight) ? Number(source.lineHeight) : defaults.lineHeight;
+		const fontSize = Number.isFinite(source.fontSize) ? Number(source.fontSize) : defaults.fontSize;
+		const fontWeight = Number.isFinite(source.fontWeight) ? Number(source.fontWeight) : defaults.fontWeight;
+		const maxLines =
+			kind === 'body' && source.maxLines !== undefined && source.maxLines !== null
+				? Math.max(0, Math.floor(Number(source.maxLines)))
+				: kind === 'body'
+					? defaults.maxLines
+					: undefined;
+		return { widthPct, topPct, align, lineHeight, fontSize, fontWeight, maxLines };
+	}
+
+	private applyLayoutStyles(el: HTMLElement, layout: ComputedLayout): void {
+		el.classList.add('tlb-slide-layout');
+		el.classList.remove('tlb-align-left', 'tlb-align-center', 'tlb-align-right');
+		el.classList.add(`tlb-align-${layout.align}`);
+		el.style.setProperty('--tlb-layout-width', `${layout.widthPct}%`);
+		el.style.setProperty('--tlb-layout-top', `${layout.topPct}%`);
 	}
 
 	private async enterFullscreen(): Promise<void> {
@@ -305,20 +359,28 @@ export class SlideViewController {
 		this.renderActive();
 	}
 
-	private renderEditForm(container: HTMLElement, row: RowData): void {
+	private renderEditForm(container: HTMLElement, row: RowData, titleLayout: ComputedLayout, bodyLayout: ComputedLayout): void {
 		this.editingTemplate = { title: [], body: [] };
 		const titleLine = container.createDiv({
 			cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
 		});
+		this.applyLayoutStyles(titleLine, titleLayout);
+		titleLine.style.lineHeight = `${titleLayout.lineHeight}`;
+		titleLine.style.fontSize = `${titleLayout.fontSize}rem`;
+		titleLine.style.fontWeight = String(titleLayout.fontWeight);
 		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, this.editingTemplate.title);
 
 		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__editable-body' });
+		this.applyLayoutStyles(bodyContainer, bodyLayout);
 		const bodyLines = this.config.template.bodyTemplate.split(/\r?\n/);
 		if (bodyLines.length === 0) {
 			bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
 		} else {
 			for (const line of bodyLines) {
 				const lineEl = bodyContainer.createDiv({ cls: 'tlb-slide-full__editable-line tlb-slide-full__block' });
+				lineEl.style.lineHeight = `${bodyLayout.lineHeight}`;
+				lineEl.style.fontSize = `${bodyLayout.fontSize}rem`;
+				lineEl.style.fontWeight = String(bodyLayout.fontWeight);
 				const segments: TemplateSegment[] = [];
 				this.renderTemplateSegments(lineEl, line, row, segments);
 				this.editingTemplate.body.push(segments);

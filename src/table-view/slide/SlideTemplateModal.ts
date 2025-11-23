@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 import { Menu, Modal } from 'obsidian';
 import { t } from '../../i18n';
-import type { SlideTemplateConfig } from '../../types/slide';
+import { getDefaultBodyLayout, getDefaultTitleLayout, type SlideLayoutConfig, type SlideTemplateConfig } from '../../types/slide';
 
 interface SlideTemplateModalOptions {
 	app: App;
@@ -11,6 +11,7 @@ interface SlideTemplateModalOptions {
 }
 
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
+const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 
 export class SlideTemplateModal extends Modal {
 	private readonly fields: string[];
@@ -19,6 +20,8 @@ export class SlideTemplateModal extends Modal {
 	private bodyTemplate: string;
 	private textColor: string;
 	private backgroundColor: string;
+	private titleLayout: SlideLayoutConfig;
+	private bodyLayout: SlideLayoutConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
 	private titleInputEl: HTMLTextAreaElement | null = null;
@@ -34,6 +37,8 @@ export class SlideTemplateModal extends Modal {
 		this.bodyTemplate = opts.initial.bodyTemplate ?? '';
 		this.textColor = opts.initial.textColor ?? '';
 		this.backgroundColor = opts.initial.backgroundColor ?? '';
+		this.titleLayout = opts.initial.titleLayout ? { ...opts.initial.titleLayout } : getDefaultTitleLayout();
+		this.bodyLayout = opts.initial.bodyLayout ? { ...opts.initial.bodyLayout } : getDefaultBodyLayout();
 	}
 
 	onOpen(): void {
@@ -45,6 +50,7 @@ export class SlideTemplateModal extends Modal {
 		this.renderTitleInput();
 		this.renderBodyInput();
 		this.ensureBodyInputExists();
+		this.renderLayoutInputs();
 		this.renderColorInputs();
 		this.renderActions();
 	}
@@ -182,6 +188,74 @@ export class SlideTemplateModal extends Modal {
 		});
 	}
 
+	private renderLayoutInputs(): void {
+		const layoutGroup = this.contentEl.createDiv({ cls: 'tlb-slide-template__layout-group' });
+		layoutGroup.createEl('h4', { cls: 'tlb-slide-template__layout-title', text: t('slideView.templateModal.layoutTitle') });
+		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.titleLayoutLabel'), this.titleLayout, (next) => {
+			this.titleLayout = next;
+		}, false);
+		this.renderLayoutRow(layoutGroup, t('slideView.templateModal.bodyLayoutLabel'), this.bodyLayout, (next) => {
+			this.bodyLayout = next;
+		}, true);
+	}
+
+	private renderLayoutRow(
+		container: HTMLElement,
+		label: string,
+		value: SlideLayoutConfig,
+		onChange: (next: SlideLayoutConfig) => void,
+		withMaxLines: boolean
+	): void {
+		const row = container.createDiv({ cls: 'tlb-slide-template__layout-row' });
+		row.createDiv({ cls: 'tlb-slide-template__layout-label', text: label });
+		const inputs = row.createDiv({ cls: 'tlb-slide-template__layout-fields' });
+
+		const numberInput = (placeholder: string, current: number, min: number, max: number, assign: (val: number) => void) => {
+			const input = inputs.createEl('input', {
+				type: 'number',
+				value: String(current),
+				attr: { min: String(min), max: String(max), step: '1', placeholder },
+				cls: 'tlb-slide-template__layout-number'
+			});
+			input.addEventListener('input', () => {
+				const next = Number(input.value);
+				if (Number.isFinite(next)) {
+					assign(next);
+					onChange({ ...value });
+				}
+			});
+		};
+
+		numberInput(t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, (v) => (value.widthPct = clampPct(v)));
+		numberInput(t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, (v) => (value.topPct = clampPct(v)));
+		const align = inputs.createEl('select', { cls: 'tlb-slide-template__layout-select' });
+		[
+			['left', t('slideView.templateModal.alignLeft')],
+			['center', t('slideView.templateModal.alignCenter')],
+			['right', t('slideView.templateModal.alignRight')]
+		].forEach(([key, text]) => {
+			const opt = align.createEl('option', { value: key, text });
+			if (value.align === key) {
+				opt.selected = true;
+			}
+		});
+		align.addEventListener('change', () => {
+			const next = align.value as SlideLayoutConfig['align'];
+			value.align = next;
+			onChange({ ...value });
+		});
+
+		numberInput(t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, (v) => (value.lineHeight = v));
+		numberInput(t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.5, 5, (v) => (value.fontSize = v));
+		numberInput(t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, (v) => (value.fontWeight = v));
+		if (withMaxLines) {
+			numberInput(t('slideView.templateModal.maxLinesLabel'), value.maxLines ?? 0, 0, 50, (v) => {
+				value.maxLines = Math.max(0, Math.floor(v));
+				onChange({ ...value });
+			});
+		}
+	}
+
 	private renderColorInput(
 		container: HTMLElement,
 		config: { label: string; value: string; defaultColor: string; onChange: (value: string) => void }
@@ -254,7 +328,9 @@ export class SlideTemplateModal extends Modal {
 				titleTemplate: this.titleTemplate,
 				bodyTemplate: this.bodyTemplate,
 				textColor: this.textColor,
-				backgroundColor: this.backgroundColor
+				backgroundColor: this.backgroundColor,
+				titleLayout: { ...this.titleLayout },
+				bodyLayout: { ...this.bodyLayout }
 			});
 			this.close();
 		});

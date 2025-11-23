@@ -12,7 +12,7 @@ import {
 	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
 
-export type ColumnFieldDisplayType = 'text' | 'date' | 'time';
+export type ColumnFieldDisplayType = 'text' | 'date' | 'time' | 'image';
 
 export interface ColumnConfig {
 	name: string;

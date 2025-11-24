@@ -1,11 +1,19 @@
-import { setIcon } from 'obsidian';
+import { App, Component, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
 import { SlideScaleManager } from './SlideScaleManager';
 import { applyLayoutStyles, computeLayout, type ComputedLayout } from './slideLayout';
+import {
+	applyLayoutWithWatcher,
+	renderMarkdownBlock,
+	resetRenderArtifacts
+} from './SlideRenderUtils';
+import { resolveSlideContent } from './SlideContentResolver';
 
 interface SlideControllerOptions {
+	app: App;
+	sourcePath: string;
 	container: HTMLElement;
 	rows: RowData[];
 	fields: string[];
@@ -19,6 +27,8 @@ type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field:
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
 export class SlideViewController {
+	private readonly app: App;
+	private readonly sourcePath: string;
 	private readonly root: HTMLElement;
 	private readonly stage: HTMLElement;
 	private readonly controls: HTMLElement;
@@ -28,6 +38,8 @@ export class SlideViewController {
 	private config: SlideViewConfig;
 	private activeIndex = 0;
 	private readonly cleanup: Array<() => void> = [];
+	private renderCleanup: Array<() => void> = [];
+	private markdownComponents: Component[] = [];
 	private readonly onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	private readonly onEditTemplate: () => void;
 	private fullscreenTarget: HTMLElement | null = null;
@@ -41,6 +53,8 @@ export class SlideViewController {
 	private editingTemplate: { title: TemplateSegment[]; body: TemplateSegment[][] } | null = null;
 
 	constructor(options: SlideControllerOptions) {
+		this.app = options.app;
+		this.sourcePath = options.sourcePath;
 		this.rows = options.rows;
 		this.fields = options.fields;
 		this.config = options.config;
@@ -76,6 +90,7 @@ export class SlideViewController {
 	}
 
 	destroy(): void {
+		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		for (const dispose of this.cleanup) {
 			try {
 				dispose();
@@ -185,6 +200,7 @@ export class SlideViewController {
 	}
 
 	private renderActive(): void {
+		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.stage.empty();
 		if (this.rows.length === 0) {
 			this.stage.createDiv({
@@ -195,7 +211,13 @@ export class SlideViewController {
 			return;
 		}
 		const row = this.rows[this.activeIndex];
-		const { title, contents } = this.resolveContent(row);
+		const { title, blocks } = resolveSlideContent({
+			row,
+			fields: this.fields,
+			template: this.config.template,
+			activeIndex: this.activeIndex,
+			reservedFields: RESERVED_FIELDS
+		});
 		const slide = this.stage.createDiv({
 			cls: 'tlb-slide-full__slide',
 			attr: { 'data-tlb-slide-index': String(this.activeIndex) }
@@ -221,61 +243,39 @@ export class SlideViewController {
 		}
 		const titleLayout = computeLayout(this.config.template.titleLayout, 'title');
 		const bodyLayout = computeLayout(this.config.template.bodyLayout, 'body');
+		const applyLayout = (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) =>
+			applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
+				applyLayoutStyles(target, layoutSpec, container));
 		if (this.editingIndex === this.activeIndex) {
-			this.renderEditForm(slide, row, titleLayout, bodyLayout);
+			this.renderEditForm(slide, row, titleLayout, bodyLayout, applyLayout);
 		} else {
 			const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
 			titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
 			titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
 			titleEl.style.fontWeight = String(titleLayout.fontWeight);
-			applyLayoutStyles(titleEl, titleLayout, slide);
+			applyLayout(titleEl, titleLayout, slide);
 			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
-			if (contents.length === 0) {
+			if (blocks.length === 0) {
 				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
 			} else {
-				const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
-				bodyBlock.textContent = contents.join('\n');
-				bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
-				bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
-				bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
-				bodyBlock.style.textAlign = bodyLayout.align;
+				for (const block of blocks) {
+					if (block.type === 'image') {
+						const imageBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
+						imageBlock.style.textAlign = bodyLayout.align;
+						renderMarkdownBlock(this.app, block.markdown, imageBlock, this.sourcePath, this.markdownComponents);
+					} else {
+						const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
+						bodyBlock.textContent = block.text;
+						bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
+						bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
+						bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
+						bodyBlock.style.textAlign = bodyLayout.align;
+					}
+				}
 			}
-			applyLayoutStyles(content, bodyLayout, slide);
+			applyLayout(content, bodyLayout, slide);
 		}
 		this.scaleManager.setSlide(slide);
-	}
-
-	private resolveContent(row: RowData): { title: string; contents: string[] } {
-		const orderedFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
-		const template = this.config.template;
-		const values: Record<string, string> = {};
-		for (const field of orderedFields) {
-			if (field === 'status') continue;
-			const raw = row[field];
-			const text = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
-			if (!text) continue;
-			values[field] = text;
-		}
-
-		const renderTemplate = (templateText: string, trimResult = true): string => {
-			const input = templateText.replace(/\r\n/g, '\n');
-			const replaced = input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
-				const field = key.trim();
-				if (!field || RESERVED_FIELDS.has(field)) {
-					return '';
-				}
-				return values[field] ?? '';
-			});
-			return trimResult ? replaced.trim() : replaced;
-		};
-
-		const titleTemplate = template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
-		const title = renderTemplate(titleTemplate) || t('slideView.untitledSlide', { index: String(this.activeIndex + 1) });
-
-		const body = renderTemplate(template.bodyTemplate, false);
-		const lines = body.split('\n');
-		const hasContent = lines.some((line) => line.trim().length > 0);
-		return { title, contents: hasContent ? lines : [] };
 	}
 
 	private async enterFullscreen(): Promise<void> {
@@ -329,7 +329,13 @@ export class SlideViewController {
 		this.renderActive();
 	}
 
-	private renderEditForm(container: HTMLElement, row: RowData, titleLayout: ComputedLayout, bodyLayout: ComputedLayout): void {
+	private renderEditForm(
+		container: HTMLElement,
+		row: RowData,
+		titleLayout: ComputedLayout,
+		bodyLayout: ComputedLayout,
+		position: (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) => void
+	): void {
 		this.editingTemplate = { title: [], body: [] };
 		const editingTemplate = this.editingTemplate;
 		const titleLine = container.createDiv({
@@ -338,7 +344,7 @@ export class SlideViewController {
 		titleLine.style.lineHeight = `${titleLayout.lineHeight}`;
 		titleLine.style.fontSize = `${titleLayout.fontSize}rem`;
 		titleLine.style.fontWeight = String(titleLayout.fontWeight);
-		applyLayoutStyles(titleLine, titleLayout, container);
+		position(titleLine, titleLayout, container);
 		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, editingTemplate.title);
 
 		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
@@ -359,7 +365,7 @@ export class SlideViewController {
 				bodyBlock.createEl('br');
 			}
 		});
-		applyLayoutStyles(bodyContainer, bodyLayout, container);
+		position(bodyContainer, bodyLayout, container);
 
 		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });
 		const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });

@@ -12,6 +12,8 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	view.slideConfig = effectiveConfig;
 
 	view.slideController = renderSlideView({
+		app: view.app,
+		sourcePath: view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '',
 		container: slideContainer,
 		rows: slideRows,
 		fields: view.schema?.columnNames ?? [],

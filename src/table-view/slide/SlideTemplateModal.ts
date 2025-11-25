@@ -103,50 +103,63 @@ export class SlideTemplateModal extends Modal {
 
 	private renderSlideModeSwitch(container: HTMLElement): void {
 		const switchRow = container.createDiv({ cls: 'tlb-slide-template__mode-switch' });
+		const tooltip = switchRow.createDiv({ cls: 'tlb-slide-template__tooltip' });
+		const showTooltip = (text: string | null, anchor: HTMLElement) => {
+			if (!text) {
+				tooltip.classList.remove('is-visible');
+				return;
+			}
+			tooltip.setText(text);
+			const rect = anchor.getBoundingClientRect();
+			const parentRect = switchRow.getBoundingClientRect();
+			tooltip.style.left = `${Math.max(0, rect.left - parentRect.left)}px`;
+			tooltip.classList.add('is-visible');
+		};
 		this.renderModeButton(
 			switchRow,
 			'single',
-			this.getText('slideView.templateModal.modeSingleLabelCn', '图文混合模式')
+			this.getText('slideView.templateModal.modeSingleLabel', 'Single mode'),
+			this.getText(
+				'slideView.templateModal.modeSingleDesc',
+				'Single mode: when image field has value, show text and image on the same page; otherwise text only.'
+			),
+			showTooltip
 		);
 		this.renderModeButton(
 			switchRow,
 			'split',
-			this.getText('slideView.templateModal.modeSplitLabelCn', '图文分割模式')
+			this.getText('slideView.templateModal.modeSplitLabel', 'Split mode'),
+			this.getText(
+				'slideView.templateModal.modeSplitDesc',
+				'Split mode: when image field has value, page 1 is text and page 2 is image-only; otherwise text page only.'
+			),
+			showTooltip
 		);
-		const tooltip = switchRow.createDiv({ cls: 'tlb-slide-template__tooltip' });
-		tooltip.setText(
-			this.template.mode === 'single'
-				? this.getText(
-						'slideView.templateModal.modeSingleDesc',
-						'图文同页：有图时同页展示文字与图片；无图时仅标题与正文。'
-					)
-				: this.getText(
-						'slideView.templateModal.modeSplitDesc',
-						'图文分割：有图时第一页文字、第二页仅图片；无图时仅文字页。'
-					)
-		);
-		const hintBtn = switchRow.createEl('button', {
-			cls: 'tlb-slide-template__help',
-			text: '?',
-			attr: { type: 'button' }
-		});
-		const toggleTooltip = (visible: boolean): void => {
-			tooltip.classList.toggle('is-visible', visible);
-		};
-		hintBtn.addEventListener('click', (evt) => {
-			evt.preventDefault();
-			const next = !tooltip.hasClass('is-visible');
-			toggleTooltip(next);
-		});
-		switchRow.addEventListener('mouseleave', () => toggleTooltip(false));
+		switchRow.addEventListener('mouseleave', () => showTooltip(null, switchRow));
 	}
 
-	private renderModeButton(container: HTMLElement, mode: 'single' | 'split', label: string): void {
+	private renderModeButton(
+		container: HTMLElement,
+		mode: 'single' | 'split',
+		label: string,
+		helpText?: string,
+		onHelpToggle?: (text: string | null, anchor: HTMLElement) => void
+	): void {
 		const btn = container.createEl('button', {
 			text: label,
 			cls: `tlb-slide-template__mode-btn${this.template.mode === mode ? ' is-active' : ''}`
 		});
 		btn.setAttr('aria-pressed', this.template.mode === mode ? 'true' : 'false');
+		if (helpText) {
+			btn.classList.add('tlb-slide-template__mode-btn--with-help');
+			const help = btn.createSpan({ cls: 'tlb-slide-template__mode-help', text: '?' });
+			help.addEventListener('click', (evt) => {
+				evt.preventDefault();
+				evt.stopPropagation();
+				onHelpToggle?.(helpText, help);
+			});
+			btn.addEventListener('mouseleave', () => onHelpToggle?.(null, help));
+		}
 		btn.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			if (this.template.mode !== mode) {

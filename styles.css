@@ -2916,14 +2916,18 @@
 	align-items: center;
 	position: relative;
 }
-.tlb-slide-template__mode-switch .tlb-slide-template__help {
-	margin-left: 4px;
+.tlb-slide-template__mode-help {
+	margin-left: 6px;
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
-	width: 26px;
-	height: 26px;
-	border-radius: 6px;
-	cursor: default;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
 }
 .tlb-slide-template__tooltip {
 	position: absolute;
@@ -2953,6 +2957,9 @@
 	border-radius: 6px;
 	background: var(--background-secondary);
 	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 }
 .tlb-slide-template__mode-btn.is-active {
 	background: var(--background-modifier-hover);

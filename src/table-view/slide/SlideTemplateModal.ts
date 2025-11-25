@@ -113,19 +113,6 @@ export class SlideTemplateModal extends Modal {
 			'split',
 			this.getText('slideView.templateModal.modeSplitLabel', 'Split layout')
 		);
-		container.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text:
-				this.template.mode === 'single'
-					? this.getText(
-							'slideView.templateModal.modeSingleDesc',
-							'One row renders one slide; if an image is available it shows alongside the text.'
-						)
-					: this.getText(
-							'slideView.templateModal.modeSplitDesc',
-							'One row renders two slides: a text slide and an image-focused slide when an image is available.'
-						)
-		});
 	}
 
 	private renderModeButton(container: HTMLElement, mode: 'single' | 'split', label: string): void {
@@ -584,17 +571,6 @@ export class SlideTemplateModal extends Modal {
 
 	private renderSingleSection(active: boolean): void {
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		wrapper.createDiv({
-			cls: 'tlb-slide-template__section-title',
-			text: this.getText('slideView.templateModal.singleSectionTitle', 'Single mode (text + image on same page)')
-		});
-		wrapper.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: this.getText(
-				'slideView.templateModal.singleSectionDesc',
-				'Applies when Slide mode is set to Single. The with-image branch is used only when the chosen image field has a value.'
-			)
-		});
 		if (!active) {
 			wrapper.createDiv({
 				cls: 'tlb-slide-template__hint tlb-slide-template__hint--muted',
@@ -605,6 +581,13 @@ export class SlideTemplateModal extends Modal {
 			});
 			return;
 		}
+		wrapper.createDiv({
+			cls: 'tlb-slide-template__hint',
+			text: this.getText(
+				'slideView.templateModal.modeSingleDesc',
+				'One row renders one slide; if an image is available it shows alongside the text.'
+			)
+		});
 		this.renderBranchTabs(
 			wrapper,
 			this.singleBranch,
@@ -694,17 +677,6 @@ export class SlideTemplateModal extends Modal {
 
 	private renderSplitSection(active: boolean): void {
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		wrapper.createDiv({
-			cls: 'tlb-slide-template__section-title',
-			text: this.getText('slideView.templateModal.splitSectionTitle', 'Split mode (text page + image page)')
-		});
-		wrapper.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: this.getText(
-				'slideView.templateModal.splitSectionDesc',
-				'When the image field has a value, slides render a text page followed by an image-only page.'
-			)
-		});
 		if (!active) {
 			wrapper.createDiv({
 				cls: 'tlb-slide-template__hint tlb-slide-template__hint--muted',
@@ -715,6 +687,13 @@ export class SlideTemplateModal extends Modal {
 			});
 			return;
 		}
+		wrapper.createDiv({
+			cls: 'tlb-slide-template__hint',
+			text: this.getText(
+				'slideView.templateModal.modeSplitDesc',
+				'One row renders two slides: a text slide and an image-focused slide when an image is available.'
+			)
+		});
 		this.renderBranchTabs(
 			wrapper,
 			this.splitBranch,

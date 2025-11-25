@@ -106,33 +106,39 @@ export class SlideTemplateModal extends Modal {
 		this.renderModeButton(
 			switchRow,
 			'single',
-			this.getText('slideView.templateModal.modeSingleLabel', '图文混合模式')
+			this.getText('slideView.templateModal.modeSingleLabelCn', '图文混合模式')
 		);
 		this.renderModeButton(
 			switchRow,
 			'split',
-			this.getText('slideView.templateModal.modeSplitLabel', '图文分割模式')
+			this.getText('slideView.templateModal.modeSplitLabelCn', '图文分割模式')
+		);
+		const tooltip = switchRow.createDiv({ cls: 'tlb-slide-template__tooltip' });
+		tooltip.setText(
+			this.template.mode === 'single'
+				? this.getText(
+						'slideView.templateModal.modeSingleDesc',
+						'图文同页：有图时同页展示文字与图片；无图时仅标题与正文。'
+					)
+				: this.getText(
+						'slideView.templateModal.modeSplitDesc',
+						'图文分割：有图时第一页文字、第二页仅图片；无图时仅文字页。'
+					)
 		);
 		const hintBtn = switchRow.createEl('button', {
 			cls: 'tlb-slide-template__help',
 			text: '?',
-			attr: {
-				type: 'button',
-				'title':
-					this.template.mode === 'single'
-						? this.getText(
-								'slideView.templateModal.modeSingleDesc',
-								'图文同页：有图时同页展示文字与图片；无图时仅标题与正文。'
-							)
-						: this.getText(
-								'slideView.templateModal.modeSplitDesc',
-								'图文分割：有图时第一页文字、第二页仅图片；无图时仅文字页。'
-							)
-			}
+			attr: { type: 'button' }
 		});
+		const toggleTooltip = (visible: boolean): void => {
+			tooltip.classList.toggle('is-visible', visible);
+		};
 		hintBtn.addEventListener('click', (evt) => {
 			evt.preventDefault();
+			const next = !tooltip.hasClass('is-visible');
+			toggleTooltip(next);
 		});
+		switchRow.addEventListener('mouseleave', () => toggleTooltip(false));
 	}
 
 	private renderModeButton(container: HTMLElement, mode: 'single' | 'split', label: string): void {

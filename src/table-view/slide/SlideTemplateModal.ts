@@ -119,11 +119,11 @@ export class SlideTemplateModal extends Modal {
 				this.template.mode === 'single'
 					? this.getText(
 							'slideView.templateModal.modeSingleDesc',
-							'When image field has value, text and image share one page; otherwise title and body only.'
+							'One row renders one slide; if an image is available it shows alongside the text.'
 						)
 					: this.getText(
 							'slideView.templateModal.modeSplitDesc',
-							'When image field has value, page 1 is text and page 2 is image-only; otherwise a single text page.'
+							'One row renders two slides: a text slide and an image-focused slide when an image is available.'
 						)
 		});
 	}

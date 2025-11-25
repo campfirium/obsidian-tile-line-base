@@ -3,13 +3,13 @@ import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
 import { SlideScaleManager } from './SlideScaleManager';
-import { applyLayoutStyles, computeLayout, type ComputedLayout } from './slideLayout';
+import { buildSlidePages, type SlidePage } from './SlidePageBuilder';
+import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import {
 	applyLayoutWithWatcher,
 	renderMarkdownBlock,
 	resetRenderArtifacts
 } from './SlideRenderUtils';
-import { resolveSlideContent } from './SlideContentResolver';
 
 interface SlideControllerOptions {
 	app: App;
@@ -46,7 +46,8 @@ export class SlideViewController {
 	private isFullscreen = false;
 	private fullscreenBtn: HTMLElement | null = null;
 	private fullscreenCleanup: (() => void) | null = null;
-	private editingIndex: number | null = null;
+	private pages: SlidePage[] = [];
+	private editingPage: SlidePage | null = null;
 	private editingValues: Record<string, string> = {};
 	private saving = false;
 	private fieldInputs: Record<string, HTMLElement[]> = {};
@@ -76,16 +77,15 @@ export class SlideViewController {
 
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
-		this.editingIndex = null;
 		this.editingTemplate = null;
-		if (this.activeIndex >= this.rows.length) {
-			this.activeIndex = Math.max(0, this.rows.length - 1);
-		}
+		this.editingPage = null;
 		this.renderActive();
 	}
 
 	updateConfig(config: SlideViewConfig): void {
 		this.config = config;
+		this.editingTemplate = null;
+		this.editingPage = null;
 		this.renderActive();
 	}
 
@@ -180,9 +180,10 @@ export class SlideViewController {
 	}
 
 	private next(): void {
-		if (this.rows.length === 0) return;
-		this.editingIndex = null;
-		const nextIndex = Math.min(this.rows.length - 1, this.activeIndex + 1);
+		if (this.pages.length === 0) return;
+		this.editingTemplate = null;
+		this.editingPage = null;
+		const nextIndex = Math.min(this.pages.length - 1, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
 			this.renderActive();
@@ -190,8 +191,9 @@ export class SlideViewController {
 	}
 
 	private prev(): void {
-		if (this.rows.length === 0) return;
-		this.editingIndex = null;
+		if (this.pages.length === 0) return;
+		this.editingTemplate = null;
+		this.editingPage = null;
 		const nextIndex = Math.max(0, this.activeIndex - 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
@@ -202,7 +204,11 @@ export class SlideViewController {
 	private renderActive(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.stage.empty();
-		if (this.rows.length === 0) {
+		this.pages = this.buildPages();
+		if (this.activeIndex >= this.pages.length) {
+			this.activeIndex = Math.max(0, this.pages.length - 1);
+		}
+		if (this.pages.length === 0) {
 			this.stage.createDiv({
 				cls: 'tlb-slide-full__empty',
 				text: t('slideView.emptyState')
@@ -210,72 +216,79 @@ export class SlideViewController {
 			this.scaleManager.setSlide(null);
 			return;
 		}
-		const row = this.rows[this.activeIndex];
-		const { title, blocks } = resolveSlideContent({
-			row,
-			fields: this.fields,
-			template: this.config.template,
-			activeIndex: this.activeIndex,
-			reservedFields: RESERVED_FIELDS
-		});
+		const page = this.pages[this.activeIndex];
+		const row = this.rows[page.rowIndex];
 		const slide = this.stage.createDiv({
 			cls: 'tlb-slide-full__slide',
 			attr: { 'data-tlb-slide-index': String(this.activeIndex) }
 		});
-		slide.addEventListener('click', () => {
-			if (this.editingIndex !== this.activeIndex) {
-				this.beginEdit(row);
-			}
-		});
-		const bgColor = (this.config.template.backgroundColor ?? '').trim();
-		const textColor = (this.config.template.textColor ?? '').trim();
-		if (bgColor) {
-			slide.style.setProperty('--tlb-slide-card-bg', bgColor);
-			this.root.style.setProperty('--tlb-slide-full-bg', bgColor);
+		if (page.editable) {
+			slide.addEventListener('click', () => {
+				if (this.editingPage !== page) {
+					this.beginEdit(page, row);
+				}
+			});
+		}
+		if (page.backgroundColor) {
+			slide.style.setProperty('--tlb-slide-card-bg', page.backgroundColor);
+			this.root.style.setProperty('--tlb-slide-full-bg', page.backgroundColor);
 		} else {
 			slide.style.removeProperty('--tlb-slide-card-bg');
 			this.root.style.removeProperty('--tlb-slide-full-bg');
 		}
-		if (textColor) {
-			slide.style.setProperty('--tlb-slide-text-color', textColor);
+		if (page.textColor) {
+			slide.style.setProperty('--tlb-slide-text-color', page.textColor);
 		} else {
 			slide.style.removeProperty('--tlb-slide-text-color');
 		}
-		const titleLayout = computeLayout(this.config.template.titleLayout, 'title');
-		const bodyLayout = computeLayout(this.config.template.bodyLayout, 'body');
 		const applyLayout = (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) =>
 			applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
 				applyLayoutStyles(target, layoutSpec, container));
-		if (this.editingIndex === this.activeIndex) {
-			this.renderEditForm(slide, row, titleLayout, bodyLayout, applyLayout);
+		const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
+		titleEl.style.lineHeight = `${page.titleLayout.lineHeight}`;
+		titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
+		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
+		applyLayout(titleEl, page.titleLayout, slide);
+
+		if (this.editingPage === page && page.editable && this.editingTemplate) {
+			this.renderEditForm(slide, row, page, applyLayout);
 		} else {
-			const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: title });
-			titleEl.style.lineHeight = `${titleLayout.lineHeight}`;
-			titleEl.style.fontSize = `${titleLayout.fontSize}rem`;
-			titleEl.style.fontWeight = String(titleLayout.fontWeight);
-			applyLayout(titleEl, titleLayout, slide);
-			const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
-			if (blocks.length === 0) {
+			if (page.textBlocks.length === 0 && page.imageBlocks.length === 0) {
+				const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
 				content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--empty', text: t('slideView.emptyValue') });
+				applyLayout(content, page.textLayout, slide);
 			} else {
-				for (const block of blocks) {
-					if (block.type === 'image') {
-						const imageBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
-						imageBlock.style.textAlign = bodyLayout.align;
-						renderMarkdownBlock(this.app, block.markdown, imageBlock, this.sourcePath, this.markdownComponents);
-					} else {
-						const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
-						bodyBlock.textContent = block.text;
-						bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
-						bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
-						bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
-						bodyBlock.style.textAlign = bodyLayout.align;
+				if (page.textBlocks.length > 0) {
+					const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
+					const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
+					bodyBlock.textContent = page.textBlocks.join('\n');
+					bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
+					bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
+					bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
+					bodyBlock.style.textAlign = page.textLayout.align;
+					applyLayout(content, page.textLayout, slide);
+				}
+				if (page.imageBlocks.length > 0) {
+					const imageWrapper = slide.createDiv({ cls: 'tlb-slide-full__content' });
+					for (const img of page.imageBlocks) {
+						const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
+						imageBlock.style.textAlign = page.imageLayout.align;
+						renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
 					}
+					applyLayout(imageWrapper, page.imageLayout, slide);
 				}
 			}
-			applyLayout(content, bodyLayout, slide);
 		}
 		this.scaleManager.setSlide(slide);
+	}
+
+	private buildPages(): SlidePage[] {
+		return buildSlidePages({
+			rows: this.rows,
+			fields: this.fields,
+			config: this.config,
+			reservedFields: RESERVED_FIELDS
+		});
 	}
 
 	private async enterFullscreen(): Promise<void> {
@@ -315,14 +328,14 @@ export class SlideViewController {
 		}
 	}
 
-	private beginEdit(row: RowData): void {
+	private beginEdit(page: SlidePage, row: RowData): void {
+		this.editingPage = page;
 		const editableFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		const values: Record<string, string> = {};
 		for (const field of editableFields) {
 			const raw = row[field];
 			values[field] = typeof raw === 'string' ? raw : String(raw ?? '');
 		}
-		this.editingIndex = this.activeIndex;
 		this.editingValues = values;
 		this.fieldInputs = {};
 		this.editingTemplate = null;
@@ -332,8 +345,7 @@ export class SlideViewController {
 	private renderEditForm(
 		container: HTMLElement,
 		row: RowData,
-		titleLayout: ComputedLayout,
-		bodyLayout: ComputedLayout,
+		page: SlidePage,
 		position: (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) => void
 	): void {
 		this.editingTemplate = { title: [], body: [] };
@@ -341,19 +353,19 @@ export class SlideViewController {
 		const titleLine = container.createDiv({
 			cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
 		});
-		titleLine.style.lineHeight = `${titleLayout.lineHeight}`;
-		titleLine.style.fontSize = `${titleLayout.fontSize}rem`;
-		titleLine.style.fontWeight = String(titleLayout.fontWeight);
-		position(titleLine, titleLayout, container);
-		this.renderTemplateSegments(titleLine, this.config.template.titleTemplate, row, editingTemplate.title);
+		titleLine.style.lineHeight = `${page.titleLayout.lineHeight}`;
+		titleLine.style.fontSize = `${page.titleLayout.fontSize}rem`;
+		titleLine.style.fontWeight = String(page.titleLayout.fontWeight);
+		position(titleLine, page.titleLayout, container);
+		this.renderTemplateSegments(titleLine, page.templateRef.titleTemplate, row, editingTemplate.title);
 
 		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
 		const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' });
-		bodyBlock.style.lineHeight = `${bodyLayout.lineHeight}`;
-		bodyBlock.style.fontSize = `${bodyLayout.fontSize}rem`;
-		bodyBlock.style.fontWeight = String(bodyLayout.fontWeight);
-		bodyBlock.style.textAlign = bodyLayout.align;
-		const bodyLines = this.config.template.bodyTemplate.split(/\r?\n/);
+		bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
+		bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
+		bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
+		bodyBlock.style.textAlign = page.textLayout.align;
+		const bodyLines = page.templateRef.bodyTemplate.split(/\r?\n/);
 		if (bodyLines.length === 0) {
 			bodyLines.push('');
 		}
@@ -365,23 +377,22 @@ export class SlideViewController {
 				bodyBlock.createEl('br');
 			}
 		});
-		position(bodyContainer, bodyLayout, container);
+		position(bodyContainer, page.textLayout, container);
 
 		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });
 		const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });
 		cancel.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			evt.stopPropagation();
-			this.editingIndex = null;
-			this.editingValues = {};
 			this.editingTemplate = null;
+			this.editingPage = null;
 			this.renderActive();
 		});
 		const save = actions.createEl('button', { cls: 'mod-cta', attr: { type: 'button' }, text: t('slideView.templateModal.saveLabel') });
 		save.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			evt.stopPropagation();
-			void this.persistEdit(row);
+			void this.persistEdit(page);
 		});
 	}
 
@@ -458,31 +469,26 @@ export class SlideViewController {
 		}
 	}
 
-	private async persistEdit(row: RowData): Promise<void> {
-		if (this.saving) return;
+	private async persistEdit(page: SlidePage): Promise<void> {
+		if (this.saving || !this.editingTemplate) return;
 		this.saving = true;
 		try {
-			if (this.editingTemplate) {
-				const renderSegments = (segments: TemplateSegment[]): string =>
-					segments.map((seg) => (seg.type === 'text' ? seg.value : `{${seg.field}}`)).join('');
-				const titleTemplate = renderSegments(this.editingTemplate.title);
-				const bodyTemplate = this.editingTemplate.body.map(renderSegments).join('\n');
-				this.config = {
-					...this.config,
-					template: {
-						...this.config.template,
-						titleTemplate,
-						bodyTemplate
-					}
-				};
-			}
+			const renderSegments = (segments: TemplateSegment[]): string =>
+				segments.map((seg) => (seg.type === 'text' ? seg.value : `{${seg.field}}`)).join('');
+			const titleTemplate = renderSegments(this.editingTemplate.title);
+			const bodyTemplate = this.editingTemplate.body.map(renderSegments).join('\n');
+			page.updateTemplate({
+				...page.templateRef,
+				titleTemplate,
+				bodyTemplate
+			});
+			const row = this.rows[page.rowIndex];
 			const nextRows = await this.onSaveRow(row, this.editingValues);
 			if (nextRows) {
 				this.updateRows(nextRows);
 			}
-			this.editingIndex = null;
-			this.editingValues = {};
 			this.editingTemplate = null;
+			this.editingPage = null;
 			this.renderActive();
 		} finally {
 			this.saving = false;

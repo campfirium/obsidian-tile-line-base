@@ -1,5 +1,5 @@
 import type { TableView } from '../../TableView';
-import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig } from '../../types/slide';
+import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig, type SlideTextTemplate } from '../../types/slide';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
 
@@ -55,21 +55,42 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 	const available = fields.filter((field) => field && field !== '#' && field !== '__tlb_row_id');
 	const defaultTitle = available[0] ? `{${available[0]}}` : '';
 	const defaultBody = available.slice(1).map((field) => `{${field}}`).join('\n');
-	const titleTemplate = config.template.titleTemplate && config.template.titleTemplate.trim().length > 0
-		? config.template.titleTemplate
-		: defaultTitle;
-	const bodyTemplate = config.template.bodyTemplate && config.template.bodyTemplate.trim().length > 0
-		? config.template.bodyTemplate
-		: defaultBody;
+	const normalizeText = (template: SlideTextTemplate): SlideTextTemplate => {
+		const titleTemplate = template.titleTemplate && template.titleTemplate.trim().length > 0 ? template.titleTemplate : defaultTitle;
+		const bodyTemplate = template.bodyTemplate && template.bodyTemplate.trim().length > 0 ? template.bodyTemplate : defaultBody;
+		return {
+			titleTemplate,
+			bodyTemplate,
+			titleLayout: template.titleLayout ?? getDefaultTitleLayout(),
+			bodyLayout: template.bodyLayout ?? getDefaultBodyLayout()
+		};
+	};
 	return {
 		...config,
 		template: {
-			titleTemplate,
-			bodyTemplate,
+			mode: config.template.mode ?? 'single',
 			textColor: config.template.textColor ?? '',
 			backgroundColor: config.template.backgroundColor ?? '',
-			titleLayout: config.template.titleLayout ?? getDefaultTitleLayout(),
-			bodyLayout: config.template.bodyLayout ?? getDefaultBodyLayout()
+			single: {
+				withImage: {
+					...normalizeText(config.template.single.withImage),
+					imageField: config.template.single.withImage.imageField ?? null,
+					imageLayout: config.template.single.withImage.imageLayout ?? getDefaultBodyLayout()
+				},
+				withoutImage: normalizeText(config.template.single.withoutImage)
+			},
+			split: {
+				withImage: {
+					imageField: config.template.split.withImage.imageField ?? null,
+					textPage: normalizeText(config.template.split.withImage.textPage),
+					imagePage: {
+						showTitle: config.template.split.withImage.imagePage.showTitle !== false,
+						titleLayout: config.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
+						imageLayout: config.template.split.withImage.imagePage.imageLayout ?? getDefaultBodyLayout()
+					}
+				},
+				withoutImage: normalizeText(config.template.split.withoutImage)
+			}
 		}
 	};
 }

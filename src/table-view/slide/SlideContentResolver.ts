@@ -1,6 +1,6 @@
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
-import type { SlideViewConfig } from '../../types/slide';
+import type { SlideTextTemplate } from '../../types/slide';
 
 export type SlideBodyBlock = { type: 'text'; text: string } | { type: 'image'; markdown: string };
 
@@ -14,9 +14,11 @@ const IMAGE_PATH_PATTERN =
 interface SlideContentOptions {
 	row: RowData;
 	fields: string[];
-	template: SlideViewConfig['template'];
+	template: SlideTextTemplate;
 	activeIndex: number;
 	reservedFields: Set<string>;
+	imageValue?: string | null;
+	includeBodyImages?: boolean;
 }
 
 export function resolveSlideContent(options: SlideContentOptions): { title: string; blocks: SlideBodyBlock[] } {
@@ -50,12 +52,20 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 	const lines = body ? body.split('\n').filter((line) => line.trim().length > 0) : [];
 	const blocks: SlideBodyBlock[] = [];
 	for (const line of lines) {
+		if (options.includeBodyImages === false) {
+			blocks.push({ type: 'text', text: line });
+			continue;
+		}
 		const imageMarkdown = resolveImageMarkdown(line, values);
 		if (imageMarkdown) {
 			blocks.push({ type: 'image', markdown: imageMarkdown });
 		} else {
 			blocks.push({ type: 'text', text: line });
 		}
+	}
+	const imageMarkdown = resolveDirectImage(options.imageValue);
+	if (imageMarkdown) {
+		blocks.push({ type: 'image', markdown: imageMarkdown });
 	}
 	return { title, blocks };
 }
@@ -77,6 +87,26 @@ function resolveImageMarkdown(line: string, values: Record<string, string>): str
 		if (/^(https?:\/\/|data:image\/)/i.test(trimmed)) {
 			return `![](${trimmed})`;
 		}
+		return `![[${trimmed}]]`;
+	}
+	return null;
+}
+
+export function resolveDirectImage(value: string | null | undefined): string | null {
+	if (!value || typeof value !== 'string') {
+		return null;
+	}
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return null;
+	}
+	if (MARKDOWN_IMAGE_PATTERN.test(trimmed) || EMBED_IMAGE_PATTERN.test(trimmed)) {
+		return trimmed;
+	}
+	if (/^(https?:\/\/|data:image\/)/i.test(trimmed)) {
+		return `![](${trimmed})`;
+	}
+	if (WIKILINK_PATTERN.test(trimmed) || IMAGE_PATH_PATTERN.test(trimmed) || hasImageExtension(trimmed)) {
 		return `![[${trimmed}]]`;
 	}
 	return null;

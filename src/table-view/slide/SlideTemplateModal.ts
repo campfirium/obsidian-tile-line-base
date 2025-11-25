@@ -567,10 +567,10 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderSingleSection(active: boolean): void {
-		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		if (!active) {
 			return;
 		}
+		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',
 			text: this.getText(
@@ -656,10 +656,10 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderSplitSection(active: boolean): void {
-		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		if (!active) {
 			return;
 		}
+		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',
 			text: this.getText(

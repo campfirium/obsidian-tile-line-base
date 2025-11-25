@@ -2915,6 +2915,15 @@
 	gap: 8px;
 	align-items: center;
 }
+.tlb-slide-template__mode-switch .tlb-slide-template__help {
+	margin-left: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	cursor: default;
+}
 .tlb-slide-template__branch-switch {
 	margin-top: -4px;
 	margin-bottom: 4px;
@@ -2973,7 +2982,7 @@
 .tlb-slide-template__header {
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
+	justify-content: space-between;
 	gap: 8px;
 }
 
@@ -3000,6 +3009,20 @@
 .tlb-slide-template__mode-toggle:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.tlb-slide-template__toolbar-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.tlb-slide-template__toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-left: auto;
 }
 
 .tlb-slide-template__set-default {

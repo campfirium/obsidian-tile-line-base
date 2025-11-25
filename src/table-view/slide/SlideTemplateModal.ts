@@ -75,8 +75,11 @@ export class SlideTemplateModal extends Modal {
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.titleEl.setText(t('slideView.templateModal.title'));
 
-		const header = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
-		this.renderModeToggle(header);
+		const toolbar = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
+		const toolbarLeft = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-left' });
+		this.renderSlideModeSwitch(toolbarLeft);
+		const toolbarRight = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-right' });
+		this.renderModeToggle(toolbarRight);
 
 		if (this.isYamlMode) {
 			this.renderYamlView();
@@ -84,7 +87,6 @@ export class SlideTemplateModal extends Modal {
 		}
 
 		this.resolveThemeDefaults();
-		this.renderSlideModeSwitch();
 		this.renderSingleSection(this.template.mode === 'single');
 		this.renderSplitSection(this.template.mode === 'split');
 		this.renderColorRow(this.contentEl, 'text');
@@ -99,42 +101,37 @@ export class SlideTemplateModal extends Modal {
 		return { row, left, right };
 	}
 
-	private renderSlideModeSwitch(): void {
-		const section = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		section.createDiv({
-			cls: 'tlb-slide-template__section-title',
-			text: this.getText('slideView.templateModal.modeHeading', 'Slide mode')
-		});
-		section.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: this.getText(
-				'slideView.templateModal.modeHint',
-				'Choose which template branch is active; both branches can be edited below.'
-			)
-		});
-		const switchRow = section.createDiv({ cls: 'tlb-slide-template__mode-switch' });
+	private renderSlideModeSwitch(container: HTMLElement): void {
+		const switchRow = container.createDiv({ cls: 'tlb-slide-template__mode-switch' });
 		this.renderModeButton(
 			switchRow,
 			'single',
-			this.getText('slideView.templateModal.modeSingleLabel', 'Single mode (text + image on same page)')
+			this.getText('slideView.templateModal.modeSingleLabel', '图文混合模式')
 		);
 		this.renderModeButton(
 			switchRow,
 			'split',
-			this.getText('slideView.templateModal.modeSplitLabel', 'Split mode (text page + image page)')
+			this.getText('slideView.templateModal.modeSplitLabel', '图文分割模式')
 		);
-		section.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text:
-				this.template.mode === 'single'
-					? this.getText(
-							'slideView.templateModal.modeSingleDesc',
-							'Active: renders text and image on the same page when the image field has a value.'
-						)
-					: this.getText(
-							'slideView.templateModal.modeSplitDesc',
-							'Active: creates a text page and a separate image-only page when the image field has a value.'
-						)
+		const hintBtn = switchRow.createEl('button', {
+			cls: 'tlb-slide-template__help',
+			text: '?',
+			attr: {
+				type: 'button',
+				'title':
+					this.template.mode === 'single'
+						? this.getText(
+								'slideView.templateModal.modeSingleDesc',
+								'图文同页：有图时同页展示文字与图片；无图时仅标题与正文。'
+							)
+						: this.getText(
+								'slideView.templateModal.modeSplitDesc',
+								'图文分割：有图时第一页文字、第二页仅图片；无图时仅文字页。'
+							)
+			}
+		});
+		hintBtn.addEventListener('click', (evt) => {
+			evt.preventDefault();
 		});
 	}
 

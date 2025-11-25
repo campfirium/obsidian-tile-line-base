@@ -2921,6 +2921,10 @@
 	position: relative;
 	margin-bottom: 4px;
 }
+.tlb-slide-template__section > .tlb-slide-template__hint {
+	margin-top: 0;
+	margin-bottom: 12px;
+}
 .tlb-slide-template__branch-switch {
 	margin-top: -4px;
 	margin-bottom: 4px;

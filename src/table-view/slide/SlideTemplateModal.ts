@@ -240,19 +240,6 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderBranchIntro(container: HTMLElement, title: string, description: string): void {
-		const head = container.createDiv({ cls: 'tlb-slide-template__cell-head' });
-		head.createSpan({ text: title });
-		if (description) {
-			head.createDiv({ cls: 'tlb-slide-template__hint', text: description });
-		}
-	}
-
-	private renderFullWidthNote(grid: HTMLElement, title: string, description: string): void {
-		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
-		this.renderBranchIntro(cell, title, description);
-	}
-
 	private renderBranchTabs(
 		container: HTMLElement,
 		current: 'withoutImage' | 'withImage',
@@ -572,13 +559,6 @@ export class SlideTemplateModal extends Modal {
 	private renderSingleSection(active: boolean): void {
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		if (!active) {
-			wrapper.createDiv({
-				cls: 'tlb-slide-template__hint tlb-slide-template__hint--muted',
-				text: this.getText(
-					'slideView.templateModal.switchToSingleHint',
-					'Switch to Single mode above to edit these templates.'
-				)
-			});
 			return;
 		}
 		wrapper.createDiv({
@@ -592,8 +572,8 @@ export class SlideTemplateModal extends Modal {
 			wrapper,
 			this.singleBranch,
 			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text only'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image')
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text slide'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image slide')
 			},
 			(next) => {
 				this.singleBranch = next;
@@ -603,11 +583,6 @@ export class SlideTemplateModal extends Modal {
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.singleBranch === 'withoutImage') {
-			this.renderFullWidthNote(
-				grid,
-				this.getText('slideView.templateModal.noImageHeading', 'No-image layout'),
-				this.getText('slideView.templateModal.noImageSingleHint', 'Image field empty → render title and body only.')
-			);
 			const withoutRow = this.createRow(grid);
 			this.renderTextContent(
 				withoutRow.left,
@@ -631,11 +606,6 @@ export class SlideTemplateModal extends Modal {
 				(next) => (this.template.single.withoutImage.bodyLayout = next)
 			);
 		} else {
-			this.renderFullWidthNote(
-				grid,
-				this.getText('slideView.templateModal.withImageHeading', 'With-image layout'),
-				this.getText('slideView.templateModal.withImageSingleHint', 'Image field set → text and image share the same page.')
-			);
 			this.renderImageFieldSelect(grid, this.template.single.withImage.imageField, (next) => {
 				this.template.single.withImage.imageField = next;
 			});
@@ -678,13 +648,6 @@ export class SlideTemplateModal extends Modal {
 	private renderSplitSection(active: boolean): void {
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		if (!active) {
-			wrapper.createDiv({
-				cls: 'tlb-slide-template__hint tlb-slide-template__hint--muted',
-				text: this.getText(
-					'slideView.templateModal.switchToSplitHint',
-					'Switch to Split mode above to edit these templates.'
-				)
-			});
 			return;
 		}
 		wrapper.createDiv({
@@ -698,8 +661,8 @@ export class SlideTemplateModal extends Modal {
 			wrapper,
 			this.splitBranch,
 			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text only'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image')
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text slide'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image slides')
 			},
 			(next) => {
 				this.splitBranch = next;
@@ -709,11 +672,6 @@ export class SlideTemplateModal extends Modal {
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.splitBranch === 'withoutImage') {
-			this.renderFullWidthNote(
-				grid,
-				this.getText('slideView.templateModal.noImageHeading', 'No-image layout'),
-				this.getText('slideView.templateModal.noImageSplitHint', 'Image field empty → text page only.')
-			);
 			const withoutRow = this.createRow(grid);
 			this.renderTextContent(
 				withoutRow.left,
@@ -737,14 +695,6 @@ export class SlideTemplateModal extends Modal {
 				(next) => (this.template.split.withoutImage.bodyLayout = next)
 			);
 		} else {
-			this.renderFullWidthNote(
-				grid,
-				this.getText('slideView.templateModal.withImageHeading', 'With-image layout'),
-				this.getText(
-					'slideView.templateModal.withImageSplitHint',
-					'Image field set → Page 1 text, Page 2 image only (no body text).'
-				)
-			);
 			this.renderImageFieldSelect(grid, this.template.split.withImage.imageField, (next) => {
 				this.template.split.withImage.imageField = next;
 			});
@@ -769,11 +719,6 @@ export class SlideTemplateModal extends Modal {
 				t('slideView.templateModal.bodyLayoutLabel'),
 				this.template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout(),
 				(next) => (this.template.split.withImage.textPage.bodyLayout = next)
-			);
-			this.renderFullWidthNote(
-				grid,
-				this.getText('slideView.templateModal.imagePageHeading', 'Image page'),
-				this.getText('slideView.templateModal.imagePageHint', 'Second page shows the image only; body text is skipped.')
 			);
 			const imageTitleRow = this.createRow(grid);
 			this.renderImagePageTitleToggle(

@@ -34,6 +34,7 @@ export class SlideTemplateModal extends Modal {
 	private yamlInputEl: HTMLTextAreaElement | null = null;
 	private singleBranch: 'withoutImage' | 'withImage';
 	private splitBranch: 'withoutImage' | 'withImage';
+	private containerNode: HTMLElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
@@ -46,6 +47,11 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	onOpen(): void {
+		const container = this.modalEl?.parentElement;
+		if (container) {
+			container.classList.add('tlb-slide-template-container');
+			this.containerNode = container;
+		}
 		this.renderModalContent();
 	}
 
@@ -57,6 +63,10 @@ export class SlideTemplateModal extends Modal {
 		this.lastFocusedInput = null;
 		this.isYamlMode = false;
 		this.yamlInputEl = null;
+		if (this.containerNode) {
+			this.containerNode.classList.remove('tlb-slide-template-container');
+			this.containerNode = null;
+		}
 	}
 
 	private getText(key: string, fallback: string): string {

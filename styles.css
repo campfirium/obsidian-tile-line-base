@@ -2895,6 +2895,10 @@
 	width: min(960px, 92vw);
 	max-width: min(960px, 92vw);
 }
+.tlb-slide-template-container {
+	align-items: flex-start;
+	padding-top: 24px;
+}
 
 .tlb-slide-template {
 	display: flex;

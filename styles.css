@@ -2915,6 +2915,10 @@
 	gap: 8px;
 	align-items: center;
 }
+.tlb-slide-template__branch-switch {
+	margin-top: -4px;
+	margin-bottom: 4px;
+}
 .tlb-slide-template__mode-btn {
 	padding: 6px 10px;
 	border: 1px solid var(--background-modifier-border);

@@ -32,6 +32,8 @@ export class SlideTemplateModal extends Modal {
 	private lastFocusedInput: HTMLTextAreaElement | null = null;
 	private isYamlMode = false;
 	private yamlInputEl: HTMLTextAreaElement | null = null;
+	private singleBranch: 'withoutImage' | 'withImage';
+	private splitBranch: 'withoutImage' | 'withImage';
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
@@ -39,6 +41,8 @@ export class SlideTemplateModal extends Modal {
 		this.fields = opts.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		this.onSave = opts.onSave;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
+		this.singleBranch = this.template.single.withImage.imageField ? 'withImage' : 'withoutImage';
+		this.splitBranch = this.template.split.withImage.imageField ? 'withImage' : 'withoutImage';
 	}
 
 	onOpen(): void {
@@ -267,12 +271,42 @@ export class SlideTemplateModal extends Modal {
 		}
 	}
 
-	private renderImageFieldSelect(
+	private renderFullWidthNote(grid: HTMLElement, title: string, description: string): void {
+		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
+		this.renderBranchIntro(cell, title, description);
+	}
+
+	private renderBranchTabs(
 		container: HTMLElement,
+		current: 'withoutImage' | 'withImage',
+		labels: { without: string; with: string },
+		onSelect: (next: 'withoutImage' | 'withImage') => void
+	): void {
+		const row = container.createDiv({ cls: 'tlb-slide-template__mode-switch tlb-slide-template__branch-switch' });
+		const buildBtn = (value: 'withoutImage' | 'withImage', text: string) => {
+			const btn = row.createEl('button', {
+				text,
+				cls: `tlb-slide-template__mode-btn${current === value ? ' is-active' : ''}`
+			});
+			btn.setAttr('aria-pressed', current === value ? 'true' : 'false');
+			btn.addEventListener('click', (evt) => {
+				evt.preventDefault();
+				if (current !== value) {
+					onSelect(value);
+				}
+			});
+		};
+		buildBtn('withoutImage', labels.without);
+		buildBtn('withImage', labels.with);
+	}
+
+	private renderImageFieldSelect(
+		grid: HTMLElement,
 		current: string | null | undefined,
 		onChange: (next: string | null) => void
 	): void {
-		const block = container.createDiv({ cls: 'tlb-slide-template__block' });
+		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
+		const block = cell.createDiv({ cls: 'tlb-slide-template__block' });
 		block.createDiv({
 			cls: 'tlb-slide-template__cell-head',
 			text: this.getText('slideView.templateModal.imageFieldLabel', 'Image field')
@@ -581,72 +615,91 @@ export class SlideTemplateModal extends Modal {
 			});
 			return;
 		}
+		this.renderBranchTabs(
+			wrapper,
+			this.singleBranch,
+			{
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text only'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image')
+			},
+			(next) => {
+				this.singleBranch = next;
+				this.renderModalContent();
+			}
+		);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
-		const withoutRow = this.createRow(grid);
-		this.renderBranchIntro(
-			withoutRow.left,
-			this.getText('slideView.templateModal.noImageHeading', 'No-image layout'),
-			this.getText('slideView.templateModal.noImageSingleHint', 'Image field empty → render title and body only.')
-		);
-		this.renderTextContent(
-			withoutRow.left,
-			this.template.single.withoutImage.titleTemplate,
-			this.template.single.withoutImage.bodyTemplate,
-			(next) => {
-				this.template.single.withoutImage.titleTemplate = next.title;
-				this.template.single.withoutImage.bodyTemplate = next.body;
-			}
-		);
-		this.renderLayoutTwoColumn(
-			withoutRow.right,
-			t('slideView.templateModal.titleLayoutLabel'),
-			this.template.single.withoutImage.titleLayout ?? getDefaultTitleLayout(),
-			(next) => (this.template.single.withoutImage.titleLayout = next)
-		);
-		this.renderLayoutTwoColumn(
-			withoutRow.right,
-			t('slideView.templateModal.bodyLayoutLabel'),
-			this.template.single.withoutImage.bodyLayout ?? getDefaultBodyLayout(),
-			(next) => (this.template.single.withoutImage.bodyLayout = next)
-		);
-
-		const withImageRow = this.createRow(grid);
-		this.renderBranchIntro(
-			withImageRow.left,
-			this.getText('slideView.templateModal.withImageHeading', 'With-image layout'),
-			this.getText('slideView.templateModal.withImageSingleHint', 'Image field set → text and image share the same page.')
-		);
-		this.renderImageFieldSelect(withImageRow.left, this.template.single.withImage.imageField, (next) => {
-			this.template.single.withImage.imageField = next;
-		});
-		this.renderTextContent(
-			withImageRow.left,
-			this.template.single.withImage.titleTemplate,
-			this.template.single.withImage.bodyTemplate,
-			(next) => {
-				this.template.single.withImage.titleTemplate = next.title;
-				this.template.single.withImage.bodyTemplate = next.body;
-			}
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			t('slideView.templateModal.titleLayoutLabel'),
-			this.template.single.withImage.titleLayout ?? getDefaultTitleLayout(),
-			(next) => (this.template.single.withImage.titleLayout = next)
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			t('slideView.templateModal.bodyLayoutLabel'),
-			this.template.single.withImage.bodyLayout ?? getDefaultBodyLayout(),
-			(next) => (this.template.single.withImage.bodyLayout = next)
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
-			this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
-			(next) => (this.template.single.withImage.imageLayout = next)
-		);
+		if (this.singleBranch === 'withoutImage') {
+			this.renderFullWidthNote(
+				grid,
+				this.getText('slideView.templateModal.noImageHeading', 'No-image layout'),
+				this.getText('slideView.templateModal.noImageSingleHint', 'Image field empty → render title and body only.')
+			);
+			const withoutRow = this.createRow(grid);
+			this.renderTextContent(
+				withoutRow.left,
+				this.template.single.withoutImage.titleTemplate,
+				this.template.single.withoutImage.bodyTemplate,
+				(next) => {
+					this.template.single.withoutImage.titleTemplate = next.title;
+					this.template.single.withoutImage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.single.withoutImage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.single.withoutImage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.single.withoutImage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.single.withoutImage.bodyLayout = next)
+			);
+		} else {
+			this.renderFullWidthNote(
+				grid,
+				this.getText('slideView.templateModal.withImageHeading', 'With-image layout'),
+				this.getText('slideView.templateModal.withImageSingleHint', 'Image field set → text and image share the same page.')
+			);
+			this.renderImageFieldSelect(grid, this.template.single.withImage.imageField, (next) => {
+				this.template.single.withImage.imageField = next;
+			});
+			const withImageRow = this.createRow(grid);
+			this.renderTextContent(
+				withImageRow.left,
+				this.template.single.withImage.titleTemplate,
+				this.template.single.withImage.bodyTemplate,
+				(next) => {
+					this.template.single.withImage.titleTemplate = next.title;
+					this.template.single.withImage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.single.withImage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.single.withImage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.single.withImage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.single.withImage.bodyLayout = next)
+			);
+			const imageLayoutRow = this.createRow(grid);
+			imageLayoutRow.left.createDiv({
+				cls: 'tlb-slide-template__cell-head',
+				text: this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout')
+			});
+			this.renderLayoutTwoColumn(
+				imageLayoutRow.right,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
+				this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.single.withImage.imageLayout = next)
+			);
+		}
 	}
 
 	private renderSplitSection(active: boolean): void {
@@ -672,96 +725,110 @@ export class SlideTemplateModal extends Modal {
 			});
 			return;
 		}
+		this.renderBranchTabs(
+			wrapper,
+			this.splitBranch,
+			{
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text only'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image')
+			},
+			(next) => {
+				this.splitBranch = next;
+				this.renderModalContent();
+			}
+		);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
-		const withoutRow = this.createRow(grid);
-		this.renderBranchIntro(
-			withoutRow.left,
-			this.getText('slideView.templateModal.noImageHeading', 'No-image layout'),
-			this.getText('slideView.templateModal.noImageSplitHint', 'Image field empty → text page only.')
-		);
-		this.renderTextContent(
-			withoutRow.left,
-			this.template.split.withoutImage.titleTemplate,
-			this.template.split.withoutImage.bodyTemplate,
-			(next) => {
-				this.template.split.withoutImage.titleTemplate = next.title;
-				this.template.split.withoutImage.bodyTemplate = next.body;
-			}
-		);
-		this.renderLayoutTwoColumn(
-			withoutRow.right,
-			t('slideView.templateModal.titleLayoutLabel'),
-			this.template.split.withoutImage.titleLayout ?? getDefaultTitleLayout(),
-			(next) => (this.template.split.withoutImage.titleLayout = next)
-		);
-		this.renderLayoutTwoColumn(
-			withoutRow.right,
-			t('slideView.templateModal.bodyLayoutLabel'),
-			this.template.split.withoutImage.bodyLayout ?? getDefaultBodyLayout(),
-			(next) => (this.template.split.withoutImage.bodyLayout = next)
-		);
-
-		const withImageRow = this.createRow(grid);
-		this.renderBranchIntro(
-			withImageRow.left,
-			this.getText('slideView.templateModal.withImageHeading', 'With-image layout'),
-			this.getText(
-				'slideView.templateModal.withImageSplitHint',
-				'Image field set → Page 1 text, Page 2 image only (no body text).'
-			)
-		);
-		this.renderImageFieldSelect(withImageRow.left, this.template.split.withImage.imageField, (next) => {
-			this.template.split.withImage.imageField = next;
-		});
-		this.renderTextContent(
-			withImageRow.left,
-			this.template.split.withImage.textPage.titleTemplate,
-			this.template.split.withImage.textPage.bodyTemplate,
-			(next) => {
-				this.template.split.withImage.textPage.titleTemplate = next.title;
-				this.template.split.withImage.textPage.bodyTemplate = next.body;
-			}
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			t('slideView.templateModal.titleLayoutLabel'),
-			this.template.split.withImage.textPage.titleLayout ?? getDefaultTitleLayout(),
-			(next) => (this.template.split.withImage.textPage.titleLayout = next)
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			t('slideView.templateModal.bodyLayoutLabel'),
-			this.template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout(),
-			(next) => (this.template.split.withImage.textPage.bodyLayout = next)
-		);
-		const imagePageHead = withImageRow.right.createDiv({ cls: 'tlb-slide-template__cell-head' });
-		imagePageHead.createSpan({
-			text: this.getText('slideView.templateModal.imagePageHeading', 'Image page')
-		});
-		imagePageHead.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: this.getText(
-				'slideView.templateModal.imagePageHint',
-				'Second page shows the image only; body text is skipped.'
-			)
-		});
-		this.renderImagePageTitleToggle(
-			withImageRow.right,
-			this.template.split.withImage.imagePage.showTitle !== false,
-			(next) => (this.template.split.withImage.imagePage.showTitle = next)
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			this.getText('slideView.templateModal.imagePageTitleLayout', 'Image page title layout'),
-			this.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
-			(next) => (this.template.split.withImage.imagePage.titleLayout = next)
-		);
-		this.renderLayoutTwoColumn(
-			withImageRow.right,
-			this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
-			this.template.split.withImage.imagePage.imageLayout ?? getDefaultBodyLayout(),
-			(next) => (this.template.split.withImage.imagePage.imageLayout = next)
-		);
+		if (this.splitBranch === 'withoutImage') {
+			this.renderFullWidthNote(
+				grid,
+				this.getText('slideView.templateModal.noImageHeading', 'No-image layout'),
+				this.getText('slideView.templateModal.noImageSplitHint', 'Image field empty → text page only.')
+			);
+			const withoutRow = this.createRow(grid);
+			this.renderTextContent(
+				withoutRow.left,
+				this.template.split.withoutImage.titleTemplate,
+				this.template.split.withoutImage.bodyTemplate,
+				(next) => {
+					this.template.split.withoutImage.titleTemplate = next.title;
+					this.template.split.withoutImage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.split.withoutImage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.split.withoutImage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.split.withoutImage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withoutImage.bodyLayout = next)
+			);
+		} else {
+			this.renderFullWidthNote(
+				grid,
+				this.getText('slideView.templateModal.withImageHeading', 'With-image layout'),
+				this.getText(
+					'slideView.templateModal.withImageSplitHint',
+					'Image field set → Page 1 text, Page 2 image only (no body text).'
+				)
+			);
+			this.renderImageFieldSelect(grid, this.template.split.withImage.imageField, (next) => {
+				this.template.split.withImage.imageField = next;
+			});
+			const withImageRow = this.createRow(grid);
+			this.renderTextContent(
+				withImageRow.left,
+				this.template.split.withImage.textPage.titleTemplate,
+				this.template.split.withImage.textPage.bodyTemplate,
+				(next) => {
+					this.template.split.withImage.textPage.titleTemplate = next.title;
+					this.template.split.withImage.textPage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.split.withImage.textPage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.split.withImage.textPage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withImage.textPage.bodyLayout = next)
+			);
+			this.renderFullWidthNote(
+				grid,
+				this.getText('slideView.templateModal.imagePageHeading', 'Image page'),
+				this.getText('slideView.templateModal.imagePageHint', 'Second page shows the image only; body text is skipped.')
+			);
+			const imageTitleRow = this.createRow(grid);
+			this.renderImagePageTitleToggle(
+				imageTitleRow.left,
+				this.template.split.withImage.imagePage.showTitle !== false,
+				(next) => (this.template.split.withImage.imagePage.showTitle = next)
+			);
+			this.renderLayoutTwoColumn(
+				imageTitleRow.right,
+				this.getText('slideView.templateModal.imagePageTitleLayout', 'Image page title layout'),
+				this.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.split.withImage.imagePage.titleLayout = next)
+			);
+			const imageLayoutRow = this.createRow(grid);
+			imageLayoutRow.left.createDiv({
+				cls: 'tlb-slide-template__cell-head',
+				text: this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout')
+			});
+			this.renderLayoutTwoColumn(
+				imageLayoutRow.right,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
+				this.template.split.withImage.imagePage.imageLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withImage.imagePage.imageLayout = next)
+			);
+		}
 	}
 }

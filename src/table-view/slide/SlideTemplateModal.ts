@@ -568,9 +568,8 @@ export class SlideTemplateModal extends Modal {
 
 	private renderSingleSection(active: boolean): void {
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		wrapper.toggleClass('is-inactive', !active);
 		if (!active) {
-			wrapper.setAttr('aria-disabled', 'true');
+			return;
 		}
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',
@@ -658,9 +657,8 @@ export class SlideTemplateModal extends Modal {
 
 	private renderSplitSection(active: boolean): void {
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		wrapper.toggleClass('is-inactive', !active);
 		if (!active) {
-			wrapper.setAttr('aria-disabled', 'true');
+			return;
 		}
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',

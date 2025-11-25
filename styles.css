@@ -2942,10 +2942,6 @@
 	flex-direction: column;
 	gap: 10px;
 }
-.tlb-slide-template__section.is-inactive {
-	opacity: 0.6;
-	pointer-events: none;
-}
 .tlb-slide-template__section-title {
 	font-weight: 600;
 	margin: 4px 0;

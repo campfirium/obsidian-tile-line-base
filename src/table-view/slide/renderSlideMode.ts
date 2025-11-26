@@ -1,11 +1,5 @@
 import type { TableView } from '../../TableView';
-import {
-	getDefaultBodyLayout,
-	getDefaultImageLayout,
-	getDefaultTitleLayout,
-	normalizeSlideViewConfig,
-	type SlideTextTemplate
-} from '../../types/slide';
+import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig, type SlideTextTemplate } from '../../types/slide';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
 
@@ -88,7 +82,7 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 						config.template.single.withImage.imageTemplate && config.template.single.withImage.imageTemplate.trim().length > 0
 							? config.template.single.withImage.imageTemplate
 							: defaultImageTemplate,
-					imageLayout: config.template.single.withImage.imageLayout ?? getDefaultImageLayout()
+					imageLayout: config.template.single.withImage.imageLayout ?? getDefaultBodyLayout()
 				},
 				withoutImage: normalizeText(config.template.single.withoutImage)
 			},
@@ -101,7 +95,7 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 					textPage: normalizeText(config.template.split.withImage.textPage),
 					imageLayout:
 						config.template.split.withImage.imageLayout ??
-						getDefaultImageLayout()
+						getDefaultBodyLayout()
 				},
 				withoutImage: normalizeText(config.template.split.withoutImage)
 			}

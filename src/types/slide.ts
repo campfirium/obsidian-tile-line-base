@@ -122,26 +122,12 @@ const DEFAULT_BODY_LAYOUT: SlideLayoutConfig = {
 	fontWeight: 400
 };
 
-const DEFAULT_IMAGE_LAYOUT: SlideLayoutConfig = {
-	widthPct: 90,
-	topPct: 60,
-	insetPct: 0,
-	align: 'center',
-	lineHeight: 1.5,
-	fontSize: 1,
-	fontWeight: 400
-};
-
 export function getDefaultTitleLayout(): SlideLayoutConfig {
 	return { ...DEFAULT_TITLE_LAYOUT };
 }
 
 export function getDefaultBodyLayout(): SlideLayoutConfig {
 	return { ...DEFAULT_BODY_LAYOUT };
-}
-
-export function getDefaultImageLayout(): SlideLayoutConfig {
-	return { ...DEFAULT_IMAGE_LAYOUT };
 }
 
 const normalizeLayout = (value: unknown, defaults: SlideLayoutConfig): SlideLayoutConfig => {
@@ -200,7 +186,7 @@ function migrateLegacyTemplate(legacy: Record<string, unknown>): SlideTemplateCo
 			withImage: {
 				...baseText,
 				imageTemplate: legacyImageTemplate,
-				imageLayout: getDefaultImageLayout()
+				imageLayout: getDefaultBodyLayout()
 			},
 			withoutImage: baseText
 		},
@@ -208,7 +194,7 @@ function migrateLegacyTemplate(legacy: Record<string, unknown>): SlideTemplateCo
 			withImage: {
 				imageTemplate: legacyImageTemplate,
 				textPage: baseText,
-				imageLayout: getDefaultImageLayout()
+				imageLayout: getDefaultBodyLayout()
 			},
 			withoutImage: baseText
 		},
@@ -253,7 +239,7 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 		withImage: {
 			...normalizeTextTemplate(singleWithImageRaw),
 			imageTemplate: resolveImageTemplate(singleWithImageRaw),
-			imageLayout: normalizeLayout(singleWithImageRaw?.imageLayout, DEFAULT_IMAGE_LAYOUT)
+			imageLayout: normalizeLayout(singleWithImageRaw?.imageLayout, DEFAULT_BODY_LAYOUT)
 		},
 		withoutImage: normalizeTextTemplate(singleWithoutRaw)
 	};
@@ -265,7 +251,7 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 			imageLayout: normalizeLayout(
 				splitWithImageRaw?.imageLayout ??
 					(splitWithImageRaw?.imagePage as Record<string, unknown> | null | undefined)?.imageLayout,
-				DEFAULT_IMAGE_LAYOUT
+				DEFAULT_BODY_LAYOUT
 			)
 		},
 		withoutImage: normalizeTextTemplate(splitWithoutRaw)

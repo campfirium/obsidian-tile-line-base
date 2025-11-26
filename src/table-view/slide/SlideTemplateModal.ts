@@ -340,8 +340,8 @@ export class SlideTemplateModal extends Modal {
 		const row1 = layoutRow('two');
 		const insetLabel = () =>
 			value.align === 'right'
-				? `${t('slideView.templateModal.alignRight')} inset (%)`
-				: `${t('slideView.templateModal.alignLeft')} inset (%)`;
+				? this.getText('slideView.templateModal.alignRight', 'Right Offset (%)')
+				: this.getText('slideView.templateModal.alignLeft', 'Left Offset (%)');
 
 		const alignRow = addSelectRow(row1, this.getText('slideView.templateModal.alignLabel', 'Horizontal align'), (next) => {
 			value.align = next as SlideLayoutConfig['align'];

@@ -1,7 +1,7 @@
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideTextTemplate, SlideViewConfig } from '../../types/slide';
 import { computeLayout, type ComputedLayout } from './slideLayout';
-import { resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
+import { renderSlideTemplate, resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
 
 export interface SlidePage {
 	rowIndex: number;
@@ -35,7 +35,7 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 	for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
 		const row = rows[rowIndex];
 		if (mode === 'single') {
-			const imageInfo = resolveImageField(row, template.single.withImage.imageField);
+			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.single.withImage.imageTemplate);
 			const hasImage = Boolean(imageInfo.markdown);
 			const branch = hasImage ? template.single.withImage : template.single.withoutImage;
 			const { title, blocks } = resolveSlideContent({
@@ -66,7 +66,7 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				)
 			);
 		} else {
-			const imageInfo = resolveImageField(row, template.split.withImage.imageField);
+			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.split.withImage.imageTemplate);
 			if (!imageInfo.markdown) {
 				const branch = template.split.withoutImage;
 				const { title, blocks } = resolveSlideContent({
@@ -167,20 +167,36 @@ function buildPageFromBlocks(
 	};
 }
 
-function getImageValue(row: RowData, field: string | null | undefined): string | null {
-	if (!field) return null;
-	const raw = row[field];
-	if (typeof raw === 'string') {
-		return raw;
-	}
-	if (raw != null) {
-		return String(raw);
-	}
-	return null;
+function resolveImageTemplate(
+	row: RowData,
+	fields: string[],
+	reservedFields: Set<string>,
+	template: string | null | undefined
+): { raw: string | null; markdown: string | null } {
+	const rendered = renderTemplateValue(template, row, fields, reservedFields);
+	const markdown = resolveDirectImage(rendered);
+	return { raw: rendered, markdown };
 }
 
-function resolveImageField(row: RowData, field: string | null | undefined): { raw: string | null; markdown: string | null } {
-	const raw = getImageValue(row, field);
-	const markdown = resolveDirectImage(raw);
-	return { raw, markdown };
+function renderTemplateValue(
+	template: string | null | undefined,
+	row: RowData,
+	fields: string[],
+	reservedFields: Set<string>
+): string | null {
+	if (!template || !template.trim()) {
+		return null;
+	}
+	const values: Record<string, string> = {};
+	const orderedFields = fields.filter((field) => field && !reservedFields.has(field));
+	for (const field of orderedFields) {
+		if (field === 'status') continue;
+		const raw = row[field];
+		const text = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
+		if (text) {
+			values[field] = text;
+		}
+	}
+	const rendered = renderSlideTemplate(template, values, reservedFields).trim();
+	return rendered.length > 0 ? rendered : null;
 }

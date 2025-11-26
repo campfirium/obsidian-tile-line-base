@@ -10,18 +10,19 @@ export interface SlideTextTemplate {
 
 export interface SlideImagePageTemplate {
 	showTitle: boolean;
+	imageTemplate: string;
 	titleLayout?: SlideLayoutConfig;
 	imageLayout?: SlideLayoutConfig;
 }
 
 export interface SlideSingleTemplate {
-	withImage: SlideTextTemplate & { imageField?: string | null; imageLayout?: SlideLayoutConfig };
+	withImage: SlideTextTemplate & { imageTemplate: string; imageLayout?: SlideLayoutConfig };
 	withoutImage: SlideTextTemplate;
 }
 
 export interface SlideSplitTemplate {
 	withImage: {
-		imageField?: string | null;
+		imageTemplate: string;
 		textPage: SlideTextTemplate;
 		imagePage: SlideImagePageTemplate;
 	};
@@ -62,6 +63,7 @@ const DEFAULT_TEXT_TEMPLATE: SlideTextTemplate = {
 
 const DEFAULT_IMAGE_PAGE_TEMPLATE: SlideImagePageTemplate = {
 	showTitle: true,
+	imageTemplate: '',
 	titleLayout: undefined,
 	imageLayout: undefined
 };
@@ -71,16 +73,16 @@ export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
 	single: {
 		withImage: {
 			...DEFAULT_TEXT_TEMPLATE,
-			imageField: null,
+			imageTemplate: '',
 			imageLayout: undefined
 		},
 		withoutImage: { ...DEFAULT_TEXT_TEMPLATE }
 	},
 	split: {
 		withImage: {
-			imageField: null,
+			imageTemplate: '',
 			textPage: { ...DEFAULT_TEXT_TEMPLATE },
-			imagePage: { ...DEFAULT_IMAGE_PAGE_TEMPLATE }
+			imagePage: { ...DEFAULT_IMAGE_PAGE_TEMPLATE, imageTemplate: '' }
 		},
 		withoutImage: { ...DEFAULT_TEXT_TEMPLATE }
 	},
@@ -187,6 +189,7 @@ const normalizeImagePageTemplate = (value: unknown): SlideImagePageTemplate => {
 	if (!value || typeof value !== 'object') {
 		return {
 			...DEFAULT_IMAGE_PAGE_TEMPLATE,
+			imageTemplate: '',
 			titleLayout: getDefaultTitleLayout(),
 			imageLayout: getDefaultBodyLayout()
 		};
@@ -194,6 +197,7 @@ const normalizeImagePageTemplate = (value: unknown): SlideImagePageTemplate => {
 	const raw = value as Record<string, unknown>;
 	return {
 		showTitle: raw.showTitle === false ? false : true,
+		imageTemplate: normalizeTemplateString(raw.imageTemplate),
 		titleLayout: normalizeLayout(raw.titleLayout, DEFAULT_TITLE_LAYOUT),
 		imageLayout: normalizeLayout(raw.imageLayout, DEFAULT_BODY_LAYOUT)
 	};
@@ -203,22 +207,28 @@ function migrateLegacyTemplate(legacy: Record<string, unknown>): SlideTemplateCo
 	const baseText = normalizeTextTemplate(legacy);
 	const textColor = normalizeColorString(legacy.textColor);
 	const backgroundColor = normalizeColorString(legacy.backgroundColor);
+	const legacyImageField =
+		typeof legacy.imageField === 'string' && legacy.imageField.trim().length > 0
+			? legacy.imageField.trim()
+			: null;
+	const legacyImageTemplate = legacyImageField ? `{${legacyImageField}}` : '';
 	return {
 		mode: 'single',
 		single: {
 			withImage: {
 				...baseText,
-				imageField: null,
+				imageTemplate: legacyImageTemplate,
 				imageLayout: getDefaultBodyLayout()
 			},
 			withoutImage: baseText
 		},
 		split: {
 			withImage: {
-				imageField: null,
+				imageTemplate: legacyImageTemplate,
 				textPage: baseText,
 				imagePage: {
 					showTitle: true,
+					imageTemplate: legacyImageTemplate,
 					titleLayout: getDefaultTitleLayout(),
 					imageLayout: getDefaultBodyLayout()
 				}
@@ -253,17 +263,19 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 	const splitWithImageRaw = (splitRaw?.withImage ?? null) as Record<string, unknown> | null;
 	const splitWithoutRaw = (splitRaw?.withoutImage ?? null) as Record<string, unknown> | null;
 
-	const resolveImageField = (value: unknown): string | null => {
-		if (typeof value === 'string' && value.trim().length > 0) {
-			return value.trim();
+	const resolveImageTemplate = (raw: Record<string, unknown> | null | undefined): string => {
+		const templateText = normalizeTemplateString(raw?.imageTemplate);
+		if (templateText) {
+			return templateText;
 		}
-		return null;
+		const legacyField = typeof raw?.imageField === 'string' ? raw.imageField.trim() : '';
+		return legacyField ? `{${legacyField}}` : '';
 	};
 
 	const single: SlideSingleTemplate = {
 		withImage: {
 			...normalizeTextTemplate(singleWithImageRaw),
-			imageField: resolveImageField(singleWithImageRaw?.imageField),
+			imageTemplate: resolveImageTemplate(singleWithImageRaw),
 			imageLayout: normalizeLayout(singleWithImageRaw?.imageLayout, DEFAULT_BODY_LAYOUT)
 		},
 		withoutImage: normalizeTextTemplate(singleWithoutRaw)
@@ -271,7 +283,7 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 
 	const split: SlideSplitTemplate = {
 		withImage: {
-			imageField: resolveImageField(splitWithImageRaw?.imageField),
+			imageTemplate: resolveImageTemplate(splitWithImageRaw),
 			textPage: normalizeTextTemplate(splitWithImageRaw?.textPage),
 			imagePage: normalizeImagePageTemplate(splitWithImageRaw?.imagePage)
 		},

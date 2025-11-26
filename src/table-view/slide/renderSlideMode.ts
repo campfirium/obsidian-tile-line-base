@@ -74,17 +74,18 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 			single: {
 				withImage: {
 					...normalizeText(config.template.single.withImage),
-					imageField: config.template.single.withImage.imageField ?? null,
+					imageTemplate: config.template.single.withImage.imageTemplate ?? '',
 					imageLayout: config.template.single.withImage.imageLayout ?? getDefaultBodyLayout()
 				},
 				withoutImage: normalizeText(config.template.single.withoutImage)
 			},
 			split: {
 				withImage: {
-					imageField: config.template.split.withImage.imageField ?? null,
+					imageTemplate: config.template.split.withImage.imageTemplate ?? '',
 					textPage: normalizeText(config.template.split.withImage.textPage),
 					imagePage: {
 						showTitle: config.template.split.withImage.imagePage.showTitle !== false,
+						imageTemplate: config.template.split.withImage.imagePage.imageTemplate ?? '',
 						titleLayout: config.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
 						imageLayout: config.template.split.withImage.imagePage.imageLayout ?? getDefaultBodyLayout()
 					}

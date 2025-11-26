@@ -32,16 +32,7 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 		values[field] = text;
 	}
 
-	const renderTemplate = (templateText: string): string => {
-		const input = templateText.replace(/\r\n/g, '\n');
-		return input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
-			const field = key.trim();
-			if (!field || options.reservedFields.has(field)) {
-				return '';
-			}
-			return values[field] ?? '';
-		}).trim();
-	};
+	const renderTemplate = (templateText: string): string => renderSlideTemplate(templateText, values, options.reservedFields);
 
 	const titleTemplate = options.template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
 	const title =
@@ -68,6 +59,21 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 		blocks.push({ type: 'image', markdown: imageMarkdown });
 	}
 	return { title, blocks };
+}
+
+export function renderSlideTemplate(
+	templateText: string,
+	values: Record<string, string>,
+	reservedFields: Set<string>
+): string {
+	const input = templateText.replace(/\r\n/g, '\n');
+	return input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
+		const field = key.trim();
+		if (!field || reservedFields.has(field)) {
+			return '';
+		}
+		return values[field] ?? '';
+	}).trim();
 }
 
 function resolveImageMarkdown(line: string, values: Record<string, string>): string | null {

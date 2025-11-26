@@ -42,8 +42,8 @@ export class SlideTemplateModal extends Modal {
 		this.fields = opts.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		this.onSave = opts.onSave;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
-		this.singleBranch = this.template.single.withImage.imageField ? 'withImage' : 'withoutImage';
-		this.splitBranch = this.template.split.withImage.imageField ? 'withImage' : 'withoutImage';
+		this.singleBranch = this.template.single.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
+		this.splitBranch = this.template.split.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
 	}
 
 	onOpen(): void {
@@ -274,36 +274,24 @@ export class SlideTemplateModal extends Modal {
 		buildBtn('withImage', labels.with);
 	}
 
-	private renderImageFieldSelect(
+	private renderImageContent(
 		grid: HTMLElement,
-		current: string | null | undefined,
-		onChange: (next: string | null) => void
+		label: string,
+		value: string,
+		onChange: (next: string) => void
 	): void {
-		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
-		const block = cell.createDiv({ cls: 'tlb-slide-template__block' });
-		block.createDiv({
-			cls: 'tlb-slide-template__cell-head',
-			text: this.getText('slideView.templateModal.imageFieldLabel', 'Image field')
-		});
-		block.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: this.getText(
-				'slideView.templateModal.imageFieldHint',
-				'Used to decide when to switch to the with-image layouts.'
-			)
-		});
-		const fieldSelect = block.createEl('select', { cls: 'dropdown' });
-		const placeholder = fieldSelect.createEl('option', { value: '', text: t('kanbanView.content.noFieldOption') || '' });
-		placeholder.selected = !current;
-		for (const field of this.fields) {
-			const opt = fieldSelect.createEl('option', { value: field, text: field });
-			if (field === current) {
-				opt.selected = true;
-			}
-		}
-		fieldSelect.addEventListener('change', () => {
-			onChange(fieldSelect.value || null);
-		});
+		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell' });
+		const head = cell.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
+		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: label });
+		this.renderInsertButton(head);
+		const textarea = cell.createEl('textarea', {
+			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
+			attr: { rows: '3' }
+		}) as HTMLTextAreaElement;
+		textarea.value = value;
+		this.registerFocusTracking(textarea);
+		textarea.addEventListener('input', () => onChange(textarea.value));
+		this.refreshInsertButton();
 	}
 
 	private renderImagePageTitleToggle(container: HTMLElement, showTitle: boolean, onChange: (next: boolean) => void): void {
@@ -616,9 +604,6 @@ export class SlideTemplateModal extends Modal {
 				(next) => (this.template.single.withoutImage.bodyLayout = next)
 			);
 		} else {
-			this.renderImageFieldSelect(grid, this.template.single.withImage.imageField, (next) => {
-				this.template.single.withImage.imageField = next;
-			});
 			const withImageRow = this.createRow(grid);
 			this.renderTextContent(
 				withImageRow.left,
@@ -642,10 +627,12 @@ export class SlideTemplateModal extends Modal {
 				(next) => (this.template.single.withImage.bodyLayout = next)
 			);
 			const imageLayoutRow = this.createRow(grid);
-			imageLayoutRow.left.createDiv({
-				cls: 'tlb-slide-template__cell-head',
-				text: this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout')
-			});
+			this.renderImageContent(
+				imageLayoutRow.left,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image content'),
+				this.template.single.withImage.imageTemplate,
+				(next) => (this.template.single.withImage.imageTemplate = next)
+			);
 			this.renderLayoutTwoColumn(
 				imageLayoutRow.right,
 				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
@@ -705,9 +692,6 @@ export class SlideTemplateModal extends Modal {
 				(next) => (this.template.split.withoutImage.bodyLayout = next)
 			);
 		} else {
-			this.renderImageFieldSelect(grid, this.template.split.withImage.imageField, (next) => {
-				this.template.split.withImage.imageField = next;
-			});
 			const withImageRow = this.createRow(grid);
 			this.renderTextContent(
 				withImageRow.left,
@@ -731,22 +715,24 @@ export class SlideTemplateModal extends Modal {
 				(next) => (this.template.split.withImage.textPage.bodyLayout = next)
 			);
 			const imageTitleRow = this.createRow(grid);
-			this.renderImagePageTitleToggle(
+			this.renderImageContent(
 				imageTitleRow.left,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image content'),
+				this.template.split.withImage.imageTemplate,
+				(next) => (this.template.split.withImage.imageTemplate = next)
+			);
+			this.renderImagePageTitleToggle(
+				imageTitleRow.right,
 				this.template.split.withImage.imagePage.showTitle !== false,
 				(next) => (this.template.split.withImage.imagePage.showTitle = next)
 			);
+			const imageLayoutRow = this.createRow(grid);
 			this.renderLayoutTwoColumn(
-				imageTitleRow.right,
+				imageLayoutRow.left,
 				this.getText('slideView.templateModal.imagePageTitleLayout', 'Image page title layout'),
 				this.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
 				(next) => (this.template.split.withImage.imagePage.titleLayout = next)
 			);
-			const imageLayoutRow = this.createRow(grid);
-			imageLayoutRow.left.createDiv({
-				cls: 'tlb-slide-template__cell-head',
-				text: this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout')
-			});
 			this.renderLayoutTwoColumn(
 				imageLayoutRow.right,
 				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),

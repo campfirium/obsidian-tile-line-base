@@ -338,10 +338,7 @@ export class SlideTemplateModal extends Modal {
 			layout.createDiv({ cls: `tlb-slide-template__layout-line tlb-slide-template__layout-line--${kind}` });
 
 		const row1 = layoutRow('two');
-		const insetLabel = () =>
-			value.align === 'right'
-				? this.getText('slideView.templateModal.alignRight', 'Right Offset (%)')
-				: this.getText('slideView.templateModal.alignLeft', 'Left Offset (%)');
+		const insetLabel = () => (value.align === 'right' ? 'Right Offset (%)' : 'Left Offset (%)');
 
 		const alignRow = addSelectRow(row1, this.getText('slideView.templateModal.alignLabel', 'Horizontal align'), (next) => {
 			value.align = next as SlideLayoutConfig['align'];
@@ -385,7 +382,7 @@ export class SlideTemplateModal extends Modal {
 		const row2 = layoutRow('two');
 		numberRow(
 			row2,
-			this.getText('slideView.templateModal.topPctLabel', 'Vertical offset (%)'),
+			'Top Offset (%)',
 			value.topPct,
 			0,
 			100,

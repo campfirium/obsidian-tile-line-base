@@ -11,14 +11,17 @@ const THUMBNAIL_STYLES = `
     background: rgba(0, 0, 0, 0.85);
     z-index: 9999;
     display: none;
-    overflow-y: auto;
+    overflow: auto;
     padding: 18px 20px;
     opacity: 0;
     transition: opacity 0.2s ease;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }
 
 .tlb-slide-thumb--visible {
-    display: block;
+    display: flex;
     opacity: 1;
 }
 
@@ -37,8 +40,12 @@ const THUMBNAIL_STYLES = `
 
 .tlb-slide-thumb__item {
 	position: relative;
-	display: block;
+	display: flex;
+	flex-direction: column;
 	width: 100%;
+	height: 100%;
+	box-sizing: border-box;
+	appearance: none;
 	border: none;
 	background: transparent;
 	padding: 0;
@@ -55,6 +62,7 @@ const THUMBNAIL_STYLES = `
     outline-offset: 4px;
     border-radius: 8px;
 }
+.tlb-slide-thumb__item:focus { outline: none; }
 
 /* 缩略图画布：强制 16:9 */
 .tlb-slide-thumb__canvas {
@@ -131,10 +139,11 @@ export class SlideThumbnailPanel {
 	private readonly grid: HTMLElement;
 	private readonly ownerDocument: Document;
 	private readonly options: SlideThumbnailPanelOptions;
-	private items: HTMLElement[] = [];
-	private visible = false;
-	private readonly baseWidth = 1200;
-	private currentCardHeight = 0;
+private items: HTMLElement[] = [];
+private visible = false;
+private readonly baseWidth = 1200;
+private readonly baseHeight = 1200 * (9 / 16); // 675px
+private currentCardHeight = 0;
 
 	private readonly thumbSurfaces: Array<{
 		canvas: HTMLElement;
@@ -236,8 +245,10 @@ export class SlideThumbnailPanel {
 			const titleEl = this.ownerDocument.createElement('div');
 			titleEl.className = 'tlb-slide-thumb__title';
 			titleEl.textContent = slide.title ?? '';
-            // 应用样式时不带单位的数值需要小心，这里复用 applyLayoutStyles
-			slideEl.appendChild(titleEl);
+			titleEl.style.lineHeight = `${slide.titleLayout.lineHeight}`;
+			titleEl.style.fontSize = `${slide.titleLayout.fontSize}rem`;
+			titleEl.style.fontWeight = String(slide.titleLayout.fontWeight);
+            slideEl.appendChild(titleEl);
 
             // 内容
 			const content = this.ownerDocument.createElement('div');
@@ -248,6 +259,10 @@ export class SlideThumbnailPanel {
 				const bodyBlock = this.ownerDocument.createElement('div');
 				bodyBlock.className = 'tlb-slide-thumb__body';
 				bodyBlock.textContent = slide.contents.join('\n');
+				bodyBlock.style.lineHeight = `${slide.bodyLayout.lineHeight}`;
+				bodyBlock.style.fontSize = `${slide.bodyLayout.fontSize}rem`;
+				bodyBlock.style.fontWeight = String(slide.bodyLayout.fontWeight);
+				bodyBlock.style.textAlign = slide.bodyLayout.align;
 				content.appendChild(bodyBlock);
 			}
 
@@ -369,7 +384,7 @@ export class SlideThumbnailPanel {
 	private applyScale(canvas: HTMLElement, root: HTMLElement): void {
 		const rect = canvas.getBoundingClientRect();
 		if (!rect.width) return;
-		const scale = Math.min(rect.width / this.baseWidth, 1);
+		const scale = Math.min(rect.width / this.baseWidth, rect.height / this.baseHeight, 1);
 		root.style.setProperty('--tlb-thumb-scale', `${scale}`);
 		if (this.currentCardHeight > 0) {
 			canvas.style.height = `${this.currentCardHeight}px`;
@@ -422,5 +437,6 @@ export class SlideThumbnailPanel {
 		this.grid.style.setProperty('--tlb-thumb-gap-y', `${gapY}px`);
 		this.grid.style.setProperty('--tlb-thumb-card-height', `${cardHeight}px`);
 		this.grid.style.width = `${cols * cardWidth + (cols - 1) * gapX}px`;
+		this.grid.style.height = `${rows * cardHeight + (rows - 1) * gapY}px`;
 	}
 }

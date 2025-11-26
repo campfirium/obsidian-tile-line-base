@@ -2958,21 +2958,17 @@
 }
 
 .tlb-slide-template__row {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 12px 16px;
-	align-items: start;
+	display: contents;
 }
 
 .tlb-slide-template__row--full {
-	grid-template-columns: 1fr;
+	grid-column: 1 / span 2;
 }
 
 .tlb-slide-template__cell {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	align-self: stretch;
 }
 
 .tlb-slide-template__cell--full {
@@ -3200,10 +3196,9 @@
 }
 
 .tlb-slide-template__layout-lines {
-	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	gap: 10px 12px;
-	align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .tlb-slide-template__layout-line {

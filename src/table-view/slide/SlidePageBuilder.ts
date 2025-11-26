@@ -117,16 +117,14 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				);
 
 				const imageMarkdown = imageInfo.markdown;
-				const imagePageTitle = template.split.withImage.imagePage.showTitle ? title : '';
-				const imageTitleLayout = template.split.withImage.imagePage.titleLayout ?? textBranch.titleLayout;
 				pages.push({
 					rowIndex,
-					title: imagePageTitle,
+					title,
 					textBlocks: [],
 					imageBlocks: imageMarkdown ? [imageMarkdown] : [],
-					titleLayout: computeLayout(imageTitleLayout, 'title'),
+					titleLayout: computeLayout(textBranch.titleLayout, 'title'),
 					textLayout: computeLayout(textBranch.bodyLayout, 'body'),
-					imageLayout: computeLayout(template.split.withImage.imagePage.imageLayout, 'body'),
+					imageLayout: computeLayout(template.split.withImage.imageLayout, 'body'),
 					textColor,
 					backgroundColor,
 					editable: false,

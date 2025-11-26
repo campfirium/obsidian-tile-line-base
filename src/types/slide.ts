@@ -8,13 +8,6 @@ export interface SlideTextTemplate {
 	bodyLayout?: SlideLayoutConfig;
 }
 
-export interface SlideImagePageTemplate {
-	showTitle: boolean;
-	imageTemplate: string;
-	titleLayout?: SlideLayoutConfig;
-	imageLayout?: SlideLayoutConfig;
-}
-
 export interface SlideSingleTemplate {
 	withImage: SlideTextTemplate & { imageTemplate: string; imageLayout?: SlideLayoutConfig };
 	withoutImage: SlideTextTemplate;
@@ -24,7 +17,7 @@ export interface SlideSplitTemplate {
 	withImage: {
 		imageTemplate: string;
 		textPage: SlideTextTemplate;
-		imagePage: SlideImagePageTemplate;
+		imageLayout?: SlideLayoutConfig;
 	};
 	withoutImage: SlideTextTemplate;
 }
@@ -61,13 +54,6 @@ const DEFAULT_TEXT_TEMPLATE: SlideTextTemplate = {
 	bodyLayout: undefined
 };
 
-const DEFAULT_IMAGE_PAGE_TEMPLATE: SlideImagePageTemplate = {
-	showTitle: true,
-	imageTemplate: '',
-	titleLayout: undefined,
-	imageLayout: undefined
-};
-
 export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
 	mode: 'single',
 	single: {
@@ -82,7 +68,7 @@ export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
 		withImage: {
 			imageTemplate: '',
 			textPage: { ...DEFAULT_TEXT_TEMPLATE },
-			imagePage: { ...DEFAULT_IMAGE_PAGE_TEMPLATE, imageTemplate: '' }
+			imageLayout: undefined
 		},
 		withoutImage: { ...DEFAULT_TEXT_TEMPLATE }
 	},
@@ -185,24 +171,6 @@ const normalizeTextTemplate = (value: unknown): SlideTextTemplate => {
 	};
 };
 
-const normalizeImagePageTemplate = (value: unknown): SlideImagePageTemplate => {
-	if (!value || typeof value !== 'object') {
-		return {
-			...DEFAULT_IMAGE_PAGE_TEMPLATE,
-			imageTemplate: '',
-			titleLayout: getDefaultTitleLayout(),
-			imageLayout: getDefaultBodyLayout()
-		};
-	}
-	const raw = value as Record<string, unknown>;
-	return {
-		showTitle: raw.showTitle === false ? false : true,
-		imageTemplate: normalizeTemplateString(raw.imageTemplate),
-		titleLayout: normalizeLayout(raw.titleLayout, DEFAULT_TITLE_LAYOUT),
-		imageLayout: normalizeLayout(raw.imageLayout, DEFAULT_BODY_LAYOUT)
-	};
-};
-
 function migrateLegacyTemplate(legacy: Record<string, unknown>): SlideTemplateConfig {
 	const baseText = normalizeTextTemplate(legacy);
 	const textColor = normalizeColorString(legacy.textColor);
@@ -226,12 +194,7 @@ function migrateLegacyTemplate(legacy: Record<string, unknown>): SlideTemplateCo
 			withImage: {
 				imageTemplate: legacyImageTemplate,
 				textPage: baseText,
-				imagePage: {
-					showTitle: true,
-					imageTemplate: legacyImageTemplate,
-					titleLayout: getDefaultTitleLayout(),
-					imageLayout: getDefaultBodyLayout()
-				}
+				imageLayout: getDefaultBodyLayout()
 			},
 			withoutImage: baseText
 		},
@@ -268,6 +231,12 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 		if (templateText) {
 			return templateText;
 		}
+		const nestedImageTemplate = normalizeTemplateString(
+			(raw?.imagePage as Record<string, unknown> | null | undefined)?.imageTemplate
+		);
+		if (nestedImageTemplate) {
+			return nestedImageTemplate;
+		}
 		const legacyField = typeof raw?.imageField === 'string' ? raw.imageField.trim() : '';
 		return legacyField ? `{${legacyField}}` : '';
 	};
@@ -285,7 +254,11 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 		withImage: {
 			imageTemplate: resolveImageTemplate(splitWithImageRaw),
 			textPage: normalizeTextTemplate(splitWithImageRaw?.textPage),
-			imagePage: normalizeImagePageTemplate(splitWithImageRaw?.imagePage)
+			imageLayout: normalizeLayout(
+				splitWithImageRaw?.imageLayout ??
+					(splitWithImageRaw?.imagePage as Record<string, unknown> | null | undefined)?.imageLayout,
+				DEFAULT_BODY_LAYOUT
+			)
 		},
 		withoutImage: normalizeTextTemplate(splitWithoutRaw)
 	};

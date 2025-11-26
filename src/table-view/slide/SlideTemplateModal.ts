@@ -294,26 +294,6 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderImagePageTitleToggle(container: HTMLElement, showTitle: boolean, onChange: (next: boolean) => void): void {
-		const row = container.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
-		const checkbox = row.createEl('input', { type: 'checkbox' });
-		checkbox.checked = showTitle;
-		const label = row.createDiv({
-			cls: 'tlb-slide-template__cell-head',
-			text: this.getText('slideView.templateModal.imagePageTitleLabel', 'Show title on image page')
-		});
-		label.addClass('tlb-slide-template__cell-head');
-		label.addEventListener('click', () => checkbox.click());
-		checkbox.addEventListener('change', () => onChange(checkbox.checked));
-		container.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: this.getText(
-				'slideView.templateModal.imagePageTitleHint',
-				'When disabled, the image-only page hides the text title.'
-			)
-		});
-	}
-
 	private renderLayoutTwoColumn(container: HTMLElement, heading: string, value: SlideLayoutConfig, onChange: (next: SlideLayoutConfig) => void): void {
 		if (heading) container.createDiv({ cls: 'tlb-slide-template__cell-head', text: heading });
 		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
@@ -714,30 +694,18 @@ export class SlideTemplateModal extends Modal {
 				this.template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout(),
 				(next) => (this.template.split.withImage.textPage.bodyLayout = next)
 			);
-			const imageTitleRow = this.createRow(grid);
+			const imageLayoutRow = this.createRow(grid);
 			this.renderImageContent(
-				imageTitleRow.left,
+				imageLayoutRow.left,
 				this.getText('slideView.templateModal.imageLayoutLabel', 'Image content'),
 				this.template.split.withImage.imageTemplate,
 				(next) => (this.template.split.withImage.imageTemplate = next)
 			);
-			this.renderImagePageTitleToggle(
-				imageTitleRow.right,
-				this.template.split.withImage.imagePage.showTitle !== false,
-				(next) => (this.template.split.withImage.imagePage.showTitle = next)
-			);
-			const imageLayoutRow = this.createRow(grid);
-			this.renderLayoutTwoColumn(
-				imageLayoutRow.left,
-				this.getText('slideView.templateModal.imagePageTitleLayout', 'Image page title layout'),
-				this.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
-				(next) => (this.template.split.withImage.imagePage.titleLayout = next)
-			);
 			this.renderLayoutTwoColumn(
 				imageLayoutRow.right,
 				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
-				this.template.split.withImage.imagePage.imageLayout ?? getDefaultBodyLayout(),
-				(next) => (this.template.split.withImage.imagePage.imageLayout = next)
+				this.template.split.withImage.imageLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withImage.imageLayout = next)
 			);
 		}
 	}

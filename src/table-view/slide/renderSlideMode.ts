@@ -55,6 +55,10 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 	const available = fields.filter((field) => field && field !== '#' && field !== '__tlb_row_id');
 	const defaultTitle = available[0] ? `{${available[0]}}` : '';
 	const defaultBody = available.slice(1).map((field) => `{${field}}`).join('\n');
+	const defaultImageTemplate = (() => {
+		const imageField = available.find((field) => field.toLowerCase() === 'image') ?? available[0];
+		return imageField ? `{${imageField}}` : '';
+	})();
 	const normalizeText = (template: SlideTextTemplate): SlideTextTemplate => {
 		const titleTemplate = template.titleTemplate && template.titleTemplate.trim().length > 0 ? template.titleTemplate : defaultTitle;
 		const bodyTemplate = template.bodyTemplate && template.bodyTemplate.trim().length > 0 ? template.bodyTemplate : defaultBody;
@@ -74,21 +78,22 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 			single: {
 				withImage: {
 					...normalizeText(config.template.single.withImage),
-					imageTemplate: config.template.single.withImage.imageTemplate ?? '',
+					imageTemplate:
+						config.template.single.withImage.imageTemplate && config.template.single.withImage.imageTemplate.trim().length > 0
+							? config.template.single.withImage.imageTemplate
+							: defaultImageTemplate,
 					imageLayout: config.template.single.withImage.imageLayout ?? getDefaultBodyLayout()
 				},
 				withoutImage: normalizeText(config.template.single.withoutImage)
 			},
 			split: {
 				withImage: {
-					imageTemplate: config.template.split.withImage.imageTemplate ?? '',
+					imageTemplate:
+						config.template.split.withImage.imageTemplate && config.template.split.withImage.imageTemplate.trim().length > 0
+							? config.template.split.withImage.imageTemplate
+							: defaultImageTemplate,
 					textPage: normalizeText(config.template.split.withImage.textPage),
-					imagePage: {
-						showTitle: config.template.split.withImage.imagePage.showTitle !== false,
-						imageTemplate: config.template.split.withImage.imagePage.imageTemplate ?? '',
-						titleLayout: config.template.split.withImage.imagePage.titleLayout ?? getDefaultTitleLayout(),
-						imageLayout: config.template.split.withImage.imagePage.imageLayout ?? getDefaultBodyLayout()
-					}
+					imageLayout: config.template.split.withImage.imageLayout ?? getDefaultBodyLayout()
 				},
 				withoutImage: normalizeText(config.template.split.withoutImage)
 			}

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { App } from 'obsidian';
 import { Menu, Modal, parseYaml, stringifyYaml } from 'obsidian';
 import { t } from '../../i18n';
@@ -22,12 +23,7 @@ const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 export class SlideTemplateModal extends Modal {
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
-	private titleTemplate: string;
-	private bodyTemplate: string;
-	private textColor: string;
-	private backgroundColor: string;
-	private titleLayout: SlideLayoutConfig;
-	private bodyLayout: SlideLayoutConfig;
+	private template: SlideTemplateConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
 	private titleInputEl: HTMLTextAreaElement | null = null;
@@ -36,22 +32,46 @@ export class SlideTemplateModal extends Modal {
 	private lastFocusedInput: HTMLTextAreaElement | null = null;
 	private isYamlMode = false;
 	private yamlInputEl: HTMLTextAreaElement | null = null;
+	private singleBranch: 'withoutImage' | 'withImage';
+	private splitBranch: 'withoutImage' | 'withImage';
+	private containerNode: HTMLElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.fields = opts.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		this.onSave = opts.onSave;
-		this.titleTemplate = opts.initial.titleTemplate ?? '';
-		this.bodyTemplate = opts.initial.bodyTemplate ?? '';
-		this.textColor = opts.initial.textColor ?? '';
-		this.backgroundColor = opts.initial.backgroundColor ?? '';
-		this.titleLayout = opts.initial.titleLayout ? { ...opts.initial.titleLayout } : getDefaultTitleLayout();
-		this.bodyLayout = opts.initial.bodyLayout ? { ...opts.initial.bodyLayout } : getDefaultBodyLayout();
+		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
+		this.singleBranch = this.template.single.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
+		this.splitBranch = this.template.split.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
 	}
 
 	onOpen(): void {
+		const container = this.modalEl?.parentElement;
+		if (container) {
+			container.classList.add('tlb-slide-template-container');
+			this.containerNode = container;
+		}
 		this.renderModalContent();
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+		this.titleInputEl = null;
+		this.bodyInputEl = null;
+		this.insertButtonEl = null;
+		this.lastFocusedInput = null;
+		this.isYamlMode = false;
+		this.yamlInputEl = null;
+		if (this.containerNode) {
+			this.containerNode.classList.remove('tlb-slide-template-container');
+			this.containerNode = null;
+		}
+	}
+
+	private getText(key: string, fallback: string): string {
+		const translated = t(key as any);
+		return translated === key ? fallback : translated;
 	}
 
 	private renderModalContent(): void {
@@ -65,8 +85,11 @@ export class SlideTemplateModal extends Modal {
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.titleEl.setText(t('slideView.templateModal.title'));
 
-		const header = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
-		this.renderModeToggle(header);
+		const toolbar = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
+		const toolbarLeft = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-left' });
+		this.renderSlideModeSwitch(toolbarLeft);
+		const toolbarRight = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-right' });
+		this.renderModeToggle(toolbarRight);
 
 		if (this.isYamlMode) {
 			this.renderYamlView();
@@ -74,34 +97,11 @@ export class SlideTemplateModal extends Modal {
 		}
 
 		this.resolveThemeDefaults();
-		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
-
-		const titleRow = this.createRow(grid);
-		this.renderTitleContent(titleRow.left);
-		this.renderLayoutTwoColumn(titleRow.right, t('slideView.templateModal.titleLayoutLabel'), this.titleLayout, (next) => {
-			this.titleLayout = next;
-		});
-
-		const bodyRow = this.createRow(grid);
-		this.renderBodyContent(bodyRow.left);
-		this.renderLayoutTwoColumn(bodyRow.right, t('slideView.templateModal.bodyLayoutLabel'), this.bodyLayout, (next) => {
-			this.bodyLayout = next;
-		});
-
-		this.renderColorRow(grid, 'text');
-		this.renderColorRow(grid, 'background');
-
+		this.renderSingleSection(this.template.mode === 'single');
+		this.renderSplitSection(this.template.mode === 'split');
+		this.renderColorRow(this.contentEl, 'text');
+		this.renderColorRow(this.contentEl, 'background');
 		this.renderActions();
-	}
-
-	onClose(): void {
-		this.contentEl.empty();
-		this.titleInputEl = null;
-		this.bodyInputEl = null;
-		this.insertButtonEl = null;
-		this.lastFocusedInput = null;
-		this.isYamlMode = false;
-		this.yamlInputEl = null;
 	}
 
 	private createRow(parent: HTMLElement): { row: HTMLElement; left: HTMLElement; right: HTMLElement } {
@@ -109,6 +109,35 @@ export class SlideTemplateModal extends Modal {
 		const left = row.createDiv({ cls: 'tlb-slide-template__cell' });
 		const right = row.createDiv({ cls: 'tlb-slide-template__cell' });
 		return { row, left, right };
+	}
+
+	private renderSlideModeSwitch(container: HTMLElement): void {
+		const switchRow = container.createDiv({ cls: 'tlb-slide-template__mode-switch' });
+		this.renderModeButton(
+			switchRow,
+			'single',
+			this.getText('slideView.templateModal.modeSingleLabel', 'Combined Slide')
+		);
+		this.renderModeButton(
+			switchRow,
+			'split',
+			this.getText('slideView.templateModal.modeSplitLabel', 'Split Slides')
+		);
+	}
+
+	private renderModeButton(container: HTMLElement, mode: 'single' | 'split', label: string): void {
+		const btn = container.createEl('button', {
+			text: label,
+			cls: `tlb-slide-template__mode-btn${this.template.mode === mode ? ' is-active' : ''}`
+		});
+		btn.setAttr('aria-pressed', this.template.mode === mode ? 'true' : 'false');
+		btn.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			if (this.template.mode !== mode) {
+				this.template.mode = mode;
+				this.renderModalContent();
+			}
+		});
 	}
 
 	private renderModeToggle(container: HTMLElement): void {
@@ -128,6 +157,29 @@ export class SlideTemplateModal extends Modal {
 			this.isYamlMode = !this.isYamlMode;
 			this.renderModalContent();
 		});
+	}
+
+	private renderYamlView(): void {
+		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
+		const row = this.createRow(grid);
+		row.left.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.bodyFieldsDesc') });
+		const textarea = row.left.createEl('textarea', {
+			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
+			attr: { rows: '16' }
+		}) as HTMLTextAreaElement;
+		textarea.value = stringifyYaml(this.template);
+		this.yamlInputEl = textarea;
+	}
+
+	private applyYamlInput(): void {
+		if (!this.yamlInputEl) return;
+		try {
+			const parsed = parseYaml(this.yamlInputEl.value) as unknown;
+			const sanitized = sanitizeSlideTemplateConfig(parsed);
+			this.template = sanitized;
+		} catch {
+			// ignore malformed yaml; keep old template
+		}
 	}
 
 	private renderInsertButton(container: HTMLElement): void {
@@ -167,7 +219,12 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderTitleContent(container: HTMLElement): void {
+	private renderTextContent(
+		container: HTMLElement,
+		titleValue: string,
+		bodyValue: string,
+		onChange: (payload: { title: string; body: string }) => void
+	): void {
 		const head = container.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
 		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.titleContentLabel') });
 		this.renderInsertButton(head);
@@ -175,23 +232,65 @@ export class SlideTemplateModal extends Modal {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--title',
 			attr: { rows: '3' }
 		}) as HTMLTextAreaElement;
-		input.value = this.titleTemplate;
+		input.value = titleValue;
 		this.registerFocusTracking(input);
-		input.addEventListener('input', () => (this.titleTemplate = input.value));
+		input.addEventListener('input', () => onChange({ title: input.value, body: bodyValue }));
 		this.titleInputEl = input;
 		this.lastFocusedInput = this.titleInputEl;
-	}
 
-	private renderBodyContent(container: HTMLElement): void {
 		container.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.bodyContentLabel') });
 		const textarea = container.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
 			attr: { rows: '4' }
 		}) as HTMLTextAreaElement;
-		textarea.value = this.bodyTemplate;
+		textarea.value = bodyValue;
 		this.registerFocusTracking(textarea);
-		textarea.addEventListener('input', () => (this.bodyTemplate = textarea.value));
+		textarea.addEventListener('input', () => onChange({ title: input.value, body: textarea.value }));
 		this.bodyInputEl = textarea;
+		this.refreshInsertButton();
+	}
+
+	private renderBranchTabs(
+		container: HTMLElement,
+		current: 'withoutImage' | 'withImage',
+		labels: { without: string; with: string },
+		onSelect: (next: 'withoutImage' | 'withImage') => void
+	): void {
+		const row = container.createDiv({ cls: 'tlb-slide-template__mode-switch tlb-slide-template__branch-switch' });
+		const buildBtn = (value: 'withoutImage' | 'withImage', text: string) => {
+			const btn = row.createEl('button', {
+				text,
+				cls: `tlb-slide-template__mode-btn${current === value ? ' is-active' : ''}`
+			});
+			btn.setAttr('aria-pressed', current === value ? 'true' : 'false');
+			btn.addEventListener('click', (evt) => {
+				evt.preventDefault();
+				if (current !== value) {
+					onSelect(value);
+				}
+			});
+		};
+		buildBtn('withoutImage', labels.without);
+		buildBtn('withImage', labels.with);
+	}
+
+	private renderImageContent(
+		grid: HTMLElement,
+		label: string,
+		value: string,
+		onChange: (next: string) => void
+	): void {
+		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell' });
+		const head = cell.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
+		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: label });
+		this.renderInsertButton(head);
+		const textarea = cell.createEl('textarea', {
+			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
+			attr: { rows: '3' }
+		}) as HTMLTextAreaElement;
+		textarea.value = value;
+		this.registerFocusTracking(textarea);
+		textarea.addEventListener('input', () => onChange(textarea.value));
 		this.refreshInsertButton();
 	}
 
@@ -239,17 +338,11 @@ export class SlideTemplateModal extends Modal {
 			layout.createDiv({ cls: `tlb-slide-template__layout-line tlb-slide-template__layout-line--${kind}` });
 
 		const row1 = layoutRow('two');
-		const insetLabel = () =>
-			value.align === 'right'
-				? `${t('slideView.templateModal.alignRight')} inset (%)`
-				: `${t('slideView.templateModal.alignLeft')} inset (%)`;
+		const insetLabel = () => (value.align === 'right' ? 'Right Offset (%)' : 'Left Offset (%)');
 
-		const alignRow = addSelectRow(row1, t('slideView.templateModal.alignLabel'), (next) => {
+		const alignRow = addSelectRow(row1, this.getText('slideView.templateModal.alignLabel', 'Horizontal align'), (next) => {
 			value.align = next as SlideLayoutConfig['align'];
 			onChange({ ...value });
-			insetInput.disabled = value.align === 'center';
-			insetInput.dataset.label = insetLabel();
-			insetInput.previousElementSibling?.setText?.(insetLabel());
 		});
 		const align = alignRow.select;
 		[
@@ -287,12 +380,28 @@ export class SlideTemplateModal extends Modal {
 		});
 
 		const row2 = layoutRow('two');
-		numberRow(row2, t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, 1, (v) => (value.topPct = clampPct(v)));
+		numberRow(
+			row2,
+			'Top Offset (%)',
+			value.topPct,
+			0,
+			100,
+			1,
+			(v) => (value.topPct = clampPct(v))
+		);
 		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
 
 		const row3 = layoutRow('three');
 		numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
-		numberRow(row3, t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, 50, (v) => (value.fontWeight = v));
+		numberRow(
+			row3,
+			this.getText('slideView.templateModal.fontWeightLabel', 'Font weight (400=Normal, 700=Bold)'),
+			value.fontWeight,
+			100,
+			900,
+			50,
+			(v) => (value.fontWeight = v)
+		);
 		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
 	}
 
@@ -304,7 +413,7 @@ export class SlideTemplateModal extends Modal {
 			kind === 'text' ? t('slideView.templateModal.textColorLabel') : t('slideView.templateModal.backgroundColorLabel');
 		colorRow.createDiv({ cls: 'tlb-slide-template__color-label', text: labelText });
 		const defaultColor = kind === 'text' ? this.defaultTextColor || '#000000' : this.defaultBackgroundColor || '#000000';
-		const current = kind === 'text' ? this.textColor : this.backgroundColor;
+		const current = kind === 'text' ? this.template.textColor : this.template.backgroundColor;
 		const fallback = current && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(current) ? current : defaultColor;
 		const picker = colorRow.createEl('input', {
 			attr: { type: 'color', value: fallback },
@@ -324,9 +433,9 @@ export class SlideTemplateModal extends Modal {
 		const apply = (value: string) => {
 			const normalized = value.trim();
 			if (kind === 'text') {
-				this.textColor = normalized;
+				this.template.textColor = normalized;
 			} else {
-				this.backgroundColor = normalized;
+				this.template.backgroundColor = normalized;
 			}
 			if (normalized) {
 				if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalized)) {
@@ -354,14 +463,10 @@ export class SlideTemplateModal extends Modal {
 			text: t('slideView.templateModal.saveLabel')
 		});
 		saveButton.addEventListener('click', () => {
-			this.onSave({
-				titleTemplate: this.titleTemplate,
-				bodyTemplate: this.bodyTemplate,
-				textColor: this.textColor,
-				backgroundColor: this.backgroundColor,
-				titleLayout: { ...this.titleLayout },
-				bodyLayout: { ...this.bodyLayout }
-			});
+			if (this.isYamlMode) {
+				this.applyYamlInput();
+			}
+			this.onSave(this.template);
 			this.close();
 		});
 
@@ -442,53 +547,179 @@ export class SlideTemplateModal extends Modal {
 		this.defaultBackgroundColor = bgDefault || '#000000';
 	}
 
-	private renderYamlView(): void {
-		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--yaml' });
-		const row = grid.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--full' });
-		const cell = row.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
-		const wrapper = cell.createDiv({ cls: 'tlb-slide-template__yaml' });
-		wrapper.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.yamlViewLabel') });
-		wrapper.createDiv({ cls: 'tlb-slide-template__hint', text: t('slideView.templateModal.yamlViewDesc') });
-		const textarea = wrapper.createEl('textarea', {
-			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--yaml',
-			attr: { rows: '16', spellcheck: 'false' }
-		}) as HTMLTextAreaElement;
-		textarea.value = this.buildTemplateYaml();
-		this.yamlInputEl = textarea;
-		textarea.addEventListener('focus', () => textarea.select());
-	}
-
-	private buildTemplateYaml(): string {
-		const template: SlideTemplateConfig = {
-			titleTemplate: this.titleTemplate ?? '',
-			bodyTemplate: this.bodyTemplate ?? '',
-			textColor: this.textColor ?? '',
-			backgroundColor: this.backgroundColor ?? '',
-			titleLayout: { ...this.titleLayout },
-			bodyLayout: { ...this.bodyLayout }
-		};
-		return stringifyYaml(template).trimEnd();
-	}
-
-	private applyYamlInput(): void {
-		if (!this.yamlInputEl) {
+	private renderSingleSection(active: boolean): void {
+		if (!active) {
 			return;
 		}
-		const raw = this.yamlInputEl.value;
-		try {
-			const parsed = parseYaml(raw) as unknown;
-			if (!parsed || typeof parsed !== 'object') {
-				return;
+		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
+		wrapper.createDiv({
+			cls: 'tlb-slide-template__hint',
+			text: this.getText(
+				'slideView.templateModal.modeSingleDesc',
+				'Generates a single slide per row. Displays text and image side-by-side if an image exists.'
+			)
+		});
+		this.renderBranchTabs(
+			wrapper,
+			this.singleBranch,
+			{
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Layout: No Image'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Layout: With Image')
+			},
+			(next) => {
+				this.singleBranch = next;
+				this.renderModalContent();
 			}
-			const sanitized = sanitizeSlideTemplateConfig(parsed);
-			this.titleTemplate = sanitized.titleTemplate ?? '';
-			this.bodyTemplate = sanitized.bodyTemplate ?? '';
-			this.textColor = sanitized.textColor ?? '';
-			this.backgroundColor = sanitized.backgroundColor ?? '';
-			this.titleLayout = sanitized.titleLayout ? { ...sanitized.titleLayout } : getDefaultTitleLayout();
-			this.bodyLayout = sanitized.bodyLayout ? { ...sanitized.bodyLayout } : getDefaultBodyLayout();
-		} catch (error) {
-			console.warn('[SlideTemplateModal] Failed to parse YAML template', error);
+		);
+		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
+
+		if (this.singleBranch === 'withoutImage') {
+			const withoutRow = this.createRow(grid);
+			this.renderTextContent(
+				withoutRow.left,
+				this.template.single.withoutImage.titleTemplate,
+				this.template.single.withoutImage.bodyTemplate,
+				(next) => {
+					this.template.single.withoutImage.titleTemplate = next.title;
+					this.template.single.withoutImage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.single.withoutImage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.single.withoutImage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.single.withoutImage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.single.withoutImage.bodyLayout = next)
+			);
+		} else {
+			const withImageRow = this.createRow(grid);
+			this.renderTextContent(
+				withImageRow.left,
+				this.template.single.withImage.titleTemplate,
+				this.template.single.withImage.bodyTemplate,
+				(next) => {
+					this.template.single.withImage.titleTemplate = next.title;
+					this.template.single.withImage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.single.withImage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.single.withImage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.single.withImage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.single.withImage.bodyLayout = next)
+			);
+			const imageLayoutRow = this.createRow(grid);
+			this.renderImageContent(
+				imageLayoutRow.left,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image content'),
+				this.template.single.withImage.imageTemplate,
+				(next) => (this.template.single.withImage.imageTemplate = next)
+			);
+			this.renderLayoutTwoColumn(
+				imageLayoutRow.right,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
+				this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.single.withImage.imageLayout = next)
+			);
+		}
+	}
+
+	private renderSplitSection(active: boolean): void {
+		if (!active) {
+			return;
+		}
+		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
+		wrapper.createDiv({
+			cls: 'tlb-slide-template__hint',
+			text: this.getText(
+				'slideView.templateModal.modeSplitDesc',
+				'Generates two sequential slides per row: 1. Text Slide → 2. Image Slide (if image exists).'
+			)
+		});
+		this.renderBranchTabs(
+			wrapper,
+			this.splitBranch,
+			{
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Slide 1: Text'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Slide 2: Image')
+			},
+			(next) => {
+				this.splitBranch = next;
+				this.renderModalContent();
+			}
+		);
+		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
+
+		if (this.splitBranch === 'withoutImage') {
+			const withoutRow = this.createRow(grid);
+			this.renderTextContent(
+				withoutRow.left,
+				this.template.split.withoutImage.titleTemplate,
+				this.template.split.withoutImage.bodyTemplate,
+				(next) => {
+					this.template.split.withoutImage.titleTemplate = next.title;
+					this.template.split.withoutImage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.split.withoutImage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.split.withoutImage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withoutRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.split.withoutImage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withoutImage.bodyLayout = next)
+			);
+		} else {
+			const withImageRow = this.createRow(grid);
+			this.renderTextContent(
+				withImageRow.left,
+				this.template.split.withImage.textPage.titleTemplate,
+				this.template.split.withImage.textPage.bodyTemplate,
+				(next) => {
+					this.template.split.withImage.textPage.titleTemplate = next.title;
+					this.template.split.withImage.textPage.bodyTemplate = next.body;
+				}
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.titleLayoutLabel'),
+				this.template.split.withImage.textPage.titleLayout ?? getDefaultTitleLayout(),
+				(next) => (this.template.split.withImage.textPage.titleLayout = next)
+			);
+			this.renderLayoutTwoColumn(
+				withImageRow.right,
+				t('slideView.templateModal.bodyLayoutLabel'),
+				this.template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withImage.textPage.bodyLayout = next)
+			);
+			const imageLayoutRow = this.createRow(grid);
+			this.renderImageContent(
+				imageLayoutRow.left,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image content'),
+				this.template.split.withImage.imageTemplate,
+				(next) => (this.template.split.withImage.imageTemplate = next)
+			);
+			this.renderLayoutTwoColumn(
+				imageLayoutRow.right,
+				this.getText('slideView.templateModal.imageLayoutLabel', 'Image layout'),
+				this.template.split.withImage.imageLayout ?? getDefaultBodyLayout(),
+				(next) => (this.template.split.withImage.imageLayout = next)
+			);
 		}
 	}
 }

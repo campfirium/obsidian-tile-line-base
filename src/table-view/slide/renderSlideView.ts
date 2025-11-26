@@ -1,3 +1,4 @@
+import type { App } from 'obsidian';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
 import { SlideViewController } from './SlideViewController';
@@ -8,6 +9,8 @@ export interface SlideViewInstance {
 }
 
 interface RenderSlideViewOptions {
+	app: App;
+	sourcePath: string;
 	container: HTMLElement;
 	rows: RowData[];
 	fields: string[];
@@ -18,6 +21,8 @@ interface RenderSlideViewOptions {
 
 export function renderSlideView(options: RenderSlideViewOptions): SlideViewInstance {
 	const controller = new SlideViewController({
+		app: options.app,
+		sourcePath: options.sourcePath,
 		container: options.container,
 		rows: options.rows,
 		fields: options.fields,

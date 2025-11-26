@@ -1,12 +1,33 @@
 export type SlideThemeId = 'basic';
+export type SlideMode = 'single' | 'split';
 
-export interface SlideTemplateConfig {
+export interface SlideTextTemplate {
 	titleTemplate: string;
 	bodyTemplate: string;
-	textColor?: string;
-	backgroundColor?: string;
 	titleLayout?: SlideLayoutConfig;
 	bodyLayout?: SlideLayoutConfig;
+}
+
+export interface SlideSingleTemplate {
+	withImage: SlideTextTemplate & { imageTemplate: string; imageLayout?: SlideLayoutConfig };
+	withoutImage: SlideTextTemplate;
+}
+
+export interface SlideSplitTemplate {
+	withImage: {
+		imageTemplate: string;
+		textPage: SlideTextTemplate;
+		imageLayout?: SlideLayoutConfig;
+	};
+	withoutImage: SlideTextTemplate;
+}
+
+export interface SlideTemplateConfig {
+	mode: SlideMode;
+	single: SlideSingleTemplate;
+	split: SlideSplitTemplate;
+	textColor?: string;
+	backgroundColor?: string;
 }
 
 export interface SlideLayoutConfig {
@@ -26,13 +47,33 @@ export interface SlideViewConfig {
 
 export const DEFAULT_SLIDE_THEME: SlideThemeId = 'basic';
 
-export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
+const DEFAULT_TEXT_TEMPLATE: SlideTextTemplate = {
 	titleTemplate: '',
 	bodyTemplate: '',
-	textColor: '',
-	backgroundColor: '',
 	titleLayout: undefined,
 	bodyLayout: undefined
+};
+
+export const DEFAULT_SLIDE_TEMPLATE: SlideTemplateConfig = {
+	mode: 'single',
+	single: {
+		withImage: {
+			...DEFAULT_TEXT_TEMPLATE,
+			imageTemplate: '',
+			imageLayout: undefined
+		},
+		withoutImage: { ...DEFAULT_TEXT_TEMPLATE }
+	},
+	split: {
+		withImage: {
+			imageTemplate: '',
+			textPage: { ...DEFAULT_TEXT_TEMPLATE },
+			imageLayout: undefined
+		},
+		withoutImage: { ...DEFAULT_TEXT_TEMPLATE }
+	},
+	textColor: '',
+	backgroundColor: ''
 };
 
 export const DEFAULT_SLIDE_VIEW_CONFIG: SlideViewConfig = {
@@ -112,17 +153,116 @@ const normalizeLayout = (value: unknown, defaults: SlideLayoutConfig): SlideLayo
 	};
 };
 
+const normalizeTextTemplate = (value: unknown): SlideTextTemplate => {
+	const defaults = DEFAULT_TEXT_TEMPLATE;
+	if (!value || typeof value !== 'object') {
+		return {
+			...defaults,
+			titleLayout: getDefaultTitleLayout(),
+			bodyLayout: getDefaultBodyLayout()
+		};
+	}
+	const raw = value as Record<string, unknown>;
+	return {
+		titleTemplate: normalizeTemplateString(raw.titleTemplate),
+		bodyTemplate: normalizeTemplateString(raw.bodyTemplate),
+		titleLayout: normalizeLayout(raw.titleLayout, DEFAULT_TITLE_LAYOUT),
+		bodyLayout: normalizeLayout(raw.bodyLayout, DEFAULT_BODY_LAYOUT)
+	};
+};
+
+function migrateLegacyTemplate(legacy: Record<string, unknown>): SlideTemplateConfig {
+	const baseText = normalizeTextTemplate(legacy);
+	const textColor = normalizeColorString(legacy.textColor);
+	const backgroundColor = normalizeColorString(legacy.backgroundColor);
+	const legacyImageField =
+		typeof legacy.imageField === 'string' && legacy.imageField.trim().length > 0
+			? legacy.imageField.trim()
+			: null;
+	const legacyImageTemplate = legacyImageField ? `{${legacyImageField}}` : '';
+	return {
+		mode: 'single',
+		single: {
+			withImage: {
+				...baseText,
+				imageTemplate: legacyImageTemplate,
+				imageLayout: getDefaultBodyLayout()
+			},
+			withoutImage: baseText
+		},
+		split: {
+			withImage: {
+				imageTemplate: legacyImageTemplate,
+				textPage: baseText,
+				imageLayout: getDefaultBodyLayout()
+			},
+			withoutImage: baseText
+		},
+		textColor,
+		backgroundColor
+	};
+}
+
 export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfig {
 	if (!config || typeof config !== 'object') {
-		return { ...DEFAULT_SLIDE_TEMPLATE };
+		return sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
 	}
+
+	const raw = config as Record<string, unknown>;
+
+	if (raw.titleTemplate !== undefined || raw.bodyTemplate !== undefined) {
+		return migrateLegacyTemplate(raw);
+	}
+
+	const mode = raw.mode === 'split' ? 'split' : 'single';
+	const textColor = normalizeColorString(raw.textColor);
+	const backgroundColor = normalizeColorString(raw.backgroundColor);
+
+	const singleRaw = raw.single as Record<string, unknown> | undefined;
+	const splitRaw = raw.split as Record<string, unknown> | undefined;
+
+	const singleWithImageRaw = (singleRaw?.withImage ?? null) as Record<string, unknown> | null;
+	const singleWithoutRaw = (singleRaw?.withoutImage ?? null) as Record<string, unknown> | null;
+	const splitWithImageRaw = (splitRaw?.withImage ?? null) as Record<string, unknown> | null;
+	const splitWithoutRaw = (splitRaw?.withoutImage ?? null) as Record<string, unknown> | null;
+
+	const resolveImageTemplate = (raw: Record<string, unknown> | null | undefined): string => {
+		const templateText = normalizeTemplateString(raw?.imageTemplate);
+		if (templateText) {
+			return templateText;
+		}
+		const legacyField = typeof raw?.imageField === 'string' ? raw.imageField.trim() : '';
+		return legacyField ? `{${legacyField}}` : '';
+	};
+
+	const single: SlideSingleTemplate = {
+		withImage: {
+			...normalizeTextTemplate(singleWithImageRaw),
+			imageTemplate: resolveImageTemplate(singleWithImageRaw),
+			imageLayout: normalizeLayout(singleWithImageRaw?.imageLayout, DEFAULT_BODY_LAYOUT)
+		},
+		withoutImage: normalizeTextTemplate(singleWithoutRaw)
+	};
+
+	const split: SlideSplitTemplate = {
+		withImage: {
+			imageTemplate: resolveImageTemplate(splitWithImageRaw),
+			textPage: normalizeTextTemplate(splitWithImageRaw?.textPage),
+			imageLayout: normalizeLayout(
+				splitWithImageRaw?.imageLayout ??
+					(splitWithImageRaw?.imagePage as Record<string, unknown> | null | undefined)?.imageLayout,
+				DEFAULT_BODY_LAYOUT
+			)
+		},
+		withoutImage: normalizeTextTemplate(splitWithoutRaw)
+	};
+
 	return {
-		titleTemplate: normalizeTemplateString((config as Record<string, unknown>).titleTemplate),
-		bodyTemplate: normalizeTemplateString((config as Record<string, unknown>).bodyTemplate),
-		textColor: normalizeColorString((config as Record<string, unknown>).textColor),
-		backgroundColor: normalizeColorString((config as Record<string, unknown>).backgroundColor),
-		titleLayout: normalizeLayout((config as Record<string, unknown>).titleLayout, DEFAULT_TITLE_LAYOUT),
-		bodyLayout: normalizeLayout((config as Record<string, unknown>).bodyLayout, DEFAULT_BODY_LAYOUT)
+		mode,
+		single,
+		split,
+		textColor,
+		backgroundColor
 	};
 }
 
@@ -130,11 +270,7 @@ export function normalizeSlideViewConfig(config: unknown): SlideViewConfig {
 	if (!config || typeof config !== 'object') {
 		return {
 			...DEFAULT_SLIDE_VIEW_CONFIG,
-			template: {
-				...DEFAULT_SLIDE_TEMPLATE,
-				titleLayout: getDefaultTitleLayout(),
-				bodyLayout: getDefaultBodyLayout()
-			}
+			template: sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE)
 		};
 	}
 
@@ -155,13 +291,9 @@ export function isDefaultSlideViewConfig(config: SlideViewConfig | null | undefi
 		return true;
 	}
 	const template = config.template ?? DEFAULT_SLIDE_TEMPLATE;
+	const defaultTemplate = sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
 	return (
 		(config.theme ?? DEFAULT_SLIDE_THEME) === DEFAULT_SLIDE_THEME &&
-		(template.titleTemplate ?? '') === DEFAULT_SLIDE_TEMPLATE.titleTemplate &&
-		(template.bodyTemplate ?? '') === DEFAULT_SLIDE_TEMPLATE.bodyTemplate &&
-		(template.textColor ?? '') === DEFAULT_SLIDE_TEMPLATE.textColor &&
-		(template.backgroundColor ?? '') === DEFAULT_SLIDE_TEMPLATE.backgroundColor &&
-		JSON.stringify(template.titleLayout ?? {}) === JSON.stringify(getDefaultTitleLayout()) &&
-		JSON.stringify(template.bodyLayout ?? {}) === JSON.stringify(getDefaultBodyLayout())
+		JSON.stringify(template) === JSON.stringify(defaultTemplate)
 	);
 }

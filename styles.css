@@ -2791,6 +2791,36 @@
 	background: var(--background-secondary);
 }
 
+.tlb-slide-full--thumbs-open .tlb-slide-full__stage {
+	pointer-events: none;
+}
+
+.tlb-slide-thumb {
+	position: absolute;
+	inset: 0;
+	display: none;
+	padding: 18px 20px;
+	background: color-mix(in srgb, var(--background-primary) 78%, transparent 22%);
+	backdrop-filter: blur(8px);
+	overflow: auto;
+	z-index: 8;
+}
+
+.tlb-slide-thumb--visible {
+	display: block;
+}
+
+
+.tlb-slide-thumb__empty {
+	grid-column: 1 / -1;
+	padding: 12px;
+	text-align: center;
+	color: var(--text-muted);
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--background-secondary) 90%, transparent 10%);
+}
+
 .tlb-slide-template-modal {
 	width: min(960px, 92vw);
 	max-width: min(960px, 92vw);

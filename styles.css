@@ -2767,12 +2767,19 @@
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
+	position: relative;
 }
 .tlb-slide-full__layer--image {
+	position: relative;
 	z-index: 1;
 }
 .tlb-slide-full__layer--text {
+	position: relative;
 	z-index: 2;
+}
+.tlb-slide-full__title {
+	position: relative;
+	z-index: 3;
 }
 
 .tlb-slide-layout {

@@ -93,7 +93,9 @@ function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfi
 							? config.template.split.withImage.imageTemplate
 							: defaultImageTemplate,
 					textPage: normalizeText(config.template.split.withImage.textPage),
-					imageLayout: config.template.split.withImage.imageLayout ?? getDefaultBodyLayout()
+					imageLayout:
+						config.template.split.withImage.imageLayout ??
+						getDefaultBodyLayout()
 				},
 				withoutImage: normalizeText(config.template.split.withoutImage)
 			}

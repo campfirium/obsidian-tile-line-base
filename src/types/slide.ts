@@ -231,12 +231,6 @@ export function sanitizeSlideTemplateConfig(config: unknown): SlideTemplateConfi
 		if (templateText) {
 			return templateText;
 		}
-		const nestedImageTemplate = normalizeTemplateString(
-			(raw?.imagePage as Record<string, unknown> | null | undefined)?.imageTemplate
-		);
-		if (nestedImageTemplate) {
-			return nestedImageTemplate;
-		}
 		const legacyField = typeof raw?.imageField === 'string' ? raw.imageField.trim() : '';
 		return legacyField ? `{${legacyField}}` : '';
 	};

@@ -259,7 +259,7 @@ export class SlideViewController {
 				applyLayout(content, page.textLayout, slide);
 			} else {
 				if (page.textBlocks.length > 0) {
-					const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
+					const content = slide.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--text' });
 					const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
 					bodyBlock.textContent = page.textBlocks.join('\n');
 					bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
@@ -269,7 +269,7 @@ export class SlideViewController {
 					applyLayout(content, page.textLayout, slide);
 				}
 				if (page.imageBlocks.length > 0) {
-					const imageWrapper = slide.createDiv({ cls: 'tlb-slide-full__content' });
+					const imageWrapper = slide.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--image' });
 					for (const img of page.imageBlocks) {
 						const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
 						imageBlock.style.textAlign = page.imageLayout.align;

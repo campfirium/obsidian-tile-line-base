@@ -2768,6 +2768,12 @@
 	flex-direction: column;
 	gap: 14px;
 }
+.tlb-slide-full__layer--image {
+	z-index: 1;
+}
+.tlb-slide-full__layer--text {
+	z-index: 2;
+}
 
 .tlb-slide-layout {
 	position: absolute;

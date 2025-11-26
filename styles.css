@@ -3097,11 +3097,11 @@
 }
 
 .tlb-slide-template__textarea--title {
-	min-height: 140px;
+	min-height: 110px;
 }
 
 .tlb-slide-template__textarea--body {
-	min-height: 140px;
+	min-height: 110px;
 }
 
 .tlb-slide-template__textarea--yaml {

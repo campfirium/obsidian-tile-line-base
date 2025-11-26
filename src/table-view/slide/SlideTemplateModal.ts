@@ -116,12 +116,12 @@ export class SlideTemplateModal extends Modal {
 		this.renderModeButton(
 			switchRow,
 			'single',
-			this.getText('slideView.templateModal.modeSingleLabel', 'Single layout')
+			this.getText('slideView.templateModal.modeSingleLabel', 'Combined Slide')
 		);
 		this.renderModeButton(
 			switchRow,
 			'split',
-			this.getText('slideView.templateModal.modeSplitLabel', 'Split layout')
+			this.getText('slideView.templateModal.modeSplitLabel', 'Split Slides')
 		);
 	}
 
@@ -343,7 +343,7 @@ export class SlideTemplateModal extends Modal {
 				? `${t('slideView.templateModal.alignRight')} inset (%)`
 				: `${t('slideView.templateModal.alignLeft')} inset (%)`;
 
-		const alignRow = addSelectRow(row1, t('slideView.templateModal.alignLabel'), (next) => {
+		const alignRow = addSelectRow(row1, this.getText('slideView.templateModal.alignLabel', 'Horizontal align'), (next) => {
 			value.align = next as SlideLayoutConfig['align'];
 			onChange({ ...value });
 		});
@@ -383,12 +383,28 @@ export class SlideTemplateModal extends Modal {
 		});
 
 		const row2 = layoutRow('two');
-		numberRow(row2, t('slideView.templateModal.topPctLabel'), value.topPct, 0, 100, 1, (v) => (value.topPct = clampPct(v)));
+		numberRow(
+			row2,
+			this.getText('slideView.templateModal.topPctLabel', 'Vertical offset (%)'),
+			value.topPct,
+			0,
+			100,
+			1,
+			(v) => (value.topPct = clampPct(v))
+		);
 		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
 
 		const row3 = layoutRow('three');
 		numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
-		numberRow(row3, t('slideView.templateModal.fontWeightLabel'), value.fontWeight, 100, 900, 50, (v) => (value.fontWeight = v));
+		numberRow(
+			row3,
+			this.getText('slideView.templateModal.fontWeightLabel', 'Font weight (400=Normal, 700=Bold)'),
+			value.fontWeight,
+			100,
+			900,
+			50,
+			(v) => (value.fontWeight = v)
+		);
 		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
 	}
 
@@ -543,15 +559,15 @@ export class SlideTemplateModal extends Modal {
 			cls: 'tlb-slide-template__hint',
 			text: this.getText(
 				'slideView.templateModal.modeSingleDesc',
-				'One row renders one slide; if an image is available it shows alongside the text.'
+				'Generates a single slide per row. Displays text and image side-by-side if an image exists.'
 			)
 		});
 		this.renderBranchTabs(
 			wrapper,
 			this.singleBranch,
 			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text slide'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image slide')
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Layout: No Image'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Layout: With Image')
 			},
 			(next) => {
 				this.singleBranch = next;
@@ -631,15 +647,15 @@ export class SlideTemplateModal extends Modal {
 			cls: 'tlb-slide-template__hint',
 			text: this.getText(
 				'slideView.templateModal.modeSplitDesc',
-				'One row renders two slides: a text slide and an image-focused slide when an image is available.'
+				'Generates two sequential slides per row: 1. Text Slide → 2. Image Slide (if image exists).'
 			)
 		});
 		this.renderBranchTabs(
 			wrapper,
 			this.splitBranch,
 			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Text slide'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Text + image slides')
+				without: this.getText('slideView.templateModal.noImageTabLabel', 'Slide 1: Text'),
+				with: this.getText('slideView.templateModal.withImageTabLabel', 'Slide 2: Image')
 			},
 			(next) => {
 				this.splitBranch = next;

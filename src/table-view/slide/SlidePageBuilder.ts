@@ -121,9 +121,6 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 					imageValue: null,
 					includeBodyImages: true
 				});
-				if (imageContent.blocks.filter((block) => block.type === 'image').length === 0 && imageInfo.markdown) {
-					imageContent.blocks.push({ type: 'image', markdown: imageInfo.markdown });
-				}
 				pages.push(
 					buildPageFromBlocks(
 						rowIndex,

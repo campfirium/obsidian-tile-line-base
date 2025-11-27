@@ -111,7 +111,7 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 					template: textBranch,
 					activeIndex: rowIndex,
 					reservedFields,
-					includeBodyImages: true
+					includeBodyImages: false
 				});
 				pages.push(
 					buildPageFromBlocks(

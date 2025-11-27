@@ -42,13 +42,15 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 
 	const body = renderTemplate(options.template.bodyTemplate);
 	const lines = body ? body.split('\n') : [];
+	const templateAllowsImages = containsImageMarker(options.template.bodyTemplate ?? '') || containsImageMarker(body ?? '');
+	const allowImages = options.includeBodyImages !== false || templateAllowsImages;
 	const blocks: SlideBodyBlock[] = [];
 	for (const line of lines) {
 		if (line.trim().length === 0) {
 			blocks.push({ type: 'text', text: '' });
 			continue;
 		}
-		if (options.includeBodyImages !== false) {
+		if (allowImages) {
 			const imageMarkdown = resolveImageMarkdown(line, values);
 			if (imageMarkdown) {
 				blocks.push({ type: 'image', markdown: imageMarkdown });
@@ -77,6 +79,12 @@ export function renderSlideTemplate(
 		}
 		return values[field] ?? '';
 	});
+}
+
+function containsImageMarker(text: string): boolean {
+	const normalized = (text ?? '').trim();
+	if (!normalized) return false;
+	return normalized.includes('![') || normalized.includes('![[');
 }
 
 function resolveImageMarkdown(line: string, values: Record<string, string>): string | null {

@@ -19,11 +19,13 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
 	const fields = view.schema?.columnNames ?? [];
+	const plugin = getPluginContext();
+	const baseTemplate = plugin?.getDefaultSlideConfig?.()?.template ?? view.slideConfig.template;
 	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults;
 	const hydratedConfig = shouldApplyBuiltIn
 		? normalizeSlideViewConfig({
 				...view.slideConfig,
-				template: buildBuiltInSlideTemplate(fields, view.slideConfig.template)
+				template: buildBuiltInSlideTemplate(fields, baseTemplate)
 			})
 		: view.slideConfig;
 	const renderState = buildRenderConfig({
@@ -32,7 +34,6 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	view.slideConfig = renderState.renderConfig;
 	view.shouldAutoFillSlideDefaults = false;
 	view.slideTemplateTouched = view.slideTemplateTouched || shouldApplyBuiltIn;
-	const plugin = getPluginContext();
 	if (shouldApplyBuiltIn && plugin?.setDefaultSlideConfig) {
 		void plugin.setDefaultSlideConfig(renderState.renderConfig).catch((error: unknown) => {
 			logger.warn('Failed to persist built-in slide preset as global default', error);

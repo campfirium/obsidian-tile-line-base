@@ -302,7 +302,9 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private applyBuiltInDefault(): void {
-		const preset = buildBuiltInSlideTemplate(this.fields, DEFAULT_SLIDE_TEMPLATE);
+		const plugin = getPluginContext();
+		const base = plugin?.getDefaultSlideConfig()?.template ?? DEFAULT_SLIDE_TEMPLATE;
+		const preset = buildBuiltInSlideTemplate(this.fields, base);
 		this.applyPresetStyles(preset);
 	}
 

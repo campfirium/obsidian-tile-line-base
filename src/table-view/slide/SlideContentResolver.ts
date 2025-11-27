@@ -1,4 +1,3 @@
-import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideTextTemplate } from '../../types/slide';
 
@@ -34,11 +33,9 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 
 	const renderTemplate = (templateText: string): string => renderSlideTemplate(templateText, values, options.reservedFields);
 
-	const titleTemplate = options.template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
-	const rawTitle = renderTemplate(titleTemplate);
-	const title =
-		rawTitle.trim() ||
-		t('slideView.untitledSlide', { index: String(options.activeIndex + 1) });
+	const titleTemplate = options.template.titleTemplate ?? '';
+	const rawTitle = titleTemplate ? renderTemplate(titleTemplate) : '';
+	const title = rawTitle;
 
 	const body = renderTemplate(options.template.bodyTemplate);
 	const lines = body ? body.split('\n') : [];

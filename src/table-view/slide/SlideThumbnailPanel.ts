@@ -2,6 +2,7 @@ import { App, Component } from 'obsidian';
 import { renderMarkdownBlock } from './SlideRenderUtils';
 import { t } from '../../i18n';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
+import { computeOverlayBackground } from './SlideColorUtils';
 
 // --- CSS 样式重构 ---
 const THUMBNAIL_STYLES = `
@@ -228,6 +229,8 @@ export class SlideThumbnailPanel {
 		this.cleanupSurfaces();
 		this.cleanupMarkdown();
 		this.slideCount = slides.length;
+		const baseColor = slides.find((slide) => slide.backgroundColor)?.backgroundColor ?? null;
+		this.overlay.style.background = computeOverlayBackground(baseColor, this.options.host, this.ownerWindow);
         
 		if (slides.length === 0) {
 			this.grid.createDiv({
@@ -463,7 +466,6 @@ export class SlideThumbnailPanel {
 		}
 		this.markdownComponents.length = 0;
 	}
-
     // ✅ 核心修复：根据 canvas 实际宽度计算缩放，移除最小限制
 	private applyScale(canvas: HTMLElement, root: HTMLElement): void {
 		const rect = canvas.getBoundingClientRect();

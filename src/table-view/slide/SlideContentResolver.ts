@@ -84,26 +84,16 @@ function containsImageMarker(text: string): boolean {
 	return normalized.includes('![') || normalized.includes('![[');
 }
 
-function resolveImageMarkdown(line: string, values: Record<string, string>): string | null {
+function resolveImageMarkdown(line: string, _values: Record<string, string>): string | null {
 	const trimmed = line.trim();
 	if (!trimmed) {
 		return null;
 	}
-	if (MARKDOWN_IMAGE_PATTERN.test(trimmed) || EMBED_IMAGE_PATTERN.test(trimmed)) {
-		return trimmed;
+	const token = extractFirstImageToken(trimmed);
+	if (!token || token !== trimmed) {
+		return null;
 	}
-	const wikilinkMatch = trimmed.match(WIKILINK_PATTERN);
-	if (wikilinkMatch && isImagePath(wikilinkMatch[1])) {
-		return `![[${wikilinkMatch[1]}]]`;
-	}
-	const matchedFieldValue = Object.values(values).find((value) => value.trim() === trimmed);
-	if (matchedFieldValue && isImagePath(trimmed)) {
-		if (/^(https?:\/\/|data:image\/)/i.test(trimmed)) {
-			return `![](${trimmed})`;
-		}
-		return `![[${trimmed}]]`;
-	}
-	return null;
+	return normalizeImageToken(token);
 }
 
 export function resolveDirectImage(value: string | null | undefined): string | null {
@@ -114,13 +104,45 @@ export function resolveDirectImage(value: string | null | undefined): string | n
 	if (!trimmed) {
 		return null;
 	}
+	const token = extractFirstImageToken(trimmed);
+	if (!token || token !== trimmed) {
+		return null;
+	}
+	return normalizeImageToken(token);
+}
+
+function extractFirstImageToken(text: string): string | null {
+	const markdown = text.match(MARKDOWN_IMAGE_PATTERN);
+	if (markdown) return markdown[0];
+	const embed = text.match(EMBED_IMAGE_PATTERN);
+	if (embed) return embed[0];
+	const wikilink = text.match(WIKILINK_PATTERN);
+	if (wikilink && isImagePath(wikilink[1])) {
+		return wikilink[0];
+	}
+	const httpMatch = text.match(/https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)/i);
+	if (httpMatch) return httpMatch[0];
+	const dataMatch = text.match(/data:image\/[^\s]+/i);
+	if (dataMatch) return dataMatch[0];
+	const fileMatch = text.match(/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)/i);
+	if (fileMatch) return fileMatch[0];
+	return null;
+}
+
+function normalizeImageToken(token: string): string | null {
+	const trimmed = token.trim();
+	if (!trimmed) return null;
 	if (MARKDOWN_IMAGE_PATTERN.test(trimmed) || EMBED_IMAGE_PATTERN.test(trimmed)) {
 		return trimmed;
 	}
 	if (/^(https?:\/\/|data:image\/)/i.test(trimmed)) {
 		return `![](${trimmed})`;
 	}
-	if (WIKILINK_PATTERN.test(trimmed) || IMAGE_PATH_PATTERN.test(trimmed) || hasImageExtension(trimmed)) {
+	const wikilink = trimmed.match(WIKILINK_PATTERN);
+	if (wikilink && isImagePath(wikilink[1])) {
+		return `![[${wikilink[1]}]]`;
+	}
+	if (isImagePath(trimmed)) {
 		return `![[${trimmed}]]`;
 	}
 	return null;

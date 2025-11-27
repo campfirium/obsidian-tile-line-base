@@ -244,6 +244,95 @@ export class SlideTemplateModal extends Modal {
 		}
 	}
 
+	private applyPresetStyles(preset: SlideTemplateConfig): void {
+		if (this.isYamlMode) {
+			this.applyYamlInput();
+		}
+		const current = sanitizeSlideTemplateConfig(this.template);
+		const sanitizedPreset = sanitizeSlideTemplateConfig(preset);
+		const mergeTextLayout = (
+			base: SlideLayoutConfig | undefined,
+			override: SlideLayoutConfig | undefined,
+			fallback: SlideLayoutConfig
+		): SlideLayoutConfig => override ?? base ?? fallback;
+		const merged: SlideTemplateConfig = {
+			...current,
+			textColor: sanitizedPreset.textColor ?? current.textColor,
+			backgroundColor: sanitizedPreset.backgroundColor ?? current.backgroundColor,
+			single: {
+				withImage: {
+					...current.single.withImage,
+					titleLayout: mergeTextLayout(
+						current.single.withImage.titleLayout,
+						sanitizedPreset.single.withImage.titleLayout,
+						getDefaultTitleLayout()
+					),
+					bodyLayout: mergeTextLayout(
+						current.single.withImage.bodyLayout,
+						sanitizedPreset.single.withImage.bodyLayout,
+						getDefaultBodyLayout()
+					),
+					imageLayout: mergeTextLayout(
+						current.single.withImage.imageLayout,
+						sanitizedPreset.single.withImage.imageLayout,
+						getDefaultBodyLayout()
+					)
+				},
+				withoutImage: {
+					...current.single.withoutImage,
+					titleLayout: mergeTextLayout(
+						current.single.withoutImage.titleLayout,
+						sanitizedPreset.single.withoutImage.titleLayout,
+						getDefaultTitleLayout()
+					),
+					bodyLayout: mergeTextLayout(
+						current.single.withoutImage.bodyLayout,
+						sanitizedPreset.single.withoutImage.bodyLayout,
+						getDefaultBodyLayout()
+					)
+				}
+			},
+			split: {
+				withImage: {
+					...current.split.withImage,
+					textPage: {
+						...current.split.withImage.textPage,
+						titleLayout: mergeTextLayout(
+							current.split.withImage.textPage.titleLayout,
+							sanitizedPreset.split.withImage.textPage.titleLayout,
+							getDefaultTitleLayout()
+						),
+						bodyLayout: mergeTextLayout(
+							current.split.withImage.textPage.bodyLayout,
+							sanitizedPreset.split.withImage.textPage.bodyLayout,
+							getDefaultBodyLayout()
+						)
+					},
+					imageLayout: mergeTextLayout(
+						current.split.withImage.imageLayout,
+						sanitizedPreset.split.withImage.imageLayout,
+						getDefaultBodyLayout()
+					)
+				},
+				withoutImage: {
+					...current.split.withoutImage,
+					titleLayout: mergeTextLayout(
+						current.split.withoutImage.titleLayout,
+						sanitizedPreset.split.withoutImage.titleLayout,
+						getDefaultTitleLayout()
+					),
+					bodyLayout: mergeTextLayout(
+						current.split.withoutImage.bodyLayout,
+						sanitizedPreset.split.withoutImage.bodyLayout,
+						getDefaultBodyLayout()
+					)
+				}
+			}
+		};
+		this.template = sanitizeSlideTemplateConfig(merged);
+		this.renderModalContent();
+	}
+
 	private applyGlobalDefault(): void {
 		const plugin = getPluginContext();
 		const globalConfig = plugin?.getDefaultSlideConfig();
@@ -251,13 +340,11 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;
 		}
-		this.template = sanitizeSlideTemplateConfig(globalConfig.template);
-		this.renderModalContent();
+		this.applyPresetStyles(globalConfig.template);
 	}
 
 	private applyBuiltInDefault(): void {
-		this.template = sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
-		this.renderModalContent();
+		this.applyPresetStyles(DEFAULT_SLIDE_TEMPLATE);
 	}
 
 	private renderInsertButton(container: HTMLElement): void {

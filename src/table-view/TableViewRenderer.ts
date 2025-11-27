@@ -95,6 +95,8 @@ export async function renderTableView(view: TableView): Promise<void> {
 			configBlock?.slide ??
 			(!isDefaultSlideViewConfig(view.slideConfig) ? view.slideConfig : globalSlideDefault ?? view.slideConfig);
 		view.slideConfig = normalizeSlideViewConfig(preferredConfig ?? null);
+		view.shouldAutoFillSlideDefaults = !configBlock?.slide && !globalSlideDefault;
+		view.slideTemplateTouched = Boolean(configBlock?.slide);
 		view.slidePreferencesLoaded = true;
 	}
 

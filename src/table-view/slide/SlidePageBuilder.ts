@@ -36,22 +36,34 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 		const row = rows[rowIndex];
 		if (mode === 'single') {
 			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.single.withImage.imageTemplate);
-			const hasImage = Boolean(imageInfo.markdown);
-			const branch = hasImage ? template.single.withImage : template.single.withoutImage;
-			const { title, blocks } = resolveSlideContent({
+			const withImageContent = resolveSlideContent({
 				row,
 				fields,
-				template: branch,
+				template: template.single.withImage,
 				activeIndex: rowIndex,
 				reservedFields,
-				imageValue: hasImage ? imageInfo.raw : undefined,
+				imageValue: imageInfo.raw,
 				includeBodyImages: true
 			});
+			const withImageBlocks = withImageContent.blocks;
+			const hasImage = Boolean(imageInfo.markdown) || withImageBlocks.some((block) => block.type === 'image');
+			const branch = hasImage ? template.single.withImage : template.single.withoutImage;
+			const content =
+				hasImage && withImageContent
+					? withImageContent
+					: resolveSlideContent({
+							row,
+							fields,
+							template: branch,
+							activeIndex: rowIndex,
+							reservedFields,
+							includeBodyImages: true
+						});
 			pages.push(
 				buildPageFromBlocks(
 					rowIndex,
-					title,
-					blocks,
+					content.title,
+					content.blocks,
 					branch,
 					textColor,
 					backgroundColor,
@@ -172,8 +184,32 @@ function resolveImageTemplate(
 	template: string | null | undefined
 ): { raw: string | null; markdown: string | null } {
 	const rendered = renderTemplateValue(template, row, fields, reservedFields);
-	const markdown = resolveDirectImage(rendered);
-	return { raw: rendered, markdown };
+	const direct = resolveDirectImage(rendered);
+	if (direct) {
+		return { raw: rendered, markdown: direct };
+	}
+	const templateFields =
+		typeof template === 'string'
+			? Array.from(template.matchAll(/\{([^{}]+)\}/g)).map((match) => match[1]?.trim()).filter(Boolean)
+			: [];
+	for (const field of templateFields) {
+		if (!field || reservedFields.has(field)) {
+			continue;
+		}
+		const candidateValue = row[field];
+		if (candidateValue == null) {
+			continue;
+		}
+		const text = typeof candidateValue === 'string' ? candidateValue.trim() : String(candidateValue).trim();
+		if (!text) {
+			continue;
+		}
+		const fallback = resolveDirectImage(text);
+		if (fallback) {
+			return { raw: text, markdown: fallback };
+		}
+	}
+	return { raw: rendered, markdown: null };
 }
 
 function renderTemplateValue(

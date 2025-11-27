@@ -35,24 +35,27 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 	const renderTemplate = (templateText: string): string => renderSlideTemplate(templateText, values, options.reservedFields);
 
 	const titleTemplate = options.template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
+	const rawTitle = renderTemplate(titleTemplate);
 	const title =
-		renderTemplate(titleTemplate) ||
+		rawTitle.trim() ||
 		t('slideView.untitledSlide', { index: String(options.activeIndex + 1) });
 
 	const body = renderTemplate(options.template.bodyTemplate);
-	const lines = body ? body.split('\n').filter((line) => line.trim().length > 0) : [];
+	const lines = body ? body.split('\n') : [];
 	const blocks: SlideBodyBlock[] = [];
 	for (const line of lines) {
-		if (options.includeBodyImages === false) {
-			blocks.push({ type: 'text', text: line });
+		if (line.trim().length === 0) {
+			blocks.push({ type: 'text', text: '' });
 			continue;
 		}
-		const imageMarkdown = resolveImageMarkdown(line, values);
-		if (imageMarkdown) {
-			blocks.push({ type: 'image', markdown: imageMarkdown });
-		} else {
-			blocks.push({ type: 'text', text: line });
+		if (options.includeBodyImages !== false) {
+			const imageMarkdown = resolveImageMarkdown(line, values);
+			if (imageMarkdown) {
+				blocks.push({ type: 'image', markdown: imageMarkdown });
+				continue;
+			}
 		}
+		blocks.push({ type: 'text', text: line });
 	}
 	const imageMarkdown = resolveDirectImage(options.imageValue);
 	if (imageMarkdown) {
@@ -66,14 +69,14 @@ export function renderSlideTemplate(
 	values: Record<string, string>,
 	reservedFields: Set<string>
 ): string {
-	const input = templateText.replace(/\r\n/g, '\n');
+	const input = (templateText ?? '').replace(/\r\n/g, '\n');
 	return input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
 		const field = key.trim();
 		if (!field || reservedFields.has(field)) {
 			return '';
 		}
 		return values[field] ?? '';
-	}).trim();
+	});
 }
 
 function resolveImageMarkdown(line: string, values: Record<string, string>): string | null {

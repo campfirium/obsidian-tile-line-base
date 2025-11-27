@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import type { App } from 'obsidian';
-import { Menu, Modal, Notice, parseYaml, setIcon, stringifyYaml } from 'obsidian';
+import { Menu, Modal, Notice, parseYaml, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import {
 	DEFAULT_SLIDE_TEMPLATE,
@@ -11,6 +11,7 @@ import {
 	type SlideTemplateConfig
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
+import { buildBuiltInSlideTemplate, RESERVED_SLIDE_FIELDS } from './slideDefaults';
 
 interface SlideTemplateModalOptions {
 	app: App;
@@ -20,7 +21,6 @@ interface SlideTemplateModalOptions {
 	onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
 }
 
-const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 
 export class SlideTemplateModal extends Modal {
@@ -36,8 +36,6 @@ export class SlideTemplateModal extends Modal {
 	private bodyInputEl: HTMLTextAreaElement | null = null;
 	private insertButtonEl: HTMLButtonElement | null = null;
 	private lastFocusedInput: HTMLTextAreaElement | null = null;
-	private isYamlMode = false;
-	private yamlInputEl: HTMLTextAreaElement | null = null;
 	private singleBranch: 'withoutImage' | 'withImage';
 	private splitBranch: 'withoutImage' | 'withImage';
 	private containerNode: HTMLElement | null = null;
@@ -45,7 +43,7 @@ export class SlideTemplateModal extends Modal {
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
 		this.modalEl.addClass('tlb-slide-template-modal');
-		this.fields = opts.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
+		this.fields = opts.fields.filter((field) => field && !RESERVED_SLIDE_FIELDS.has(field));
 		this.onSave = opts.onSave;
 		this.onSaveDefault = opts.onSaveDefault;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
@@ -68,8 +66,6 @@ export class SlideTemplateModal extends Modal {
 		this.bodyInputEl = null;
 		this.insertButtonEl = null;
 		this.lastFocusedInput = null;
-		this.isYamlMode = false;
-		this.yamlInputEl = null;
 		if (this.containerNode) {
 			this.containerNode.classList.remove('tlb-slide-template-container');
 			this.containerNode = null;
@@ -87,7 +83,6 @@ export class SlideTemplateModal extends Modal {
 		this.bodyInputEl = null;
 		this.insertButtonEl = null;
 		this.lastFocusedInput = null;
-		this.yamlInputEl = null;
 		this.contentEl.addClass('tlb-slide-template');
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.titleEl.setText(t('slideView.templateModal.title'));
@@ -96,13 +91,7 @@ export class SlideTemplateModal extends Modal {
 		const toolbarLeft = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-left' });
 		this.renderSlideModeSwitch(toolbarLeft);
 		const toolbarRight = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-right' });
-		this.renderModeToggle(toolbarRight);
 		this.renderPresetsMenu(toolbarRight);
-
-		if (this.isYamlMode) {
-			this.renderYamlView();
-			return;
-		}
 
 		this.resolveThemeDefaults();
 		this.renderSingleSection(this.template.mode === 'single');
@@ -149,25 +138,6 @@ export class SlideTemplateModal extends Modal {
 		});
 	}
 
-	private renderModeToggle(container: HTMLElement): void {
-		const label = this.isYamlMode
-			? t('slideView.templateModal.backToFormLabel')
-			: t('slideView.templateModal.showYamlLabel');
-		const toggleButton = container.createEl('button', {
-			cls: 'tlb-slide-template__mode-toggle',
-			text: label,
-			attr: { type: 'button' }
-		});
-		toggleButton.addEventListener('click', (event) => {
-			event.preventDefault();
-			if (this.isYamlMode) {
-				this.applyYamlInput();
-			}
-			this.isYamlMode = !this.isYamlMode;
-			this.renderModalContent();
-		});
-	}
-
 	private renderPresetsMenu(container: HTMLElement): void {
 		if (!this.onSaveDefault) {
 			return;
@@ -198,30 +168,99 @@ export class SlideTemplateModal extends Modal {
 					this.applyBuiltInDefault();
 				});
 			});
+			menu.addSeparator();
+			menu.addItem((item) => {
+				item.setTitle(t('slideView.templateModal.copyPresetLabel')).onClick(() => {
+					void this.copyPresetToClipboard();
+				});
+			});
+			menu.addItem((item) => {
+				item.setTitle(t('slideView.templateModal.pastePresetLabel')).onClick(() => {
+					void this.pastePresetFromClipboard();
+				});
+			});
 			menu.showAtMouseEvent(event);
 		});
 	}
 
-	private renderYamlView(): void {
-		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
-		const row = this.createRow(grid);
-		row.left.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.bodyFieldsDesc') });
-		const textarea = row.left.createEl('textarea', {
-			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
-			attr: { rows: '16' }
-		}) as HTMLTextAreaElement;
-		textarea.value = stringifyYaml(this.template);
-		this.yamlInputEl = textarea;
+	private getClipboard(): Clipboard | null {
+		const ownerDoc = this.contentEl.ownerDocument ?? document;
+		const navigatorLike =
+			ownerDoc.defaultView?.navigator ?? (typeof navigator === 'undefined' ? null : navigator);
+		return navigatorLike?.clipboard ?? null;
 	}
 
-	private applyYamlInput(): void {
-		if (!this.yamlInputEl) return;
+	private isTemplatePayload(payload: unknown): boolean {
+		if (!payload || typeof payload !== 'object') {
+			return false;
+		}
+		const raw = payload as Record<string, unknown>;
+		return Boolean(
+			raw.single ||
+				raw.split ||
+				typeof raw.mode === 'string' ||
+				typeof raw.titleTemplate === 'string' ||
+				typeof raw.bodyTemplate === 'string' ||
+				raw.textColor !== undefined ||
+				raw.backgroundColor !== undefined
+		);
+	}
+
+	private async copyPresetToClipboard(): Promise<void> {
+		const clipboard = this.getClipboard();
+		if (!clipboard?.writeText) {
+			new Notice(t('slideView.templateModal.clipboardUnavailable'));
+			return;
+		}
 		try {
-			const parsed = parseYaml(this.yamlInputEl.value) as unknown;
-			const sanitized = sanitizeSlideTemplateConfig(parsed);
-			this.template = sanitized;
-		} catch {
-			// ignore malformed yaml; keep old template
+			const payload = JSON.stringify(sanitizeSlideTemplateConfig(this.template), null, 2);
+			await clipboard.writeText(payload);
+			new Notice(t('slideView.templateModal.copyPresetSuccess'));
+		} catch (error) {
+			console.error('[SlideTemplateModal] Failed to copy preset', error);
+			new Notice(t('slideView.templateModal.copyPresetFailed'));
+		}
+	}
+
+	private async pastePresetFromClipboard(): Promise<void> {
+		const clipboard = this.getClipboard();
+		if (!clipboard?.readText) {
+			new Notice(t('slideView.templateModal.clipboardUnavailable'));
+			return;
+		}
+		let rawText = '';
+		try {
+			rawText = await clipboard.readText();
+		} catch (error) {
+			console.error('[SlideTemplateModal] Failed to read preset from clipboard', error);
+			new Notice(t('slideView.templateModal.pastePresetFailed'));
+			return;
+		}
+		if (!rawText || rawText.trim().length === 0) {
+			new Notice(t('slideView.templateModal.pastePresetInvalid'));
+			return;
+		}
+		let parsed: unknown;
+		try {
+			parsed = parseYaml(rawText);
+		} catch (error) {
+			console.error('[SlideTemplateModal] Failed to parse preset from clipboard', error);
+			new Notice(t('slideView.templateModal.pastePresetInvalid'));
+			return;
+		}
+		if (!this.isTemplatePayload(parsed)) {
+			new Notice(t('slideView.templateModal.pastePresetInvalid'));
+			return;
+		}
+		try {
+			this.template = sanitizeSlideTemplateConfig(parsed);
+			this.setBranchSelection('single', this.resolveInitialBranch('single'));
+			this.setBranchSelection('split', this.resolveInitialBranch('split'));
+			this.renderModalContent();
+			new Notice(t('slideView.templateModal.pastePresetSuccess'));
+		} catch (error) {
+			console.error('[SlideTemplateModal] Failed to apply preset from clipboard', error);
+			new Notice(t('slideView.templateModal.pastePresetFailed'));
 		}
 	}
 
@@ -230,9 +269,6 @@ export class SlideTemplateModal extends Modal {
 			return;
 		}
 		try {
-			if (this.isYamlMode) {
-				this.applyYamlInput();
-			}
 			const nextTemplate = sanitizeSlideTemplateConfig(this.template);
 			const maybePromise = this.onSaveDefault(nextTemplate);
 			if (maybePromise && typeof (maybePromise as Promise<void>).catch === 'function') {
@@ -248,91 +284,10 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private applyPresetStyles(preset: SlideTemplateConfig): void {
-		if (this.isYamlMode) {
-			this.applyYamlInput();
-		}
-		const current = sanitizeSlideTemplateConfig(this.template);
 		const sanitizedPreset = sanitizeSlideTemplateConfig(preset);
-		const mergeTextLayout = (
-			base: SlideLayoutConfig | undefined,
-			override: SlideLayoutConfig | undefined,
-			fallback: SlideLayoutConfig
-		): SlideLayoutConfig => override ?? base ?? fallback;
-		const merged: SlideTemplateConfig = {
-			...current,
-			textColor: sanitizedPreset.textColor ?? current.textColor,
-			backgroundColor: sanitizedPreset.backgroundColor ?? current.backgroundColor,
-			single: {
-				withImage: {
-					...current.single.withImage,
-					titleLayout: mergeTextLayout(
-						current.single.withImage.titleLayout,
-						sanitizedPreset.single.withImage.titleLayout,
-						getDefaultTitleLayout()
-					),
-					bodyLayout: mergeTextLayout(
-						current.single.withImage.bodyLayout,
-						sanitizedPreset.single.withImage.bodyLayout,
-						getDefaultBodyLayout()
-					),
-					imageLayout: mergeTextLayout(
-						current.single.withImage.imageLayout,
-						sanitizedPreset.single.withImage.imageLayout,
-						getDefaultBodyLayout()
-					)
-				},
-				withoutImage: {
-					...current.single.withoutImage,
-					titleLayout: mergeTextLayout(
-						current.single.withoutImage.titleLayout,
-						sanitizedPreset.single.withoutImage.titleLayout,
-						getDefaultTitleLayout()
-					),
-					bodyLayout: mergeTextLayout(
-						current.single.withoutImage.bodyLayout,
-						sanitizedPreset.single.withoutImage.bodyLayout,
-						getDefaultBodyLayout()
-					)
-				}
-			},
-			split: {
-				withImage: {
-					...current.split.withImage,
-					textPage: {
-						...current.split.withImage.textPage,
-						titleLayout: mergeTextLayout(
-							current.split.withImage.textPage.titleLayout,
-							sanitizedPreset.split.withImage.textPage.titleLayout,
-							getDefaultTitleLayout()
-						),
-						bodyLayout: mergeTextLayout(
-							current.split.withImage.textPage.bodyLayout,
-							sanitizedPreset.split.withImage.textPage.bodyLayout,
-							getDefaultBodyLayout()
-						)
-					},
-					imageLayout: mergeTextLayout(
-						current.split.withImage.imageLayout,
-						sanitizedPreset.split.withImage.imageLayout,
-						getDefaultBodyLayout()
-					)
-				},
-				withoutImage: {
-					...current.split.withoutImage,
-					titleLayout: mergeTextLayout(
-						current.split.withoutImage.titleLayout,
-						sanitizedPreset.split.withoutImage.titleLayout,
-						getDefaultTitleLayout()
-					),
-					bodyLayout: mergeTextLayout(
-						current.split.withoutImage.bodyLayout,
-						sanitizedPreset.split.withoutImage.bodyLayout,
-						getDefaultBodyLayout()
-					)
-				}
-			}
-		};
-		this.template = sanitizeSlideTemplateConfig(merged);
+		this.template = sanitizedPreset;
+		this.setBranchSelection('single', this.resolveInitialBranch('single'));
+		this.setBranchSelection('split', this.resolveInitialBranch('split'));
 		this.renderModalContent();
 	}
 
@@ -347,7 +302,8 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private applyBuiltInDefault(): void {
-		this.applyPresetStyles(DEFAULT_SLIDE_TEMPLATE);
+		const preset = buildBuiltInSlideTemplate(this.fields, DEFAULT_SLIDE_TEMPLATE);
+		this.applyPresetStyles(preset);
 	}
 
 	private setBranchSelection(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): void {
@@ -652,9 +608,6 @@ export class SlideTemplateModal extends Modal {
 			text: t('slideView.templateModal.saveLabel')
 		});
 		saveButton.addEventListener('click', () => {
-			if (this.isYamlMode) {
-				this.applyYamlInput();
-			}
 			this.onSave(this.template);
 			this.close();
 		});

@@ -10,6 +10,7 @@ import {
 import { getLogger } from '../../utils/logger';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
+import { buildBuiltInSlideTemplate } from './slideDefaults';
 
 const logger = getLogger('slide:render-mode');
 
@@ -18,13 +19,25 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
 	const fields = view.schema?.columnNames ?? [];
+	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults;
+	const hydratedConfig = shouldApplyBuiltIn
+		? normalizeSlideViewConfig({
+				...view.slideConfig,
+				template: buildBuiltInSlideTemplate(fields, view.slideConfig.template)
+			})
+		: view.slideConfig;
 	const renderState = buildRenderConfig({
-		config: view.slideConfig
+		config: hydratedConfig
 	});
 	view.slideConfig = renderState.renderConfig;
 	view.shouldAutoFillSlideDefaults = false;
-	view.slideTemplateTouched = true;
+	view.slideTemplateTouched = view.slideTemplateTouched || shouldApplyBuiltIn;
 	const plugin = getPluginContext();
+	if (shouldApplyBuiltIn && plugin?.setDefaultSlideConfig) {
+		void plugin.setDefaultSlideConfig(renderState.renderConfig).catch((error: unknown) => {
+			logger.warn('Failed to persist built-in slide preset as global default', error);
+		});
+	}
 
 	view.slideController = renderSlideView({
 		app: view.app,

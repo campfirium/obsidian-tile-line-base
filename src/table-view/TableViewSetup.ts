@@ -60,6 +60,7 @@ export function initializeTableView(view: TableView): void {
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		getSlideConfig: () => view.slideConfig ?? null,
+		getGlobalSlideConfig: () => getPluginContext()?.getDefaultSlideConfig() ?? null,
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
 		shouldAllowSave: () => view.hasUserMutations(),
 		onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),

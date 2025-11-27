@@ -1,7 +1,13 @@
+import { Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
+import { t } from '../../i18n';
+import { getPluginContext } from '../../pluginContext';
 import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig, type SlideTextTemplate } from '../../types/slide';
+import { getLogger } from '../../utils/logger';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
+
+const logger = getLogger('slide:render-mode');
 
 export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	container.classList.add('tlb-slide-mode');
@@ -10,6 +16,7 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
 	const effectiveConfig = applyDefaultTemplates(baseConfig, view.schema?.columnNames ?? []);
 	view.slideConfig = effectiveConfig;
+	const plugin = getPluginContext();
 
 	view.slideController = renderSlideView({
 		app: view.app,
@@ -44,7 +51,19 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 					view.slideController?.controller.updateConfig(view.slideConfig);
 					view.markUserMutation('slide-template');
 					view.persistenceService.scheduleSave();
-				}
+				},
+				onSaveDefault: plugin
+					? async (nextTemplate) => {
+							try {
+								const nextConfig = normalizeSlideViewConfig({ ...freshConfig, template: nextTemplate });
+								await plugin.setDefaultSlideConfig(nextConfig);
+								new Notice(t('slideView.templateModal.setDefaultSuccess'));
+							} catch (error) {
+								logger.error('Failed to set slide template as default', error);
+								new Notice(t('slideView.templateModal.setDefaultError'));
+							}
+						}
+					: undefined
 			});
 			modal.open();
 		}

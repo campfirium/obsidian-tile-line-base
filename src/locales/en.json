@@ -105,6 +105,13 @@
       "backToFormLabel": "Back to form",
       "yamlViewLabel": "Slide template YAML",
       "yamlViewDesc": "Copy or paste YAML to migrate or reuse this slide template.",
+      "presetsLabel": "Presets",
+      "setDefaultLabel": "Set as global default",
+      "resetToGlobalDefaultLabel": "Load global default",
+      "resetToBuiltInDefaultLabel": "Load built-in default",
+      "setDefaultSuccess": "Saved current slide template as the default.",
+      "setDefaultError": "Failed to save as default. Check the console for details.",
+      "noGlobalDefault": "No global default preset is available yet.",
       "saveLabel": "Save",
       "cancelLabel": "Cancel"
     }

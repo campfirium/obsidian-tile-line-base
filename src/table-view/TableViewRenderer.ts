@@ -13,7 +13,7 @@ import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
-import { normalizeSlideViewConfig } from '../types/slide';
+import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 
 const logger = getLogger('table-view:renderer');
@@ -89,7 +89,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	if (!view.slidePreferencesLoaded) {
-		view.slideConfig = normalizeSlideViewConfig(configBlock?.slide ?? view.slideConfig ?? null);
+		const plugin = getPluginContext();
+		const globalSlideDefault = plugin?.getDefaultSlideConfig?.() ?? null;
+		const preferredConfig =
+			configBlock?.slide ??
+			(!isDefaultSlideViewConfig(view.slideConfig) ? view.slideConfig : globalSlideDefault ?? view.slideConfig);
+		view.slideConfig = normalizeSlideViewConfig(preferredConfig ?? null);
 		view.slidePreferencesLoaded = true;
 	}
 

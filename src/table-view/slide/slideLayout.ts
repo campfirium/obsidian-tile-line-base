@@ -41,15 +41,20 @@ export function applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slide
 		el.style.setProperty('--tlb-layout-right', `${layout.insetPct}%`);
 		el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
 	} else {
-		el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
-		el.style.setProperty('--tlb-layout-right', 'auto');
-		el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
-	}
+	el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
+	el.style.setProperty('--tlb-layout-right', 'auto');
+	el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
+}
 
 	const usableHeight = Math.max(0, slideEl.clientHeight);
-	const blockHeight = el.offsetHeight;
 	const topPx = (usableHeight * layout.topPct) / 100;
-	const maxTop = Math.max(0, usableHeight - blockHeight);
-	el.style.setProperty('--tlb-layout-top', `${Math.min(topPx, maxTop)}px`);
+	el.style.setProperty('--tlb-layout-top', `${topPx}px`);
+
+	if (layout.widthPct >= 99) {
+		el.style.width = '100%';
+		el.style.left = '0';
+		el.style.right = '0';
+		el.style.transform = 'none';
+	}
 }
 /* eslint-enable obsidianmd/no-static-styles-assignment */

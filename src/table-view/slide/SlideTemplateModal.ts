@@ -49,8 +49,8 @@ export class SlideTemplateModal extends Modal {
 		this.onSave = opts.onSave;
 		this.onSaveDefault = opts.onSaveDefault;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
-		this.singleBranch = SlideTemplateModal.lastSelectedSingleBranch;
-		this.splitBranch = SlideTemplateModal.lastSelectedSplitBranch;
+		this.singleBranch = this.resolveInitialBranch('single');
+		this.splitBranch = this.resolveInitialBranch('split');
 	}
 
 	onOpen(): void {
@@ -143,6 +143,7 @@ export class SlideTemplateModal extends Modal {
 			evt.preventDefault();
 			if (this.template.mode !== mode) {
 				this.template.mode = mode;
+				this.setBranchSelection(mode, this.resolveInitialBranch(mode));
 				this.renderModalContent();
 			}
 		});
@@ -357,6 +358,17 @@ export class SlideTemplateModal extends Modal {
 		}
 		this.splitBranch = branch;
 		SlideTemplateModal.lastSelectedSplitBranch = branch;
+	}
+
+	private resolveInitialBranch(mode: 'single' | 'split'): 'withoutImage' | 'withImage' {
+		const hasImageTemplate =
+			mode === 'single'
+				? Boolean(this.template.single.withImage.imageTemplate?.trim())
+				: Boolean(this.template.split.withImage.imageTemplate?.trim());
+		if (hasImageTemplate) {
+			return 'withImage';
+		}
+		return mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
 	}
 
 	private renderInsertButton(container: HTMLElement): void {

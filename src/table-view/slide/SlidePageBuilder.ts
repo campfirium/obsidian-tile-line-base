@@ -1,5 +1,5 @@
 import type { RowData } from '../../grid/GridAdapter';
-import { getDefaultBodyLayout, getDefaultTitleLayout, type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
+import { type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
 import { computeLayout, type ComputedLayout } from './slideLayout';
 import { renderSlideTemplate, resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
 
@@ -78,8 +78,6 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				)
 			);
 		} else {
-			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.split.withImage.imageTemplate);
-			const hasImage = Boolean(imageInfo.markdown);
 			const textBranch = template.split.withoutImage;
 			const { title, blocks } = resolveSlideContent({
 				row,
@@ -104,21 +102,16 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				)
 			);
 
-			if (hasImage && imageInfo.markdown) {
-				const imageTemplateText = template.split.withImage.imageTemplate ?? '';
-				const imageTemplate: SlideTextTemplate = {
-					titleTemplate: '',
-					bodyTemplate: imageTemplateText,
-					titleLayout: getDefaultTitleLayout(),
-					bodyLayout: template.split.withImage.imageLayout ?? getDefaultBodyLayout()
-				};
+			const imageTemplate = template.split.withImage;
+			const imageInfo = resolveImageTemplate(row, fields, reservedFields, imageTemplate.imageTemplate);
+			if (imageInfo.markdown) {
 				const imageContent = resolveSlideContent({
 					row,
 					fields,
-					template: imageTemplate,
+					template: imageTemplate.textPage,
 					activeIndex: rowIndex,
 					reservedFields,
-					imageValue: null,
+					imageValue: imageInfo.raw,
 					includeBodyImages: true
 				});
 				pages.push(
@@ -126,11 +119,14 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 						rowIndex,
 						imageContent.title,
 						imageContent.blocks,
-						imageTemplate,
+						imageTemplate.textPage,
 						textColor,
 						backgroundColor,
-						() => {},
-						computeLayout(template.split.withImage.imageLayout, 'body')
+						(next) => {
+							imageTemplate.textPage = { ...imageTemplate.textPage, ...next };
+							template.split.withImage = { ...imageTemplate };
+						},
+						computeLayout(imageTemplate.imageLayout, 'body')
 					)
 				);
 			}

@@ -3,16 +3,14 @@ export function computeOverlayBackground(
 	host: HTMLElement,
 	ownerWindow: Window | null
 ): string {
+	const theme = resolveTheme(ownerWindow);
 	const candidate = parseColor(baseColor);
 	const hostBg = parseColor(readHostBackground(host, ownerWindow));
 	const parsed = candidate ?? hostBg;
 	if (!parsed) {
-		return 'var(--background-primary)';
+		return buildThemeAwareFallback(theme);
 	}
-	const luminance = getLuminance(parsed);
-	const darkenFactor = 0.12;
-	const lightenFactor = 0.06;
-	const shifted = luminance < 0.1 ? lighten(parsed, lightenFactor) : darken(parsed, darkenFactor);
+	const shifted = theme === 'light' ? lighten(parsed, 0.65) : darken(parsed, 0.18);
 	return `rgb(${shifted.r}, ${shifted.g}, ${shifted.b})`;
 }
 
@@ -23,6 +21,25 @@ function readHostBackground(host: HTMLElement, ownerWindow: Window | null): stri
 	if (slideBg) return slideBg;
 	const primary = style.getPropertyValue('--background-primary')?.trim();
 	return primary ?? '';
+}
+
+type ThemeMode = 'light' | 'dark';
+
+function resolveTheme(ownerWindow: Window | null): ThemeMode {
+	const doc = ownerWindow?.document;
+	if (doc?.body?.classList.contains('theme-light')) return 'light';
+	if (doc?.body?.classList.contains('theme-dark')) return 'dark';
+	if (ownerWindow?.matchMedia?.('(prefers-color-scheme: light)').matches) {
+		return 'light';
+	}
+	return 'dark';
+}
+
+function buildThemeAwareFallback(theme: ThemeMode): string {
+	if (theme === 'light') {
+		return 'color-mix(in srgb, var(--background-primary) 88%, rgba(255, 255, 255, 0.72))';
+	}
+	return 'color-mix(in srgb, var(--background-primary) 76%, rgba(0, 0, 0, 0.42))';
 }
 
 function parseColor(input: string | null | undefined): { r: number; g: number; b: number } | null {
@@ -77,17 +94,6 @@ function darken(color: { r: number; g: number; b: number }, factor: number): { r
 		g: Math.round(clamp(color.g * (1 - factor), 0, 255)),
 		b: Math.round(clamp(color.b * (1 - factor), 0, 255))
 	};
-}
-
-function getLuminance(color: { r: number; g: number; b: number }): number {
-	const normalize = (channel: number) => {
-		const c = channel / 255;
-		return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-	};
-	const r = normalize(color.r);
-	const g = normalize(color.g);
-	const b = normalize(color.b);
-	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function clamp(value: number, min: number, max: number): number {

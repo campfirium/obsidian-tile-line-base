@@ -2974,6 +2974,9 @@
 	grid-auto-rows: auto;
 	gap: 12px 16px;
 }
+.tlb-slide-template__grid--colors {
+	align-items: start;
+}
 .tlb-slide-template__mode-switch {
 	display: flex;
 	gap: 8px;
@@ -3061,7 +3064,34 @@
 	gap: 8px;
 }
 
-.tlb-slide-template__insert,
+.tlb-slide-template__insert {
+	margin-left: auto;
+	padding: 0.2rem 0.55rem;
+	min-height: 30px;
+	border-radius: 16px;
+	border: 1px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+	background-color: transparent;
+	color: var(--text-muted);
+	opacity: 0.5;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.tlb-slide-template__insert:not(:disabled):hover,
+.tlb-slide-template__insert:not(:disabled):focus-visible {
+	background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+	border-color: color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+	color: var(--text-normal);
+	opacity: 1;
+}
+
+.tlb-slide-template__insert:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
 .tlb-slide-template__mode-toggle {
 	margin-left: auto;
 	padding: 0.35rem 0.75rem;
@@ -3070,20 +3100,21 @@
 	background-color: var(--background-secondary);
 	color: var(--text-normal);
 	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 }
 
-.tlb-slide-template__insert:not(:disabled):hover,
-.tlb-slide-template__insert:not(:disabled):focus-visible,
 .tlb-slide-template__mode-toggle:not(:disabled):hover,
 .tlb-slide-template__mode-toggle:not(:disabled):focus-visible {
 	background-color: var(--background-modifier-form-field-highlighted);
 	color: var(--text-normal);
 }
 
-.tlb-slide-template__insert:disabled,
-.tlb-slide-template__mode-toggle:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
+.tlb-slide-template__insert-icon {
+	display: inline-flex;
+	width: 14px;
+	height: 14px;
 }
 
 .tlb-slide-template__toolbar-left {
@@ -3193,7 +3224,7 @@
 
 .tlb-slide-template__color-row {
 	display: grid;
-	grid-template-columns: 100px 40px 150px 110px;
+	grid-template-columns: minmax(96px, auto) 40px minmax(140px, 1fr) 110px;
 	align-items: center;
 	gap: 10px;
 }
@@ -3214,6 +3245,18 @@
 	border-radius: 50%;
 	background: transparent;
 	overflow: hidden;
+	appearance: none;
+	-webkit-appearance: none;
+}
+
+.tlb-slide-template__color-row input[type="color"]::-webkit-color-swatch-wrapper {
+	padding: 2px;
+	border-radius: 50%;
+}
+
+.tlb-slide-template__color-row input[type="color"]::-webkit-color-swatch {
+	border: none;
+	border-radius: 50%;
 }
 
 .tlb-slide-template__color-text {
@@ -3232,27 +3275,44 @@
 	align-items: center;
 	justify-content: center;
 	gap: 6px;
-	padding: 0 10px;
-	height: 32px;
-	border: 1px solid var(--background-modifier-border);
+	padding: 0 8px;
+	height: 30px;
+	border: 1px solid color-mix(in srgb, var(--text-muted) 45%, transparent);
 	border-radius: 6px;
-	background: var(--background-secondary);
-	color: var(--text-normal);
+	background: transparent;
+	color: var(--text-muted);
 	cursor: pointer;
+	transition:
+		border-color 120ms ease,
+		background-color 120ms ease,
+		color 120ms ease,
+		box-shadow 120ms ease;
 }
 
 .tlb-slide-template__color-reset-dot {
 	display: inline-block;
-	width: 14px;
-	height: 14px;
+	width: 12px;
+	height: 12px;
 	border-radius: 50%;
 	border: 1px solid var(--text-muted);
 	background: var(--text-muted);
+	transition:
+		border-color 120ms ease,
+		background-color 120ms ease;
 }
 
 .tlb-slide-template__color-reset:hover,
 .tlb-slide-template__color-reset:focus-visible {
 	color: var(--text-normal);
+	border-color: color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+	background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+	box-shadow: none;
+}
+
+.tlb-slide-template__color-reset:hover .tlb-slide-template__color-reset-dot,
+.tlb-slide-template__color-reset:focus-visible .tlb-slide-template__color-reset-dot {
+	border-color: color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+	background: color-mix(in srgb, var(--interactive-accent) 55%, transparent);
 }
 
 .tlb-slide-template__layout-two-col {

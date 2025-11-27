@@ -44,7 +44,7 @@ import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, Kanba
 import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
 import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
-import { buildTableViewTitle } from "./utils/viewTitle";
+import { buildTableViewTabTitle } from "./utils/viewTitle";
 import { ConversionSessionManager } from "./table-view/ConversionSessionManager";
 import { refreshTableViewDisplayText } from "./table-view/viewDisplayText";
 import type { SlideViewConfig } from "./types/slide";
@@ -119,6 +119,7 @@ export class TableView extends ItemView {
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
+		this.navigation = true;
 		initializeTableView(this);
 		this.viewModeManager = new ViewModeManager(this);
 	}
@@ -126,10 +127,9 @@ export class TableView extends ItemView {
 		return TABLE_VIEW_TYPE;
 	}
 	getDisplayText(): string {
-		return buildTableViewTitle({
+		return buildTableViewTabTitle({
 			file: this.file,
-			filePath: this.file?.path ?? null,
-			mode: this.activeViewMode
+			filePath: this.file?.path ?? null
 		});
 	}
 	public refreshDisplayText(): void {

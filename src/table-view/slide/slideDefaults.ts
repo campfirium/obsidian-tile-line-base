@@ -7,6 +7,8 @@ import {
 
 export const RESERVED_SLIDE_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
+let cachedBaseTemplate: SlideTemplateConfig | null = null;
+
 const normalizeFieldList = (fields: string[]): string[] => {
 	const seen = new Set<string>();
 	const normalized: string[] = [];
@@ -33,9 +35,16 @@ const applyTemplates = (template: SlideTextTemplate, title: string, body: string
 	bodyTemplate: body || template.bodyTemplate || ''
 });
 
+const resolveBaseTemplate = (base: SlideTemplateConfig | undefined): SlideTemplateConfig => {
+	if (!cachedBaseTemplate) {
+		cachedBaseTemplate = sanitizeSlideTemplateConfig(base ?? DEFAULT_SLIDE_TEMPLATE);
+	}
+	return cachedBaseTemplate;
+};
+
 export function buildBuiltInSlideTemplate(fields: string[], base?: SlideTemplateConfig): SlideTemplateConfig {
 	const normalizedFields = normalizeFieldList(fields);
-	const normalizedBase = sanitizeSlideTemplateConfig(base ?? DEFAULT_SLIDE_TEMPLATE);
+	const normalizedBase = resolveBaseTemplate(base);
 	const primaryField = pickPrimaryField(normalizedFields);
 	const titleTemplate = primaryField ? `{${primaryField}}` : '';
 	const bodyFields = normalizedFields.filter((field) => field !== primaryField);

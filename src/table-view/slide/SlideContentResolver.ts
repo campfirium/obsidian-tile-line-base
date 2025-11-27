@@ -106,39 +106,26 @@ export function resolveDirectImage(value: string | null | undefined): string | n
 }
 
 function extractFirstImageToken(text: string): string | null {
-	const checkToken = (candidate: string | null | undefined): string | null => {
-		if (!candidate) return null;
-		const normalized = candidate.trim().replace(/^[“”"'\u2018\u2019]+|[“”"'\u2018\u2019]+$/g, '');
-		if (!normalized) return null;
-		if (MARKDOWN_IMAGE_PATTERN.test(normalized) || EMBED_IMAGE_PATTERN.test(normalized)) return normalized;
-		if (/^(https?:\/\/|data:image\/)/i.test(normalized) && IMAGE_PATH_PATTERN.test(normalized)) return normalized;
-		if (WIKILINK_PATTERN.test(normalized) && isImagePath(normalized.replace(/^\[\[|\]\]$/g, ''))) return normalized;
-		if (IMAGE_PATH_PATTERN.test(normalized)) return normalized;
+	const candidates: string[] = [];
+	const patterns: RegExp[] = [
+		/!\[[^\]]*]\([^)]+\)/g, // markdown image
+		/!\[\[[^\]]+?]]/g, // embed image
+		/\[\[([^\]]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif))(?:\|[^\]]*)?]]/gi, // wikilink with image extension
+		/https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/gi,
+		/data:image\/[^\s]+/gi,
+		/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/gi
+	];
+	for (const pattern of patterns) {
+		const match = pattern.exec(text);
+		if (match && match[0]) {
+			candidates.push(match[0]);
+			break;
+		}
+	}
+	if (candidates.length === 0) {
 		return null;
-	};
-
-	const markdown = text.match(MARKDOWN_IMAGE_PATTERN);
-	if (markdown) return checkToken(markdown[0]);
-	const embed = text.match(EMBED_IMAGE_PATTERN);
-	if (embed) return checkToken(embed[0]);
-	const wikilink = text.match(WIKILINK_PATTERN);
-	if (wikilink && isImagePath(wikilink[1])) {
-		return checkToken(wikilink[0]);
 	}
-
-	const tokens = text.split(/\s+/);
-	for (const raw of tokens) {
-		const token = checkToken(raw);
-		if (token) {
-			return token;
-		}
-		const trimmedPunct = raw.replace(/[.,;:]+$/g, '');
-		const token2 = checkToken(trimmedPunct);
-		if (token2) {
-			return token2;
-		}
-	}
-	return null;
+	return candidates[0].trim();
 }
 
 function normalizeImageToken(token: string): string | null {

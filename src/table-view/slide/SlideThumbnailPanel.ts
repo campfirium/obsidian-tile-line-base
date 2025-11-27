@@ -532,7 +532,8 @@ export class SlideThumbnailPanel {
 		this.grid.style.width = `${cols * cardWidth + (cols - 1) * gapX}px`;
 		this.grid.style.height = `${rows * cardHeight + (rows - 1) * gapY}px`;
 
-		const shouldCenter = rows <= 2 && totalHeight < usableHeight;
+		const leftover = usableHeight - totalHeight;
+		const shouldCenter = leftover > cardHeight * 0.2;
 		this.overlay.classList.toggle('tlb-slide-thumb--centered', shouldCenter);
 	}
 }

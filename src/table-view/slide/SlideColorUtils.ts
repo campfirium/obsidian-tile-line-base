@@ -10,8 +10,9 @@ export function computeOverlayBackground(
 		return 'var(--background-primary)';
 	}
 	const luminance = getLuminance(parsed);
-	const factor = 0.08;
-	const shifted = luminance < 0.45 ? lighten(parsed, factor) : darken(parsed, factor);
+	const darkenFactor = 0.12;
+	const lightenFactor = 0.06;
+	const shifted = luminance < 0.1 ? lighten(parsed, lightenFactor) : darken(parsed, darkenFactor);
 	return `rgb(${shifted.r}, ${shifted.g}, ${shifted.b})`;
 }
 

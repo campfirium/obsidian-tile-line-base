@@ -75,6 +75,8 @@ export class SlideViewController {
 		this.thumbnailPanel = new SlideThumbnailPanel({
 			host: this.root,
 			emptyText: t('slideView.emptyState'),
+			app: this.app,
+			sourcePath: this.sourcePath,
 			onSelect: (index) => {
 				this.jumpTo(index);
 				this.closeThumbnails();
@@ -329,7 +331,7 @@ export class SlideViewController {
 				if (page.textBlocks.length > 0) {
 					const content = slide.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--text' });
 					const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
-					bodyBlock.textContent = page.textBlocks.join('\n');
+					renderMarkdownBlock(this.app, page.textBlocks.join('\n'), bodyBlock, this.sourcePath, this.markdownComponents);
 					bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
 					bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
 					bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
@@ -440,9 +442,11 @@ export class SlideViewController {
 		const slides: SlideThumbnail[] = this.pages.map((page, index) => ({
 			index,
 			title: page.title,
-			contents: page.textBlocks,
+			textBlocks: page.textBlocks,
+			imageBlocks: page.imageBlocks,
 			titleLayout: page.titleLayout,
-			bodyLayout: page.textLayout,
+			textLayout: page.textLayout,
+			imageLayout: page.imageLayout,
 			backgroundColor: page.backgroundColor,
 			textColor: page.textColor
 		}));

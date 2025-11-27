@@ -2802,6 +2802,23 @@
 	white-space: pre-wrap;
 	color: var(--tlb-slide-text-color, var(--text-normal));
 }
+.tlb-slide-full__block--text {
+	white-space: normal;
+}
+.tlb-slide-full__block--text p {
+	margin: 0 0 0.35em;
+}
+.tlb-slide-full__block--text p:last-child {
+	margin-bottom: 0;
+}
+.tlb-slide-full__block--text ul,
+.tlb-slide-full__block--text ol {
+	margin: 0;
+	padding-left: 1.2em;
+}
+.tlb-slide-full__block--text li + li {
+	margin-top: 0.25em;
+}
 
 .tlb-slide-full__block--empty {
 	color: var(--text-muted);

@@ -1,28 +1,29 @@
+import { App, Component } from 'obsidian';
+import { renderMarkdownBlock } from './SlideRenderUtils';
+import { t } from '../../i18n';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 
 // --- CSS 样式重构 ---
 const THUMBNAIL_STYLES = `
 .tlb-slide-thumb {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 9999;
-    display: none;
-    overflow: auto;
-    padding: 18px 20px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
+	position: absolute;
+	inset: 0;
+	display: none;
+	padding: 18px 20px;
+	background: color-mix(in srgb, var(--background-primary) 78%, transparent 22%);
+	backdrop-filter: blur(8px);
+	overflow: auto;
+	z-index: 8;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
 }
 
 .tlb-slide-thumb--visible {
-    display: flex;
-    opacity: 1;
+	display: flex;
+	opacity: 1;
 }
 
 .tlb-slide-thumb__grid {
@@ -54,13 +55,13 @@ const THUMBNAIL_STYLES = `
 }
 
 .tlb-slide-thumb__item:hover {
-    transform: translateY(-4px);
+	transform: translateY(-4px);
 }
 
 .tlb-slide-thumb__item:focus-visible {
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: 4px;
-    border-radius: 8px;
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 4px;
+	border-radius: 8px;
 }
 .tlb-slide-thumb__item:focus { outline: none; }
 
@@ -70,16 +71,16 @@ const THUMBNAIL_STYLES = `
 	width: 100%;
 	height: 100%;
 	aspect-ratio: 16 / 9;
-	background: var(--background-secondary);
-	border-radius: 8px;
+	background: color-mix(in srgb, var(--background-secondary) 88%, transparent 12%);
+	border-radius: 10px;
 	overflow: hidden;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-	border: 2px solid transparent;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+	border: 1px solid var(--background-modifier-border);
 }
 
 .tlb-slide-thumb__item--active .tlb-slide-thumb__canvas {
-    border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
 /* 缩略图内容容器：绝对定位，通过 scale 适应画布 */
@@ -88,41 +89,52 @@ const THUMBNAIL_STYLES = `
 	top: 0;
 	left: 0;
 	/* 这里的宽高必须与 JS 中的 baseWidth/baseHeight 一致 */
-	width: 1200px; 
-	height: 675px; 
+	width: 1200px;
+	height: 675px;
 	transform-origin: top left;
 	transform: scale(var(--tlb-thumb-scale, 1));
-	background: var(--background-primary);
 	pointer-events: none; /* 禁止缩略图内部交互 */
 }
 
-/* 复用 SlideFull 的样式逻辑 */
 .tlb-slide-thumb__slide {
-    width: 100%;
-    height: 100%;
-    padding: 40px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	max-height: none;
+	aspect-ratio: 16 / 9;
+	padding: 36px 48px;
+	box-sizing: border-box;
+	transform: none;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
 }
 
-/* 覆盖一些可能导致缩略图溢出的样式 */
-.tlb-slide-thumb__title {
-    margin-bottom: 20px;
+.tlb-slide-thumb__slide .tlb-slide-full__content {
+	gap: 14px;
 }
 
-.tlb-slide-thumb__content {
-    flex: 1;
-    overflow: hidden;
+.tlb-slide-thumb__block--text {
+	white-space: normal;
+}
+
+.tlb-slide-thumb__block--text p:last-child {
+	margin-bottom: 0;
+}
+
+.tlb-slide-thumb__block--image {
+	align-items: center;
 }
 `;
 
 export interface SlideThumbnail {
 	index: number;
 	title: string;
-	contents: string[];
+	textBlocks: string[];
+	imageBlocks: string[];
 	titleLayout: ComputedLayout;
-	bodyLayout: ComputedLayout;
+	textLayout: ComputedLayout;
+	imageLayout: ComputedLayout;
 	backgroundColor: string;
 	textColor: string;
 }
@@ -130,39 +142,50 @@ export interface SlideThumbnail {
 interface SlideThumbnailPanelOptions {
 	host: HTMLElement;
 	emptyText: string;
+	app: App;
+	sourcePath: string;
 	onSelect: (index: number) => void;
 	onVisibilityChange?: (open: boolean) => void;
 }
+
+type ThumbSurface = {
+	canvas: HTMLElement;
+	root: HTMLElement;
+	slide: HTMLElement;
+	titleEl: HTMLElement;
+	textEl: HTMLElement | null;
+	imageEl: HTMLElement | null;
+	titleLayout: ComputedLayout;
+	textLayout: ComputedLayout;
+	imageLayout: ComputedLayout;
+	observer: ResizeObserver | null;
+};
 
 export class SlideThumbnailPanel {
 	private readonly overlay: HTMLElement;
 	private readonly grid: HTMLElement;
 	private readonly ownerDocument: Document;
 	private readonly options: SlideThumbnailPanelOptions;
-private items: HTMLElement[] = [];
-private visible = false;
-private readonly baseWidth = 1200;
-private readonly baseHeight = 1200 * (9 / 16); // 675px
-private currentCardHeight = 0;
-
-	private readonly thumbSurfaces: Array<{
-		canvas: HTMLElement;
-		root: HTMLElement; // 缩放的根元素
-		slide: HTMLElement;
-		titleEl: HTMLElement;
-		contentEl: HTMLElement;
-		titleLayout: ComputedLayout;
-		bodyLayout: ComputedLayout;
-		observer: ResizeObserver | null;
-	}> = [];
-	
-	private scaleRaf: number | null = null;
 	private readonly ownerWindow: Window | null;
+	private readonly app: App;
+	private readonly sourcePath: string;
+	private items: HTMLElement[] = [];
+	private visible = false;
+	private readonly baseWidth = 1200;
+	private readonly baseHeight = 1200 * (9 / 16); // 675px
+	private currentCardHeight = 0;
+	private readonly markdownComponents: Component[] = [];
+
+	private readonly thumbSurfaces: ThumbSurface[] = [];
+
+	private scaleRaf: number | null = null;
 
 	constructor(options: SlideThumbnailPanelOptions) {
 		this.options = options;
 		this.ownerDocument = options.host.ownerDocument ?? document;
 		this.ownerWindow = this.ownerDocument.defaultView ?? null;
+		this.app = options.app;
+		this.sourcePath = options.sourcePath;
 		this.overlay = options.host.createDiv({ cls: 'tlb-slide-thumb', attr: { tabindex: '-1' } });
 		this.grid = this.overlay.createDiv({ cls: 'tlb-slide-thumb__grid' });
 		this.injectStyles();
@@ -199,13 +222,13 @@ private currentCardHeight = 0;
 		this.grid.empty();
 		this.items = [];
 		this.cleanupSurfaces();
+		this.cleanupMarkdown();
         
 		if (slides.length === 0) {
-			this.grid.createDiv({ 
-                cls: 'tlb-slide-thumb__empty', 
-                text: this.options.emptyText,
-                attr: { style: 'color: white; text-align: center; padding: 20px;' }
-            });
+			this.grid.createDiv({
+				cls: 'tlb-slide-thumb__empty',
+				text: this.options.emptyText
+			});
 			return;
 		}
 
@@ -226,16 +249,14 @@ private currentCardHeight = 0;
             // 缩放容器
 			const root = this.ownerDocument.createElement('div');
 			root.className = 'tlb-slide-thumb__root'; // 这里的 CSS 负责 scale
-			if (slide.backgroundColor) {
-                // 应用到 root 以确保填充整个背景
-				root.style.backgroundColor = slide.backgroundColor;
-			}
 
 			const slideEl = this.ownerDocument.createElement('div');
-			slideEl.className = 'tlb-slide-thumb__slide';
-			
+			slideEl.className = 'tlb-slide-full__slide tlb-slide-thumb__slide';
+			if (slide.backgroundColor) {
+				slideEl.style.setProperty('--tlb-slide-card-bg', slide.backgroundColor);
+			}
 			if (slide.textColor) {
-				slideEl.style.color = slide.textColor;
+				slideEl.style.setProperty('--tlb-slide-text-color', slide.textColor);
 			}
 			root.appendChild(slideEl);
 			canvas.appendChild(root);
@@ -243,33 +264,22 @@ private currentCardHeight = 0;
 
             // 标题
 			const titleEl = this.ownerDocument.createElement('div');
-			titleEl.className = 'tlb-slide-thumb__title';
+			titleEl.className = 'tlb-slide-full__title';
 			titleEl.textContent = slide.title ?? '';
 			titleEl.style.lineHeight = `${slide.titleLayout.lineHeight}`;
 			titleEl.style.fontSize = `${slide.titleLayout.fontSize}rem`;
 			titleEl.style.fontWeight = String(slide.titleLayout.fontWeight);
-            slideEl.appendChild(titleEl);
-
-            // 内容
-			const content = this.ownerDocument.createElement('div');
-			content.className = 'tlb-slide-thumb__content';
-			slideEl.appendChild(content);
-
-            if (slide.contents.length > 0) {
-				const bodyBlock = this.ownerDocument.createElement('div');
-				bodyBlock.className = 'tlb-slide-thumb__body';
-				bodyBlock.textContent = slide.contents.join('\n');
-				bodyBlock.style.lineHeight = `${slide.bodyLayout.lineHeight}`;
-				bodyBlock.style.fontSize = `${slide.bodyLayout.fontSize}rem`;
-				bodyBlock.style.fontWeight = String(slide.bodyLayout.fontWeight);
-				bodyBlock.style.textAlign = slide.bodyLayout.align;
-				content.appendChild(bodyBlock);
-			}
+			slideEl.appendChild(titleEl);
+			const { textEl, imageEl } = this.renderSlideBodies(slide, slideEl);
 
             // 应用布局样式
-            // 注意：applyLayoutStyles 需要支持 HTMLElement
 			applyLayoutStyles(titleEl, slide.titleLayout, slideEl);
-			applyLayoutStyles(content, slide.bodyLayout, slideEl);
+			if (textEl) {
+				applyLayoutStyles(textEl, slide.textLayout, slideEl);
+			}
+			if (imageEl) {
+				applyLayoutStyles(imageEl, slide.imageLayout, slideEl);
+			}
 
 			btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -285,9 +295,11 @@ private currentCardHeight = 0;
 				root,
 				slide: slideEl,
 				titleEl,
-				contentEl: content,
+				textEl,
+				imageEl,
 				titleLayout: slide.titleLayout,
-				bodyLayout: slide.bodyLayout
+				textLayout: slide.textLayout,
+				imageLayout: slide.imageLayout
 			});
 		}
 
@@ -296,6 +308,61 @@ private currentCardHeight = 0;
         // 立即计算一次，防止闪烁
         // requestAnimationFrame 放在 open 中处理
 		this.setActive(activeIndex);
+		if (this.visible) {
+			this.requestLayoutAndScale();
+		}
+	}
+
+	private renderSlideBodies(slide: SlideThumbnail, slideEl: HTMLElement): { textEl: HTMLElement | null; imageEl: HTMLElement | null } {
+		let textEl: HTMLElement | null = null;
+		let imageEl: HTMLElement | null = null;
+		const hasText = slide.textBlocks.length > 0;
+		const hasImages = slide.imageBlocks.length > 0;
+
+		if (!hasText && !hasImages) {
+			textEl = this.ownerDocument.createElement('div');
+			textEl.className = 'tlb-slide-full__content';
+			const emptyBlock = this.ownerDocument.createElement('div');
+			emptyBlock.className = 'tlb-slide-full__block tlb-slide-full__block--empty';
+			emptyBlock.textContent = t('slideView.emptyValue');
+			textEl.appendChild(emptyBlock);
+			slideEl.appendChild(textEl);
+			return { textEl, imageEl };
+		}
+
+		if (hasText) {
+			textEl = this.ownerDocument.createElement('div');
+			textEl.className = 'tlb-slide-full__content tlb-slide-full__layer--text';
+			const bodyBlock = this.ownerDocument.createElement('div');
+			bodyBlock.className = 'tlb-slide-full__block tlb-slide-full__block--text tlb-slide-thumb__block--text';
+			bodyBlock.style.lineHeight = `${slide.textLayout.lineHeight}`;
+			bodyBlock.style.fontSize = `${slide.textLayout.fontSize}rem`;
+			bodyBlock.style.fontWeight = String(slide.textLayout.fontWeight);
+			bodyBlock.style.textAlign = slide.textLayout.align;
+			const markdown = slide.textBlocks.join('\n');
+			if (markdown.trim().length > 0) {
+				renderMarkdownBlock(this.app, markdown, bodyBlock, this.sourcePath, this.markdownComponents);
+			} else {
+				bodyBlock.textContent = '';
+			}
+			textEl.appendChild(bodyBlock);
+			slideEl.appendChild(textEl);
+		}
+
+		if (hasImages) {
+			imageEl = this.ownerDocument.createElement('div');
+			imageEl.className = 'tlb-slide-full__content tlb-slide-full__layer--image';
+			for (const img of slide.imageBlocks) {
+				const imageBlock = this.ownerDocument.createElement('div');
+				imageBlock.className = 'tlb-slide-full__block tlb-slide-full__block--image tlb-slide-thumb__block--image';
+				imageBlock.style.textAlign = slide.imageLayout.align;
+				renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
+				imageEl.appendChild(imageBlock);
+			}
+			slideEl.appendChild(imageEl);
+		}
+
+		return { textEl, imageEl };
 	}
 
 	setActive(index: number): void {
@@ -351,13 +418,14 @@ private currentCardHeight = 0;
 		this.overlay.remove();
 		this.items = [];
 		this.cleanupSurfaces();
+		this.cleanupMarkdown();
 		if (this.scaleRaf != null && this.ownerWindow) {
 			this.ownerWindow.cancelAnimationFrame(this.scaleRaf);
 		}
 		this.scaleRaf = null;
 	}
 
-	private registerSurface(surface: any): void {
+	private registerSurface(surface: Omit<ThumbSurface, 'observer'>): void {
 		let observer: ResizeObserver | null = null;
 		if (typeof ResizeObserver !== 'undefined') {
 			observer = new ResizeObserver((entries) => {
@@ -380,6 +448,17 @@ private currentCardHeight = 0;
 		this.thumbSurfaces.length = 0;
 	}
 
+	private cleanupMarkdown(): void {
+		for (const component of this.markdownComponents) {
+			try {
+				component.unload();
+			} catch {
+				// ignore
+			}
+		}
+		this.markdownComponents.length = 0;
+	}
+
     // ✅ 核心修复：根据 canvas 实际宽度计算缩放，移除最小限制
 	private applyScale(canvas: HTMLElement, root: HTMLElement): void {
 		const rect = canvas.getBoundingClientRect();
@@ -392,13 +471,18 @@ private currentCardHeight = 0;
 	}
 
 	private requestLayoutAndScale(): void {
-		if (!this.ownerWindow || this.scaleRaf != null) return;
+		if (!this.ownerWindow || this.scaleRaf != null || !this.visible) return;
 		this.scaleRaf = this.ownerWindow.requestAnimationFrame(() => {
 			this.scaleRaf = null;
 			this.layoutGrid();
 			for (const surface of this.thumbSurfaces) {
 				applyLayoutStyles(surface.titleEl, surface.titleLayout, surface.slide);
-				applyLayoutStyles(surface.contentEl, surface.bodyLayout, surface.slide);
+				if (surface.textEl) {
+					applyLayoutStyles(surface.textEl, surface.textLayout, surface.slide);
+				}
+				if (surface.imageEl) {
+					applyLayoutStyles(surface.imageEl, surface.imageLayout, surface.slide);
+				}
 				this.applyScale(surface.canvas, surface.root);
 			}
 		});

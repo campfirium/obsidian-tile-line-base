@@ -24,6 +24,8 @@ const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_ind
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 
 export class SlideTemplateModal extends Modal {
+	private static lastSelectedSingleBranch: 'withoutImage' | 'withImage' = 'withoutImage';
+	private static lastSelectedSplitBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
@@ -47,8 +49,8 @@ export class SlideTemplateModal extends Modal {
 		this.onSave = opts.onSave;
 		this.onSaveDefault = opts.onSaveDefault;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
-		this.singleBranch = this.template.single.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
-		this.splitBranch = this.template.split.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
+		this.singleBranch = SlideTemplateModal.lastSelectedSingleBranch;
+		this.splitBranch = SlideTemplateModal.lastSelectedSplitBranch;
 	}
 
 	onOpen(): void {
@@ -345,6 +347,16 @@ export class SlideTemplateModal extends Modal {
 
 	private applyBuiltInDefault(): void {
 		this.applyPresetStyles(DEFAULT_SLIDE_TEMPLATE);
+	}
+
+	private setBranchSelection(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): void {
+		if (mode === 'single') {
+			this.singleBranch = branch;
+			SlideTemplateModal.lastSelectedSingleBranch = branch;
+			return;
+		}
+		this.splitBranch = branch;
+		SlideTemplateModal.lastSelectedSplitBranch = branch;
 	}
 
 	private renderInsertButton(container: HTMLElement): void {
@@ -724,18 +736,18 @@ export class SlideTemplateModal extends Modal {
 				'Generates a single slide per row. Displays text and image side-by-side if an image exists.'
 			)
 		});
-		this.renderBranchTabs(
-			wrapper,
-			this.singleBranch,
-			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Layout: No Image'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Layout: With Image')
-			},
-			(next) => {
-				this.singleBranch = next;
-				this.renderModalContent();
-			}
-		);
+			this.renderBranchTabs(
+				wrapper,
+				this.singleBranch,
+				{
+					without: this.getText('slideView.templateModal.noImageTabLabel', 'Layout: No Image'),
+					with: this.getText('slideView.templateModal.withImageTabLabel', 'Layout: With Image')
+				},
+				(next) => {
+					this.setBranchSelection('single', next);
+					this.renderModalContent();
+				}
+			);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.singleBranch === 'withoutImage') {
@@ -812,18 +824,18 @@ export class SlideTemplateModal extends Modal {
 				'Generates two sequential slides per row: 1. Text Slide → 2. Image Slide (if image exists).'
 			)
 		});
-		this.renderBranchTabs(
-			wrapper,
-			this.splitBranch,
-			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Slide 1: Text'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Slide 2: Image')
-			},
-			(next) => {
-				this.splitBranch = next;
-				this.renderModalContent();
-			}
-		);
+			this.renderBranchTabs(
+				wrapper,
+				this.splitBranch,
+				{
+					without: this.getText('slideView.templateModal.noImageTabLabel', 'Slide 1: Text'),
+					with: this.getText('slideView.templateModal.withImageTabLabel', 'Slide 2: Image')
+				},
+				(next) => {
+					this.setBranchSelection('split', next);
+					this.renderModalContent();
+				}
+			);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.splitBranch === 'withoutImage') {

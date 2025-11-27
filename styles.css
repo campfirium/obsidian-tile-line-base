@@ -3072,17 +3072,10 @@
 	margin-left: auto;
 }
 
-.tlb-slide-template__set-default {
-	background-color: var(--interactive-accent);
-	border-color: var(--interactive-accent);
-	color: var(--text-on-accent, #fff);
-	margin-left: 0;
-}
-
-.tlb-slide-template__set-default:not(:disabled):hover,
-.tlb-slide-template__set-default:not(:disabled):focus-visible {
-	background-color: var(--interactive-accent-hover, var(--interactive-accent));
-	color: var(--text-on-accent, #fff);
+.tlb-slide-template__chevron {
+	display: inline-flex;
+	margin-left: 6px;
+	vertical-align: middle;
 }
 
 .tlb-slide-template__block {

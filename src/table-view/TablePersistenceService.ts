@@ -42,6 +42,7 @@ interface TablePersistenceDeps {
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	getSlideConfig?: () => SlideViewConfig | null;
+	getGlobalSlideConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
 	onSaveSettled?: () => void;
@@ -161,7 +162,13 @@ export class TablePersistenceService {
 
 		const slideConfig = this.deps.getSlideConfig?.() ?? null;
 		const normalizedSlideConfig = slideConfig ? normalizeSlideViewConfig(slideConfig) : null;
-		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig);
+		const globalSlideConfig = this.deps.getGlobalSlideConfig?.() ?? null;
+		const normalizedGlobalSlideConfig = globalSlideConfig ? normalizeSlideViewConfig(globalSlideConfig) : null;
+		const matchesGlobalSlideConfig =
+			normalizedSlideConfig && normalizedGlobalSlideConfig
+				? JSON.stringify(normalizedSlideConfig) === JSON.stringify(normalizedGlobalSlideConfig)
+				: false;
+		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig) && !matchesGlobalSlideConfig;
 
 		return {
 			filterViews: this.deps.getFilterViewState(),

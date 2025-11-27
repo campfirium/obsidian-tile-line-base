@@ -14,6 +14,7 @@ import { setPluginContext } from './pluginContext';
 import type { FileFilterViewState } from './types/filterView';
 import type { FileTagGroupState } from './types/tagGroup';
 import type { KanbanBoardState } from './types/kanban';
+import type { SlideViewConfig } from './types/slide';
 import { SettingsService, DEFAULT_SETTINGS, TileLineBaseSettings } from './services/SettingsService';
 import { BackupManager } from './services/BackupManager';
 import { WindowContextManager } from './plugin/WindowContextManager';
@@ -386,6 +387,15 @@ export default class TileLineBasePlugin extends Plugin {
 	async saveKanbanBoardsForFile(filePath: string, state: KanbanBoardState): Promise<void> {
 		const sanitized = await this.settingsService.saveKanbanBoardsForFile(filePath, state);
 		logger.debug('saveKanbanBoardsForFile', { filePath, boardCount: sanitized.boards.length, activeBoard: sanitized.activeBoardId });
+	}
+
+	getDefaultSlideConfig(): SlideViewConfig | null {
+		return this.settingsService.getDefaultSlideConfig();
+	}
+
+	async setDefaultSlideConfig(config: SlideViewConfig | null): Promise<void> {
+		await this.settingsService.setDefaultSlideConfig(config);
+		this.settings = this.settingsService.getSettings();
 	}
 
 	isHideRightSidebarEnabled(): boolean {

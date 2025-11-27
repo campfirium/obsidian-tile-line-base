@@ -9,6 +9,7 @@ import type {
 import type { FileTagGroupState } from '../types/tagGroup';
 import { type KanbanBoardState, type KanbanViewPreferenceConfig } from '../types/kanban';
 import type { SlideViewConfig } from '../types/slide';
+import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
 import type { LocaleCode } from '../i18n';
 import { normalizeLocaleCode } from '../i18n';
 import type { LogLevelName, LoggingConfig } from '../utils/logger';
@@ -48,6 +49,7 @@ export interface TileLineBaseSettings {
 	copyTemplates: Record<string, string>;
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	slidePreferences: Record<string, SlideViewConfig>;
+	defaultSlideConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
 	logging: LoggingConfig;
 	backups: BackupSettings;
@@ -66,6 +68,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	copyTemplates: {},
 	kanbanPreferences: {},
 	slidePreferences: {},
+	defaultSlideConfig: null,
 	hideRightSidebar: false,
 	logging: {
 		globalLevel: 'warn',
@@ -103,6 +106,7 @@ export class SettingsService {
 		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
 		merged.kanbanPreferences = { ...DEFAULT_SETTINGS.kanbanPreferences, ...(merged.kanbanPreferences ?? {}) };
 		merged.slidePreferences = { ...DEFAULT_SETTINGS.slidePreferences, ...(merged.slidePreferences ?? {}) };
+		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -312,7 +316,12 @@ export class SettingsService {
 	}
 
 	getSlidePreferencesForFile(filePath: string): SlideViewConfig | null {
-		return getSlidePreferences(this.settings, filePath);
+		const stored = getSlidePreferences(this.settings, filePath);
+		if (stored) {
+			return stored;
+		}
+		const globalDefault = this.getDefaultSlideConfig();
+		return globalDefault ? normalizeSlideViewConfig(globalDefault) : null;
 	}
 
 	async saveSlidePreferencesForFile(
@@ -320,6 +329,26 @@ export class SettingsService {
 		preferences: SlideViewConfig | null | undefined
 	): Promise<SlideViewConfig | null> {
 		return saveSlidePreferences(this.settings, filePath, preferences, () => this.persist());
+	}
+
+	getDefaultSlideConfig(): SlideViewConfig | null {
+		const stored = this.settings.defaultSlideConfig;
+		return stored ? normalizeSlideViewConfig(stored) : null;
+	}
+
+	async setDefaultSlideConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
+		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
+		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
+		const previous = this.getDefaultSlideConfig();
+		const unchanged =
+			(next === null && previous === null) ||
+			(next !== null && previous !== null && JSON.stringify(next) === JSON.stringify(previous));
+		if (unchanged) {
+			return previous;
+		}
+		this.settings.defaultSlideConfig = next;
+		await this.persist();
+		return next;
 	}
 
 	private cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {
@@ -491,6 +520,14 @@ export class SettingsService {
 			completed,
 			helpFilePath
 		};
+	}
+
+	private sanitizeDefaultSlideConfig(raw: unknown): SlideViewConfig | null {
+		if (!raw || typeof raw !== 'object') {
+			return null;
+		}
+		const normalized = normalizeSlideViewConfig(raw as SlideViewConfig);
+		return isDefaultSlideViewConfig(normalized) ? null : normalized;
 	}
 
 	private sanitizeIconId(icon: unknown): string | null {

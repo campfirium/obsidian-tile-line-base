@@ -1,20 +1,23 @@
 /* eslint-disable max-lines */
 import type { App } from 'obsidian';
-import { Menu, Modal, parseYaml, stringifyYaml } from 'obsidian';
+import { Menu, Modal, Notice, parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { t } from '../../i18n';
 import {
+	DEFAULT_SLIDE_TEMPLATE,
 	getDefaultBodyLayout,
 	getDefaultTitleLayout,
 	sanitizeSlideTemplateConfig,
 	type SlideLayoutConfig,
 	type SlideTemplateConfig
 } from '../../types/slide';
+import { getPluginContext } from '../../pluginContext';
 
 interface SlideTemplateModalOptions {
 	app: App;
 	fields: string[];
 	initial: SlideTemplateConfig;
 	onSave: (next: SlideTemplateConfig) => void;
+	onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
 }
 
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
@@ -23,6 +26,7 @@ const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 export class SlideTemplateModal extends Modal {
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
+	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
 	private template: SlideTemplateConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
@@ -41,6 +45,7 @@ export class SlideTemplateModal extends Modal {
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.fields = opts.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		this.onSave = opts.onSave;
+		this.onSaveDefault = opts.onSaveDefault;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
 		this.singleBranch = this.template.single.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
 		this.splitBranch = this.template.split.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
@@ -90,6 +95,7 @@ export class SlideTemplateModal extends Modal {
 		this.renderSlideModeSwitch(toolbarLeft);
 		const toolbarRight = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-right' });
 		this.renderModeToggle(toolbarRight);
+		this.renderPresetsMenu(toolbarRight);
 
 		if (this.isYamlMode) {
 			this.renderYamlView();
@@ -159,6 +165,40 @@ export class SlideTemplateModal extends Modal {
 		});
 	}
 
+	private renderPresetsMenu(container: HTMLElement): void {
+		if (!this.onSaveDefault) {
+			return;
+		}
+		const presetsButton = container.createEl('button', {
+			cls: 'tlb-slide-template__mode-toggle',
+			attr: { type: 'button' }
+		});
+		presetsButton.createSpan({ text: t('slideView.templateModal.presetsLabel') });
+		const iconWrap = presetsButton.createSpan({ cls: 'tlb-slide-template__chevron' });
+		setIcon(iconWrap, 'chevron-down');
+		presetsButton.addEventListener('click', (event) => {
+			event.preventDefault();
+			const menu = new Menu();
+			menu.addItem((item) => {
+				item.setTitle(t('slideView.templateModal.setDefaultLabel')).onClick(() => {
+					this.saveAsGlobalDefault();
+				});
+			});
+			menu.addSeparator();
+			menu.addItem((item) => {
+				item.setTitle(t('slideView.templateModal.resetToGlobalDefaultLabel')).onClick(() => {
+					this.applyGlobalDefault();
+				});
+			});
+			menu.addItem((item) => {
+				item.setTitle(t('slideView.templateModal.resetToBuiltInDefaultLabel')).onClick(() => {
+					this.applyBuiltInDefault();
+				});
+			});
+			menu.showAtMouseEvent(event);
+		});
+	}
+
 	private renderYamlView(): void {
 		const grid = this.contentEl.createDiv({ cls: 'tlb-slide-template__grid' });
 		const row = this.createRow(grid);
@@ -180,6 +220,44 @@ export class SlideTemplateModal extends Modal {
 		} catch {
 			// ignore malformed yaml; keep old template
 		}
+	}
+
+	private saveAsGlobalDefault(): void {
+		if (!this.onSaveDefault) {
+			return;
+		}
+		try {
+			if (this.isYamlMode) {
+				this.applyYamlInput();
+			}
+			const nextTemplate = sanitizeSlideTemplateConfig(this.template);
+			const maybePromise = this.onSaveDefault(nextTemplate);
+			if (maybePromise && typeof (maybePromise as Promise<void>).catch === 'function') {
+				void maybePromise.catch((error: unknown) => {
+					console.error('[SlideTemplateModal] Failed to save global default', error);
+					new Notice(t('slideView.templateModal.setDefaultError'));
+				});
+			}
+		} catch (error) {
+			console.error('[SlideTemplateModal] Failed to save global default', error);
+			new Notice(t('slideView.templateModal.setDefaultError'));
+		}
+	}
+
+	private applyGlobalDefault(): void {
+		const plugin = getPluginContext();
+		const globalConfig = plugin?.getDefaultSlideConfig();
+		if (!globalConfig || !globalConfig.template) {
+			new Notice(t('slideView.templateModal.noGlobalDefault'));
+			return;
+		}
+		this.template = sanitizeSlideTemplateConfig(globalConfig.template);
+		this.renderModalContent();
+	}
+
+	private applyBuiltInDefault(): void {
+		this.template = sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
+		this.renderModalContent();
 	}
 
 	private renderInsertButton(container: HTMLElement): void {

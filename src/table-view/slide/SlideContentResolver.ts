@@ -106,20 +106,38 @@ export function resolveDirectImage(value: string | null | undefined): string | n
 }
 
 function extractFirstImageToken(text: string): string | null {
+	const checkToken = (candidate: string | null | undefined): string | null => {
+		if (!candidate) return null;
+		const normalized = candidate.trim().replace(/^[“”"'\u2018\u2019]+|[“”"'\u2018\u2019]+$/g, '');
+		if (!normalized) return null;
+		if (MARKDOWN_IMAGE_PATTERN.test(normalized) || EMBED_IMAGE_PATTERN.test(normalized)) return normalized;
+		if (/^(https?:\/\/|data:image\/)/i.test(normalized) && IMAGE_PATH_PATTERN.test(normalized)) return normalized;
+		if (WIKILINK_PATTERN.test(normalized) && isImagePath(normalized.replace(/^\[\[|\]\]$/g, ''))) return normalized;
+		if (IMAGE_PATH_PATTERN.test(normalized)) return normalized;
+		return null;
+	};
+
 	const markdown = text.match(MARKDOWN_IMAGE_PATTERN);
-	if (markdown) return markdown[0];
+	if (markdown) return checkToken(markdown[0]);
 	const embed = text.match(EMBED_IMAGE_PATTERN);
-	if (embed) return embed[0];
+	if (embed) return checkToken(embed[0]);
 	const wikilink = text.match(WIKILINK_PATTERN);
 	if (wikilink && isImagePath(wikilink[1])) {
-		return wikilink[0];
+		return checkToken(wikilink[0]);
 	}
-	const httpMatch = text.match(/https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)/i);
-	if (httpMatch) return httpMatch[0];
-	const dataMatch = text.match(/data:image\/[^\s]+/i);
-	if (dataMatch) return dataMatch[0];
-	const fileMatch = text.match(/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)/i);
-	if (fileMatch) return fileMatch[0];
+
+	const tokens = text.split(/\s+/);
+	for (const raw of tokens) {
+		const token = checkToken(raw);
+		if (token) {
+			return token;
+		}
+		const trimmedPunct = raw.replace(/[.,;:]+$/g, '');
+		const token2 = checkToken(trimmedPunct);
+		if (token2) {
+			return token2;
+		}
+	}
 	return null;
 }
 

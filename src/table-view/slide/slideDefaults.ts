@@ -7,7 +7,7 @@ import {
 
 export const RESERVED_SLIDE_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
-let cachedBaseTemplate: SlideTemplateConfig | null = null;
+const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
 
 const normalizeFieldList = (fields: string[]): string[] => {
 	const seen = new Set<string>();
@@ -35,38 +35,30 @@ const applyTemplates = (template: SlideTextTemplate, title: string, body: string
 	bodyTemplate: body || template.bodyTemplate || ''
 });
 
-const resolveBaseTemplate = (base: SlideTemplateConfig | undefined): SlideTemplateConfig => {
-	if (!cachedBaseTemplate) {
-		cachedBaseTemplate = sanitizeSlideTemplateConfig(base ?? DEFAULT_SLIDE_TEMPLATE);
-	}
-	return cachedBaseTemplate;
-};
-
-export function buildBuiltInSlideTemplate(fields: string[], base?: SlideTemplateConfig): SlideTemplateConfig {
+export function buildBuiltInSlideTemplate(fields: string[]): SlideTemplateConfig {
 	const normalizedFields = normalizeFieldList(fields);
-	const normalizedBase = resolveBaseTemplate(base);
 	const primaryField = pickPrimaryField(normalizedFields);
 	const titleTemplate = primaryField ? `{${primaryField}}` : '';
 	const bodyFields = normalizedFields.filter((field) => field !== primaryField);
 	const bodyTemplate = bodyFields.length > 0 ? bodyFields.map((field) => `{${field}}`).join('\n') : '';
 
 	const merged: SlideTemplateConfig = {
-		...normalizedBase,
+		...BUILT_IN_SLIDE_BASE,
 		single: {
 			withImage: {
-				...normalizedBase.single.withImage,
-				...applyTemplates(normalizedBase.single.withImage, titleTemplate, bodyTemplate),
+				...BUILT_IN_SLIDE_BASE.single.withImage,
+				...applyTemplates(BUILT_IN_SLIDE_BASE.single.withImage, titleTemplate, bodyTemplate),
 				imageTemplate: ''
 			},
-			withoutImage: applyTemplates(normalizedBase.single.withoutImage, titleTemplate, bodyTemplate)
+			withoutImage: applyTemplates(BUILT_IN_SLIDE_BASE.single.withoutImage, titleTemplate, bodyTemplate)
 		},
 		split: {
 			withImage: {
-				...normalizedBase.split.withImage,
+				...BUILT_IN_SLIDE_BASE.split.withImage,
 				imageTemplate: '',
-				textPage: applyTemplates(normalizedBase.split.withImage.textPage, titleTemplate, bodyTemplate)
+				textPage: applyTemplates(BUILT_IN_SLIDE_BASE.split.withImage.textPage, titleTemplate, bodyTemplate)
 			},
-			withoutImage: applyTemplates(normalizedBase.split.withoutImage, titleTemplate, bodyTemplate)
+			withoutImage: applyTemplates(BUILT_IN_SLIDE_BASE.split.withoutImage, titleTemplate, bodyTemplate)
 		}
 	};
 

@@ -3,7 +3,6 @@ import type { App } from 'obsidian';
 import { Menu, Modal, Notice, parseYaml, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import {
-	DEFAULT_SLIDE_TEMPLATE,
 	getDefaultBodyLayout,
 	getDefaultTitleLayout,
 	sanitizeSlideTemplateConfig,
@@ -302,9 +301,7 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private applyBuiltInDefault(): void {
-		const plugin = getPluginContext();
-		const base = plugin?.getDefaultSlideConfig()?.template ?? DEFAULT_SLIDE_TEMPLATE;
-		const preset = buildBuiltInSlideTemplate(this.fields, base);
+		const preset = buildBuiltInSlideTemplate(this.fields);
 		this.applyPresetStyles(preset);
 	}
 

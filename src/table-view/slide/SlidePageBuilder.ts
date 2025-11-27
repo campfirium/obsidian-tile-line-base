@@ -1,5 +1,5 @@
 import type { RowData } from '../../grid/GridAdapter';
-import type { SlideTextTemplate, SlideViewConfig } from '../../types/slide';
+import { getDefaultBodyLayout, getDefaultTitleLayout, type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
 import { computeLayout, type ComputedLayout } from './slideLayout';
 import { renderSlideTemplate, resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
 
@@ -79,70 +79,60 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 			);
 		} else {
 			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.split.withImage.imageTemplate);
-			if (!imageInfo.markdown) {
-				const branch = template.split.withoutImage;
-				const { title, blocks } = resolveSlideContent({
+			const hasImage = Boolean(imageInfo.markdown);
+			const textBranch = template.split.withoutImage;
+			const { title, blocks } = resolveSlideContent({
+				row,
+				fields,
+				template: textBranch,
+				activeIndex: rowIndex,
+				reservedFields,
+				includeBodyImages: true
+			});
+			pages.push(
+				buildPageFromBlocks(
+					rowIndex,
+					title,
+					blocks,
+					textBranch,
+					textColor,
+					backgroundColor,
+					(next) => {
+						template.split.withoutImage = { ...template.split.withoutImage, ...next };
+					},
+					computeLayout(textBranch.bodyLayout, 'body')
+				)
+			);
+
+			if (hasImage && imageInfo.markdown) {
+				const imageTemplateText = template.split.withImage.imageTemplate ?? '';
+				const imageTemplate: SlideTextTemplate = {
+					titleTemplate: '',
+					bodyTemplate: imageTemplateText,
+					titleLayout: getDefaultTitleLayout(),
+					bodyLayout: template.split.withImage.imageLayout ?? getDefaultBodyLayout()
+				};
+				const imageContent = resolveSlideContent({
 					row,
 					fields,
-					template: branch,
+					template: imageTemplate,
 					activeIndex: rowIndex,
 					reservedFields,
+					imageValue: imageInfo.raw,
 					includeBodyImages: true
 				});
 				pages.push(
 					buildPageFromBlocks(
 						rowIndex,
-						title,
-						blocks,
-						branch,
+						imageContent.title,
+						imageContent.blocks,
+						imageTemplate,
 						textColor,
 						backgroundColor,
-						(next) => {
-							template.split.withoutImage = { ...template.split.withoutImage, ...next };
-						},
-						computeLayout(branch.bodyLayout, 'body')
+						() => {},
+						computeLayout(template.split.withImage.imageLayout, 'body')
 					)
 				);
-			} else {
-				const textBranch = template.split.withImage.textPage;
-				const { title, blocks } = resolveSlideContent({
-					row,
-					fields,
-					template: textBranch,
-					activeIndex: rowIndex,
-					reservedFields,
-					includeBodyImages: false
-				});
-				pages.push(
-					buildPageFromBlocks(
-						rowIndex,
-						title,
-						blocks,
-						textBranch,
-						textColor,
-						backgroundColor,
-						(next) => {
-							template.split.withImage.textPage = { ...template.split.withImage.textPage, ...next };
-						},
-						computeLayout(textBranch.bodyLayout, 'body')
-					)
-				);
-
-				const imageMarkdown = imageInfo.markdown;
-				pages.push({
-					rowIndex,
-					title,
-					textBlocks: [],
-					imageBlocks: imageMarkdown ? [imageMarkdown] : [],
-					titleLayout: computeLayout(textBranch.titleLayout, 'title'),
-					textLayout: computeLayout(textBranch.bodyLayout, 'body'),
-					imageLayout: computeLayout(template.split.withImage.imageLayout, 'body'),
-					textColor,
-					backgroundColor,
-					editable: false,
-					templateRef: textBranch,
-					updateTemplate: () => {}
-				});
 			}
 		}
 	}

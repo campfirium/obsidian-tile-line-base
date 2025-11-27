@@ -3,6 +3,7 @@ import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
 import { SlideScaleManager } from './SlideScaleManager';
+import { SlideThumbnailPanel, type SlideThumbnail } from './SlideThumbnailPanel';
 import { buildSlidePages, type SlidePage } from './SlidePageBuilder';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import {
@@ -52,6 +53,7 @@ export class SlideViewController {
 	private saving = false;
 	private fieldInputs: Record<string, HTMLElement[]> = {};
 	private editingTemplate: { title: TemplateSegment[]; body: TemplateSegment[][] } | null = null;
+	private readonly thumbnailPanel: SlideThumbnailPanel;
 
 	constructor(options: SlideControllerOptions) {
 		this.app = options.app;
@@ -69,6 +71,21 @@ export class SlideViewController {
 		this.fullscreenTarget = this.root;
 		this.scaleManager = new SlideScaleManager(this.stage, () => this.isFullscreen);
 		this.cleanup.push(() => this.scaleManager.dispose());
+		this.thumbnailPanel = new SlideThumbnailPanel({
+			host: this.root,
+			emptyText: t('slideView.emptyState'),
+			onSelect: (index) => {
+				this.jumpTo(index);
+				this.closeThumbnails();
+			},
+			onVisibilityChange: (open) => {
+				this.root.toggleClass('tlb-slide-full--thumbs-open', open);
+				if (open) {
+					this.refreshThumbnails();
+				}
+			}
+		});
+		this.cleanup.push(() => this.thumbnailPanel.destroy());
 		this.renderControls();
 		this.attachFullscreenWatcher();
 		this.attachKeyboard();
@@ -79,6 +96,9 @@ export class SlideViewController {
 		this.rows = rows;
 		this.editingTemplate = null;
 		this.editingPage = null;
+		if (rows.length === 0) {
+			this.closeThumbnails();
+		}
 		this.renderActive();
 	}
 
@@ -134,7 +154,20 @@ export class SlideViewController {
 		const handler = (evt: KeyboardEvent) => {
 			const target = evt.target as HTMLElement | null;
 			const tag = target?.tagName?.toLowerCase();
-			if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+			if (
+				tag === 'input' ||
+				tag === 'textarea' ||
+				tag === 'select' ||
+				tag === 'button' ||
+				target?.isContentEditable
+			) {
+				return;
+			}
+			if (evt.key === 'Tab') {
+				if (this.isFullscreen && !this.editingPage && !this.thumbnailPanel.isOpen()) {
+					evt.preventDefault();
+					this.openThumbnails();
+				}
 				return;
 			}
 			if (evt.key === 'ArrowRight' || evt.key === ' ') {
@@ -150,6 +183,11 @@ export class SlideViewController {
 					evt.preventDefault();
 				}
 			} else if (evt.key === 'Escape') {
+				if (this.thumbnailPanel.isOpen()) {
+					this.closeThumbnails();
+					evt.preventDefault();
+					return;
+				}
 				if (this.isFullscreen) {
 					this.exitFullscreen();
 					this.updateFullscreenButton();
@@ -168,6 +206,7 @@ export class SlideViewController {
 			if (!doc.fullscreenElement && this.isFullscreen) {
 				this.isFullscreen = false;
 				this.root.removeClass('tlb-slide-full--fullscreen');
+				this.closeThumbnails();
 				this.updateFullscreenButton();
 				this.scaleManager.requestScale();
 			} else if (doc.fullscreenElement && this.isFullscreen) {
@@ -201,6 +240,16 @@ export class SlideViewController {
 		}
 	}
 
+	private jumpTo(index: number): void {
+		if (index < 0 || index >= this.pages.length || index === this.activeIndex) {
+			return;
+		}
+		this.editingTemplate = null;
+		this.editingPage = null;
+		this.activeIndex = index;
+		this.renderActive();
+	}
+
 	private renderActive(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.stage.empty();
@@ -208,12 +257,14 @@ export class SlideViewController {
 		if (this.activeIndex >= this.pages.length) {
 			this.activeIndex = Math.max(0, this.pages.length - 1);
 		}
+		this.refreshThumbnails();
 		if (this.pages.length === 0) {
 			this.stage.createDiv({
 				cls: 'tlb-slide-full__empty',
 				text: t('slideView.emptyState')
 			});
 			this.scaleManager.setSlide(null);
+			this.closeThumbnails();
 			return;
 		}
 		const page = this.pages[this.activeIndex];
@@ -280,6 +331,7 @@ export class SlideViewController {
 			}
 		}
 		this.scaleManager.setSlide(slide);
+		this.thumbnailPanel.setActive(this.activeIndex);
 	}
 
 	private buildPages(): SlidePage[] {
@@ -313,6 +365,7 @@ export class SlideViewController {
 		}
 		this.isFullscreen = false;
 		this.root.removeClass('tlb-slide-full--fullscreen');
+		this.closeThumbnails();
 		this.updateFullscreenButton();
 		this.scaleManager.requestScale();
 	}
@@ -330,6 +383,7 @@ export class SlideViewController {
 
 	private beginEdit(page: SlidePage, row: RowData): void {
 		this.editingPage = page;
+		this.closeThumbnails();
 		const editableFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		const values: Record<string, string> = {};
 		for (const field of editableFields) {
@@ -493,5 +547,28 @@ export class SlideViewController {
 		} finally {
 			this.saving = false;
 		}
+	}
+
+	private refreshThumbnails(): void {
+		const slides: SlideThumbnail[] = this.pages.map((page, index) => ({
+			index,
+			title: page.title,
+			contents: page.textBlocks,
+			titleLayout: page.titleLayout,
+			bodyLayout: page.textLayout,
+			backgroundColor: page.backgroundColor,
+			textColor: page.textColor
+		}));
+		this.thumbnailPanel.setSlides(slides, this.activeIndex);
+	}
+
+	private openThumbnails(): void {
+		this.refreshThumbnails();
+		this.thumbnailPanel.setActive(this.activeIndex);
+		this.thumbnailPanel.open(this.activeIndex);
+	}
+
+	private closeThumbnails(): void {
+		this.thumbnailPanel.close();
 	}
 }

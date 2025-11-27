@@ -90,10 +90,7 @@ function resolveImageMarkdown(line: string, _values: Record<string, string>): st
 		return null;
 	}
 	const token = extractFirstImageToken(trimmed);
-	if (!token || token !== trimmed) {
-		return null;
-	}
-	return normalizeImageToken(token);
+	return token ? normalizeImageToken(token) : null;
 }
 
 export function resolveDirectImage(value: string | null | undefined): string | null {
@@ -105,10 +102,7 @@ export function resolveDirectImage(value: string | null | undefined): string | n
 		return null;
 	}
 	const token = extractFirstImageToken(trimmed);
-	if (!token || token !== trimmed) {
-		return null;
-	}
-	return normalizeImageToken(token);
+	return token ? normalizeImageToken(token) : null;
 }
 
 function extractFirstImageToken(text: string): string | null {

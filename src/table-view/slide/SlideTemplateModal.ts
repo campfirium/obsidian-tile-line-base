@@ -24,6 +24,8 @@ const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_ind
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 
 export class SlideTemplateModal extends Modal {
+	private static lastSelectedSingleBranch: 'withoutImage' | 'withImage' = 'withoutImage';
+	private static lastSelectedSplitBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
@@ -47,8 +49,8 @@ export class SlideTemplateModal extends Modal {
 		this.onSave = opts.onSave;
 		this.onSaveDefault = opts.onSaveDefault;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
-		this.singleBranch = this.template.single.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
-		this.splitBranch = this.template.split.withImage.imageTemplate?.trim() ? 'withImage' : 'withoutImage';
+		this.singleBranch = this.resolveInitialBranch('single');
+		this.splitBranch = this.resolveInitialBranch('split');
 	}
 
 	onOpen(): void {
@@ -141,6 +143,7 @@ export class SlideTemplateModal extends Modal {
 			evt.preventDefault();
 			if (this.template.mode !== mode) {
 				this.template.mode = mode;
+				this.setBranchSelection(mode, this.resolveInitialBranch(mode));
 				this.renderModalContent();
 			}
 		});
@@ -244,6 +247,95 @@ export class SlideTemplateModal extends Modal {
 		}
 	}
 
+	private applyPresetStyles(preset: SlideTemplateConfig): void {
+		if (this.isYamlMode) {
+			this.applyYamlInput();
+		}
+		const current = sanitizeSlideTemplateConfig(this.template);
+		const sanitizedPreset = sanitizeSlideTemplateConfig(preset);
+		const mergeTextLayout = (
+			base: SlideLayoutConfig | undefined,
+			override: SlideLayoutConfig | undefined,
+			fallback: SlideLayoutConfig
+		): SlideLayoutConfig => override ?? base ?? fallback;
+		const merged: SlideTemplateConfig = {
+			...current,
+			textColor: sanitizedPreset.textColor ?? current.textColor,
+			backgroundColor: sanitizedPreset.backgroundColor ?? current.backgroundColor,
+			single: {
+				withImage: {
+					...current.single.withImage,
+					titleLayout: mergeTextLayout(
+						current.single.withImage.titleLayout,
+						sanitizedPreset.single.withImage.titleLayout,
+						getDefaultTitleLayout()
+					),
+					bodyLayout: mergeTextLayout(
+						current.single.withImage.bodyLayout,
+						sanitizedPreset.single.withImage.bodyLayout,
+						getDefaultBodyLayout()
+					),
+					imageLayout: mergeTextLayout(
+						current.single.withImage.imageLayout,
+						sanitizedPreset.single.withImage.imageLayout,
+						getDefaultBodyLayout()
+					)
+				},
+				withoutImage: {
+					...current.single.withoutImage,
+					titleLayout: mergeTextLayout(
+						current.single.withoutImage.titleLayout,
+						sanitizedPreset.single.withoutImage.titleLayout,
+						getDefaultTitleLayout()
+					),
+					bodyLayout: mergeTextLayout(
+						current.single.withoutImage.bodyLayout,
+						sanitizedPreset.single.withoutImage.bodyLayout,
+						getDefaultBodyLayout()
+					)
+				}
+			},
+			split: {
+				withImage: {
+					...current.split.withImage,
+					textPage: {
+						...current.split.withImage.textPage,
+						titleLayout: mergeTextLayout(
+							current.split.withImage.textPage.titleLayout,
+							sanitizedPreset.split.withImage.textPage.titleLayout,
+							getDefaultTitleLayout()
+						),
+						bodyLayout: mergeTextLayout(
+							current.split.withImage.textPage.bodyLayout,
+							sanitizedPreset.split.withImage.textPage.bodyLayout,
+							getDefaultBodyLayout()
+						)
+					},
+					imageLayout: mergeTextLayout(
+						current.split.withImage.imageLayout,
+						sanitizedPreset.split.withImage.imageLayout,
+						getDefaultBodyLayout()
+					)
+				},
+				withoutImage: {
+					...current.split.withoutImage,
+					titleLayout: mergeTextLayout(
+						current.split.withoutImage.titleLayout,
+						sanitizedPreset.split.withoutImage.titleLayout,
+						getDefaultTitleLayout()
+					),
+					bodyLayout: mergeTextLayout(
+						current.split.withoutImage.bodyLayout,
+						sanitizedPreset.split.withoutImage.bodyLayout,
+						getDefaultBodyLayout()
+					)
+				}
+			}
+		};
+		this.template = sanitizeSlideTemplateConfig(merged);
+		this.renderModalContent();
+	}
+
 	private applyGlobalDefault(): void {
 		const plugin = getPluginContext();
 		const globalConfig = plugin?.getDefaultSlideConfig();
@@ -251,13 +343,32 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;
 		}
-		this.template = sanitizeSlideTemplateConfig(globalConfig.template);
-		this.renderModalContent();
+		this.applyPresetStyles(globalConfig.template);
 	}
 
 	private applyBuiltInDefault(): void {
-		this.template = sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
-		this.renderModalContent();
+		this.applyPresetStyles(DEFAULT_SLIDE_TEMPLATE);
+	}
+
+	private setBranchSelection(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): void {
+		if (mode === 'single') {
+			this.singleBranch = branch;
+			SlideTemplateModal.lastSelectedSingleBranch = branch;
+			return;
+		}
+		this.splitBranch = branch;
+		SlideTemplateModal.lastSelectedSplitBranch = branch;
+	}
+
+	private resolveInitialBranch(mode: 'single' | 'split'): 'withoutImage' | 'withImage' {
+		const hasImageTemplate =
+			mode === 'single'
+				? Boolean(this.template.single.withImage.imageTemplate?.trim())
+				: Boolean(this.template.split.withImage.imageTemplate?.trim());
+		if (hasImageTemplate) {
+			return 'withImage';
+		}
+		return mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
 	}
 
 	private renderInsertButton(container: HTMLElement): void {
@@ -637,18 +748,18 @@ export class SlideTemplateModal extends Modal {
 				'Generates a single slide per row. Displays text and image side-by-side if an image exists.'
 			)
 		});
-		this.renderBranchTabs(
-			wrapper,
-			this.singleBranch,
-			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Layout: No Image'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Layout: With Image')
-			},
-			(next) => {
-				this.singleBranch = next;
-				this.renderModalContent();
-			}
-		);
+			this.renderBranchTabs(
+				wrapper,
+				this.singleBranch,
+				{
+					without: this.getText('slideView.templateModal.noImageTabLabel', 'Layout: No Image'),
+					with: this.getText('slideView.templateModal.withImageTabLabel', 'Layout: With Image')
+				},
+				(next) => {
+					this.setBranchSelection('single', next);
+					this.renderModalContent();
+				}
+			);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.singleBranch === 'withoutImage') {
@@ -725,18 +836,18 @@ export class SlideTemplateModal extends Modal {
 				'Generates two sequential slides per row: 1. Text Slide → 2. Image Slide (if image exists).'
 			)
 		});
-		this.renderBranchTabs(
-			wrapper,
-			this.splitBranch,
-			{
-				without: this.getText('slideView.templateModal.noImageTabLabel', 'Slide 1: Text'),
-				with: this.getText('slideView.templateModal.withImageTabLabel', 'Slide 2: Image')
-			},
-			(next) => {
-				this.splitBranch = next;
-				this.renderModalContent();
-			}
-		);
+			this.renderBranchTabs(
+				wrapper,
+				this.splitBranch,
+				{
+					without: this.getText('slideView.templateModal.noImageTabLabel', 'Slide 1: Text'),
+					with: this.getText('slideView.templateModal.withImageTabLabel', 'Slide 2: Image')
+				},
+				(next) => {
+					this.setBranchSelection('split', next);
+					this.renderModalContent();
+				}
+			);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.splitBranch === 'withoutImage') {

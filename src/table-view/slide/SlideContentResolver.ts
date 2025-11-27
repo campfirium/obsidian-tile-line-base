@@ -1,4 +1,3 @@
-import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideTextTemplate } from '../../types/slide';
 
@@ -34,25 +33,28 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 
 	const renderTemplate = (templateText: string): string => renderSlideTemplate(templateText, values, options.reservedFields);
 
-	const titleTemplate = options.template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
-	const title =
-		renderTemplate(titleTemplate) ||
-		t('slideView.untitledSlide', { index: String(options.activeIndex + 1) });
+	const titleTemplate = options.template.titleTemplate ?? '';
+	const rawTitle = titleTemplate ? renderTemplate(titleTemplate) : '';
+	const title = rawTitle;
 
 	const body = renderTemplate(options.template.bodyTemplate);
-	const lines = body ? body.split('\n').filter((line) => line.trim().length > 0) : [];
+	const lines = body ? body.split('\n') : [];
+	const templateAllowsImages = containsImageMarker(options.template.bodyTemplate ?? '') || containsImageMarker(body ?? '');
+	const allowImages = options.includeBodyImages !== false || templateAllowsImages;
 	const blocks: SlideBodyBlock[] = [];
 	for (const line of lines) {
-		if (options.includeBodyImages === false) {
-			blocks.push({ type: 'text', text: line });
+		if (line.trim().length === 0) {
+			blocks.push({ type: 'text', text: '' });
 			continue;
 		}
-		const imageMarkdown = resolveImageMarkdown(line, values);
-		if (imageMarkdown) {
-			blocks.push({ type: 'image', markdown: imageMarkdown });
-		} else {
-			blocks.push({ type: 'text', text: line });
+		if (allowImages) {
+			const imageMarkdown = resolveImageMarkdown(line, values);
+			if (imageMarkdown) {
+				blocks.push({ type: 'image', markdown: imageMarkdown });
+				continue;
+			}
 		}
+		blocks.push({ type: 'text', text: line });
 	}
 	const imageMarkdown = resolveDirectImage(options.imageValue);
 	if (imageMarkdown) {
@@ -66,36 +68,29 @@ export function renderSlideTemplate(
 	values: Record<string, string>,
 	reservedFields: Set<string>
 ): string {
-	const input = templateText.replace(/\r\n/g, '\n');
+	const input = (templateText ?? '').replace(/\r\n/g, '\n');
 	return input.replace(/\{([^{}]+)\}/g, (_, key: string) => {
 		const field = key.trim();
 		if (!field || reservedFields.has(field)) {
 			return '';
 		}
 		return values[field] ?? '';
-	}).trim();
+	});
 }
 
-function resolveImageMarkdown(line: string, values: Record<string, string>): string | null {
+function containsImageMarker(text: string): boolean {
+	const normalized = (text ?? '').trim();
+	if (!normalized) return false;
+	return normalized.includes('![') || normalized.includes('![[');
+}
+
+function resolveImageMarkdown(line: string, _values: Record<string, string>): string | null {
 	const trimmed = line.trim();
 	if (!trimmed) {
 		return null;
 	}
-	if (MARKDOWN_IMAGE_PATTERN.test(trimmed) || EMBED_IMAGE_PATTERN.test(trimmed)) {
-		return trimmed;
-	}
-	const wikilinkMatch = trimmed.match(WIKILINK_PATTERN);
-	if (wikilinkMatch && isImagePath(wikilinkMatch[1])) {
-		return `![[${wikilinkMatch[1]}]]`;
-	}
-	const matchedFieldValue = Object.values(values).find((value) => value.trim() === trimmed);
-	if (matchedFieldValue && isImagePath(trimmed)) {
-		if (/^(https?:\/\/|data:image\/)/i.test(trimmed)) {
-			return `![](${trimmed})`;
-		}
-		return `![[${trimmed}]]`;
-	}
-	return null;
+	const token = extractFirstImageToken(trimmed);
+	return token ? normalizeImageToken(token) : null;
 }
 
 export function resolveDirectImage(value: string | null | undefined): string | null {
@@ -106,13 +101,47 @@ export function resolveDirectImage(value: string | null | undefined): string | n
 	if (!trimmed) {
 		return null;
 	}
+	const token = extractFirstImageToken(trimmed);
+	return token ? normalizeImageToken(token) : null;
+}
+
+function extractFirstImageToken(text: string): string | null {
+	const candidates: string[] = [];
+	const patterns: RegExp[] = [
+		/!\[[^\]]*]\([^)]+\)/g, // markdown image
+		/!\[\[[^\]]+?]]/g, // embed image
+		/\[\[([^\]]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif))(?:\|[^\]]*)?]]/gi, // wikilink with image extension
+		/https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/gi,
+		/data:image\/[^\s]+/gi,
+		/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/gi
+	];
+	for (const pattern of patterns) {
+		const match = pattern.exec(text);
+		if (match && match[0]) {
+			candidates.push(match[0]);
+			break;
+		}
+	}
+	if (candidates.length === 0) {
+		return null;
+	}
+	return candidates[0].trim();
+}
+
+function normalizeImageToken(token: string): string | null {
+	const trimmed = token.trim();
+	if (!trimmed) return null;
 	if (MARKDOWN_IMAGE_PATTERN.test(trimmed) || EMBED_IMAGE_PATTERN.test(trimmed)) {
 		return trimmed;
 	}
 	if (/^(https?:\/\/|data:image\/)/i.test(trimmed)) {
 		return `![](${trimmed})`;
 	}
-	if (WIKILINK_PATTERN.test(trimmed) || IMAGE_PATH_PATTERN.test(trimmed) || hasImageExtension(trimmed)) {
+	const wikilink = trimmed.match(WIKILINK_PATTERN);
+	if (wikilink && isImagePath(wikilink[1])) {
+		return `![[${wikilink[1]}]]`;
+	}
+	if (isImagePath(trimmed)) {
 		return `![[${trimmed}]]`;
 	}
 	return null;

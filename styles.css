@@ -2981,9 +2981,20 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
+	transition:
+		border-color 120ms ease,
+		background-color 120ms ease,
+		box-shadow 120ms ease;
+}
+.tlb-slide-template__mode-btn:focus-visible {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 32%, transparent);
 }
 .tlb-slide-template__mode-btn.is-active {
-	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-secondary) 86%);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 32%, transparent);
 }
 .tlb-slide-template__section {
 	display: flex;

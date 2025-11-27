@@ -112,6 +112,8 @@ export class TableView extends ItemView {
 	public slideConfig: SlideViewConfig = normalizeSlideViewConfig(null);
 	public slideController: SlideViewInstance | null = null;
 	public slidePreferencesLoaded = false;
+	public shouldAutoFillSlideDefaults = false;
+	public slideTemplateTouched = false;
 	private viewModeManager!: ViewModeManager;
 	public previousNonSlideMode: 'table' | 'kanban' = 'table';
 
@@ -145,6 +147,8 @@ export class TableView extends ItemView {
 				this.kanbanBoardsLoaded = false;
 				this.kanbanPreferencesLoaded = false;
 				this.slidePreferencesLoaded = false;
+				this.shouldAutoFillSlideDefaults = false;
+				this.slideTemplateTouched = false;
 				this.slideConfig = normalizeSlideViewConfig(null);
 				await this.render();
 			} else {

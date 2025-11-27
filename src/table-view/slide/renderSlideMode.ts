@@ -2,7 +2,11 @@ import { Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
 import { getPluginContext } from '../../pluginContext';
-import { getDefaultBodyLayout, getDefaultTitleLayout, normalizeSlideViewConfig, type SlideTextTemplate } from '../../types/slide';
+import {
+	getDefaultBodyLayout,
+	getDefaultTitleLayout,
+	normalizeSlideViewConfig
+} from '../../types/slide';
 import { getLogger } from '../../utils/logger';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
@@ -13,9 +17,13 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	container.classList.add('tlb-slide-mode');
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
-	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
-	const effectiveConfig = applyDefaultTemplates(baseConfig, view.schema?.columnNames ?? []);
-	view.slideConfig = effectiveConfig;
+	const fields = view.schema?.columnNames ?? [];
+	const renderState = buildRenderConfig({
+		config: view.slideConfig
+	});
+	view.slideConfig = renderState.renderConfig;
+	view.shouldAutoFillSlideDefaults = false;
+	view.slideTemplateTouched = true;
 	const plugin = getPluginContext();
 
 	view.slideController = renderSlideView({
@@ -23,8 +31,8 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 		sourcePath: view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '',
 		container: slideContainer,
 		rows: slideRows,
-		fields: view.schema?.columnNames ?? [],
-		config: effectiveConfig,
+		fields,
+		config: renderState.renderConfig,
 		onSaveRow: async (row, values) => {
 			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
 			if (rowIndex == null) return;
@@ -36,26 +44,28 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			return view.dataStore.extractRowData();
 		},
 		onEditTemplate: () => {
-			const freshConfig = applyDefaultTemplates(
-				normalizeSlideViewConfig(view.slideConfig),
-				view.schema?.columnNames ?? []
-			);
-			view.slideConfig = freshConfig;
+			const baseConfig = ensureLayoutDefaults(normalizeSlideViewConfig(view.slideConfig));
+			view.slideConfig = baseConfig;
 			const modal = new SlideTemplateModal({
 				app: view.app,
-				fields: view.schema?.columnNames ?? [],
-				initial: freshConfig.template,
+				fields,
+				initial: baseConfig.template,
 				onSave: (nextTemplate) => {
-					const nextConfig = { ...freshConfig, template: nextTemplate };
-					view.slideConfig = nextConfig;
-					view.slideController?.controller.updateConfig(view.slideConfig);
+					const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));
+					const nextRenderState = buildRenderConfig({
+						config: nextConfig
+					});
+					view.slideTemplateTouched = true;
+					view.shouldAutoFillSlideDefaults = false;
+					view.slideConfig = nextRenderState.renderConfig;
+					view.slideController?.controller.updateConfig(nextRenderState.renderConfig);
 					view.markUserMutation('slide-template');
 					view.persistenceService.scheduleSave();
 				},
 				onSaveDefault: plugin
 					? async (nextTemplate) => {
 							try {
-								const nextConfig = normalizeSlideViewConfig({ ...freshConfig, template: nextTemplate });
+								const nextConfig = normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate });
 								await plugin.setDefaultSlideConfig(nextConfig);
 								new Notice(t('slideView.templateModal.setDefaultSuccess'));
 							} catch (error) {
@@ -70,54 +80,63 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	});
 }
 
-function applyDefaultTemplates(config: ReturnType<typeof normalizeSlideViewConfig>, fields: string[]): typeof config {
-	const available = fields.filter((field) => field && field !== '#' && field !== '__tlb_row_id');
-	const defaultTitle = available[0] ? `{${available[0]}}` : '';
-	const defaultBody = available.slice(1).map((field) => `{${field}}`).join('\n');
-	const defaultImageTemplate = (() => {
-		const imageField = available.find((field) => field.toLowerCase() === 'image') ?? available[0];
-		return imageField ? `{${imageField}}` : '';
-	})();
-	const normalizeText = (template: SlideTextTemplate): SlideTextTemplate => {
-		const titleTemplate = template.titleTemplate && template.titleTemplate.trim().length > 0 ? template.titleTemplate : defaultTitle;
-		const bodyTemplate = template.bodyTemplate && template.bodyTemplate.trim().length > 0 ? template.bodyTemplate : defaultBody;
-		return {
-			titleTemplate,
-			bodyTemplate,
-			titleLayout: template.titleLayout ?? getDefaultTitleLayout(),
-			bodyLayout: template.bodyLayout ?? getDefaultBodyLayout()
-		};
-	};
+function ensureLayoutDefaults(config: ReturnType<typeof normalizeSlideViewConfig>): typeof config {
+	const template = config.template;
 	return {
 		...config,
 		template: {
-			mode: config.template.mode ?? 'single',
-			textColor: config.template.textColor ?? '',
-			backgroundColor: config.template.backgroundColor ?? '',
+			mode: template.mode ?? 'single',
+			textColor: template.textColor ?? '',
+			backgroundColor: template.backgroundColor ?? '',
 			single: {
 				withImage: {
-					...normalizeText(config.template.single.withImage),
-					imageTemplate:
-						config.template.single.withImage.imageTemplate && config.template.single.withImage.imageTemplate.trim().length > 0
-							? config.template.single.withImage.imageTemplate
-							: defaultImageTemplate,
-					imageLayout: config.template.single.withImage.imageLayout ?? getDefaultBodyLayout()
+					...template.single.withImage,
+					titleLayout: template.single.withImage.titleLayout ?? getDefaultTitleLayout(),
+					bodyLayout: template.single.withImage.bodyLayout ?? getDefaultBodyLayout(),
+					imageLayout: template.single.withImage.imageLayout ?? getDefaultBodyLayout()
 				},
-				withoutImage: normalizeText(config.template.single.withoutImage)
+				withoutImage: {
+					...template.single.withoutImage,
+					titleLayout: template.single.withoutImage.titleLayout ?? getDefaultTitleLayout(),
+					bodyLayout: template.single.withoutImage.bodyLayout ?? getDefaultBodyLayout()
+				}
 			},
 			split: {
 				withImage: {
-					imageTemplate:
-						config.template.split.withImage.imageTemplate && config.template.split.withImage.imageTemplate.trim().length > 0
-							? config.template.split.withImage.imageTemplate
-							: defaultImageTemplate,
-					textPage: normalizeText(config.template.split.withImage.textPage),
-					imageLayout:
-						config.template.split.withImage.imageLayout ??
-						getDefaultBodyLayout()
+					...template.split.withImage,
+					textPage: {
+						...template.split.withImage.textPage,
+						titleLayout: template.split.withImage.textPage.titleLayout ?? getDefaultTitleLayout(),
+						bodyLayout: template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout()
+					},
+					imageLayout: template.split.withImage.imageLayout ?? getDefaultBodyLayout()
 				},
-				withoutImage: normalizeText(config.template.split.withoutImage)
+				withoutImage: {
+					...template.split.withoutImage,
+					titleLayout: template.split.withoutImage.titleLayout ?? getDefaultTitleLayout(),
+					bodyLayout: template.split.withoutImage.bodyLayout ?? getDefaultBodyLayout()
+				}
 			}
 		}
+	};
+}
+
+function buildRenderConfig(options: {
+	config: ReturnType<typeof normalizeSlideViewConfig>;
+}): {
+	normalizedConfig: ReturnType<typeof normalizeSlideViewConfig>;
+	renderConfig: ReturnType<typeof normalizeSlideViewConfig>;
+	templateTouched: boolean;
+	allowAutoFillNext: boolean;
+	appliedDefaults: boolean;
+} {
+	const baseConfig = ensureLayoutDefaults(normalizeSlideViewConfig(options.config));
+	const renderConfig = baseConfig;
+	return {
+		normalizedConfig: baseConfig,
+		renderConfig,
+		templateTouched: true,
+		allowAutoFillNext: false,
+		appliedDefaults: false
 	};
 }

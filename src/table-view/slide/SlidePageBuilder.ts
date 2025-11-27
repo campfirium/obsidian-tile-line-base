@@ -1,5 +1,5 @@
 import type { RowData } from '../../grid/GridAdapter';
-import type { SlideTextTemplate, SlideViewConfig } from '../../types/slide';
+import { type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
 import { computeLayout, type ComputedLayout } from './slideLayout';
 import { renderSlideTemplate, resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
 
@@ -36,22 +36,34 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 		const row = rows[rowIndex];
 		if (mode === 'single') {
 			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.single.withImage.imageTemplate);
-			const hasImage = Boolean(imageInfo.markdown);
-			const branch = hasImage ? template.single.withImage : template.single.withoutImage;
-			const { title, blocks } = resolveSlideContent({
+			const withImageContent = resolveSlideContent({
 				row,
 				fields,
-				template: branch,
+				template: template.single.withImage,
 				activeIndex: rowIndex,
 				reservedFields,
-				imageValue: hasImage ? imageInfo.raw : undefined,
+				imageValue: imageInfo.raw,
 				includeBodyImages: true
 			});
+			const withImageBlocks = withImageContent.blocks;
+			const hasImage = Boolean(imageInfo.markdown) || withImageBlocks.some((block) => block.type === 'image');
+			const branch = hasImage ? template.single.withImage : template.single.withoutImage;
+			const content =
+				hasImage && withImageContent
+					? withImageContent
+					: resolveSlideContent({
+							row,
+							fields,
+							template: branch,
+							activeIndex: rowIndex,
+							reservedFields,
+							includeBodyImages: true
+						});
 			pages.push(
 				buildPageFromBlocks(
 					rowIndex,
-					title,
-					blocks,
+					content.title,
+					content.blocks,
 					branch,
 					textColor,
 					backgroundColor,
@@ -66,71 +78,57 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				)
 			);
 		} else {
-			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.split.withImage.imageTemplate);
-			if (!imageInfo.markdown) {
-				const branch = template.split.withoutImage;
-				const { title, blocks } = resolveSlideContent({
-					row,
-					fields,
-					template: branch,
-					activeIndex: rowIndex,
-					reservedFields,
-					includeBodyImages: true
-				});
-				pages.push(
-					buildPageFromBlocks(
-						rowIndex,
-						title,
-						blocks,
-						branch,
-						textColor,
-						backgroundColor,
-						(next) => {
-							template.split.withoutImage = { ...template.split.withoutImage, ...next };
-						},
-						computeLayout(branch.bodyLayout, 'body')
-					)
-				);
-			} else {
-				const textBranch = template.split.withImage.textPage;
-				const { title, blocks } = resolveSlideContent({
-					row,
-					fields,
-					template: textBranch,
-					activeIndex: rowIndex,
-					reservedFields,
-					includeBodyImages: true
-				});
-				pages.push(
-					buildPageFromBlocks(
-						rowIndex,
-						title,
-						blocks,
-						textBranch,
-						textColor,
-						backgroundColor,
-						(next) => {
-							template.split.withImage.textPage = { ...template.split.withImage.textPage, ...next };
-						},
-						computeLayout(textBranch.bodyLayout, 'body')
-					)
-				);
-
-				const imageMarkdown = imageInfo.markdown;
-				pages.push({
+			const textBranch = template.split.withoutImage;
+			const { title, blocks } = resolveSlideContent({
+				row,
+				fields,
+				template: textBranch,
+				activeIndex: rowIndex,
+				reservedFields,
+				includeBodyImages: true
+			});
+			pages.push(
+				buildPageFromBlocks(
 					rowIndex,
 					title,
-					textBlocks: [],
-					imageBlocks: imageMarkdown ? [imageMarkdown] : [],
-					titleLayout: computeLayout(textBranch.titleLayout, 'title'),
-					textLayout: computeLayout(textBranch.bodyLayout, 'body'),
-					imageLayout: computeLayout(template.split.withImage.imageLayout, 'body'),
+					blocks,
+					textBranch,
 					textColor,
 					backgroundColor,
-					editable: false,
-					templateRef: textBranch,
-					updateTemplate: () => {}
+					(next) => {
+						template.split.withoutImage = { ...template.split.withoutImage, ...next };
+					},
+					computeLayout(textBranch.bodyLayout, 'body')
+				)
+			);
+
+			const imageTemplate = template.split.withImage;
+			const imageInfo = resolveImageTemplate(row, fields, reservedFields, imageTemplate.imageTemplate);
+			if (imageInfo.markdown) {
+				const imageContent = resolveSlideContent({
+					row,
+					fields,
+					template: imageTemplate.textPage,
+					activeIndex: rowIndex,
+					reservedFields,
+					imageValue: imageInfo.raw,
+					includeBodyImages: true
 				});
+				pages.push(
+					buildPageFromBlocks(
+						rowIndex,
+						imageContent.title,
+						imageContent.blocks,
+						imageTemplate.textPage,
+						textColor,
+						backgroundColor,
+						(next) => {
+							imageTemplate.textPage = { ...imageTemplate.textPage, ...next };
+							template.split.withImage = { ...imageTemplate };
+						},
+						computeLayout(imageTemplate.imageLayout, 'body')
+					)
+				);
 			}
 		}
 	}
@@ -172,8 +170,32 @@ function resolveImageTemplate(
 	template: string | null | undefined
 ): { raw: string | null; markdown: string | null } {
 	const rendered = renderTemplateValue(template, row, fields, reservedFields);
-	const markdown = resolveDirectImage(rendered);
-	return { raw: rendered, markdown };
+	const direct = resolveDirectImage(rendered);
+	if (direct) {
+		return { raw: rendered, markdown: direct };
+	}
+	const templateFields =
+		typeof template === 'string'
+			? Array.from(template.matchAll(/\{([^{}]+)\}/g)).map((match) => match[1]?.trim()).filter(Boolean)
+			: [];
+	for (const field of templateFields) {
+		if (!field || reservedFields.has(field)) {
+			continue;
+		}
+		const candidateValue = row[field];
+		if (candidateValue == null) {
+			continue;
+		}
+		const text = typeof candidateValue === 'string' ? candidateValue.trim() : String(candidateValue).trim();
+		if (!text) {
+			continue;
+		}
+		const fallback = resolveDirectImage(text);
+		if (fallback) {
+			return { raw: text, markdown: fallback };
+		}
+	}
+	return { raw: rendered, markdown: null };
 }
 
 function renderTemplateValue(

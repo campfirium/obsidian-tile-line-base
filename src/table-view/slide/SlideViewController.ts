@@ -7,6 +7,11 @@ import { SlideThumbnailPanel, type SlideThumbnail } from './SlideThumbnailPanel'
 import { buildSlidePages, type SlidePage } from './SlidePageBuilder';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import {
+	renderSlideEditForm,
+	serializeTemplateSegments,
+	type EditState
+} from './slideTemplateEditing';
+import {
 	applyLayoutWithWatcher,
 	renderMarkdownBlock,
 	resetRenderArtifacts
@@ -22,8 +27,6 @@ interface SlideControllerOptions {
 	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onEditTemplate: () => void;
 }
-
-type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field: string; value: string };
 
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
@@ -49,10 +52,8 @@ export class SlideViewController {
 	private fullscreenCleanup: (() => void) | null = null;
 	private pages: SlidePage[] = [];
 	private editingPage: SlidePage | null = null;
-	private editingValues: Record<string, string> = {};
 	private saving = false;
-	private fieldInputs: Record<string, HTMLElement[]> = {};
-	private editingTemplate: { title: TemplateSegment[]; body: TemplateSegment[][] } | null = null;
+	private readonly editState: EditState = { template: null, values: {}, fieldInputs: {} };
 	private readonly thumbnailPanel: SlideThumbnailPanel;
 
 	constructor(options: SlideControllerOptions) {
@@ -94,7 +95,7 @@ export class SlideViewController {
 
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
-		this.editingTemplate = null;
+		this.editState.template = null;
 		this.editingPage = null;
 		if (rows.length === 0) {
 			this.closeThumbnails();
@@ -104,7 +105,7 @@ export class SlideViewController {
 
 	updateConfig(config: SlideViewConfig): void {
 		this.config = config;
-		this.editingTemplate = null;
+		this.editState.template = null;
 		this.editingPage = null;
 		this.renderActive();
 	}
@@ -220,7 +221,7 @@ export class SlideViewController {
 
 	private next(): void {
 		if (this.pages.length === 0) return;
-		this.editingTemplate = null;
+		this.editState.template = null;
 		this.editingPage = null;
 		const nextIndex = Math.min(this.pages.length - 1, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
@@ -231,7 +232,7 @@ export class SlideViewController {
 
 	private prev(): void {
 		if (this.pages.length === 0) return;
-		this.editingTemplate = null;
+		this.editState.template = null;
 		this.editingPage = null;
 		const nextIndex = Math.max(0, this.activeIndex - 1);
 		if (nextIndex !== this.activeIndex) {
@@ -244,7 +245,7 @@ export class SlideViewController {
 		if (index < 0 || index >= this.pages.length || index === this.activeIndex) {
 			return;
 		}
-		this.editingTemplate = null;
+		this.editState.template = null;
 		this.editingPage = null;
 		this.activeIndex = index;
 		this.renderActive();
@@ -301,8 +302,24 @@ export class SlideViewController {
 		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
 		applyLayout(titleEl, page.titleLayout, slide);
 
-		if (this.editingPage === page && page.editable && this.editingTemplate) {
-			this.renderEditForm(slide, row, page, applyLayout);
+		if (this.editingPage === page && page.editable && this.editState.template) {
+			renderSlideEditForm({
+				container: slide,
+				row,
+				page,
+				fields: this.fields,
+				reservedFields: RESERVED_FIELDS,
+				state: this.editState,
+				position: applyLayout,
+				onCancel: () => {
+					this.editState.template = null;
+					this.editingPage = null;
+					this.renderActive();
+				},
+				onSave: () => {
+					void this.persistEdit(page);
+				}
+			});
 		} else {
 			if (page.textBlocks.length === 0 && page.imageBlocks.length === 0) {
 				const content = slide.createDiv({ cls: 'tlb-slide-full__content' });
@@ -390,158 +407,28 @@ export class SlideViewController {
 			const raw = row[field];
 			values[field] = typeof raw === 'string' ? raw : String(raw ?? '');
 		}
-		this.editingValues = values;
-		this.fieldInputs = {};
-		this.editingTemplate = null;
+		this.editState.values = values;
+		this.editState.fieldInputs = {};
+		this.editState.template = null;
 		this.renderActive();
 	}
 
-	private renderEditForm(
-		container: HTMLElement,
-		row: RowData,
-		page: SlidePage,
-		position: (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) => void
-	): void {
-		this.editingTemplate = { title: [], body: [] };
-		const editingTemplate = this.editingTemplate;
-		const titleLine = container.createDiv({
-			cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
-		});
-		titleLine.style.lineHeight = `${page.titleLayout.lineHeight}`;
-		titleLine.style.fontSize = `${page.titleLayout.fontSize}rem`;
-		titleLine.style.fontWeight = String(page.titleLayout.fontWeight);
-		position(titleLine, page.titleLayout, container);
-		this.renderTemplateSegments(titleLine, page.templateRef.titleTemplate, row, editingTemplate.title);
-
-		const bodyContainer = container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
-		const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' });
-		bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
-		bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
-		bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
-		bodyBlock.style.textAlign = page.textLayout.align;
-		const bodyLines = page.templateRef.bodyTemplate.split(/\r?\n/);
-		if (bodyLines.length === 0) {
-			bodyLines.push('');
-		}
-		bodyLines.forEach((line, index) => {
-			const segments: TemplateSegment[] = [];
-			this.renderTemplateSegments(bodyBlock, line, row, segments);
-			editingTemplate.body.push(segments);
-			if (index < bodyLines.length - 1) {
-				bodyBlock.createEl('br');
-			}
-		});
-		position(bodyContainer, page.textLayout, container);
-
-		const actions = container.createDiv({ cls: 'tlb-slide-full__actions' });
-		const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });
-		cancel.addEventListener('click', (evt) => {
-			evt.preventDefault();
-			evt.stopPropagation();
-			this.editingTemplate = null;
-			this.editingPage = null;
-			this.renderActive();
-		});
-		const save = actions.createEl('button', { cls: 'mod-cta', attr: { type: 'button' }, text: t('slideView.templateModal.saveLabel') });
-		save.addEventListener('click', (evt) => {
-			evt.preventDefault();
-			evt.stopPropagation();
-			void this.persistEdit(page);
-		});
-	}
-
-	private renderTemplateSegments(
-		container: HTMLElement,
-		template: string,
-		row: RowData,
-		collect: TemplateSegment[]
-	): void {
-		const orderedFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
-		const values: Record<string, string> = {};
-		for (const field of orderedFields) {
-			if (field === 'status') continue;
-			const raw = row[field];
-			values[field] = typeof raw === 'string' ? raw : String(raw ?? '');
-		}
-
-		const segments: TemplateSegment[] = [];
-		const regex = /\{([^{}]+)\}/g;
-		let lastIndex = 0;
-		let match: RegExpExecArray | null;
-		while ((match = regex.exec(template)) !== null) {
-			const before = template.slice(lastIndex, match.index);
-			if (before) {
-				segments.push({ type: 'text', value: before });
-			}
-			const fieldName = match[1].trim();
-			if (fieldName && !RESERVED_FIELDS.has(fieldName)) {
-				const value = this.editingValues[fieldName] ?? values[fieldName] ?? '';
-				segments.push({ type: 'field', field: fieldName, value });
-			} else {
-				segments.push({ type: 'text', value: '' });
-			}
-			lastIndex = regex.lastIndex;
-		}
-		if (lastIndex < template.length) {
-			segments.push({ type: 'text', value: template.slice(lastIndex) });
-		}
-
-		for (const segment of segments) {
-			if (segment.type === 'text') {
-				if (segment.value) {
-					const input = container.createEl('span', {
-						text: segment.value,
-						cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-text',
-						attr: { contenteditable: 'true' }
-					});
-					input.addEventListener('input', () => {
-						segment.value = input.textContent ?? '';
-					});
-					collect.push(segment);
-				}
-			} else {
-				const input = container.createEl('span', {
-					text: segment.value,
-					cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-input--field',
-					attr: { contenteditable: 'true' }
-				});
-				const field = segment.field;
-				if (!this.fieldInputs[field]) {
-					this.fieldInputs[field] = [];
-				}
-				this.fieldInputs[field].push(input);
-				input.addEventListener('input', () => {
-					this.editingValues[field] = input.textContent ?? '';
-					for (const peer of this.fieldInputs[field]) {
-						if (peer !== input) {
-							peer.textContent = input.textContent;
-						}
-					}
-				});
-				collect.push({ type: 'field', field, value: this.editingValues[field] ?? '' });
-			}
-		}
-	}
-
 	private async persistEdit(page: SlidePage): Promise<void> {
-		if (this.saving || !this.editingTemplate) return;
+		if (this.saving || !this.editState.template) return;
 		this.saving = true;
 		try {
-			const renderSegments = (segments: TemplateSegment[]): string =>
-				segments.map((seg) => (seg.type === 'text' ? seg.value : `{${seg.field}}`)).join('');
-			const titleTemplate = renderSegments(this.editingTemplate.title);
-			const bodyTemplate = this.editingTemplate.body.map(renderSegments).join('\n');
+			const { titleTemplate, bodyTemplate } = serializeTemplateSegments(this.editState.template);
 			page.updateTemplate({
 				...page.templateRef,
 				titleTemplate,
 				bodyTemplate
 			});
 			const row = this.rows[page.rowIndex];
-			const nextRows = await this.onSaveRow(row, this.editingValues);
+			const nextRows = await this.onSaveRow(row, this.editState.values);
 			if (nextRows) {
 				this.updateRows(nextRows);
 			}
-			this.editingTemplate = null;
+			this.editState.template = null;
 			this.editingPage = null;
 			this.renderActive();
 		} finally {

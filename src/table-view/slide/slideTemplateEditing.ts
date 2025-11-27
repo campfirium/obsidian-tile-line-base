@@ -4,35 +4,99 @@ import type { SlidePage } from './SlidePageBuilder';
 import type { ComputedLayout } from './slideLayout';
 
 export type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field: string; value: string };
-export interface EditableTemplateState {
-	title: TemplateSegment[];
-	body: TemplateSegment[][];
+
+export interface EditState {
+	template: { title: TemplateSegment[]; body: TemplateSegment[][] } | null;
+	values: Record<string, string>;
+	fieldInputs: Record<string, HTMLElement[]>;
 }
 
-interface RenderEditFormOptions {
+export function renderSlideEditForm(options: {
 	container: HTMLElement;
 	row: RowData;
 	page: SlidePage;
 	fields: string[];
 	reservedFields: Set<string>;
-	editingValues: Record<string, string>;
-	fieldInputs: Record<string, HTMLElement[]>;
+	state: EditState;
 	position: (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) => void;
 	onCancel: () => void;
-	onSave: (payload: { titleTemplate: string; bodyTemplate: string; values: Record<string, string> }) => void;
+	onSave: () => void;
+}): void {
+	options.state.template = { title: [], body: [] };
+	const editingTemplate = options.state.template;
+	const titleLine = options.container.createDiv({
+		cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
+	});
+	titleLine.style.lineHeight = `${options.page.titleLayout.lineHeight}`;
+	titleLine.style.fontSize = `${options.page.titleLayout.fontSize}rem`;
+	titleLine.style.fontWeight = String(options.page.titleLayout.fontWeight);
+	options.position(titleLine, options.page.titleLayout, options.container);
+	renderTemplateSegments(
+		titleLine,
+		options.page.templateRef.titleTemplate,
+		options.row,
+		options.fields,
+		options.reservedFields,
+		options.state.values,
+		options.state.fieldInputs,
+		editingTemplate.title
+	);
+
+	const bodyContainer = options.container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
+	const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' });
+	bodyBlock.style.lineHeight = `${options.page.textLayout.lineHeight}`;
+	bodyBlock.style.fontSize = `${options.page.textLayout.fontSize}rem`;
+	bodyBlock.style.fontWeight = String(options.page.textLayout.fontWeight);
+	bodyBlock.style.textAlign = options.page.textLayout.align;
+	const bodyLines = options.page.templateRef.bodyTemplate.split(/\r?\n/);
+	if (bodyLines.length === 0) {
+		bodyLines.push('');
+	}
+	bodyLines.forEach((line, index) => {
+		const segments: TemplateSegment[] = [];
+		renderTemplateSegments(
+			bodyBlock,
+			line,
+			options.row,
+			options.fields,
+			options.reservedFields,
+			options.state.values,
+			options.state.fieldInputs,
+			segments
+		);
+		editingTemplate.body.push(segments);
+		if (index < bodyLines.length - 1) {
+			bodyBlock.createEl('br');
+		}
+	});
+	options.position(bodyContainer, options.page.textLayout, options.container);
+
+	const actions = options.container.createDiv({ cls: 'tlb-slide-full__actions' });
+	const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });
+	cancel.addEventListener('click', (evt) => {
+		evt.preventDefault();
+		evt.stopPropagation();
+		options.onCancel();
+	});
+	const save = actions.createEl('button', { cls: 'mod-cta', attr: { type: 'button' }, text: t('slideView.templateModal.saveLabel') });
+	save.addEventListener('click', (evt) => {
+		evt.preventDefault();
+		evt.stopPropagation();
+		options.onSave();
+	});
 }
 
-const renderTemplateSegments = (
+export function renderTemplateSegments(
 	container: HTMLElement,
 	template: string,
 	row: RowData,
 	fields: string[],
-	reserved: Set<string>,
+	reservedFields: Set<string>,
 	editingValues: Record<string, string>,
 	fieldInputs: Record<string, HTMLElement[]>,
 	collect: TemplateSegment[]
-): void => {
-	const orderedFields = fields.filter((field) => field && !reserved.has(field));
+): void {
+	const orderedFields = fields.filter((field) => field && !reservedFields.has(field));
 	const values: Record<string, string> = {};
 	for (const field of orderedFields) {
 		if (field === 'status') continue;
@@ -50,7 +114,7 @@ const renderTemplateSegments = (
 			segments.push({ type: 'text', value: before });
 		}
 		const fieldName = match[1].trim();
-		if (fieldName && !reserved.has(fieldName)) {
+		if (fieldName && !reservedFields.has(fieldName)) {
 			const value = editingValues[fieldName] ?? values[fieldName] ?? '';
 			segments.push({ type: 'field', field: fieldName, value });
 		} else {
@@ -97,80 +161,16 @@ const renderTemplateSegments = (
 			collect.push({ type: 'field', field, value: editingValues[field] ?? '' });
 		}
 	}
-};
+}
 
-const renderSegments = (segments: TemplateSegment[]): string =>
-	segments.map((seg) => (seg.type === 'text' ? seg.value : `{${seg.field}}`)).join('');
-
-export function renderEditForm(options: RenderEditFormOptions): EditableTemplateState {
-	const editingTemplate: EditableTemplateState = { title: [], body: [] };
-
-	const titleLine = options.container.createDiv({
-		cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
-	});
-	titleLine.style.lineHeight = `${options.page.titleLayout.lineHeight}`;
-	titleLine.style.fontSize = `${options.page.titleLayout.fontSize}rem`;
-	titleLine.style.fontWeight = String(options.page.titleLayout.fontWeight);
-	options.position(titleLine, options.page.titleLayout, options.container);
-	renderTemplateSegments(
-		titleLine,
-		options.page.templateRef.titleTemplate,
-		options.row,
-		options.fields,
-		options.reservedFields,
-		options.editingValues,
-		options.fieldInputs,
-		editingTemplate.title
-	);
-
-	const bodyContainer = options.container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
-	const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' });
-	bodyBlock.style.lineHeight = `${options.page.textLayout.lineHeight}`;
-	bodyBlock.style.fontSize = `${options.page.textLayout.fontSize}rem`;
-	bodyBlock.style.fontWeight = String(options.page.textLayout.fontWeight);
-	bodyBlock.style.textAlign = options.page.textLayout.align;
-	const bodyLines = options.page.templateRef.bodyTemplate.split(/\r?\n/);
-	if (bodyLines.length === 0) {
-		bodyLines.push('');
-	}
-	bodyLines.forEach((line, index) => {
-		const segments: TemplateSegment[] = [];
-		renderTemplateSegments(
-			bodyBlock,
-			line,
-			options.row,
-			options.fields,
-			options.reservedFields,
-			options.editingValues,
-			options.fieldInputs,
-			segments
-		);
-		editingTemplate.body.push(segments);
-		if (index < bodyLines.length - 1) {
-			bodyBlock.createEl('br');
-		}
-	});
-	options.position(bodyContainer, options.page.textLayout, options.container);
-
-	const actions = options.container.createDiv({ cls: 'tlb-slide-full__actions' });
-	const cancel = actions.createEl('button', { attr: { type: 'button' }, text: t('slideView.templateModal.cancelLabel') });
-	cancel.addEventListener('click', (evt) => {
-		evt.preventDefault();
-		evt.stopPropagation();
-		options.onCancel();
-	});
-	const save = actions.createEl('button', { cls: 'mod-cta', attr: { type: 'button' }, text: t('slideView.templateModal.saveLabel') });
-	save.addEventListener('click', (evt) => {
-		evt.preventDefault();
-		evt.stopPropagation();
-		const titleTemplate = renderSegments(editingTemplate.title);
-		const bodyTemplate = editingTemplate.body.map(renderSegments).join('\n');
-		void options.onSave({
-			titleTemplate,
-			bodyTemplate,
-			values: { ...options.editingValues }
-		});
-	});
-
-	return editingTemplate;
+export function serializeTemplateSegments(template: { title: TemplateSegment[]; body: TemplateSegment[][] }): {
+	titleTemplate: string;
+	bodyTemplate: string;
+} {
+	const renderSegments = (segments: TemplateSegment[]): string =>
+		segments.map((seg) => (seg.type === 'text' ? seg.value : `{${seg.field}}`)).join('');
+	return {
+		titleTemplate: renderSegments(template.title),
+		bodyTemplate: template.body.map(renderSegments).join('\n')
+	};
 }

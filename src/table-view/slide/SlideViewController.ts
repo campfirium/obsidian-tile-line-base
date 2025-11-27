@@ -7,11 +7,15 @@ import { SlideThumbnailPanel, type SlideThumbnail } from './SlideThumbnailPanel'
 import { buildSlidePages, type SlidePage } from './SlidePageBuilder';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import {
+	renderSlideEditForm,
+	serializeTemplateSegments,
+	type EditState
+} from './slideTemplateEditing';
+import {
 	applyLayoutWithWatcher,
 	renderMarkdownBlock,
 	resetRenderArtifacts
 } from './SlideRenderUtils';
-import { renderEditForm } from './slideTemplateEditing';
 
 interface SlideControllerOptions {
 	app: App;
@@ -48,9 +52,8 @@ export class SlideViewController {
 	private fullscreenCleanup: (() => void) | null = null;
 	private pages: SlidePage[] = [];
 	private editingPage: SlidePage | null = null;
-	private editingValues: Record<string, string> = {};
 	private saving = false;
-	private fieldInputs: Record<string, HTMLElement[]> = {};
+	private readonly editState: EditState = { template: null, values: {}, fieldInputs: {} };
 	private readonly thumbnailPanel: SlideThumbnailPanel;
 
 	constructor(options: SlideControllerOptions) {
@@ -92,6 +95,7 @@ export class SlideViewController {
 
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
+		this.editState.template = null;
 		this.editingPage = null;
 		if (rows.length === 0) {
 			this.closeThumbnails();
@@ -101,6 +105,7 @@ export class SlideViewController {
 
 	updateConfig(config: SlideViewConfig): void {
 		this.config = config;
+		this.editState.template = null;
 		this.editingPage = null;
 		this.renderActive();
 	}
@@ -216,6 +221,7 @@ export class SlideViewController {
 
 	private next(): void {
 		if (this.pages.length === 0) return;
+		this.editState.template = null;
 		this.editingPage = null;
 		const nextIndex = Math.min(this.pages.length - 1, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
@@ -226,6 +232,7 @@ export class SlideViewController {
 
 	private prev(): void {
 		if (this.pages.length === 0) return;
+		this.editState.template = null;
 		this.editingPage = null;
 		const nextIndex = Math.max(0, this.activeIndex - 1);
 		if (nextIndex !== this.activeIndex) {
@@ -238,6 +245,7 @@ export class SlideViewController {
 		if (index < 0 || index >= this.pages.length || index === this.activeIndex) {
 			return;
 		}
+		this.editState.template = null;
 		this.editingPage = null;
 		this.activeIndex = index;
 		this.renderActive();
@@ -294,22 +302,22 @@ export class SlideViewController {
 		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
 		applyLayout(titleEl, page.titleLayout, slide);
 
-		if (this.editingPage === page && page.editable) {
-			void renderEditForm({
+		if (this.editingPage === page && page.editable && this.editState.template) {
+			renderSlideEditForm({
 				container: slide,
 				row,
 				page,
 				fields: this.fields,
 				reservedFields: RESERVED_FIELDS,
-				editingValues: this.editingValues,
-				fieldInputs: this.fieldInputs,
+				state: this.editState,
 				position: applyLayout,
 				onCancel: () => {
+					this.editState.template = null;
 					this.editingPage = null;
 					this.renderActive();
 				},
-				onSave: (payload) => {
-					void this.handleEditSave(page, row, payload);
+				onSave: () => {
+					void this.persistEdit(page);
 				}
 			});
 		} else {
@@ -399,9 +407,33 @@ export class SlideViewController {
 			const raw = row[field];
 			values[field] = typeof raw === 'string' ? raw : String(raw ?? '');
 		}
-		this.editingValues = values;
-		this.fieldInputs = {};
+		this.editState.values = values;
+		this.editState.fieldInputs = {};
+		this.editState.template = null;
 		this.renderActive();
+	}
+
+	private async persistEdit(page: SlidePage): Promise<void> {
+		if (this.saving || !this.editState.template) return;
+		this.saving = true;
+		try {
+			const { titleTemplate, bodyTemplate } = serializeTemplateSegments(this.editState.template);
+			page.updateTemplate({
+				...page.templateRef,
+				titleTemplate,
+				bodyTemplate
+			});
+			const row = this.rows[page.rowIndex];
+			const nextRows = await this.onSaveRow(row, this.editState.values);
+			if (nextRows) {
+				this.updateRows(nextRows);
+			}
+			this.editState.template = null;
+			this.editingPage = null;
+			this.renderActive();
+		} finally {
+			this.saving = false;
+		}
 	}
 
 	private refreshThumbnails(): void {
@@ -425,29 +457,5 @@ export class SlideViewController {
 
 	private closeThumbnails(): void {
 		this.thumbnailPanel.close();
-	}
-
-	private async handleEditSave(
-		page: SlidePage,
-		row: RowData,
-		payload: { titleTemplate: string; bodyTemplate: string; values: Record<string, string> }
-	): Promise<void> {
-		if (this.saving) return;
-		this.saving = true;
-		try {
-			page.updateTemplate({
-				...page.templateRef,
-				titleTemplate: payload.titleTemplate,
-				bodyTemplate: payload.bodyTemplate
-			});
-			const nextRows = await this.onSaveRow(row, payload.values);
-			if (nextRows) {
-				this.updateRows(nextRows);
-			}
-			this.editingPage = null;
-			this.renderActive();
-		} finally {
-			this.saving = false;
-		}
 	}
 }

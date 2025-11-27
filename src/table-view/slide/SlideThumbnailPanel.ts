@@ -10,20 +10,23 @@ const THUMBNAIL_STYLES = `
 	inset: 0;
 	display: none;
 	padding: 18px 20px;
-	background: color-mix(in srgb, var(--background-primary) 78%, transparent 22%);
-	backdrop-filter: blur(8px);
+	background: var(--background-primary);
 	overflow: auto;
 	z-index: 8;
 	opacity: 0;
 	transition: opacity 0.2s ease;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	flex-direction: column;
 }
 
 .tlb-slide-thumb--visible {
 	display: flex;
 	opacity: 1;
+}
+
+.tlb-slide-thumb--centered {
+	justify-content: center;
 }
 
 .tlb-slide-thumb__grid {
@@ -171,6 +174,7 @@ export class SlideThumbnailPanel {
 	private readonly sourcePath: string;
 	private items: HTMLElement[] = [];
 	private visible = false;
+	private slideCount = 0;
 	private readonly baseWidth = 1200;
 	private readonly baseHeight = 1200 * (9 / 16); // 675px
 	private currentCardHeight = 0;
@@ -223,6 +227,7 @@ export class SlideThumbnailPanel {
 		this.items = [];
 		this.cleanupSurfaces();
 		this.cleanupMarkdown();
+		this.slideCount = slides.length;
         
 		if (slides.length === 0) {
 			this.grid.createDiv({
@@ -497,7 +502,8 @@ export class SlideThumbnailPanel {
 		if (usableWidth <= 0 || usableHeight <= 0) return;
 
 		const cols = 5;
-		const rows = 4;
+		const count = Math.max(1, this.slideCount || this.items.length || 1);
+		const rows = Math.max(1, Math.ceil(count / cols));
 		const gapRatio = 0.05;
 
 		let cardWidth = usableWidth / (cols + (cols - 1) * gapRatio);
@@ -505,12 +511,13 @@ export class SlideThumbnailPanel {
 		let cardHeight = cardWidth * (9 / 16);
 		let gapY = cardHeight * gapRatio;
 
-		const totalHeight = rows * cardHeight + (rows - 1) * gapY;
+		let totalHeight = rows * cardHeight + (rows - 1) * gapY;
 		if (totalHeight > usableHeight) {
 			cardHeight = usableHeight / (rows + (rows - 1) * gapRatio);
 			gapY = cardHeight * gapRatio;
 			cardWidth = cardHeight * (16 / 9);
 			gapX = cardWidth * gapRatio;
+			totalHeight = rows * cardHeight + (rows - 1) * gapY;
 		}
 
 		this.currentCardHeight = cardHeight;
@@ -522,5 +529,8 @@ export class SlideThumbnailPanel {
 		this.grid.style.setProperty('--tlb-thumb-card-height', `${cardHeight}px`);
 		this.grid.style.width = `${cols * cardWidth + (cols - 1) * gapX}px`;
 		this.grid.style.height = `${rows * cardHeight + (rows - 1) * gapY}px`;
+
+		const shouldCenter = rows <= 2 && totalHeight < usableHeight;
+		this.overlay.classList.toggle('tlb-slide-thumb--centered', shouldCenter);
 	}
 }

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { App, Component, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';

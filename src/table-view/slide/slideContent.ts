@@ -13,7 +13,10 @@ export function resolveSlideContent(params: {
 	index: number;
 }): { title: string; contents: string[] } {
 	const orderedFields = params.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
-	const template = params.config.template;
+	const template =
+		params.config.template.mode === 'split'
+			? params.config.template.split.withoutImage
+			: params.config.template.single.withoutImage;
 	const values: Record<string, string> = {};
 	for (const field of orderedFields) {
 		if (field === 'status') continue;
@@ -38,7 +41,7 @@ export function resolveSlideContent(params: {
 	const titleTemplate = template.titleTemplate || `{${orderedFields[0] ?? ''}}`;
 	const title = renderTemplate(titleTemplate) || t('slideView.untitledSlide', { index: String(params.index + 1) });
 
-	const body = renderTemplate(template.bodyTemplate, false);
+	const body = renderTemplate(template.bodyTemplate ?? '', false);
 	const lines = body.split('\n');
 	const hasContent = lines.some((line) => line.trim().length > 0);
 	return { title, contents: hasContent ? lines : [] };
@@ -51,8 +54,14 @@ export function buildSlidePreviews(rows: RowData[], fields: string[], config: Sl
 			index,
 			title,
 			contents,
-			titleLayout: computeLayout(config.template.titleLayout, 'title'),
-			bodyLayout: computeLayout(config.template.bodyLayout, 'body'),
+			titleLayout: computeLayout(
+				config.template.mode === 'split' ? config.template.split.withoutImage.titleLayout : config.template.single.withoutImage.titleLayout,
+				'title'
+			),
+			bodyLayout: computeLayout(
+				config.template.mode === 'split' ? config.template.split.withoutImage.bodyLayout : config.template.single.withoutImage.bodyLayout,
+				'body'
+			),
 			backgroundColor: (config.template.backgroundColor ?? '').trim(),
 			textColor: (config.template.textColor ?? '').trim()
 		};

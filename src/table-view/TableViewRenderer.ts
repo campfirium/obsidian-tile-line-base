@@ -13,7 +13,7 @@ import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
-import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
+import { normalizeSlideViewConfig } from '../types/slide';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 
 const logger = getLogger('table-view:renderer');
@@ -89,13 +89,9 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	if (!view.slidePreferencesLoaded) {
-		const plugin = getPluginContext();
-		const globalSlideDefault = plugin?.getDefaultSlideConfig?.() ?? null;
-		const preferredConfig =
-			configBlock?.slide ??
-			(!isDefaultSlideViewConfig(view.slideConfig) ? view.slideConfig : globalSlideDefault ?? view.slideConfig);
+		const preferredConfig = configBlock?.slide ?? view.slideConfig;
 		view.slideConfig = normalizeSlideViewConfig(preferredConfig ?? null);
-		view.shouldAutoFillSlideDefaults = !configBlock?.slide && !globalSlideDefault;
+		view.shouldAutoFillSlideDefaults = !configBlock?.slide;
 		view.slideTemplateTouched = Boolean(configBlock?.slide);
 		view.slidePreferencesLoaded = true;
 	}

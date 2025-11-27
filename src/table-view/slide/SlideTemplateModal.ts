@@ -325,12 +325,14 @@ export class SlideTemplateModal extends Modal {
 		return mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
 	}
 
-	private renderInsertButton(container: HTMLElement): void {
+	private renderInsertButton(container: HTMLElement, getPreferredTarget?: () => HTMLTextAreaElement | null): void {
 		const insertButton = container.createEl('button', {
 			cls: 'tlb-slide-template__insert',
-			text: t('slideView.templateModal.insertField'),
-			attr: { type: 'button' }
+			attr: { type: 'button', 'aria-label': t('slideView.templateModal.insertField') }
 		});
+		const icon = insertButton.createSpan({ cls: 'tlb-slide-template__insert-icon' });
+		setIcon(icon, 'plus');
+		insertButton.createSpan({ text: t('slideView.templateModal.insertField') });
 		this.insertButtonEl = insertButton;
 		insertButton.disabled = false;
 		insertButton.addEventListener('mousedown', (event) => {
@@ -338,6 +340,11 @@ export class SlideTemplateModal extends Modal {
 		});
 		insertButton.addEventListener('click', (event) => {
 			event.preventDefault();
+			const preferred = getPreferredTarget?.();
+			if (preferred) {
+				this.lastFocusedInput = preferred;
+				preferred.focus();
+			}
 			const menu = new Menu();
 			if (this.fields.length === 0) {
 				menu.addItem((item) => {
@@ -351,7 +358,7 @@ export class SlideTemplateModal extends Modal {
 				menu.addItem((item) => {
 					item.setTitle(field);
 					item.onClick(() => {
-						const target = this.resolveInsertionTarget();
+						const target = getPreferredTarget?.() ?? this.resolveInsertionTarget();
 						if (!target) return;
 						this.insertPlaceholder(target, `{${field}}`);
 					});
@@ -370,7 +377,7 @@ export class SlideTemplateModal extends Modal {
 	): void {
 		const head = container.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
 		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.titleContentLabel') });
-		this.renderInsertButton(head);
+		this.renderInsertButton(head, () => this.titleInputEl);
 		const input = container.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--title',
 			attr: { rows: '3' }
@@ -381,7 +388,9 @@ export class SlideTemplateModal extends Modal {
 		this.titleInputEl = input;
 		this.lastFocusedInput = this.titleInputEl;
 
-		container.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.bodyContentLabel') });
+		const bodyHead = container.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
+		bodyHead.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('slideView.templateModal.bodyContentLabel') });
+		this.renderInsertButton(bodyHead, () => this.bodyInputEl);
 		const textarea = container.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
 			attr: { rows: '4' }
@@ -426,7 +435,6 @@ export class SlideTemplateModal extends Modal {
 		const cell = grid.createDiv({ cls: 'tlb-slide-template__cell' });
 		const head = cell.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
 		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: label });
-		this.renderInsertButton(head);
 		const textarea = cell.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
 			attr: { rows: '3' }
@@ -434,6 +442,7 @@ export class SlideTemplateModal extends Modal {
 		textarea.value = value;
 		this.registerFocusTracking(textarea);
 		textarea.addEventListener('input', () => onChange(textarea.value));
+		this.renderInsertButton(head, () => textarea);
 		this.refreshInsertButton();
 	}
 
@@ -583,7 +592,9 @@ export class SlideTemplateModal extends Modal {
 			text: t('slideView.templateModal.resetColorLabel'),
 			attr: { type: 'button' }
 		});
-		resetBtn.createSpan({ cls: 'tlb-slide-template__color-reset-dot' });
+		const resetDot = resetBtn.createSpan({ cls: 'tlb-slide-template__color-reset-dot' });
+		resetDot.style.backgroundColor = defaultColor;
+		resetDot.style.borderColor = defaultColor;
 
 		const apply = (value: string) => {
 			const normalized = value.trim();

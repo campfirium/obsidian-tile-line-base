@@ -2957,6 +2957,9 @@
 	grid-auto-rows: auto;
 	gap: 12px 16px;
 }
+.tlb-slide-template__grid--colors {
+	align-items: start;
+}
 .tlb-slide-template__mode-switch {
 	display: flex;
 	gap: 8px;
@@ -3176,7 +3179,7 @@
 
 .tlb-slide-template__color-row {
 	display: grid;
-	grid-template-columns: 100px 40px 150px 110px;
+	grid-template-columns: minmax(96px, auto) 40px minmax(140px, 1fr) 110px;
 	align-items: center;
 	gap: 10px;
 }

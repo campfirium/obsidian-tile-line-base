@@ -95,8 +95,7 @@ export class SlideTemplateModal extends Modal {
 		this.resolveThemeDefaults();
 		this.renderSingleSection(this.template.mode === 'single');
 		this.renderSplitSection(this.template.mode === 'split');
-		this.renderColorRow(this.contentEl, 'text');
-		this.renderColorRow(this.contentEl, 'background');
+		this.renderColorSection(this.contentEl);
 		this.renderActions();
 	}
 
@@ -549,10 +548,22 @@ export class SlideTemplateModal extends Modal {
 		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
 	}
 
-	private renderColorRow(container: HTMLElement, kind: 'text' | 'background'): void {
-		const row = container.createDiv({ cls: 'tlb-slide-template__row tlb-slide-template__row--full' });
-		const colorCell = row.createDiv({ cls: 'tlb-slide-template__cell tlb-slide-template__cell--full' });
-		const colorRow = colorCell.createDiv({ cls: 'tlb-slide-template__color-row' });
+	private renderColorSection(container: HTMLElement): void {
+		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
+		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
+		headRow.createDiv({
+			cls: 'tlb-slide-template__cell-head',
+			text: this.getText('slideView.templateModal.globalSettingsLabel', 'Global settings')
+		});
+		const grid = section.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--colors' });
+		const colorsRow = this.createRow(grid);
+		this.renderColorControls(colorsRow.left, 'text');
+		this.renderColorControls(colorsRow.right, 'background');
+	}
+
+	private renderColorControls(container: HTMLElement, kind: 'text' | 'background'): void {
+		const colorGroup = container.createDiv({ cls: 'tlb-slide-template__color-group' });
+		const colorRow = colorGroup.createDiv({ cls: 'tlb-slide-template__color-row' });
 		const labelText =
 			kind === 'text' ? t('slideView.templateModal.textColorLabel') : t('slideView.templateModal.backgroundColorLabel');
 		colorRow.createDiv({ cls: 'tlb-slide-template__color-label', text: labelText });

@@ -1,4 +1,4 @@
-import { App, Component } from 'obsidian';
+import { App, Component, type EventRef } from 'obsidian';
 import { renderMarkdownBlock } from './SlideRenderUtils';
 import { t } from '../../i18n';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
@@ -180,6 +180,8 @@ export class SlideThumbnailPanel {
 	private readonly baseHeight = 1200 * (9 / 16); // 675px
 	private currentCardHeight = 0;
 	private readonly markdownComponents: Component[] = [];
+	private overlayBaseColor: string | null = null;
+	private cssChangeRef: EventRef | null = null;
 
 	private readonly thumbSurfaces: ThumbSurface[] = [];
 
@@ -194,6 +196,7 @@ export class SlideThumbnailPanel {
 		this.overlay = options.host.createDiv({ cls: 'tlb-slide-thumb', attr: { tabindex: '-1' } });
 		this.grid = this.overlay.createDiv({ cls: 'tlb-slide-thumb__grid' });
 		this.injectStyles();
+		this.cssChangeRef = this.app.workspace.on('css-change', () => this.applyOverlayBackground());
 
         // 点击遮罩层关闭
 		this.overlay.addEventListener('click', (evt) => {
@@ -230,7 +233,7 @@ export class SlideThumbnailPanel {
 		this.cleanupMarkdown();
 		this.slideCount = slides.length;
 		const baseColor = slides.find((slide) => slide.backgroundColor)?.backgroundColor ?? null;
-		this.overlay.style.background = computeOverlayBackground(baseColor, this.options.host, this.ownerWindow);
+		this.applyOverlayBackground(baseColor);
         
 		if (slides.length === 0) {
 			this.grid.createDiv({
@@ -423,6 +426,10 @@ export class SlideThumbnailPanel {
 	}
 
 	destroy(): void {
+		if (this.cssChangeRef) {
+			this.app.workspace.offref(this.cssChangeRef);
+			this.cssChangeRef = null;
+		}
 		this.overlay.remove();
 		this.items = [];
 		this.cleanupSurfaces();
@@ -447,6 +454,14 @@ export class SlideThumbnailPanel {
 			observer.observe(surface.canvas);
 		}
 		this.thumbSurfaces.push({ ...surface, observer });
+	}
+
+	private applyOverlayBackground(baseColor?: string | null): void {
+		if (baseColor !== undefined) {
+			this.overlayBaseColor = baseColor;
+		}
+		const background = computeOverlayBackground(this.overlayBaseColor, this.options.host, this.ownerWindow);
+		this.overlay.style.background = background;
 	}
 
 	private cleanupSurfaces(): void {

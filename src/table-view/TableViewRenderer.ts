@@ -375,7 +375,11 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	if (forceStripe) {
 		effectiveStripeStrength = Math.max(stripeStrength, 0.6);
 		const forcedMix = `calc(var(--tlb-row-stripe-strength-effective, ${effectiveStripeStrength}) * 100%)`;
-		const forcedStripeCss = `color-mix(in srgb, ${primaryColor} calc(100% - ${forcedMix}), ${textFallback} ${forcedMix})`;
+		const forcedStripeCss = `color-mix(
+			in srgb,
+			${primaryColor} calc(100% - ${forcedMix}),
+			${resolvedStripeBase || syntheticStripeBase} ${forcedMix}
+		)`;
 		tableContainer.classList.add('tlb-force-odd-row-stripe');
 		tableContainer.style.setProperty('--tlb-odd-row-override', forcedStripeCss, 'important');
 		tableContainer.style.setProperty('--ag-odd-row-background-color', forcedStripeCss, 'important');
@@ -384,6 +388,7 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 		tableContainer.style.removeProperty('--tlb-odd-row-override');
 		tableContainer.style.removeProperty('--ag-odd-row-background-color');
 	}
+	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
 	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
 	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
 	const sideBarVisible = !hideRightSidebar;

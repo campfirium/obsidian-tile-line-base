@@ -9,6 +9,7 @@ import type {
 } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import { type KanbanBoardState, type KanbanViewPreferenceConfig } from '../types/kanban';
+import type { BorderColorMode, StripeColorMode } from '../types/appearance';
 import type { SlideViewConfig } from '../types/slide';
 import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
 import type { LocaleCode } from '../i18n';
@@ -52,8 +53,11 @@ export interface TileLineBaseSettings {
 	slidePreferences: Record<string, SlideViewConfig>;
 	defaultSlideConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
-	rowStripeStrength: number;
 	borderContrast: number;
+	stripeColorMode: StripeColorMode;
+	stripeCustomColor: string | null;
+	borderColorMode: BorderColorMode;
+	borderCustomColor: string | null;
 	logging: LoggingConfig;
 	backups: BackupSettings;
 	onboarding: OnboardingState;
@@ -73,8 +77,11 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	slidePreferences: {},
 	defaultSlideConfig: null,
 	hideRightSidebar: false,
-	rowStripeStrength: 1,
 	borderContrast: 0.4,
+	stripeColorMode: 'recommended',
+	stripeCustomColor: null,
+	borderColorMode: 'recommended',
+	borderCustomColor: null,
 	logging: {
 		globalLevel: 'warn',
 		scopeLevels: {}
@@ -115,16 +122,26 @@ export class SettingsService {
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
-		const stripeCandidate = Number((merged as TileLineBaseSettings).rowStripeStrength);
-		merged.rowStripeStrength =
-			Number.isFinite(stripeCandidate) && stripeCandidate >= 0 && stripeCandidate <= 1
-				? stripeCandidate
-				: DEFAULT_SETTINGS.rowStripeStrength;
 		const borderCandidate = Number((merged as TileLineBaseSettings).borderContrast);
 		merged.borderContrast =
 			Number.isFinite(borderCandidate) && borderCandidate >= 0 && borderCandidate <= 1
 				? borderCandidate
 				: DEFAULT_SETTINGS.borderContrast;
+		const legacyStripe = Number((merged as any).rowStripeStrength);
+		const stripeColorMode = (merged as TileLineBaseSettings).stripeColorMode;
+		const stripeCustomColor = (merged as TileLineBaseSettings).stripeCustomColor;
+		const borderColorMode = (merged as TileLineBaseSettings).borderColorMode;
+		const borderCustomColor = (merged as TileLineBaseSettings).borderCustomColor;
+		merged.stripeColorMode =
+			stripeColorMode === 'primary' || stripeColorMode === 'recommended' || stripeColorMode === 'custom'
+				? stripeColorMode
+				: legacyStripe <= 0 ? 'primary' : DEFAULT_SETTINGS.stripeColorMode;
+		merged.stripeCustomColor = this.sanitizeColorValue(stripeCustomColor);
+		merged.borderColorMode =
+			borderColorMode === 'custom' || borderColorMode === 'recommended'
+				? borderColorMode
+				: DEFAULT_SETTINGS.borderColorMode;
+		merged.borderCustomColor = this.sanitizeColorValue(borderCustomColor);
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
 		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
 		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
@@ -201,16 +218,29 @@ export class SettingsService {
 		return true;
 	}
 
-	getRowStripeStrength(): number {
-		return this.settings.rowStripeStrength;
+	getStripeColorMode(): StripeColorMode {
+		return this.settings.stripeColorMode;
 	}
 
-	async setRowStripeStrength(value: number): Promise<boolean> {
-		const clamped = Math.min(1, Math.max(0, value));
-		if (this.settings.rowStripeStrength === clamped) {
+	async setStripeColorMode(mode: StripeColorMode): Promise<boolean> {
+		if (this.settings.stripeColorMode === mode) {
 			return false;
 		}
-		this.settings.rowStripeStrength = clamped;
+		this.settings.stripeColorMode = mode;
+		await this.persist();
+		return true;
+	}
+
+	getStripeCustomColor(): string | null {
+		return this.settings.stripeCustomColor;
+	}
+
+	async setStripeCustomColor(value: string | null): Promise<boolean> {
+		const sanitized = this.sanitizeColorValue(value);
+		if (this.settings.stripeCustomColor === sanitized) {
+			return false;
+		}
+		this.settings.stripeCustomColor = sanitized;
 		await this.persist();
 		return true;
 	}
@@ -225,6 +255,33 @@ export class SettingsService {
 			return false;
 		}
 		this.settings.borderContrast = clamped;
+		await this.persist();
+		return true;
+	}
+
+	getBorderColorMode(): BorderColorMode {
+		return this.settings.borderColorMode;
+	}
+
+	async setBorderColorMode(mode: BorderColorMode): Promise<boolean> {
+		if (this.settings.borderColorMode === mode) {
+			return false;
+		}
+		this.settings.borderColorMode = mode;
+		await this.persist();
+		return true;
+	}
+
+	getBorderCustomColor(): string | null {
+		return this.settings.borderCustomColor;
+	}
+
+	async setBorderCustomColor(value: string | null): Promise<boolean> {
+		const sanitized = this.sanitizeColorValue(value);
+		if (this.settings.borderCustomColor === sanitized) {
+			return false;
+		}
+		this.settings.borderCustomColor = sanitized;
 		await this.persist();
 		return true;
 	}
@@ -595,6 +652,14 @@ export class SettingsService {
 			result.icon = icon;
 		}
 		return Object.keys(result).length > 0 ? result : null;
+	}
+
+	private sanitizeColorValue(value: unknown): string | null {
+		if (typeof value !== 'string') {
+			return null;
+		}
+		const trimmed = value.trim();
+		return trimmed.length === 0 ? null : trimmed;
 	}
 
 

@@ -5,6 +5,7 @@ import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
 import { applyStripeStyles } from './table-view/stripeStyles';
+import type { BorderColorMode, StripeColorMode } from './types/appearance';
 import {
 	applyLoggingConfig,
 	getLogger,
@@ -411,12 +412,23 @@ export default class TileLineBasePlugin extends Plugin {
 		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
 
-	getRowStripeStrength(): number {
-		return this.settingsService.getRowStripeStrength();
+	getStripeColorMode(): StripeColorMode {
+		return this.settingsService.getStripeColorMode();
 	}
 
-	async setRowStripeStrength(value: number): Promise<void> {
-		const changed = await this.settingsService.setRowStripeStrength(value);
+	getStripeCustomColor(): string | null {
+		return this.settingsService.getStripeCustomColor();
+	}
+
+	async setStripeColorMode(mode: StripeColorMode): Promise<void> {
+		const changed = await this.settingsService.setStripeColorMode(mode);
+		if (!changed) { return; }
+		this.settings = this.settingsService.getSettings();
+		this.refreshTableVisualVars();
+	}
+
+	async setStripeCustomColor(value: string | null): Promise<void> {
+		const changed = await this.settingsService.setStripeCustomColor(value);
 		if (!changed) { return; }
 		this.settings = this.settingsService.getSettings();
 		this.refreshTableVisualVars();
@@ -433,9 +445,34 @@ export default class TileLineBasePlugin extends Plugin {
 		this.refreshTableVisualVars();
 	}
 
+	getBorderColorMode(): BorderColorMode {
+		return this.settingsService.getBorderColorMode();
+	}
+
+	getBorderCustomColor(): string | null {
+		return this.settingsService.getBorderCustomColor();
+	}
+
+	async setBorderColorMode(mode: BorderColorMode): Promise<void> {
+		const changed = await this.settingsService.setBorderColorMode(mode);
+		if (!changed) { return; }
+		this.settings = this.settingsService.getSettings();
+		this.refreshTableVisualVars();
+	}
+
+	async setBorderCustomColor(value: string | null): Promise<void> {
+		const changed = await this.settingsService.setBorderCustomColor(value);
+		if (!changed) { return; }
+		this.settings = this.settingsService.getSettings();
+		this.refreshTableVisualVars();
+	}
+
 	private refreshTableVisualVars(): void {
-		const stripe = this.settingsService.getRowStripeStrength();
 		const border = this.settingsService.getBorderContrast();
+		const stripeMode = this.settingsService.getStripeColorMode();
+		const stripeCustom = this.settingsService.getStripeCustomColor();
+		const borderMode = this.settingsService.getBorderColorMode();
+		const borderCustom = this.settingsService.getBorderCustomColor();
 		this.windowContextManager.forEachWindowContext((context) => {
 			const doc = context.window?.document;
 			if (!doc) return;
@@ -444,7 +481,10 @@ export default class TileLineBasePlugin extends Plugin {
 				applyStripeStyles({
 					container: el,
 					ownerDocument: doc,
-					stripeStrength: stripe,
+					stripeColorMode: stripeMode,
+					stripeCustomColor: stripeCustom,
+					borderColorMode: borderMode,
+					borderCustomColor: borderCustom,
 					borderContrast: border,
 					isDarkMode
 				});

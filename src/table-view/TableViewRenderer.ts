@@ -250,12 +250,18 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
 	const plugin = getPluginContext();
 	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
-	const stripeStrength = plugin?.getRowStripeStrength?.() ?? 0.32;
+	const stripeColorMode = plugin?.getStripeColorMode?.() ?? 'recommended';
+	const stripeCustomColor = plugin?.getStripeCustomColor?.() ?? null;
+	const borderColorMode = plugin?.getBorderColorMode?.() ?? 'recommended';
+	const borderCustomColor = plugin?.getBorderCustomColor?.() ?? null;
 	const borderContrast = plugin?.getBorderContrast?.() ?? 0.16;
 	applyStripeStyles({
 		container: tableContainer,
 		ownerDocument: ownerDoc,
-		stripeStrength,
+		stripeColorMode,
+		stripeCustomColor,
+		borderColorMode,
+		borderCustomColor,
 		borderContrast,
 		isDarkMode
 	});

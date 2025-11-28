@@ -261,22 +261,26 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	const primaryAlt = docStyles?.getPropertyValue('--background-primary-alt')?.trim() ?? '';
 	const textColor = docStyles?.getPropertyValue('--text-normal')?.trim() ?? '';
 	const hoverColor = docStyles?.getPropertyValue('--background-modifier-hover')?.trim() ?? '';
-	const colorsEqual = (a: string, b: string) => !!a && !!b && a === b;
+	const colorsEqual = (a: string | null | undefined, b: string | null | undefined) => !!a && !!b && a === b;
 	const primaryColor = primary || 'var(--background-primary)';
 	const textFallback = textColor || 'var(--text-normal)';
 	const fallbackStripeBase = isDarkMode ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.08)';
 	const altUsable = primaryAlt && !colorsEqual(primaryAlt, primary);
 	const secondaryUsable = secondary && !colorsEqual(secondary, primary);
 	const syntheticStripeBase = `color-mix(in srgb, ${primaryColor} 70%, ${textFallback} 30%)`;
-	const baseStripeColor = altUsable
+	const stripeBase = altUsable
 		? primaryAlt
 		: secondaryUsable
 			? secondary
-			: hoverColor || fallbackStripeBase;
-	const stripeBase = baseStripeColor || syntheticStripeBase;
-	tableContainer.style.setProperty('--tlb-odd-row-base', stripeBase);
-	tableContainer.style.removeProperty('--tlb-odd-row-override');
-	tableContainer.style.removeProperty('--ag-odd-row-background-color');
+			: hoverColor || fallbackStripeBase || syntheticStripeBase;
+	const fallbackActive = !altUsable && !secondaryUsable;
+	tableContainer.style.setProperty('--tlb-odd-row-base', stripeBase || syntheticStripeBase);
+	if (fallbackActive) {
+		tableContainer.style.setProperty('--ag-odd-row-background-color', stripeBase || fallbackStripeBase);
+		effectiveStripeStrength = Math.max(stripeStrength, 0.9);
+	} else {
+		tableContainer.style.removeProperty('--ag-odd-row-background-color');
+	}
 	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
 	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
 	const sideBarVisible = !hideRightSidebar;

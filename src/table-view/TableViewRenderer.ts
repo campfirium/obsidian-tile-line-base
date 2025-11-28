@@ -10,12 +10,12 @@ import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
-/* eslint-disable max-lines */
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
 import { normalizeSlideViewConfig } from '../types/slide';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
+import { applyStripeStyles } from './stripeStyles';
 
 const logger = getLogger('table-view:renderer');
 export async function renderTableView(view: TableView): Promise<void> {
@@ -250,146 +250,15 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
 	const plugin = getPluginContext();
 	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
-	const stripeStrengthRaw = plugin?.getRowStripeStrength?.() ?? 0.32;
-	const stripeStrength = Math.min(1, Math.max(0, stripeStrengthRaw));
+	const stripeStrength = plugin?.getRowStripeStrength?.() ?? 0.32;
 	const borderContrast = plugin?.getBorderContrast?.() ?? 0.16;
-	let effectiveStripeStrength = stripeStrength;
-	tableContainer.style.setProperty('--tlb-row-stripe-strength', String(stripeStrength));
-	tableContainer.style.setProperty('--tlb-border-contrast', String(borderContrast));
-	const docStyles = ownerDoc.defaultView ? ownerDoc.defaultView.getComputedStyle(ownerDoc.body) : null;
-	const primary = docStyles?.getPropertyValue('--background-primary')?.trim() ?? '';
-	const secondary = docStyles?.getPropertyValue('--background-secondary')?.trim() ?? '';
-	const primaryAlt = docStyles?.getPropertyValue('--background-primary-alt')?.trim() ?? '';
-	const textColor = docStyles?.getPropertyValue('--text-normal')?.trim() ?? '';
-	const hoverColor = docStyles?.getPropertyValue('--background-modifier-hover')?.trim() ?? '';
-	const parseCssColor = (value: string | null | undefined) => {
-		if (!value) { return null; }
-		const trimmed = value.trim();
-		const hexMatch = trimmed.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
-		if (hexMatch) {
-			const hex = hexMatch[1];
-			const expand = (chunk: string) => chunk.length === 1 ? chunk + chunk : chunk;
-			const toChannel = (chunk: string) => parseInt(expand(chunk), 16);
-			const alphaChunk = hex.length === 4 ? hex.slice(3) : hex.length === 8 ? hex.slice(6, 8) : null;
-			const r = toChannel(hex.slice(0, hex.length === 3 || hex.length === 4 ? 1 : 2));
-			const g = toChannel(hex.slice(hex.length === 3 || hex.length === 4 ? 1 : 2, hex.length === 3 || hex.length === 4 ? 2 : 4));
-			const b = toChannel(hex.slice(hex.length === 3 || hex.length === 4 ? 2 : 4, hex.length === 3 || hex.length === 4 ? 3 : 6));
-			const a = alphaChunk ? toChannel(alphaChunk) / 255 : 1;
-			return { r, g, b, a };
-		}
-		const parseRgbNumbers = (input: string) => {
-			const numericParts = input.match(/[\d.]+%?/g);
-			if (!numericParts || numericParts.length < 3) { return null; }
-			const [rRaw, gRaw, bRaw, aRaw] = numericParts;
-			const parseChannel = (component: string, scale = 255) => {
-				const inner = component.trim();
-				if (!inner) { return null; }
-				if (inner.endsWith('%')) {
-					const percent = Number(inner.slice(0, -1));
-					return Number.isFinite(percent) ? (percent / 100) * scale : null;
-				}
-				const numeric = Number(inner);
-				return Number.isFinite(numeric) ? numeric : null;
-			};
-			const r = parseChannel(rRaw);
-			const g = parseChannel(gRaw);
-			const b = parseChannel(bRaw);
-			const a = aRaw ? parseChannel(aRaw, 1) : 1;
-			if (
-				r == null ||
-				g == null ||
-				b == null ||
-				a == null ||
-				Number.isNaN(r) ||
-				Number.isNaN(g) ||
-				Number.isNaN(b) ||
-				Number.isNaN(a)
-			) {
-				return null;
-			}
-			return { r, g, b, a };
-		};
-		const direct = parseRgbNumbers(trimmed);
-		if (direct) { return direct; }
-		const probe = ownerDoc.createElement('div');
-		probe.style.color = trimmed;
-		ownerDoc.body.appendChild(probe);
-		const computed = ownerDoc.defaultView?.getComputedStyle(probe).color ?? '';
-		probe.remove();
-		return parseRgbNumbers(computed);
-	};
-	const computeLuminance = (color: { r: number; g: number; b: number }) => {
-		const toLinear = (channel: number) => {
-			const normalized = channel / 255;
-			return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
-		};
-		return 0.2126 * toLinear(color.r) + 0.7152 * toLinear(color.g) + 0.0722 * toLinear(color.b);
-	};
-	const contrastRatio = (a: string | null | undefined, b: string | null | undefined) => {
-		const parsedA = parseCssColor(a);
-		const parsedB = parseCssColor(b);
-		if (!parsedA || !parsedB) { return Number.POSITIVE_INFINITY; }
-		const lumA = computeLuminance(parsedA);
-		const lumB = computeLuminance(parsedB);
-		return (Math.max(lumA, lumB) + 0.05) / (Math.min(lumA, lumB) + 0.05);
-	};
-	const hasLowContrast = (a: string | null | undefined, b: string | null | undefined, threshold = 1.1) =>
-		contrastRatio(a, b) < threshold;
-	const colorsClose = (a: string | null | undefined, b: string | null | undefined) => {
-		if (!a || !b) { return false; }
-		if (a === b) { return true; }
-		const parsedA = parseCssColor(a);
-		const parsedB = parseCssColor(b);
-		if (!parsedA || !parsedB) { return false; }
-		const channelDistance = Math.max(
-			Math.abs(parsedA.r - parsedB.r),
-			Math.abs(parsedA.g - parsedB.g),
-			Math.abs(parsedA.b - parsedB.b)
-		);
-		const alphaDistance = Math.abs(parsedA.a - parsedB.a);
-		return channelDistance <= 6 && alphaDistance <= 0.02;
-	};
-	const colorsEqual = (a: string | null | undefined, b: string | null | undefined) =>
-		!!a && !!b && (a === b || colorsClose(a, b));
-	const primaryColor = primary || 'var(--background-primary)';
-	const textFallback = textColor || 'var(--text-normal)';
-	const fallbackStripeBase = isDarkMode ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.08)';
-	const altUsable = primaryAlt && !colorsEqual(primaryAlt, primary) && !hasLowContrast(primaryAlt, primary);
-	const secondaryUsable = secondary && !colorsEqual(secondary, primary) && !hasLowContrast(secondary, primary);
-	const hoverUsable = hoverColor && !colorsEqual(hoverColor, primary) && !hasLowContrast(hoverColor, primary);
-	const syntheticStripeBase = `color-mix(in srgb, ${primaryColor} 70%, ${textFallback} 30%)`;
-	const stripeBaseCandidate = altUsable
-		? primaryAlt
-		: secondaryUsable
-			? secondary
-			: hoverUsable
-				? hoverColor
-				: fallbackStripeBase;
-	const fallbackActive = !altUsable && !secondaryUsable;
-	const stripeBase =
-		stripeBaseCandidate && stripeBaseCandidate.trim().length > 0 ? stripeBaseCandidate : fallbackStripeBase;
-	const stripeBaseTooClose = colorsEqual(stripeBase, primary) || hasLowContrast(stripeBase, primary);
-	const resolvedStripeBase = stripeBaseTooClose ? fallbackStripeBase : stripeBase;
-	tableContainer.style.setProperty('--tlb-odd-row-base', resolvedStripeBase || syntheticStripeBase);
-	const forceStripe = fallbackActive || stripeBaseTooClose;
-	if (forceStripe) {
-		effectiveStripeStrength = Math.max(stripeStrength, 0.6);
-		const forcedMix = `calc(var(--tlb-row-stripe-strength-effective, ${effectiveStripeStrength}) * 100%)`;
-		const forcedStripeCss = `color-mix(
-			in srgb,
-			${primaryColor} calc(100% - ${forcedMix}),
-			${resolvedStripeBase || syntheticStripeBase} ${forcedMix}
-		)`;
-		tableContainer.classList.add('tlb-force-odd-row-stripe');
-		tableContainer.style.setProperty('--tlb-odd-row-override', forcedStripeCss, 'important');
-		tableContainer.style.setProperty('--ag-odd-row-background-color', forcedStripeCss, 'important');
-	} else {
-		tableContainer.classList.remove('tlb-force-odd-row-stripe');
-		tableContainer.style.removeProperty('--tlb-odd-row-override');
-		tableContainer.style.removeProperty('--ag-odd-row-background-color');
-	}
-	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
-	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
+	applyStripeStyles({
+		container: tableContainer,
+		ownerDocument: ownerDoc,
+		stripeStrength,
+		borderContrast,
+		isDarkMode
+	});
 	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
 	const sideBarVisible = !hideRightSidebar;
 

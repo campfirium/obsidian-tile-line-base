@@ -4,6 +4,7 @@ import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
+import { applyStripeStyles } from './table-view/stripeStyles';
 import {
 	applyLoggingConfig,
 	getLogger,
@@ -438,14 +439,15 @@ export default class TileLineBasePlugin extends Plugin {
 		this.windowContextManager.forEachWindowContext((context) => {
 			const doc = context.window?.document;
 			if (!doc) return;
+			const isDarkMode = doc.body.classList.contains('theme-dark');
 			doc.querySelectorAll<HTMLElement>('.tlb-table-container').forEach((el) => {
-				el.style.setProperty('--tlb-row-stripe-strength', String(stripe));
-				const clamped = Math.min(1, Math.max(0, stripe));
-				const effectiveStripe = el.classList.contains('tlb-force-odd-row-stripe')
-					? Math.max(clamped, 0.6)
-					: clamped;
-				el.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripe));
-				el.style.setProperty('--tlb-border-contrast', String(border));
+				applyStripeStyles({
+					container: el,
+					ownerDocument: doc,
+					stripeStrength: stripe,
+					borderContrast: border,
+					isDarkMode
+				});
 			});
 		});
 	}

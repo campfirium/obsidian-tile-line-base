@@ -1,5 +1,4 @@
 import {
-	DEFAULT_SLIDE_TEMPLATE,
 	sanitizeSlideTemplateConfig,
 	type SlideTemplateConfig,
 	type SlideTextTemplate
@@ -7,7 +6,138 @@ import {
 
 export const RESERVED_SLIDE_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
 
-const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig(DEFAULT_SLIDE_TEMPLATE);
+const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
+	mode: 'single',
+	single: {
+		withImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 80,
+				topPct: 20,
+				insetPct: 11,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.8,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 50,
+				topPct: 30,
+				insetPct: 10,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1,
+				fontWeight: 400
+			},
+			imageTemplate: '',
+			imageLayout: {
+				widthPct: 30,
+				topPct: 32,
+				insetPct: 60,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1,
+				fontWeight: 400
+			}
+		},
+		withoutImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 62,
+				topPct: 30,
+				insetPct: 30,
+				align: 'center',
+				lineHeight: 1.2,
+				fontSize: 1.8,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 62,
+				topPct: 40,
+				insetPct: 20,
+				align: 'center',
+				lineHeight: 1.5,
+				fontSize: 1,
+				fontWeight: 400
+			}
+		}
+	},
+	split: {
+		withImage: {
+			imageTemplate: '',
+			textPage: {
+				titleTemplate: '',
+				bodyTemplate: '',
+				titleLayout: {
+					widthPct: 62,
+					topPct: 90,
+					insetPct: 30,
+					align: 'center',
+					lineHeight: 1.2,
+					fontSize: 0.8,
+					fontWeight: 700
+				},
+				bodyLayout: {
+					widthPct: 62,
+					topPct: 50,
+					insetPct: 20,
+					align: 'center',
+					lineHeight: 1.5,
+					fontSize: 1,
+					fontWeight: 400
+				}
+			},
+			imageLayout: {
+				widthPct: 80,
+				topPct: 5,
+				insetPct: 0,
+				align: 'center',
+				lineHeight: 1.5,
+				fontSize: 1,
+				fontWeight: 400
+			}
+		},
+		withoutImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 62,
+				topPct: 30,
+				insetPct: 30,
+				align: 'center',
+				lineHeight: 1.2,
+				fontSize: 1.8,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 62,
+				topPct: 40,
+				insetPct: 20,
+				align: 'center',
+				lineHeight: 1.5,
+				fontSize: 1,
+				fontWeight: 400
+			}
+		}
+	},
+	textColor: '',
+	backgroundColor: ''
+});
+
+const isEmptyTextTemplate = (template: SlideTextTemplate): boolean =>
+	!template.titleTemplate?.trim() && !template.bodyTemplate?.trim();
+
+export function isSlideTemplateEmpty(template: SlideTemplateConfig): boolean {
+	const singleWithImageEmpty =
+		isEmptyTextTemplate(template.single.withImage) && !template.single.withImage.imageTemplate?.trim();
+	const singleWithoutEmpty = isEmptyTextTemplate(template.single.withoutImage);
+	const splitWithImageEmpty =
+		!template.split.withImage.imageTemplate?.trim() && isEmptyTextTemplate(template.split.withImage.textPage);
+	const splitWithoutEmpty = isEmptyTextTemplate(template.split.withoutImage);
+	return singleWithImageEmpty && singleWithoutEmpty && splitWithImageEmpty && splitWithoutEmpty;
+}
 
 const normalizeFieldList = (fields: string[]): string[] => {
 	const seen = new Set<string>();
@@ -41,24 +171,25 @@ export function buildBuiltInSlideTemplate(fields: string[]): SlideTemplateConfig
 	const titleTemplate = primaryField ? `{${primaryField}}` : '';
 	const bodyFields = normalizedFields.filter((field) => field !== primaryField);
 	const bodyTemplate = bodyFields.length > 0 ? bodyFields.map((field) => `{${field}}`).join('\n') : '';
+	const base = BUILT_IN_SLIDE_BASE;
 
 	const merged: SlideTemplateConfig = {
-		...BUILT_IN_SLIDE_BASE,
+		...base,
 		single: {
 			withImage: {
-				...BUILT_IN_SLIDE_BASE.single.withImage,
-				...applyTemplates(BUILT_IN_SLIDE_BASE.single.withImage, titleTemplate, bodyTemplate),
+				...base.single.withImage,
+				...applyTemplates(base.single.withImage, titleTemplate, bodyTemplate),
 				imageTemplate: ''
 			},
-			withoutImage: applyTemplates(BUILT_IN_SLIDE_BASE.single.withoutImage, titleTemplate, bodyTemplate)
+			withoutImage: applyTemplates(base.single.withoutImage, titleTemplate, bodyTemplate)
 		},
 		split: {
 			withImage: {
-				...BUILT_IN_SLIDE_BASE.split.withImage,
+				...base.split.withImage,
 				imageTemplate: '',
-				textPage: applyTemplates(BUILT_IN_SLIDE_BASE.split.withImage.textPage, titleTemplate, bodyTemplate)
+				textPage: applyTemplates(base.split.withImage.textPage, titleTemplate, bodyTemplate)
 			},
-			withoutImage: applyTemplates(BUILT_IN_SLIDE_BASE.split.withoutImage, titleTemplate, bodyTemplate)
+			withoutImage: applyTemplates(base.split.withoutImage, titleTemplate, bodyTemplate)
 		}
 	};
 

@@ -297,3 +297,57 @@ export function isDefaultSlideViewConfig(config: SlideViewConfig | null | undefi
 		JSON.stringify(template) === JSON.stringify(defaultTemplate)
 	);
 }
+
+const clearTextTemplate = (template: SlideTextTemplate): SlideTextTemplate => ({
+	...template,
+	titleTemplate: '',
+	bodyTemplate: ''
+});
+
+const clearImageTemplate = (template: { imageTemplate: string }): { imageTemplate: string } => ({
+	...template,
+	imageTemplate: ''
+});
+
+export function stripSlideTemplateContent(template: SlideTemplateConfig): SlideTemplateConfig {
+	const singleWithImage = {
+		...template.single.withImage,
+		...clearTextTemplate(template.single.withImage),
+		...clearImageTemplate({ imageTemplate: template.single.withImage.imageTemplate })
+	};
+	const singleWithoutImage = {
+		...template.single.withoutImage,
+		...clearTextTemplate(template.single.withoutImage)
+	};
+	const splitWithImage = {
+		...template.split.withImage,
+		imageTemplate: '',
+		textPage: {
+			...template.split.withImage.textPage,
+			...clearTextTemplate(template.split.withImage.textPage)
+		}
+	};
+	const splitWithoutImage = {
+		...template.split.withoutImage,
+		...clearTextTemplate(template.split.withoutImage)
+	};
+
+	return {
+		...template,
+		single: {
+			withImage: singleWithImage,
+			withoutImage: singleWithoutImage
+		},
+		split: {
+			withImage: splitWithImage,
+			withoutImage: splitWithoutImage
+		}
+	};
+}
+
+export function stripSlideViewContent(config: SlideViewConfig): SlideViewConfig {
+	return {
+		...config,
+		template: stripSlideTemplateContent(config.template)
+	};
+}

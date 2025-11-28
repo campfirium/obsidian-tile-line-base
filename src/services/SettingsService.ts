@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { Plugin } from 'obsidian';
 import type {
 	FileFilterViewState,
@@ -51,6 +52,8 @@ export interface TileLineBaseSettings {
 	slidePreferences: Record<string, SlideViewConfig>;
 	defaultSlideConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
+	rowStripeStrength: number;
+	borderContrast: number;
 	logging: LoggingConfig;
 	backups: BackupSettings;
 	onboarding: OnboardingState;
@@ -70,6 +73,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	slidePreferences: {},
 	defaultSlideConfig: null,
 	hideRightSidebar: false,
+	rowStripeStrength: 1,
+	borderContrast: 0.4,
 	logging: {
 		globalLevel: 'warn',
 		scopeLevels: {}
@@ -110,6 +115,16 @@ export class SettingsService {
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
+		const stripeCandidate = Number((merged as TileLineBaseSettings).rowStripeStrength);
+		merged.rowStripeStrength =
+			Number.isFinite(stripeCandidate) && stripeCandidate >= 0 && stripeCandidate <= 1
+				? stripeCandidate
+				: DEFAULT_SETTINGS.rowStripeStrength;
+		const borderCandidate = Number((merged as TileLineBaseSettings).borderContrast);
+		merged.borderContrast =
+			Number.isFinite(borderCandidate) && borderCandidate >= 0 && borderCandidate <= 1
+				? borderCandidate
+				: DEFAULT_SETTINGS.borderContrast;
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
 		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
 		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
@@ -182,6 +197,34 @@ export class SettingsService {
 			return false;
 		}
 		this.settings.hideRightSidebar = value;
+		await this.persist();
+		return true;
+	}
+
+	getRowStripeStrength(): number {
+		return this.settings.rowStripeStrength;
+	}
+
+	async setRowStripeStrength(value: number): Promise<boolean> {
+		const clamped = Math.min(1, Math.max(0, value));
+		if (this.settings.rowStripeStrength === clamped) {
+			return false;
+		}
+		this.settings.rowStripeStrength = clamped;
+		await this.persist();
+		return true;
+	}
+
+	getBorderContrast(): number {
+		return this.settings.borderContrast;
+	}
+
+	async setBorderContrast(value: number): Promise<boolean> {
+		const clamped = Math.min(1, Math.max(0, value));
+		if (this.settings.borderContrast === clamped) {
+			return false;
+		}
+		this.settings.borderContrast = clamped;
 		await this.persist();
 		return true;
 	}

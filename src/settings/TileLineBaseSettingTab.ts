@@ -7,6 +7,10 @@ import { getLogger } from '../utils/logger';
 type SidebarSettingHost = Plugin & {
 	isHideRightSidebarEnabled(): boolean;
 	setHideRightSidebarEnabled(value: boolean): Promise<void>;
+	getRowStripeStrength(): number;
+	setRowStripeStrength(value: number): Promise<void>;
+	getBorderContrast(): number;
+	setBorderContrast(value: number): Promise<void>;
 	getLoggingLevel(): LogLevelName;
 	setLoggingLevel(level: LogLevelName): Promise<void>;
 	isBackupEnabled(): boolean;
@@ -86,6 +90,38 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				toggle.onChange(async (value) => {
 					await this.plugin.setHideRightSidebarEnabled(value);
 				});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settings.tableViewHeading'))
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName(t('settings.rowStripeStrengthLabel'))
+			.setDesc(t('settings.rowStripeStrengthDesc'))
+			.addSlider((slider) => {
+				const current = this.plugin.getRowStripeStrength();
+				slider.setLimits(0, 100, 1);
+				slider.setValue(Math.round(current * 100));
+				slider.onChange(async (value) => {
+					const normalized = Math.max(0, Math.min(100, value)) / 100;
+					await this.plugin.setRowStripeStrength(normalized);
+				});
+				slider.setDynamicTooltip();
+			});
+
+		new Setting(containerEl)
+			.setName(t('settings.borderContrastLabel'))
+			.setDesc(t('settings.borderContrastDesc'))
+			.addSlider((slider) => {
+				const current = this.plugin.getBorderContrast();
+				slider.setLimits(0, 100, 1);
+				slider.setValue(Math.round(current * 100));
+				slider.onChange(async (value) => {
+					const normalized = Math.max(0, Math.min(100, value)) / 100;
+					await this.plugin.setBorderContrast(normalized);
+				});
+				slider.setDynamicTooltip();
 			});
 
 	}

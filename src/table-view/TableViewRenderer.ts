@@ -10,6 +10,7 @@ import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
+/* eslint-disable max-lines */
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
@@ -246,9 +247,37 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	];
 
 	const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
-	const themeClass = isDarkMode ? 'ag-theme-alpine-dark' : 'ag-theme-alpine';
-	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
+	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
 	const plugin = getPluginContext();
+	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
+	const stripeStrength = plugin?.getRowStripeStrength?.() ?? 0.32;
+	const borderContrast = plugin?.getBorderContrast?.() ?? 0.16;
+	let effectiveStripeStrength = stripeStrength;
+	tableContainer.style.setProperty('--tlb-row-stripe-strength', String(stripeStrength));
+	tableContainer.style.setProperty('--tlb-border-contrast', String(borderContrast));
+	const docStyles = ownerDoc.defaultView ? ownerDoc.defaultView.getComputedStyle(ownerDoc.body) : null;
+	const primary = docStyles?.getPropertyValue('--background-primary')?.trim() ?? '';
+	const secondary = docStyles?.getPropertyValue('--background-secondary')?.trim() ?? '';
+	const primaryAlt = docStyles?.getPropertyValue('--background-primary-alt')?.trim() ?? '';
+	const textColor = docStyles?.getPropertyValue('--text-normal')?.trim() ?? '';
+	const hoverColor = docStyles?.getPropertyValue('--background-modifier-hover')?.trim() ?? '';
+	const colorsEqual = (a: string, b: string) => !!a && !!b && a === b;
+	const primaryColor = primary || 'var(--background-primary)';
+	const textFallback = textColor || 'var(--text-normal)';
+	const fallbackStripeBase = isDarkMode ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.08)';
+	const altUsable = primaryAlt && !colorsEqual(primaryAlt, primary);
+	const secondaryUsable = secondary && !colorsEqual(secondary, primary);
+	const syntheticStripeBase = `color-mix(in srgb, ${primaryColor} 70%, ${textFallback} 30%)`;
+	const baseStripeColor = altUsable
+		? primaryAlt
+		: secondaryUsable
+			? secondary
+			: hoverColor || fallbackStripeBase;
+	const stripeBase = baseStripeColor || syntheticStripeBase;
+	tableContainer.style.setProperty('--tlb-odd-row-base', stripeBase);
+	tableContainer.style.removeProperty('--tlb-odd-row-override');
+	tableContainer.style.removeProperty('--ag-odd-row-background-color');
+	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
 	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
 	const sideBarVisible = !hideRightSidebar;
 

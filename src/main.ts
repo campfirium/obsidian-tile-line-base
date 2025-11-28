@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
@@ -407,6 +408,41 @@ export default class TileLineBasePlugin extends Plugin {
 		if (!changed) { return; }
 		this.settings = this.settingsService.getSettings();
 		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
+	}
+
+	getRowStripeStrength(): number {
+		return this.settingsService.getRowStripeStrength();
+	}
+
+	async setRowStripeStrength(value: number): Promise<void> {
+		const changed = await this.settingsService.setRowStripeStrength(value);
+		if (!changed) { return; }
+		this.settings = this.settingsService.getSettings();
+		this.refreshTableVisualVars();
+	}
+
+	getBorderContrast(): number {
+		return this.settingsService.getBorderContrast();
+	}
+
+	async setBorderContrast(value: number): Promise<void> {
+		const changed = await this.settingsService.setBorderContrast(value);
+		if (!changed) { return; }
+		this.settings = this.settingsService.getSettings();
+		this.refreshTableVisualVars();
+	}
+
+	private refreshTableVisualVars(): void {
+		const stripe = this.settingsService.getRowStripeStrength();
+		const border = this.settingsService.getBorderContrast();
+		this.windowContextManager.forEachWindowContext((context) => {
+			const doc = context.window?.document;
+			if (!doc) return;
+			doc.querySelectorAll<HTMLElement>('.tlb-table-container').forEach((el) => {
+				el.style.setProperty('--tlb-row-stripe-strength', String(stripe));
+				el.style.setProperty('--tlb-border-contrast', String(border));
+			});
+		});
 	}
 	async toggleLeafView(leaf: WorkspaceLeaf): Promise<void> {
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);

@@ -82,6 +82,12 @@ export class WindowContextManager {
 		return this.getWindowContext(win)?.app.workspace ?? null;
 	}
 
+	forEachWindowContext(callback: (context: WindowContext) => void): void {
+		for (const context of this.contexts.values()) {
+			callback(context);
+		}
+	}
+
 	hasWindow(win: Window | null | undefined): boolean {
 		return !!win && this.contexts.has(win);
 	}

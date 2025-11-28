@@ -85,7 +85,8 @@ const normalizeTemplateString = (value: unknown): string => {
 	if (typeof value !== 'string') {
 		return '';
 	}
-	return value.replace(/\r\n/g, '\n').trimEnd();
+	// Preserve trailing newlines so template blank lines remain intact.
+	return value.replace(/\r\n/g, '\n');
 };
 
 const normalizeColorString = (value: unknown): string => {

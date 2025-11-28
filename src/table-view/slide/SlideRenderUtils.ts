@@ -36,6 +36,11 @@ export function applyLayoutWithWatcher(
 	renderCleanup.push(() => observer.disconnect());
 }
 
+export function buildSlideMarkdown(textBlocks: string[]): string {
+	// Replace empty lines with explicit <br> so blank rows survive Markdown rendering.
+	return textBlocks.map((line) => (line.trim().length === 0 ? '<br />' : line)).join('\n');
+}
+
 export function renderMarkdownBlock(
 	app: App,
 	markdown: string,

@@ -2854,6 +2854,13 @@
   background-color: var(--ag-odd-row-background-color);
 }
 
+.tlb-table-container.tlb-force-odd-row-stripe .ag-row.ag-row-odd:not(.ag-row-hover):not(.ag-row-selected) .ag-cell {
+  background-color: var(
+		--tlb-odd-row-override,
+		var(--ag-odd-row-background-color, var(--tlb-odd-row-base, var(--background-secondary, #121212)))
+	) !important;
+}
+
 .ag-theme-quartz .ag-cell-focus:not(.ag-cell-inline-editing),
 .ag-theme-quartz-dark .ag-cell-focus:not(.ag-cell-inline-editing),
 .ag-theme-quartz-auto-dark .ag-cell-focus:not(.ag-cell-inline-editing) {
@@ -4695,4 +4702,76 @@
 
 .tlb-slide-template__primary {
 	min-width: 96px;
+}
+
+.tlb-choice-group {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}
+
+.tlb-choice-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	cursor: pointer;
+	user-select: none;
+	transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.tlb-choice-option::before {
+	content: '';
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid var(--background-modifier-border);
+	box-sizing: border-box;
+	transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.tlb-choice-option input {
+	margin: 0;
+}
+
+.tlb-choice-option-selected {
+	border-color: var(--interactive-accent);
+	background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+}
+
+.tlb-choice-option-selected::before {
+	border-color: var(--interactive-accent);
+	background-color: var(--interactive-accent);
+}
+
+.tlb-color-input {
+	display: inline-block !important;
+	appearance: none;
+	-webkit-appearance: none;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 1px solid var(--background-modifier-border);
+	padding: 0;
+	background: transparent;
+	cursor: pointer;
+}
+
+.tlb-color-input::-webkit-color-swatch-wrapper {
+	padding: 0;
+	border-radius: 50%;
+}
+
+.tlb-color-input::-webkit-color-swatch {
+	border: none;
+	border-radius: 50%;
+}
+
+.tlb-color-input::-moz-color-swatch {
+	border: none;
+	border-radius: 50%;
 }

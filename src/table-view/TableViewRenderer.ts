@@ -10,13 +10,13 @@ import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
-/* eslint-disable max-lines */
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
 import { normalizeSlideViewConfig, stripSlideViewContent } from '../types/slide';
 import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
+import { applyStripeStyles } from './stripeStyles';
 
 const logger = getLogger('table-view:renderer');
 export async function renderTableView(view: TableView): Promise<void> {
@@ -254,38 +254,21 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
 	const plugin = getPluginContext();
 	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
-	const stripeStrength = plugin?.getRowStripeStrength?.() ?? 0.32;
+	const stripeColorMode = plugin?.getStripeColorMode?.() ?? 'recommended';
+	const stripeCustomColor = plugin?.getStripeCustomColor?.() ?? null;
+	const borderColorMode = plugin?.getBorderColorMode?.() ?? 'recommended';
+	const borderCustomColor = plugin?.getBorderCustomColor?.() ?? null;
 	const borderContrast = plugin?.getBorderContrast?.() ?? 0.16;
-	let effectiveStripeStrength = stripeStrength;
-	tableContainer.style.setProperty('--tlb-row-stripe-strength', String(stripeStrength));
-	tableContainer.style.setProperty('--tlb-border-contrast', String(borderContrast));
-	const docStyles = ownerDoc.defaultView ? ownerDoc.defaultView.getComputedStyle(ownerDoc.body) : null;
-	const primary = docStyles?.getPropertyValue('--background-primary')?.trim() ?? '';
-	const secondary = docStyles?.getPropertyValue('--background-secondary')?.trim() ?? '';
-	const primaryAlt = docStyles?.getPropertyValue('--background-primary-alt')?.trim() ?? '';
-	const textColor = docStyles?.getPropertyValue('--text-normal')?.trim() ?? '';
-	const hoverColor = docStyles?.getPropertyValue('--background-modifier-hover')?.trim() ?? '';
-	const colorsEqual = (a: string | null | undefined, b: string | null | undefined) => !!a && !!b && a === b;
-	const primaryColor = primary || 'var(--background-primary)';
-	const textFallback = textColor || 'var(--text-normal)';
-	const fallbackStripeBase = isDarkMode ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.08)';
-	const altUsable = primaryAlt && !colorsEqual(primaryAlt, primary);
-	const secondaryUsable = secondary && !colorsEqual(secondary, primary);
-	const syntheticStripeBase = `color-mix(in srgb, ${primaryColor} 70%, ${textFallback} 30%)`;
-	const stripeBase = altUsable
-		? primaryAlt
-		: secondaryUsable
-			? secondary
-			: hoverColor || fallbackStripeBase || syntheticStripeBase;
-	const fallbackActive = !altUsable && !secondaryUsable;
-	tableContainer.style.setProperty('--tlb-odd-row-base', stripeBase || syntheticStripeBase);
-	if (fallbackActive) {
-		tableContainer.style.setProperty('--ag-odd-row-background-color', stripeBase || fallbackStripeBase);
-		effectiveStripeStrength = Math.max(stripeStrength, 0.9);
-	} else {
-		tableContainer.style.removeProperty('--ag-odd-row-background-color');
-	}
-	tableContainer.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripeStrength));
+	applyStripeStyles({
+		container: tableContainer,
+		ownerDocument: ownerDoc,
+		stripeColorMode,
+		stripeCustomColor,
+		borderColorMode,
+		borderCustomColor,
+		borderContrast,
+		isDarkMode
+	});
 	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
 	const sideBarVisible = !hideRightSidebar;
 
@@ -337,4 +320,3 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 		executeMount();
 	}
 }
-

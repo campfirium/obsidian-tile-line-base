@@ -1,5 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { t, getLocaleCode, setLocale } from '../i18n';
+import { computeRecommendedStripeColor } from '../table-view/stripeStyles';
+import type { BorderColorMode, StripeColorMode } from '../types/appearance';
 import type { LocaleCode, TranslationKey } from '../i18n';
 import type { LogLevelName } from '../utils/logger';
 import { getLogger } from '../utils/logger';
@@ -7,9 +9,15 @@ import { getLogger } from '../utils/logger';
 type SidebarSettingHost = Plugin & {
 	isHideRightSidebarEnabled(): boolean;
 	setHideRightSidebarEnabled(value: boolean): Promise<void>;
-	getRowStripeStrength(): number;
-	setRowStripeStrength(value: number): Promise<void>;
+	getStripeColorMode(): StripeColorMode;
+	setStripeColorMode(mode: StripeColorMode): Promise<void>;
+	getStripeCustomColor(): string | null;
+	setStripeCustomColor(value: string | null): Promise<void>;
 	getBorderContrast(): number;
+	getBorderColorMode(): BorderColorMode;
+	setBorderColorMode(mode: BorderColorMode): Promise<void>;
+	getBorderCustomColor(): string | null;
+	setBorderCustomColor(value: string | null): Promise<void>;
 	setBorderContrast(value: number): Promise<void>;
 	getLoggingLevel(): LogLevelName;
 	setLoggingLevel(level: LogLevelName): Promise<void>;
@@ -96,19 +104,68 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 			.setName(t('settings.tableViewHeading'))
 			.setHeading();
 
-		new Setting(containerEl)
-			.setName(t('settings.rowStripeStrengthLabel'))
-			.setDesc(t('settings.rowStripeStrengthDesc'))
-			.addSlider((slider) => {
-				const current = this.plugin.getRowStripeStrength();
-				slider.setLimits(0, 100, 1);
-				slider.setValue(Math.round(current * 100));
-				slider.onChange(async (value) => {
-					const normalized = Math.max(0, Math.min(100, value)) / 100;
-					await this.plugin.setRowStripeStrength(normalized);
-				});
-				slider.setDynamicTooltip();
-			});
+		const stripeMode = this.normalizeStripeMode(this.plugin.getStripeColorMode());
+		const stripeCustomColor = this.plugin.getStripeCustomColor();
+		const stripeRecommended = this.getRecommendedStripeColor(containerEl);
+
+		const stripeSetting = new Setting(containerEl)
+			.setName('Row stripe color')
+			.setDesc('Default uses theme-based stripes (±4% lightness).');
+		const controls = stripeSetting.controlEl;
+
+		const colorInput = controls.createEl('input', { type: 'color', cls: 'tlb-color-input' });
+		const dropdown = controls.createEl('select', { cls: 'tlb-stripe-select' });
+
+		const resolveStripeColor = (mode: StripeColorMode, custom: string | null): string => {
+			const primary = this.getPrimaryColor(containerEl);
+			if (mode === 'primary') {
+				return primary;
+			}
+			if (mode === 'custom') {
+				return custom ?? primary;
+			}
+			return stripeRecommended;
+		};
+
+		const syncControls = (mode: StripeColorMode, custom: string | null) => {
+			dropdown.value = mode;
+			const color = resolveStripeColor(mode, custom);
+			colorInput.value = color;
+			colorInput.disabled = mode !== 'custom';
+		};
+
+		[
+			{ value: 'recommended', label: 'Default' },
+			{ value: 'primary', label: 'No stripes' },
+			{ value: 'custom', label: 'Custom' }
+		].forEach((option) => {
+			const opt = dropdown.createEl('option', { value: option.value });
+			opt.textContent = option.label;
+		});
+
+		dropdown.addEventListener('change', () => {
+			const value = this.normalizeStripeMode(dropdown.value);
+			void this.plugin.setStripeColorMode(value);
+			const latestCustom = this.plugin.getStripeCustomColor();
+			const nextColor = resolveStripeColor(value, latestCustom);
+			if (value === 'custom') {
+				void this.plugin.setStripeCustomColor(nextColor);
+			}
+			syncControls(value, latestCustom);
+		});
+
+		colorInput.addEventListener('input', () => {
+			const currentMode = this.normalizeStripeMode(dropdown.value);
+			if (currentMode !== 'custom') {
+				dropdown.value = 'custom';
+				void this.plugin.setStripeColorMode('custom');
+			}
+			const value = colorInput.value;
+			void this.plugin.setStripeCustomColor(value);
+			syncControls('custom', value);
+		});
+
+		syncControls(stripeMode, stripeCustomColor ?? null);
 
 		new Setting(containerEl)
 			.setName(t('settings.borderContrastLabel'))
@@ -195,7 +252,7 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					return;
 				}
 				await this.plugin.setBackupCapacityLimit(parsed);
-			});
+				});
 			text.inputEl.addEventListener('blur', () => {
 				const updated = this.plugin.getBackupCapacityLimit();
 				if (text.getValue() !== String(updated)) {
@@ -204,4 +261,42 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				});
 			});
 	}
+
+	private normalizeStripeMode(value: string | null | undefined): StripeColorMode {
+		return value === 'primary' || value === 'custom' ? value : 'recommended';
+	}
+
+	private getPrimaryColor(containerEl: HTMLElement): string {
+		const doc = containerEl.ownerDocument;
+		const styles = doc.defaultView ? doc.defaultView.getComputedStyle(doc.body) : null;
+		const primary = styles?.getPropertyValue('--background-primary')?.trim() ?? '';
+		const parsed = this.toHex(primary);
+		return parsed ?? '#000000';
+	}
+
+	private getRecommendedStripeColor(containerEl: HTMLElement): string {
+		const doc = containerEl.ownerDocument;
+		const isDarkMode = doc.body.classList.contains('theme-dark');
+		const styles = doc.defaultView ? doc.defaultView.getComputedStyle(doc.body) : null;
+		const primary = styles?.getPropertyValue('--background-primary')?.trim() ?? '';
+		const primaryColor = this.toHex(primary) ?? '#000000';
+		return computeRecommendedStripeColor(primaryColor, isDarkMode);
+	}
+
+	private toHex(value: string | null | undefined): string | null {
+		if (!value) return null;
+		const el = document.createElement('div');
+		el.style.color = value;
+		document.body.appendChild(el);
+		const computed = getComputedStyle(el).color;
+		el.remove();
+		const parts = computed.match(/[\d.]+/g);
+		if (!parts || parts.length < 3) {
+			return null;
+		}
+		const [r, g, b] = parts.map((n) => Math.max(0, Math.min(255, Math.round(Number(n)))));
+		const toHex = (n: number) => n.toString(16).padStart(2, '0');
+		return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+	}
+
 }

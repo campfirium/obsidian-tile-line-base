@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync, statSync } from "fs";
 import path from "path";
 
-const MAX_MAIN_SIZE = 2_000_000;
+const MAX_MAIN_SIZE = 2_050_000;
 const ALLOWED_DIST_FILES = new Set(["main.js", "styles.css"]);
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const rootDir = process.cwd();

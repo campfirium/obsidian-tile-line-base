@@ -14,7 +14,8 @@ import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
-import { normalizeSlideViewConfig } from '../types/slide';
+import { normalizeSlideViewConfig, stripSlideViewContent } from '../types/slide';
+import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 
 const logger = getLogger('table-view:renderer');
@@ -91,9 +92,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	if (!view.slidePreferencesLoaded) {
 		const preferredConfig = configBlock?.slide ?? view.slideConfig;
-		view.slideConfig = normalizeSlideViewConfig(preferredConfig ?? null);
-		view.shouldAutoFillSlideDefaults = !configBlock?.slide;
-		view.slideTemplateTouched = Boolean(configBlock?.slide);
+		const stripped = preferredConfig ? stripSlideViewContent(preferredConfig) : null;
+		const normalized = normalizeSlideViewConfig(stripped ?? null);
+		const templateEmpty = isSlideTemplateEmpty(normalized.template);
+		view.slideConfig = normalized;
+		view.shouldAutoFillSlideDefaults = !configBlock?.slide || templateEmpty;
+		view.slideTemplateTouched = Boolean(configBlock?.slide && !templateEmpty);
 		view.slidePreferencesLoaded = true;
 	}
 

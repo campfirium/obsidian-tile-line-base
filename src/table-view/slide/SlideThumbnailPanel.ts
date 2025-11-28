@@ -1,5 +1,5 @@
 import { App, Component, type EventRef } from 'obsidian';
-import { renderMarkdownBlock } from './SlideRenderUtils';
+import { buildSlideMarkdown, renderMarkdownBlock } from './SlideRenderUtils';
 import { t } from '../../i18n';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import { computeOverlayBackground } from './SlideColorUtils';
@@ -350,12 +350,8 @@ export class SlideThumbnailPanel {
 			bodyBlock.style.fontSize = `${slide.textLayout.fontSize}rem`;
 			bodyBlock.style.fontWeight = String(slide.textLayout.fontWeight);
 			bodyBlock.style.textAlign = slide.textLayout.align;
-			const markdown = slide.textBlocks.join('\n');
-			if (markdown.trim().length > 0) {
-				renderMarkdownBlock(this.app, markdown, bodyBlock, this.sourcePath, this.markdownComponents);
-			} else {
-				bodyBlock.textContent = '';
-			}
+			const markdown = buildSlideMarkdown(slide.textBlocks);
+			renderMarkdownBlock(this.app, markdown, bodyBlock, this.sourcePath, this.markdownComponents);
 			textEl.appendChild(bodyBlock);
 			slideEl.appendChild(textEl);
 		}

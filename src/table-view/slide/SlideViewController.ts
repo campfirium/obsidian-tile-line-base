@@ -13,6 +13,7 @@ import {
 } from './slideTemplateEditing';
 import {
 	applyLayoutWithWatcher,
+	buildSlideMarkdown,
 	renderMarkdownBlock,
 	resetRenderArtifacts
 } from './SlideRenderUtils';
@@ -331,7 +332,13 @@ export class SlideViewController {
 				if (page.textBlocks.length > 0) {
 					const content = slide.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--text' });
 					const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
-					renderMarkdownBlock(this.app, page.textBlocks.join('\n'), bodyBlock, this.sourcePath, this.markdownComponents);
+					renderMarkdownBlock(
+						this.app,
+						buildSlideMarkdown(page.textBlocks),
+						bodyBlock,
+						this.sourcePath,
+						this.markdownComponents
+					);
 					bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
 					bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
 					bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);

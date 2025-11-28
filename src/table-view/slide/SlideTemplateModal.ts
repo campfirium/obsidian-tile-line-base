@@ -11,6 +11,7 @@ import {
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { buildBuiltInSlideTemplate, RESERVED_SLIDE_FIELDS } from './slideDefaults';
+import { toHexColor } from './SlideColorUtils';
 
 interface SlideTemplateModalOptions {
 	app: App;
@@ -565,36 +566,40 @@ export class SlideTemplateModal extends Modal {
 			text: this.getText('slideView.templateModal.globalSettingsLabel', 'Global settings')
 		});
 		const grid = section.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--colors' });
-		const colorsRow = this.createRow(grid);
-		this.renderColorControls(colorsRow.left, 'text');
-		this.renderColorControls(colorsRow.right, 'background');
+		const row = grid.createDiv({ cls: 'tlb-slide-template__color-row' });
+		this.renderColorControls(row, 'text');
+		this.renderColorControls(row, 'background');
 	}
 
 	private renderColorControls(container: HTMLElement, kind: 'text' | 'background'): void {
-		const colorGroup = container.createDiv({ cls: 'tlb-slide-template__color-group' });
-		const colorRow = colorGroup.createDiv({ cls: 'tlb-slide-template__color-row' });
+		const colorGroup = container.createDiv({ cls: 'tlb-slide-template__color-group tlb-slide-template__color-item' });
 		const labelText =
 			kind === 'text' ? t('slideView.templateModal.textColorLabel') : t('slideView.templateModal.backgroundColorLabel');
-		colorRow.createDiv({ cls: 'tlb-slide-template__color-label', text: labelText });
+		colorGroup.createDiv({ cls: 'tlb-slide-template__color-label', text: labelText });
 		const defaultColor = kind === 'text' ? this.defaultTextColor || '#000000' : this.defaultBackgroundColor || '#000000';
 		const current = kind === 'text' ? this.template.textColor : this.template.backgroundColor;
-		const fallback = current && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(current) ? current : defaultColor;
-		const picker = colorRow.createEl('input', {
-			attr: { type: 'color', value: fallback },
+		const fallbackHex = toHexColor(defaultColor) ?? '#000000';
+		const resetBtn = colorGroup.createEl('button', {
+			cls: 'clickable-icon tlb-slide-template__color-reset-icon',
+			attr: { type: 'button', 'aria-label': t('slideView.templateModal.resetColorLabel') }
+		});
+		setIcon(resetBtn, 'rotate-ccw');
+		const colorInputValue = toHexColor(current) ?? fallbackHex;
+		const picker = colorGroup.createEl('input', {
+			attr: { type: 'color', value: colorInputValue },
 			cls: 'tlb-slide-template__color-picker'
 		}) as HTMLInputElement;
-		const textInput = colorRow.createEl('input', {
-			attr: { type: 'text', value: current ?? '', placeholder: '#RRGGBB' },
-			cls: 'tlb-slide-template__color-text'
-		}) as HTMLInputElement;
-		const resetBtn = colorRow.createEl('button', {
-			cls: 'tlb-slide-template__color-reset',
-			text: t('slideView.templateModal.resetColorLabel'),
-			attr: { type: 'button' }
-		});
-		const resetDot = resetBtn.createSpan({ cls: 'tlb-slide-template__color-reset-dot' });
-		resetDot.style.backgroundColor = defaultColor;
-		resetDot.style.borderColor = defaultColor;
+
+		const applyPickerValue = (value: string, allowFallback = false) => {
+			const parsedHex = toHexColor(value);
+			if (parsedHex) {
+				picker.value = parsedHex;
+				return;
+			}
+			if (allowFallback || !value.trim()) {
+				picker.value = fallbackHex;
+			}
+		};
 
 		const apply = (value: string) => {
 			const normalized = value.trim();
@@ -604,18 +609,13 @@ export class SlideTemplateModal extends Modal {
 				this.template.backgroundColor = normalized;
 			}
 			if (normalized) {
-				if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalized)) {
-					picker.value = normalized;
-				}
-				textInput.value = normalized;
+				applyPickerValue(normalized);
 			} else {
-				picker.value = defaultColor;
-				textInput.value = '';
+				applyPickerValue(defaultColor, true);
 			}
 		};
 
 		picker.addEventListener('input', () => apply(picker.value));
-		textInput.addEventListener('input', () => apply(textInput.value));
 		resetBtn.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			apply('');

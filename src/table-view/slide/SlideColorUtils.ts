@@ -80,6 +80,13 @@ function parseColor(input: string | null | undefined): { r: number; g: number; b
 	return null;
 }
 
+export function toHexColor(input: string | null | undefined): string | null {
+	const parsed = parseColor(input);
+	if (!parsed) return null;
+	const toHex = (value: number) => value.toString(16).padStart(2, '0');
+	return `#${toHex(parsed.r)}${toHex(parsed.g)}${toHex(parsed.b)}`;
+}
+
 function lighten(color: { r: number; g: number; b: number }, factor: number): { r: number; g: number; b: number } {
 	return {
 		r: Math.round(clamp(color.r + (255 - color.r) * factor, 0, 255)),

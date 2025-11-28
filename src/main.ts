@@ -440,6 +440,11 @@ export default class TileLineBasePlugin extends Plugin {
 			if (!doc) return;
 			doc.querySelectorAll<HTMLElement>('.tlb-table-container').forEach((el) => {
 				el.style.setProperty('--tlb-row-stripe-strength', String(stripe));
+				const clamped = Math.min(1, Math.max(0, stripe));
+				const effectiveStripe = el.classList.contains('tlb-force-odd-row-stripe')
+					? Math.max(clamped, 0.6)
+					: clamped;
+				el.style.setProperty('--tlb-row-stripe-strength-effective', String(effectiveStripe));
 				el.style.setProperty('--tlb-border-contrast', String(border));
 			});
 		});

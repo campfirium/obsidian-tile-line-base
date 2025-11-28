@@ -2854,6 +2854,13 @@
   background-color: var(--ag-odd-row-background-color);
 }
 
+.tlb-table-container.tlb-force-odd-row-stripe .ag-row.ag-row-odd:not(.ag-row-hover):not(.ag-row-selected) .ag-cell {
+  background-color: var(
+		--tlb-odd-row-override,
+		var(--ag-odd-row-background-color, var(--tlb-odd-row-base, var(--background-secondary, #121212)))
+	) !important;
+}
+
 .ag-theme-quartz .ag-cell-focus:not(.ag-cell-inline-editing),
 .ag-theme-quartz-dark .ag-cell-focus:not(.ag-cell-inline-editing),
 .ag-theme-quartz-auto-dark .ag-cell-focus:not(.ag-cell-inline-editing) {

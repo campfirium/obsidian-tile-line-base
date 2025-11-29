@@ -3075,6 +3075,7 @@
 	background: transparent;
 	padding: 0;
 	color: inherit;
+	color-scheme: inherit;
 	font: inherit;
 }
 
@@ -3234,11 +3235,11 @@
   position: absolute;
   opacity: 0;
   pointer-events: none;
-  color-scheme: light;
+  color-scheme: inherit;
 }
 
 .theme-dark .tlb-date-editor-hidden-picker {
-  color-scheme: dark;
+  color-scheme: inherit;
 }
 
 

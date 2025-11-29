@@ -29,6 +29,7 @@ import { TableCreationController } from './TableCreationController';
 import { TableFileDuplicationController } from './TableFileDuplicationController';
 import { KanbanBoardController } from './kanban/KanbanBoardController';
 import { RowOrderController } from './row-sort/RowOrderController';
+import { MagicMigrationController } from './MagicMigrationController';
 
 const logger = getLogger('table-view:setup');
 
@@ -140,6 +141,7 @@ export function initializeTableView(view: TableView): void {
 		getCurrentFile: () => view.file,
 		getOwnerDocument: () => view.containerEl.ownerDocument ?? document
 	});
+	view.magicMigrationController = new MagicMigrationController(view);
 	view.kanbanBoardController = new KanbanBoardController({
 		app: view.app,
 		view,

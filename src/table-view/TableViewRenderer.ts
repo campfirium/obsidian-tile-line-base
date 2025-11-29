@@ -133,10 +133,11 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 
 	const parsedBlocks = view.markdownParser.parseH2Blocks(content);
 	if (parsedBlocks.length === 0) {
-		container.createDiv({
-			text: t('tableViewRenderer.missingH2'),
-			cls: 'tlb-warning'
-		});
+		if (view.file) {
+			view.magicMigrationController?.handleNonStandardFile({ container, content, file: view.file });
+		} else {
+			container.createDiv({ text: t('tableViewRenderer.missingH2'), cls: 'tlb-warning' });
+		}
 		return;
 	}
 

@@ -3139,7 +3139,7 @@
 	);
 	color: var(--ag-foreground-color, var(--text-normal));
 	border-radius: var(--ag-wrapper-border-radius, 8px);
-	border: 1px solid var(--interactive-accent, #6aa5ff);
+	border: 1px solid color-mix(in srgb, var(--interactive-accent, #6aa5ff) 60%, transparent);
 	box-shadow: none;
 	box-sizing: border-box;
 	overflow: visible;
@@ -3172,8 +3172,8 @@
 }
 
 .tlb-text-editor-popup:focus-within {
-	border-color: var(--interactive-accent, #6aa5ff);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 45%, transparent);
+	border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 80%, transparent);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent, #6aa5ff) 35%, transparent);
 }
 
 .theme-dark .tlb-text-editor-popup {

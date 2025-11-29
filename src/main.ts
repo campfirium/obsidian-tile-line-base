@@ -134,6 +134,18 @@ export default class TileLineBasePlugin extends Plugin {
 				}, 0);
 			}
 		}));
+		this.registerEvent(
+			this.app.vault.on('rename', (abstractFile, oldPath) => {
+				if (!(abstractFile instanceof TFile) || abstractFile.extension !== 'md') {
+					return;
+				}
+				void this.settingsService
+					.migrateFileScopedSettings(oldPath, abstractFile.path)
+					.catch((error) => {
+						logger.error('Failed to migrate file-scoped settings after rename', error);
+					});
+			})
+		);
 
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
 			this.viewActionManager.ensureActionsForLeaf(leaf ?? null);

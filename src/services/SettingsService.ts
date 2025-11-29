@@ -431,6 +431,42 @@ export class SettingsService {
 		return saveSlidePreferences(this.settings, filePath, preferences, () => this.persist());
 	}
 
+	async migrateFileScopedSettings(oldPath: string, newPath: string): Promise<boolean> {
+		const source = typeof oldPath === 'string' ? oldPath.trim() : '';
+		const target = typeof newPath === 'string' ? newPath.trim() : '';
+		if (!source || !target || source === target) {
+			return false;
+		}
+
+		let changed = false;
+		const migrate = <T>(store: Record<string, T>): void => {
+			if (!Object.prototype.hasOwnProperty.call(store, source)) {
+				return;
+			}
+			store[target] = store[source];
+			delete store[source];
+			changed = true;
+		};
+
+		migrate(this.settings.fileViewPrefs);
+		migrate(this.settings.columnLayouts);
+		migrate(this.settings.filterViews);
+		migrate(this.settings.tagGroups);
+		migrate(this.settings.kanbanBoards);
+		migrate(this.settings.columnConfigs);
+		migrate(this.settings.copyTemplates);
+		migrate(this.settings.kanbanPreferences);
+		migrate(this.settings.slidePreferences);
+
+		if (!changed) {
+			return false;
+		}
+
+		await this.persist();
+		logger.debug('Migrated file-scoped settings after rename', { from: source, to: target });
+		return true;
+	}
+
 	getDefaultSlideConfig(): SlideViewConfig | null {
 		const stored = this.settings.defaultSlideConfig;
 		return stored ? normalizeSlideViewConfig(stored) : null;

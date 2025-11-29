@@ -62,7 +62,19 @@ export function createTextCellEditor() {
 
 			if (this.usePopup) {
 				const wrapper = doc.createElement('div');
-				wrapper.classList.add('tlb-text-editor-popup');
+				wrapper.classList.add('tlb-text-editor-popup', 'ag-cell', 'ag-cell-inline-editing', 'ag-cell-focus');
+				// inherit current theme so popup uses the same AG/Obsidian tokens
+				const themeClass = doc.body.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';
+				wrapper.classList.add(themeClass);
+				const themeSource = params.eGridCell?.closest('[class*="ag-theme"]');
+				const agThemeClasses = themeSource
+					? Array.from(themeSource.classList).filter(cls => cls.startsWith('ag-theme'))
+					: [];
+				const hasQuartz = agThemeClasses.some(cls => cls.startsWith('ag-theme-quartz'));
+				if (!hasQuartz) {
+					agThemeClasses.unshift(themeClass === 'theme-dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz');
+				}
+				wrapper.classList.add(...agThemeClasses);
 				wrapper.appendChild(this.eInput);
 				this.wrapper = wrapper;
 				const win = doc.defaultView ?? window;

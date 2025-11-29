@@ -380,7 +380,7 @@
   gap: 0;
   padding: 0;
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--background-modifier-border, #d0d0d0) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 90%, transparent);
   background: color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary) 8%);
   cursor: pointer;
   color: var(--text-normal);
@@ -3153,7 +3153,7 @@
 		--ag-odd-row-background-color,
 		var(
 			--tlb-odd-row-base,
-			color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary, var(--background-primary)) 8%)
+			color-mix(in srgb, var(--background-primary) 92%, var(--background-secondary) 8%)
 		)
 	);
 	color: var(--ag-foreground-color, var(--text-normal));
@@ -3165,7 +3165,7 @@
 		--ag-odd-row-background-color,
 		var(
 			--tlb-odd-row-base,
-			color-mix(in srgb, var(--background-secondary, #202020) 90%, var(--background-primary, #161616) 10%)
+			color-mix(in srgb, var(--background-secondary) 90%, var(--background-primary) 10%)
 		)
 	);
 	color: var(--ag-foreground-color, var(--text-normal));
@@ -3181,7 +3181,7 @@
 		--ag-odd-row-background-color,
 		var(
 			--tlb-odd-row-base,
-			color-mix(in srgb, var(--background-secondary, #202020) 90%, var(--background-primary, #161616) 10%)
+			color-mix(in srgb, var(--background-secondary) 90%, var(--background-primary) 10%)
 		)
 	);
 	color: var(--ag-foreground-color, var(--text-normal));
@@ -3428,13 +3428,13 @@
 }
 
 .tlb-time-editor.is-invalid {
-	border-color: color-mix(in srgb, var(--color-red, #d93c3c) 85%, transparent);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red, #d93c3c) 32%, transparent);
+	border-color: color-mix(in srgb, var(--color-red, var(--text-error)) 85%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red, var(--text-error)) 32%, transparent);
 }
 
 .theme-dark .tlb-time-editor.is-invalid {
-	border-color: color-mix(in srgb, var(--color-red, #ff6b6b) 75%, transparent);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red, #ff6b6b) 28%, transparent);
+	border-color: color-mix(in srgb, var(--color-red, var(--text-error)) 75%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-red, var(--text-error)) 28%, transparent);
 }
 
 .tlb-time-editor-input {
@@ -3453,7 +3453,7 @@
 }
 
 .tlb-time-editor-input--invalid {
-	color: var(--text-error, var(--color-red, #d93c3c));
+	color: var(--text-error, var(--color-red));
 }
 .tlb-kanban-wrapper {
 	width: 100%;

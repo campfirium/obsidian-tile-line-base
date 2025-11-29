@@ -1,11 +1,20 @@
 /* TileLineBase �����?*/
 
 :root {
+	--tlb-color-scheme: light;
 	--tlb-popup-border-color: var(
 		--ag-input-focus-border-color,
 		color-mix(in srgb, var(--ag-active-color, var(--interactive-accent, #6aa5ff)) 65%, transparent)
 	);
 	--tlb-kanban-single-row-offset: 7rem;
+}
+
+.theme-dark {
+	--tlb-color-scheme: dark;
+	--tlb-popup-border-color: var(
+		--ag-input-focus-border-color,
+		color-mix(in srgb, var(--ag-active-color, var(--interactive-accent, #6aa5ff)) 65%, transparent)
+	);
 }
 
 .tile-line-base-view {
@@ -3044,7 +3053,7 @@
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
 	position: relative;
-	color-scheme: light;
+	color-scheme: var(--tlb-color-scheme, light);
 	gap: 4px;
 	width: 100%;
 	height: 100%;
@@ -3057,7 +3066,6 @@
 }
 
 .theme-dark .tlb-date-editor {
-  color-scheme: dark;
   background: color-mix(in srgb, var(--background-secondary) 90%, var(--background-primary) 10%);
   border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 }
@@ -3075,7 +3083,7 @@
 	background: transparent;
 	padding: 0;
 	color: inherit;
-	color-scheme: inherit;
+	color-scheme: var(--tlb-color-scheme, light);
 	font: inherit;
 }
 
@@ -3235,11 +3243,11 @@
   position: absolute;
   opacity: 0;
   pointer-events: none;
-  color-scheme: inherit;
+  color-scheme: var(--tlb-color-scheme, light);
 }
 
 .theme-dark .tlb-date-editor-hidden-picker {
-  color-scheme: inherit;
+  color-scheme: var(--tlb-color-scheme, dark);
 }
 
 

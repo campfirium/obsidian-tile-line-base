@@ -3044,6 +3044,7 @@
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
 	position: relative;
+	color-scheme: light;
 	gap: 4px;
 	width: 100%;
 	height: 100%;
@@ -3056,6 +3057,7 @@
 }
 
 .theme-dark .tlb-date-editor {
+  color-scheme: dark;
   background: color-mix(in srgb, var(--background-secondary) 90%, var(--background-primary) 10%);
   border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 }

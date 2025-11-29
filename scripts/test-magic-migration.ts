@@ -36,27 +36,8 @@ function assertRow(template: string, expectedRows: string[][]): void {
 	});
 }
 
-assertRow('*', [
-	[sample],
-	['任务B 设计全局主题系统 李四 未开始 截止时间 2025年12月10日 中优先级']
-]);
-assertRow('* *', [
-	['任务A', '重构导入逻辑 张三 进行中 截止时间 2025年12月01日 高优先级'],
-	['任务B', '设计全局主题系统 李四 未开始 截止时间 2025年12月10日 中优先级']
-]);
-assertRow('* * *', [
-	['任务A', '重构导入逻辑', '张三 进行中 截止时间 2025年12月01日 高优先级'],
-	['任务B', '设计全局主题系统', '李四 未开始 截止时间 2025年12月10日 中优先级']
-]);
-
-const resultMulti = controller.runExtractionForTest('* * * * * * *', sample, content);
-if (resultMulti.error) {
-	throw new Error(`Multi-star error: ${resultMulti.error}`);
-}
-assertEqual(resultMulti.rows.length, 2, 'multi-line rows');
-const first = resultMulti.rows[0];
-const second = resultMulti.rows[1];
-assertEqual(first[0], '任务A', 'row1 col1');
-assertEqual(second[0], '任务B', 'row2 col1');
+assertRow('*', [[sample]]);
+assertRow('* *', [['任务A', '重构导入逻辑 张三 进行中 截止时间 2025年12月01日 高优先级']]);
+assertRow('* * *', [['任务A', '重构导入逻辑', '张三 进行中 截止时间 2025年12月01日 高优先级']]);
 
 console.log('Magic migration template tests passed.');

@@ -347,15 +347,7 @@ export class MagicMigrationController {
 				.filter((block) => block.length > 0);
 		}
 
-		const anchorIndex = normalizedContent.indexOf(trimmedSample);
-		if (anchorIndex === -1) {
-			return [];
-		}
-		const anchoredSlice = normalizedContent.slice(anchorIndex);
-		return anchoredSlice
-			.split(/\n+/)
-			.map((block) => block.trim())
-			.filter((block) => block.length > 0);
+		return [sample];
 	}
 
 	private buildTargetFileName(file: TFile): string {
@@ -396,47 +388,25 @@ export class MagicMigrationController {
 		if (placeholderCount === 0) {
 			return null;
 		}
-		const hasLiteral = /[^*\s]/.test(trimmed);
-		if (!hasLiteral) {
-			const parts = Array(placeholderCount).fill('([\\s\\S]+?)').join('\\s+');
-			const pattern = `^\\s*${parts}\\s*$`;
-			try {
-				return new RegExp(pattern, 'u');
-			} catch (error) {
-				this.logger.warn('Failed to compile whitespace-only star template', error);
-				return null;
-			}
-		}
 
-		const normalized = trimmed.replace(/\s+/g, ' ');
-		const tokens = normalized.split('*');
+		const tokens = trimmed.split('*');
 		const parts: string[] = [];
-		parts.push('^\\s*');
+		parts.push('^');
 
 		for (let index = 0; index < placeholderCount; index++) {
 			const literal = tokens[index] ?? '';
-			const trimmedLiteral = literal.trim();
 			if (literal.length > 0) {
-				if (trimmedLiteral.length === 0) {
-					parts.push('\\s+');
-				} else {
-					parts.push(this.escapeLiteral(literal));
-				}
+				parts.push(this.escapeLiteral(literal, false));
 			}
 			const isLast = index === placeholderCount - 1;
-			parts.push(isLast ? '([\\s\\S]+?)' : '([\\s\\S]*?)');
+			parts.push(isLast ? '([\\s\\S]+)' : '([\\s\\S]+?)');
 		}
 
 		const tailLiteral = tokens[placeholderCount] ?? '';
 		if (tailLiteral.length > 0) {
-			const trimmedLiteral = tailLiteral.trim();
-			if (trimmedLiteral.length === 0) {
-				parts.push('\\s*');
-			} else {
-				parts.push(this.escapeLiteral(tailLiteral));
-			}
+			parts.push(this.escapeLiteral(tailLiteral, false));
 		}
-		parts.push('\\s*$');
+		parts.push('$');
 
 		try {
 			return new RegExp(parts.join(''), 'u');
@@ -446,9 +416,19 @@ export class MagicMigrationController {
 		}
 	}
 
-	private escapeLiteral(literal: string): string {
-		const escaped = literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-		return escaped.replace(/ /g, '\\s+');
+	private escapeLiteral(literal: string, allowFlexibleWhitespace: boolean): string {
+		if (!allowFlexibleWhitespace) {
+			return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		}
+		return literal
+			.split(/(\s+)/)
+			.map((part) => {
+				if (/^\s+$/.test(part)) {
+					return '\\s+';
+				}
+				return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			})
+			.join('');
 	}
 
 	public runExtractionForTest(template: string, sample: string, content: string): ExtractionResult {

@@ -79,6 +79,9 @@ function renderHeaderTitle(view: TableView, headerTitleEl: HTMLElement | null): 
 		span.addEventListener('click', onActivate);
 		span.addEventListener('dblclick', onActivate);
 		span.addEventListener('keydown', (event: KeyboardEvent) => {
+			if (span.getAttribute('data-tlb-editing') === 'true') {
+				return;
+			}
 			if (event.key === 'Enter' || event.key === ' ') {
 				onActivate(event);
 			}
@@ -135,7 +138,14 @@ function enterInlineRename(
 		element.focus({ preventScroll: true });
 	}
 
+	let finalized = false;
 	const finalize = async (commit: boolean) => {
+		if (finalized) {
+			return;
+		}
+		finalized = true;
+		element.removeEventListener('keydown', onKeydown);
+		element.removeEventListener('blur', onBlur);
 		element.removeAttribute('data-tlb-editing');
 		element.contentEditable = 'false';
 		if (!commit) {
@@ -176,6 +186,6 @@ function enterInlineRename(
 	const onBlur = () => {
 		void finalize(true);
 	};
-	element.addEventListener('keydown', onKeydown, { once: true });
-	element.addEventListener('blur', onBlur, { once: true });
+	element.addEventListener('keydown', onKeydown);
+	element.addEventListener('blur', onBlur);
 }

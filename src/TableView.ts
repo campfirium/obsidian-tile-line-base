@@ -15,6 +15,7 @@ import type { FileFilterViewState, FilterRule } from "./types/filterView";
 import type { FileTagGroupState } from "./types/tagGroup";
 import { TableDataStore } from "./table-view/TableDataStore";
 import type { TableConfigManager } from "./table-view/TableConfigManager";
+import { RenderScheduler } from "./table-view/RenderScheduler";
 import type { ColumnInteractionController } from "./table-view/ColumnInteractionController";
 import type { RowInteractionController } from "./table-view/RowInteractionController";
 import type { RowMigrationController } from "./table-view/RowMigrationController";
@@ -27,10 +28,9 @@ import type { TablePersistenceService } from "./table-view/TablePersistenceServi
 import { initializeTableView } from "./table-view/TableViewSetup";
 import { renderTableView } from "./table-view/TableViewRenderer";
 import { handleOnClose } from "./table-view/TableViewInteractions";
-import { t } from "./i18n";
+import { ensureMarkdownToggle } from "./table-view/MarkdownToggle";
 import { CopyTemplateController } from "./table-view/CopyTemplateController";
 import { TableHistoryManager } from "./table-view/TableHistoryManager";
-import { getPluginContext } from "./pluginContext";
 import type { ParagraphPromotionController } from "./table-view/paragraph/ParagraphPromotionController";
 import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
@@ -93,7 +93,7 @@ export class TableView extends ItemView {
 	public filterViewController!: FilterViewController;
 	public filterStateStore = new FilterStateStore(null); public filterViewState: FileFilterViewState = this.filterStateStore.getState();
 	public tagGroupStore = new TagGroupStore(null); public tagGroupController!: TagGroupController; public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
-	public initialColumnState: ColumnState[] | null = null; private markdownToggleButton: HTMLElement | null = null;
+	public initialColumnState: ColumnState[] | null = null; public markdownToggleButton: HTMLElement | null = null;
 	public activeViewMode: 'table' | 'kanban' | 'slide' = 'table';
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null; public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
@@ -116,6 +116,7 @@ export class TableView extends ItemView {
 	public slideTemplateTouched = false;
 	private viewModeManager!: ViewModeManager;
 	public previousNonSlideMode: 'table' | 'kanban' = 'table';
+	private readonly renderScheduler = new RenderScheduler(() => this.renderInternal());
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -169,6 +170,10 @@ export class TableView extends ItemView {
 	}
 
 	async render(): Promise<void> {
+		await this.renderScheduler.run();
+	}
+
+	private async renderInternal(): Promise<void> {
 		if (this.kanbanBoardController) {
 			this.kanbanBoardController.ensureInitialized();
 			this.kanbanBoardsLoaded = true;
@@ -191,7 +196,7 @@ export class TableView extends ItemView {
 		this.refreshDisplayText();
 	}
 	async onOpen(): Promise<void> {
-		this.ensureMarkdownToggle();
+		ensureMarkdownToggle(this);
 		this.viewModeManager.ensureActions();
 		this.viewModeManager.updateButtons();
 	}
@@ -231,33 +236,6 @@ export class TableView extends ItemView {
 	onMoreOptions(menu: Menu): void {
 		populateMoreOptionsMenu(this, menu);
 	}
-
-	private ensureMarkdownToggle(): void {
-		if (this.markdownToggleButton) {
-			return;
-		}
-
-		const label = t("viewControls.openMarkdownView");
-		const button = this.addAction("pencil", label, async (evt) => {
-			const plugin = getPluginContext();
-			if (!plugin) {
-				logger.warn("No plugin context when toggling to markdown view");
-				return;
-			}
-			try {
-				await plugin.toggleLeafView(this.leaf);
-			} catch (error) {
-				logger.error("Failed to toggle back to markdown view", error);
-			}
-			evt?.preventDefault();
-			evt?.stopPropagation();
-		});
-		button.setAttribute("data-tlb-action", "open-markdown-view");
-		button.setAttribute("aria-label", label);
-		button.setAttribute("title", label);
-		this.markdownToggleButton = button;
-	}
-
 
 	public setKanbanHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);

@@ -101,6 +101,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 export class SettingsService {
 	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
 	private readonly plugin: Plugin;
+	private pendingMigrations: Array<{ source: string; target: string; promise: Promise<boolean> }> = [];
+	private readonly recentRenames: Map<string, string> = new Map();
 
 	constructor(plugin: Plugin) {
 		this.plugin = plugin;
@@ -438,33 +440,45 @@ export class SettingsService {
 			return false;
 		}
 
-		let changed = false;
-		const migrate = <T>(store: Record<string, T>): void => {
-			if (!Object.prototype.hasOwnProperty.call(store, source)) {
-				return;
+		this.recentRenames.set(target, source);
+
+		const promise = (async () => {
+			let changed = false;
+			const migrate = <T>(store: Record<string, T>): void => {
+				if (!Object.prototype.hasOwnProperty.call(store, source)) {
+					return;
+				}
+				store[target] = store[source];
+				delete store[source];
+				changed = true;
+			};
+
+			migrate(this.settings.fileViewPrefs);
+			migrate(this.settings.columnLayouts);
+			migrate(this.settings.filterViews);
+			migrate(this.settings.tagGroups);
+			migrate(this.settings.kanbanBoards);
+			migrate(this.settings.columnConfigs);
+			migrate(this.settings.copyTemplates);
+			migrate(this.settings.kanbanPreferences);
+			migrate(this.settings.slidePreferences);
+
+			if (!changed) {
+				return false;
 			}
-			store[target] = store[source];
-			delete store[source];
-			changed = true;
-		};
 
-		migrate(this.settings.fileViewPrefs);
-		migrate(this.settings.columnLayouts);
-		migrate(this.settings.filterViews);
-		migrate(this.settings.tagGroups);
-		migrate(this.settings.kanbanBoards);
-		migrate(this.settings.columnConfigs);
-		migrate(this.settings.copyTemplates);
-		migrate(this.settings.kanbanPreferences);
-		migrate(this.settings.slidePreferences);
+			await this.persist();
+			logger.debug('Migrated file-scoped settings after rename', { from: source, to: target });
+			return true;
+		})();
 
-		if (!changed) {
-			return false;
+		this.pendingMigrations.push({ source, target, promise });
+		try {
+			return await promise;
+		} finally {
+			this.pendingMigrations = this.pendingMigrations.filter((entry) => entry.promise !== promise);
+			this.recentRenames.delete(target);
 		}
-
-		await this.persist();
-		logger.debug('Migrated file-scoped settings after rename', { from: source, to: target });
-		return true;
 	}
 
 	getDefaultSlideConfig(): SlideViewConfig | null {
@@ -522,6 +536,40 @@ export class SettingsService {
 		} catch (error) {
 			logger.warn('deepClone fallback failed, returning original reference', error);
 			return value;
+		}
+	}
+
+	async waitForPendingMigration(path: string): Promise<void> {
+		if (!path) {
+			return;
+		}
+		const tasks = this.pendingMigrations
+			.filter((entry) => entry.source === path || entry.target === path)
+			.map((entry) => entry.promise.catch(() => undefined));
+		if (tasks.length === 0) {
+			return;
+		}
+		await Promise.all(tasks);
+	}
+
+	async ensureFileSettingsForPath(filePath: string): Promise<void> {
+		const target = typeof filePath === 'string' ? filePath.trim() : '';
+		if (!target) {
+			return;
+		}
+		await this.waitForPendingMigration(target);
+		if (this.settings.columnConfigs[target]) {
+			this.recentRenames.delete(target);
+			return;
+		}
+		const source = this.recentRenames.get(target);
+		if (!source) {
+			return;
+		}
+		try {
+			await this.migrateFileScopedSettings(source, target);
+		} finally {
+			this.recentRenames.delete(target);
 		}
 	}
 

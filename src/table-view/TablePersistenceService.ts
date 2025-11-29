@@ -141,10 +141,9 @@ export class TablePersistenceService {
 
 	getConfigPayload(): TableConfigData {
 		const schema = this.deps.dataStore.getSchema();
-		const columnConfigs =
-			schema?.columnConfigs
-				?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
-				?.map((config) => this.deps.dataStore.serializeColumnConfig(config)) ?? [];
+		const columnConfigs = schema?.columnConfigs
+			?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
+			?.map((config) => this.deps.dataStore.serializeColumnConfig(config));
 
 		const viewPreference = this.deps.getViewPreference?.() ?? 'table';
 		const kanbanConfig = this.deps.getKanbanConfig?.();

@@ -35,12 +35,14 @@ export class TableConfigManager {
 			return null;
 		}
 
+		const settingsService = plugin.getSettingsService();
+		await settingsService.ensureFileSettingsForPath(file.path);
+
 		const imported = await this.tryImportFromConfigBlock(file);
 		if (imported) {
 			return imported;
 		}
 
-		const settingsService = plugin.getSettingsService();
 		const settings = settingsService.getSettings();
 		const filePath = file.path;
 		const snapshot: TableConfigData = {};
@@ -104,9 +106,11 @@ export class TableConfigManager {
 		}
 		tasks.push(settingsService.setColumnLayout(filePath, data.columnWidths ?? null));
 
-		const serializedConfigs =
-			Array.isArray(data.columnConfigs) && data.columnConfigs.length > 0 ? data.columnConfigs : null;
-		tasks.push(settingsService.saveColumnConfigsForFile(filePath, serializedConfigs));
+		if (data.columnConfigs !== undefined) {
+			const serializedConfigs =
+				Array.isArray(data.columnConfigs) && data.columnConfigs.length > 0 ? data.columnConfigs : null;
+			tasks.push(settingsService.saveColumnConfigsForFile(filePath, serializedConfigs));
+		}
 
 		const copyTemplate =
 			typeof data.copyTemplate === 'string' && data.copyTemplate.trim().length > 0 ? data.copyTemplate : null;
@@ -140,6 +144,7 @@ export class TableConfigManager {
 		}
 
 		try {
+			await plugin.getSettingsService().ensureFileSettingsForPath(file.path);
 			const content = await plugin.app.vault.read(file);
 			const callout = readConfigCallout(content);
 			if (!callout?.data) {

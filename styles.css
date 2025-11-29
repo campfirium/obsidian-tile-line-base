@@ -3147,6 +3147,13 @@
 	padding: 0;
 }
 
+/* prevent parent ag-popup-editor from adding extra border/shadow thickness */
+.ag-popup-editor {
+	border: none !important;
+	box-shadow: none !important;
+	background: transparent;
+}
+
 /* align popup background with grid row stripe and theme variables via parent ag-popup-editor */
 .ag-popup-editor .tlb-text-editor-popup {
 	background: var(

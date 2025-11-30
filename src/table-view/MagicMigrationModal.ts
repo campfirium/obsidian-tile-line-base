@@ -248,9 +248,10 @@ export class MagicMigrationModal extends Modal {
 		this.syncConvertButton();
 	}
 
-	private setActiveView(view: WizardViewMode): void {
-		this.sourcePane?.toggleClass('is-active', view === 'source');
-		this.previewPane?.toggleClass('is-active', view === 'preview');
+	private setActiveView(_view: WizardViewMode): void {
+		// Always keep source visible; preview remains active for stacked layout.
+		this.sourcePane?.addClass('is-active');
+		this.previewPane?.addClass('is-active');
 	}
 
 	private handleSourceSelection(): void {

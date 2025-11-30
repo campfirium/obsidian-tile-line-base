@@ -159,12 +159,6 @@ export class MagicMigrationModal extends Modal {
 			},
 			onFocus: () => this.setActiveView('source'),
 			wrapperClass: 'tlb-conversion-field--half',
-			actionSlot: (slot) => {
-				const button = slot.createEl('button', { cls: 'tlb-conversion-aux-button', text: 'Select from Source' });
-				button.addEventListener('click', () => {
-					this.applySelectionFromSource();
-				});
-			},
 			placeholder: 'Select text from the Source Text panel.'
 		});
 
@@ -350,23 +344,6 @@ export class MagicMigrationModal extends Modal {
 		};
 		ownerDoc.addEventListener('selectionchange', handler);
 		this.selectionChangeCleanup = () => ownerDoc.removeEventListener('selectionchange', handler);
-	}
-
-	private applySelectionFromSource(): void {
-		if (!this.sourceContentEl) {
-			return;
-		}
-		const ownerDoc = this.sourceContentEl.ownerDocument ?? document;
-		const selection = ownerDoc.getSelection();
-		const anchorNode = selection?.anchorNode;
-		if (!selection || selection.isCollapsed || !anchorNode || !this.sourceContentEl.contains(anchorNode)) {
-			return;
-		}
-		const text = selection.toString().trim();
-		if (!text) {
-			return;
-		}
-		this.applySampleSelection(text);
 	}
 
 	private renderPreview(): void {

@@ -52,6 +52,7 @@ import { normalizeSlideViewConfig } from "./types/slide";
 import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
 import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
 import { RowOrderController } from "./table-view/row-sort/RowOrderController";
+import type { MagicMigrationController } from "./table-view/MagicMigrationController";
 
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
@@ -86,6 +87,7 @@ export class TableView extends ItemView {
 	public paragraphPromotionController!: ParagraphPromotionController;
 	public tableCreationController!: TableCreationController;
 	public fileDuplicationController!: TableFileDuplicationController;
+	public magicMigrationController!: MagicMigrationController;
 	public historyManager = new TableHistoryManager(this);
 	public refreshCoordinator!: TableRefreshCoordinator;
 	public tableContainer: HTMLElement | null = null; public filterViewBar: FilterViewBar | null = null;
@@ -144,6 +146,7 @@ export class TableView extends ItemView {
 			if (file instanceof TFile) {
 				this.file = file;
 				this.conversionSession.prepare(file);
+				this.magicMigrationController.resetPromptState();
 				this.refreshCoordinator.setTrackedFile(file);
 				this.kanbanBoardsLoaded = false;
 				this.kanbanPreferencesLoaded = false;
@@ -155,6 +158,7 @@ export class TableView extends ItemView {
 			} else {
 				this.file = null;
 				this.conversionSession.prepare(null);
+				this.magicMigrationController.resetPromptState();
 				this.refreshCoordinator.setTrackedFile(null);
 			}
 		} catch (error) {

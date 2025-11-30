@@ -299,16 +299,15 @@ export class MagicMigrationModal extends Modal {
 		this.applySampleSelection(selected);
 	}
 
-	private applySampleSelection(selected: string): void {
+	private applySampleSelection(selected: string, range?: Range): void {
+		this.highlightSource(range ?? null);
 		this.sampleValue = selected;
 		if (this.sampleInput) {
 			this.sampleInput.value = selected;
 		}
-		if (!this.templateValue || this.templateValue.trim().length === 0) {
-			this.templateValue = selected;
-			if (this.templateInput) {
-				this.templateInput.value = selected;
-			}
+		this.templateValue = selected;
+		if (this.templateInput) {
+			this.templateInput.value = selected;
 		}
 		this.refreshPreview();
 	}
@@ -337,7 +336,7 @@ export class MagicMigrationModal extends Modal {
 			if (inSource && !selection.isCollapsed) {
 				const text = selection.toString().trim();
 				if (text) {
-					this.applySampleSelection(text);
+					this.applySampleSelection(text, selection.getRangeAt(0));
 				}
 				return;
 			}
@@ -486,5 +485,37 @@ export class MagicMigrationModal extends Modal {
 			this.sourceContentEl.contains(anchorNode) &&
 			this.sourceContentEl.contains(focusNode)
 		);
+	}
+
+	private highlightSource(range: Range | null): void {
+		if (!this.sourceContentEl) {
+			return;
+		}
+		this.clearSourceHighlight();
+		if (!range) {
+			return;
+		}
+		const mark = this.sourceContentEl.ownerDocument.createElement('mark');
+		mark.className = 'tlb-source-highlight';
+		try {
+			range.surroundContents(mark);
+		} catch {
+			// If surround fails (e.g., partial nodes), skip highlighting.
+		}
+	}
+
+	private clearSourceHighlight(): void {
+		if (!this.sourceContentEl) {
+			return;
+		}
+		const highlights = Array.from(this.sourceContentEl.querySelectorAll('.tlb-source-highlight'));
+		for (const highlight of highlights) {
+			const parent = highlight.parentNode;
+			if (!parent) continue;
+			while (highlight.firstChild) {
+				parent.insertBefore(highlight.firstChild, highlight);
+			}
+			parent.removeChild(highlight);
+		}
 	}
 }

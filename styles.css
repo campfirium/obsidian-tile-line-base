@@ -1810,6 +1810,12 @@
 	line-height: 1.5;
 	user-select: text;
 	-webkit-user-select: text;
+	--tlb-highlight-bg: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 24%, transparent);
+}
+
+.tlb-conversion-source__content .tlb-source-highlight {
+	background: var(--tlb-highlight-bg);
+	border-radius: 4px;
 }
 
 .tlb-conversion-status {

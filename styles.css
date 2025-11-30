@@ -1828,10 +1828,13 @@
 }
 
 .tlb-source-inline-highlight {
-	background: color-mix(
-		in srgb,
-		var(--interactive-accent, #f0c15c) 35%,
-		var(--background-primary, #fdf6e3) 65%
+	background: var(
+		--text-selection,
+		color-mix(
+			in srgb,
+			var(--interactive-accent, #f0c15c) 35%,
+			var(--background-primary, #fdf6e3) 65%
+		)
 	);
 	border-radius: 4px;
 }

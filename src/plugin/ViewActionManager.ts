@@ -75,7 +75,8 @@ export class ViewActionManager {
 						leaf,
 						preferredWindow,
 						workspace,
-						mode: 'table'
+						mode: 'table',
+						trigger: 'manual'
 					});
 				} catch (error) {
 					logger.error('Failed to switch to table view from markdown header action', error);
@@ -122,7 +123,8 @@ export class ViewActionManager {
 					leaf,
 					preferredWindow,
 					workspace,
-					mode: 'kanban'
+					mode: 'kanban',
+					trigger: 'manual'
 				});
 			} catch (error) {
 				logger.error('Failed to switch to kanban view from markdown header action', error);
@@ -172,7 +174,8 @@ export class ViewActionManager {
 					leaf,
 					preferredWindow,
 					workspace,
-					mode: 'slide'
+					mode: 'slide',
+					trigger: 'manual'
 				});
 			} catch (error) {
 				logger.error('Failed to switch to slide view from markdown header action', error);

@@ -1,5 +1,7 @@
 import { App, Menu, TFile, Workspace, WorkspaceLeaf } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from '../TableView';
+import { MarkdownBlockParser } from '../table-view/MarkdownBlockParser';
+import { MagicMigrationController } from '../table-view/MagicMigrationController';
 import { getLogger } from '../utils/logger';
 import type { SettingsService } from '../services/SettingsService';
 import type { WindowContext, WindowContextManager } from './WindowContextManager';
@@ -11,11 +13,14 @@ export interface ViewOpenContext {
 	preferredWindow?: Window | null;
 	workspace?: Workspace | null;
 	mode?: 'table' | 'kanban' | 'slide';
+	trigger?: 'manual' | 'auto';
 }
 
 export class ViewSwitchCoordinator {
 	private readonly app: App;
 	private readonly autoSwitchStats = new Map<string, { hits: number; first: number }>();
+	private readonly markdownParser = new MarkdownBlockParser();
+	private readonly magicMigrationController: MagicMigrationController;
 
 	constructor(
 		app: App,
@@ -24,6 +29,7 @@ export class ViewSwitchCoordinator {
 		private readonly suppressAutoSwitchUntil: Map<string, number>
 	) {
 		this.app = app;
+		this.magicMigrationController = new MagicMigrationController({ app } as unknown as TableView);
 	}
 
 	handleFileMenu(menu: Menu, file: TFile, context: WindowContext): void {
@@ -52,7 +58,8 @@ export class ViewSwitchCoordinator {
 				await this.openTableView(file, {
 					leaf: resolution.leaf,
 					preferredWindow: resolution.preferredWindow ?? context.window,
-					workspace: resolution.workspace ?? context.app.workspace
+					workspace: resolution.workspace ?? context.app.workspace,
+					trigger: 'manual'
 				});
 			};
 
@@ -104,13 +111,17 @@ export class ViewSwitchCoordinator {
 				file: file.path,
 				targetLeaf: this.describeLeaf(activeLeaf)
 			});
-			await this.openTableView(file, { leaf: activeLeaf, preferredWindow, workspace });
+			await this.openTableView(file, { leaf: activeLeaf, preferredWindow, workspace, trigger: 'auto' });
 		} catch (error) {
 			logger.error('Failed to auto switch to table view', error);
 		}
 	}
 
 	async openTableView(file: TFile, options?: ViewOpenContext): Promise<void> {
+		const trigger = options?.trigger ?? 'auto';
+		if (await this.shouldInterceptForConversion(file, trigger)) {
+			return;
+		}
 		this.markAutoSwitchCooldown(file.path);
 		const requestedLeaf = options?.leaf ?? null;
 		const preferredWindow = options?.preferredWindow ?? this.windowContextManager.getLeafWindow(requestedLeaf);
@@ -261,7 +272,8 @@ export class ViewSwitchCoordinator {
 				await this.openTableView(activeFile, {
 					leaf,
 					preferredWindow: this.windowContextManager.getLeafWindow(leaf),
-					workspace
+					workspace,
+					trigger: 'manual'
 				});
 			}
 		}
@@ -381,6 +393,32 @@ export class ViewSwitchCoordinator {
 		const fallback = workspace.getLeaf(false);
 		logger.debug('selectLeaf -> workspace.getLeaf(false)', this.describeLeaf(fallback));
 		return fallback;
+	}
+
+	private async shouldInterceptForConversion(file: TFile, trigger: 'manual' | 'auto'): Promise<boolean> {
+		if (file.extension !== 'md') {
+			return false;
+		}
+		let content: string;
+		try {
+			content = await this.app.vault.read(file);
+		} catch (error) {
+			logger.warn('shouldInterceptForConversion: read failed', { file: file.path, error });
+			return false;
+		}
+		const blocks = this.markdownParser.parseH2Blocks(content);
+		if (blocks.length > 0) {
+			return false;
+		}
+		if (trigger !== 'manual') {
+			logger.debug('shouldInterceptForConversion: skip modal for non-manual trigger', {
+				file: file.path,
+				trigger
+			});
+			return true;
+		}
+		this.magicMigrationController.launchWizard({ file, content });
+		return true;
 	}
 
 	private describeLeaf(leaf: WorkspaceLeaf | null | undefined): Record<string, unknown> | null {

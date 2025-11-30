@@ -177,7 +177,8 @@ export default class TileLineBasePlugin extends Plugin {
 				const openContext = {
 					leaf: leaf ?? null,
 					preferredWindow: this.windowContextManager.getLeafWindow(leaf ?? null),
-					workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace
+					workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace,
+					trigger: 'auto' as const
 				};
 				void this.viewCoordinator.openTableView(file, openContext);
 			}, 0);
@@ -233,7 +234,8 @@ export default class TileLineBasePlugin extends Plugin {
 					leaf: leaf ?? undefined,
 					preferredWindow,
 					workspace,
-					mode
+					mode,
+					trigger: 'manual'
 				});
 			}
 		});
@@ -524,7 +526,8 @@ export default class TileLineBasePlugin extends Plugin {
 		await this.viewCoordinator.openTableView(file, {
 			leaf: activeLeaf,
 			preferredWindow,
-			workspace
+			workspace,
+			trigger: 'manual'
 		});
 	}
 

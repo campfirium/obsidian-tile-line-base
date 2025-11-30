@@ -1591,6 +1591,12 @@
 	align-self: flex-start;
 }
 
+.tlb-conversion-wizard {
+	width: min(1200px, calc(100vw - 48px));
+	min-width: min(1200px, calc(100vw - 48px));
+	max-width: min(1300px, calc(100vw - 32px));
+}
+
 .tlb-conversion-wizard .tlb-conversion-layout {
 	display: grid;
 	grid-template-columns: 1fr 1fr;

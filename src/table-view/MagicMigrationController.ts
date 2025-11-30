@@ -128,20 +128,8 @@ export class MagicMigrationController {
 			};
 		}
 
-		const compiled = this.buildRegex(normalizedTemplate);
-		if (!compiled) {
-			return {
-				columns: [],
-				rows: [],
-				placeholderCount,
-				truncated: false,
-				totalMatches: 0,
-				error: t('magicMigration.errorInvalidPattern')
-			};
-		}
-
-		const candidates = this.getCandidateParagraphs(content, sample);
-		if (candidates.length === 0) {
+		const contentSlice = this.sliceFromSample(content.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), sample);
+		if (!contentSlice) {
 			return {
 				columns: [],
 				rows: [],
@@ -157,8 +145,22 @@ export class MagicMigrationController {
 		let totalMatches = 0;
 		let truncated = false;
 
-		for (const paragraph of candidates) {
-			const match = compiled.exec(paragraph);
+		const isSingleStar = normalizedTemplate === '*';
+		const units = this.buildRecordUnits(contentSlice, sample, isSingleStar, normalizedTemplate);
+		const regex = this.buildRegex(normalizedTemplate);
+		if (!regex) {
+			return {
+				columns: [],
+				rows: [],
+				placeholderCount,
+				truncated: false,
+				totalMatches: 0,
+				error: t('magicMigration.errorInvalidPattern')
+			};
+		}
+
+		for (const unit of units) {
+			const match = regex.exec(unit);
 			if (!match) {
 				continue;
 			}
@@ -337,19 +339,6 @@ export class MagicMigrationController {
 		return lines.every((line) => /^#\s+/.test(line) && !/^##/.test(line));
 	}
 
-	private getCandidateParagraphs(content: string, sample: string): string[] {
-		const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-		const trimmedSample = sample.trim();
-		if (!trimmedSample) {
-			return normalizedContent
-				.split(/\n\s*\n/)
-				.map((block) => block.trim())
-				.filter((block) => block.length > 0);
-		}
-
-		return [sample];
-	}
-
 	private buildTargetFileName(file: TFile): string {
 		const base = `${file.basename}_tlb`;
 		return this.sanitizeFileName(base) || t('magicMigration.defaultFileName');
@@ -380,6 +369,18 @@ export class MagicMigrationController {
 			.replace(/\s+/g, ' ')
 			.trim()
 			.replace(/[. ]+$/g, '');
+	}
+
+	private sliceFromSample(content: string, sample: string): string | null {
+		const trimmedSample = sample.trim();
+		if (!trimmedSample) {
+			return content;
+		}
+		const anchorIndex = content.indexOf(trimmedSample);
+		if (anchorIndex === -1) {
+			return null;
+		}
+		return content.slice(anchorIndex);
 	}
 
 	private buildRegex(template: string): RegExp | null {
@@ -433,6 +434,33 @@ export class MagicMigrationController {
 
 	public runExtractionForTest(template: string, sample: string, content: string): ExtractionResult {
 		return this.extractMatches(template, sample, content, MATCH_LIMIT);
+	}
+
+	private buildRecordUnits(content: string, sample: string, isSingleStar: boolean, template: string): string[] {
+		if (isSingleStar) {
+			if (sample.includes('\n')) {
+				return content
+					.split(/\n\s*\n/)
+					.map((block) => block.trim())
+					.filter((block) => block.length > 0);
+			}
+			return content
+				.split(/\n+/)
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0);
+		}
+
+		if (template.includes('\n')) {
+			return content
+				.split(/\n\s*\n/)
+				.map((block) => block.trim())
+				.filter((block) => block.length > 0);
+		}
+
+		return content
+			.split(/\n+/)
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0);
 	}
 
 	private countPlaceholders(template: string): number {

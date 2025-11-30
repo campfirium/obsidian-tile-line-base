@@ -36,6 +36,8 @@ export class MagicMigrationModal extends Modal {
 	private sourcePane: HTMLElement | null = null;
 	private previewPane: HTMLElement | null = null;
 	private sourceContentEl: HTMLElement | null = null;
+	private savedSelectionRange: Range | null = null;
+	private isRestoringSelection = false;
 	private convertButton: HTMLButtonElement | null = null;
 	private sampleInput: HTMLTextAreaElement | null = null;
 	private templateInput: HTMLTextAreaElement | null = null;
@@ -134,14 +136,9 @@ export class MagicMigrationModal extends Modal {
 		const right = shell.createDiv({ cls: 'tlb-conversion-right' });
 
 		const header = left.createDiv({ cls: 'tlb-conversion-header' });
-		header.createEl('h2', { text: 'Conversion Wizard' });
 		header.createEl('p', {
 			text: 'Extract data from text to create a structured note.',
 			cls: 'tlb-conversion-subtitle'
-		});
-		header.createEl('div', {
-			text: `Target: ${this.options.targetFileName}`,
-			cls: 'tlb-conversion-target'
 		});
 
 		const formArea = left.createDiv({ cls: 'tlb-conversion-left-body' });
@@ -325,22 +322,38 @@ export class MagicMigrationModal extends Modal {
 				return;
 			}
 			const selection = ownerDoc.getSelection();
-			if (!selection || selection.isCollapsed) {
+			if (!selection) {
+				return;
+			}
+			if (this.isRestoringSelection) {
 				return;
 			}
 			const anchorNode = selection.anchorNode;
 			const focusNode = selection.focusNode;
-			if (!anchorNode || !focusNode) {
+			const inSource =
+				anchorNode &&
+				focusNode &&
+				this.sourceContentEl.contains(anchorNode) &&
+				this.sourceContentEl.contains(focusNode);
+
+			if (inSource && !selection.isCollapsed) {
+				const text = selection.toString().trim();
+				if (text) {
+					this.savedSelectionRange = selection.getRangeAt(0).cloneRange();
+					this.applySampleSelection(text);
+				}
 				return;
 			}
-			if (!this.sourceContentEl.contains(anchorNode) || !this.sourceContentEl.contains(focusNode)) {
-				return;
+
+			if (selection.isCollapsed && this.savedSelectionRange && this.rangeIsInSource()) {
+				this.isRestoringSelection = true;
+				try {
+					selection.removeAllRanges();
+					selection.addRange(this.savedSelectionRange);
+				} finally {
+					this.isRestoringSelection = false;
+				}
 			}
-			const text = selection.toString().trim();
-			if (!text) {
-				return;
-			}
-			this.applySampleSelection(text);
 		};
 		ownerDoc.addEventListener('selectionchange', handler);
 		this.selectionChangeCleanup = () => ownerDoc.removeEventListener('selectionchange', handler);
@@ -470,5 +483,14 @@ export class MagicMigrationModal extends Modal {
 		} else {
 			window.setTimeout(() => focus(), 0);
 		}
+	}
+
+	private rangeIsInSource(): boolean {
+		if (!this.savedSelectionRange || !this.sourceContentEl) {
+			return false;
+		}
+		const start = this.savedSelectionRange.startContainer;
+		const end = this.savedSelectionRange.endContainer;
+		return this.sourceContentEl.contains(start) && this.sourceContentEl.contains(end);
 	}
 }

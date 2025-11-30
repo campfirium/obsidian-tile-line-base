@@ -1591,10 +1591,16 @@
 	align-self: flex-start;
 }
 
-.tlb-conversion-wizard {
+.modal.tlb-conversion-modal {
 	width: min(1200px, calc(100vw - 48px));
-	min-width: min(1200px, calc(100vw - 48px));
-	max-width: min(1300px, calc(100vw - 32px));
+	min-width: min(1100px, calc(100vw - 64px));
+	max-width: min(1400px, calc(100vw - 32px));
+}
+
+.tlb-conversion-wizard {
+	width: 100%;
+	max-width: none;
+	min-width: 0;
 }
 
 .tlb-conversion-wizard .tlb-conversion-layout {

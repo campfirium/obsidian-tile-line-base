@@ -60,6 +60,7 @@ export class MagicMigrationModal extends Modal {
 		}
 
 		contentEl.empty();
+		this.modalEl?.addClass('tlb-conversion-modal');
 		contentEl.addClass('tlb-magic-migration-modal');
 		contentEl.addClass('tlb-conversion-wizard');
 

@@ -267,11 +267,7 @@ export class MagicMigrationModal extends Modal {
 		this.templateValue = selected;
 		if (this.templateInput) {
 			this.templateInput.value = selected;
-			this.templateInput.focus({ preventScroll: true });
-			const end = this.templateInput.value.length;
-			this.templateInput.setSelectionRange(end, end);
 		}
-		this.setActiveView('preview');
 		this.refreshPreview();
 	}
 

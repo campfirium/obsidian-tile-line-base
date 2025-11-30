@@ -38,7 +38,6 @@ export class MagicMigrationModal extends Modal {
 	private sourceContentEl: HTMLElement | null = null;
 	private savedSelectionRange: Range | null = null;
 	private isRestoringSelection = false;
-	private pointerInSource = false;
 	private convertButton: HTMLButtonElement | null = null;
 	private sampleInput: HTMLTextAreaElement | null = null;
 	private templateInput: HTMLTextAreaElement | null = null;
@@ -245,12 +244,6 @@ export class MagicMigrationModal extends Modal {
 		content.textContent = sourceText && sourceText.length > 0
 			? this.options.sourceContent
 			: 'Highlight a representative line of text here to start.';
-		content.addEventListener('mousedown', () => {
-			this.pointerInSource = true;
-		});
-		content.addEventListener('mouseup', () => {
-			this.pointerInSource = false;
-		});
 		content.addEventListener('mouseup', () => this.handleSourceSelection());
 		content.addEventListener('keyup', () => this.handleSourceSelection());
 		sourceBox.appendChild(content);
@@ -337,13 +330,7 @@ export class MagicMigrationModal extends Modal {
 			if (this.isRestoringSelection) {
 				return;
 			}
-			const anchorNode = selection.anchorNode;
-			const focusNode = selection.focusNode;
-			const inSource =
-				anchorNode &&
-				focusNode &&
-				this.sourceContentEl.contains(anchorNode) &&
-				this.sourceContentEl.contains(focusNode);
+			const inSource = this.isSelectionInSource(selection);
 
 			if (inSource && !selection.isCollapsed) {
 				const text = selection.toString().trim();
@@ -354,13 +341,7 @@ export class MagicMigrationModal extends Modal {
 				return;
 			}
 
-			if (
-				selection.isCollapsed &&
-				this.savedSelectionRange &&
-				this.rangeIsInSource() &&
-				!this.pointerInSource &&
-				!this.isActiveInSource(ownerDoc)
-			) {
+			if (!inSource && selection.isCollapsed && this.savedSelectionRange && this.rangeIsInSource()) {
 				this.isRestoringSelection = true;
 				try {
 					selection.removeAllRanges();
@@ -509,8 +490,15 @@ export class MagicMigrationModal extends Modal {
 		return this.sourceContentEl.contains(start) && this.sourceContentEl.contains(end);
 	}
 
-	private isActiveInSource(ownerDoc: Document): boolean {
-		const active = ownerDoc.activeElement;
-		return Boolean(active && this.sourceContentEl && this.sourceContentEl.contains(active));
+	private isSelectionInSource(selection: Selection): boolean {
+		const anchorNode = selection.anchorNode;
+		const focusNode = selection.focusNode;
+		return Boolean(
+			anchorNode &&
+			focusNode &&
+			this.sourceContentEl &&
+			this.sourceContentEl.contains(anchorNode) &&
+			this.sourceContentEl.contains(focusNode)
+		);
 	}
 }

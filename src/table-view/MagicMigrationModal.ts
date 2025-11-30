@@ -36,8 +36,6 @@ export class MagicMigrationModal extends Modal {
 	private sourcePane: HTMLElement | null = null;
 	private previewPane: HTMLElement | null = null;
 	private sourceContentEl: HTMLElement | null = null;
-	private savedSelectionRange: Range | null = null;
-	private isRestoringSelection = false;
 	private convertButton: HTMLButtonElement | null = null;
 	private sampleInput: HTMLTextAreaElement | null = null;
 	private templateInput: HTMLTextAreaElement | null = null;
@@ -327,9 +325,6 @@ export class MagicMigrationModal extends Modal {
 			if (!selection) {
 				return;
 			}
-			if (this.isRestoringSelection) {
-				return;
-			}
 			const inSource = this.isSelectionInSource(selection);
 			const active = ownerDoc.activeElement;
 			const activeTag = active?.tagName?.toLowerCase();
@@ -342,7 +337,6 @@ export class MagicMigrationModal extends Modal {
 			if (inSource && !selection.isCollapsed) {
 				const text = selection.toString().trim();
 				if (text) {
-					this.savedSelectionRange = selection.getRangeAt(0).cloneRange();
 					this.applySampleSelection(text);
 				}
 				return;
@@ -350,16 +344,6 @@ export class MagicMigrationModal extends Modal {
 
 			if (isEditingForm) {
 				return;
-			}
-
-			if (!inSource && selection.isCollapsed && this.savedSelectionRange && this.rangeIsInSource()) {
-				this.isRestoringSelection = true;
-				try {
-					selection.removeAllRanges();
-					selection.addRange(this.savedSelectionRange);
-				} finally {
-					this.isRestoringSelection = false;
-				}
 			}
 		};
 		ownerDoc.addEventListener('selectionchange', handler);
@@ -490,15 +474,6 @@ export class MagicMigrationModal extends Modal {
 		} else {
 			window.setTimeout(() => focus(), 0);
 		}
-	}
-
-	private rangeIsInSource(): boolean {
-		if (!this.savedSelectionRange || !this.sourceContentEl) {
-			return false;
-		}
-		const start = this.savedSelectionRange.startContainer;
-		const end = this.savedSelectionRange.endContainer;
-		return this.sourceContentEl.contains(start) && this.sourceContentEl.contains(end);
 	}
 
 	private isSelectionInSource(selection: Selection): boolean {

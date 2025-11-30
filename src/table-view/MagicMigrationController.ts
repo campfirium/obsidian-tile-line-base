@@ -485,6 +485,32 @@ export class MagicMigrationController {
 	}
 
 	private buildRecordUnits(content: string, sample: string, isSingleStar: boolean, template: string): string[] {
+		const normalizedSample = sample.trim();
+		const shouldTreatAsTableRow =
+			template.includes('|') && normalizedSample.includes('|') && normalizedSample.includes('\n');
+		if (shouldTreatAsTableRow) {
+			const rows: string[] = [];
+			const buffer: string[] = [];
+			for (const rawLine of content.split('\n')) {
+				const line = rawLine.trim();
+				if (!line) {
+					continue;
+				}
+				const startsNewRow = line.startsWith('|');
+				if (startsNewRow && buffer.length > 0) {
+					rows.push(buffer.join('\n').trim());
+					buffer.length = 0;
+				}
+				buffer.push(line);
+			}
+			if (buffer.length > 0) {
+				rows.push(buffer.join('\n').trim());
+			}
+			if (rows.length > 0) {
+				return rows;
+			}
+		}
+
 		if (isSingleStar) {
 			if (sample.includes('\n')) {
 				return content

@@ -242,6 +242,7 @@ export class MagicMigrationModal extends Modal {
 		content.textContent = sourceText && sourceText.length > 0
 			? this.options.sourceContent
 			: 'Highlight a representative line of text here to start.';
+		content.addEventListener('mousedown', () => this.clearSourceHighlight());
 		content.addEventListener('mouseup', () => this.handleSourceSelection());
 		content.addEventListener('keyup', () => this.handleSourceSelection());
 		sourceBox.appendChild(content);

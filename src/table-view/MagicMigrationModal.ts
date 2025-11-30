@@ -331,6 +331,13 @@ export class MagicMigrationModal extends Modal {
 				return;
 			}
 			const inSource = this.isSelectionInSource(selection);
+			const active = ownerDoc.activeElement;
+			const activeTag = active?.tagName?.toLowerCase();
+			const isEditingForm =
+				activeTag === 'textarea' ||
+				activeTag === 'input' ||
+				activeTag === 'button' ||
+				activeTag === 'select';
 
 			if (inSource && !selection.isCollapsed) {
 				const text = selection.toString().trim();
@@ -338,6 +345,10 @@ export class MagicMigrationModal extends Modal {
 					this.savedSelectionRange = selection.getRangeAt(0).cloneRange();
 					this.applySampleSelection(text);
 				}
+				return;
+			}
+
+			if (isEditingForm) {
 				return;
 			}
 

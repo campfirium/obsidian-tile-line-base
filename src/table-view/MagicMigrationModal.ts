@@ -247,8 +247,9 @@ export class MagicMigrationModal extends Modal {
 		content.addEventListener('mousedown', () => this.clearSourceHighlight());
 		content.addEventListener('mouseup', () => this.handleSourceSelection());
 		content.addEventListener('keyup', () => this.handleSourceSelection());
-		this.sourceHighlightLayer = sourceBox.createDiv({ cls: 'tlb-source-highlight-layer' });
 		sourceBox.appendChild(content);
+		this.sourceHighlightLayer = sourceBox.createDiv({ cls: 'tlb-source-highlight-layer' });
+		sourceBox.addEventListener('scroll', () => this.renderSourceHighlight());
 		this.sourceContentEl = content;
 		return pane;
 	}

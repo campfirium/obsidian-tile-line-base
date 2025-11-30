@@ -1673,6 +1673,17 @@
 	line-height: 1.4;
 }
 
+.tlb-conversion-field-row {
+	display: flex;
+	gap: 12px;
+	width: 100%;
+}
+
+.tlb-conversion-field--half {
+	flex: 1 1 50%;
+	min-width: 0;
+}
+
 .tlb-conversion-textarea {
 	width: 100%;
 	min-height: 96px;
@@ -1806,6 +1817,10 @@
 @media (max-width: 960px) {
 	.tlb-conversion-wizard .tlb-conversion-layout {
 		grid-template-columns: 1fr;
+	}
+
+	.tlb-conversion-field-row {
+		flex-direction: column;
 	}
 }
 

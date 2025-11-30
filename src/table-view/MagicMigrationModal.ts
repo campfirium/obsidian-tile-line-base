@@ -144,7 +144,9 @@ export class MagicMigrationModal extends Modal {
 
 		const formArea = left.createDiv({ cls: 'tlb-conversion-left-body' });
 
-		this.sampleInput = this.createTextareaField(formArea, ownerDoc, {
+		const fieldRow = formArea.createDiv({ cls: 'tlb-conversion-field-row' });
+
+		this.sampleInput = this.createTextareaField(fieldRow, ownerDoc, {
 			label: '1. Reference Sample',
 			helper: 'Select text on the right. The selection represents one row of data in your table.',
 			value: this.sampleValue,
@@ -153,10 +155,11 @@ export class MagicMigrationModal extends Modal {
 				this.sampleValue = value;
 				this.refreshPreview();
 			},
-			onFocus: () => this.setActiveView('source')
+			onFocus: () => this.setActiveView('source'),
+			wrapperClass: 'tlb-conversion-field--half'
 		});
 
-		this.templateInput = this.createTextareaField(formArea, ownerDoc, {
+		this.templateInput = this.createTextareaField(fieldRow, ownerDoc, {
 			label: '2. Extraction Pattern',
 			helper: 'Replace the content you want to extract (or that varies) with an asterisk *.',
 			value: this.templateValue,
@@ -165,7 +168,8 @@ export class MagicMigrationModal extends Modal {
 				this.templateValue = value;
 				this.refreshPreview();
 			},
-			onFocus: () => this.setActiveView('preview')
+			onFocus: () => this.setActiveView('preview'),
+			wrapperClass: 'tlb-conversion-field--half'
 		});
 
 		this.previewPane = this.renderPreviewPane(formArea);
@@ -195,9 +199,13 @@ export class MagicMigrationModal extends Modal {
 			rows: number;
 			onInput: (value: string) => void;
 			onFocus: () => void;
+			wrapperClass?: string;
 		}
 	): HTMLTextAreaElement {
 		const wrapper = container.createDiv({ cls: 'tlb-conversion-field' });
+		if (options.wrapperClass) {
+			wrapper.addClass(options.wrapperClass);
+		}
 		const labelRow = wrapper.createDiv({ cls: 'tlb-conversion-label-row' });
 		labelRow.createEl('label', { text: options.label, cls: 'tlb-conversion-label' });
 		wrapper.createEl('div', { text: options.helper, cls: 'tlb-conversion-helper' });

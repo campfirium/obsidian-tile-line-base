@@ -220,7 +220,7 @@ export class MagicMigrationModal extends Modal {
 		}
 		const labelRow = wrapper.createDiv({ cls: 'tlb-conversion-label-row' });
 		labelRow.createEl('label', { text: options.label, cls: 'tlb-conversion-label' });
-		const actions = wrapper.createDiv({ cls: 'tlb-conversion-field__actions' });
+		const actions = labelRow.createDiv({ cls: 'tlb-conversion-field__actions' });
 		if (options.actionSlot) {
 			options.actionSlot(actions);
 		}

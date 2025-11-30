@@ -161,7 +161,9 @@ export class MagicMigrationController {
 			if (!match) {
 				continue;
 			}
-			const captures = match.slice(1, placeholderCount + 1).map((value) => (value ?? '').trim());
+			const captures = match
+				.slice(1, placeholderCount + 1)
+				.map((value) => this.normalizeCapturedValue(value ?? ''));
 			if (captures.every((value) => value.length === 0)) {
 				continue;
 			}
@@ -492,6 +494,10 @@ export class MagicMigrationController {
 			columns.push(override || `${COLUMN_LABEL_BASE} ${index + 1}`);
 		}
 		return columns;
+	}
+
+	private normalizeCapturedValue(raw: string): string {
+		return raw.replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
 	}
 
 	private async openFileInTableView(file: TFile): Promise<void> {

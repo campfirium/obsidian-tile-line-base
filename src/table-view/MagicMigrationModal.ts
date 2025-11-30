@@ -37,6 +37,7 @@ export class MagicMigrationModal extends Modal {
 	private convertButton: HTMLButtonElement | null = null;
 	private sampleInput: HTMLTextAreaElement | null = null;
 	private templateInput: HTMLTextAreaElement | null = null;
+	private selectionChangeCleanup: (() => void) | null = null;
 	private isSubmitting = false;
 	private returnFocusTarget: HTMLElement | null = null;
 	private keydownHandler?: (event: KeyboardEvent) => void;
@@ -69,6 +70,7 @@ export class MagicMigrationModal extends Modal {
 		this.setActiveView('source');
 		this.syncConvertButton();
 		this.focusSample(ownerDoc);
+		this.attachSelectionWatcher(ownerDoc);
 
 		if (modalEl) {
 			this.keydownHandler = (event: KeyboardEvent) => {
@@ -86,6 +88,10 @@ export class MagicMigrationModal extends Modal {
 		if (this.modalEl && this.keydownHandler) {
 			this.modalEl.removeEventListener('keydown', this.keydownHandler, true);
 			this.keydownHandler = undefined;
+		}
+		if (this.selectionChangeCleanup) {
+			this.selectionChangeCleanup();
+			this.selectionChangeCleanup = null;
 		}
 		this.options.onClose(this.templateValue, this.sampleValue, this.getNormalizedColumnNames());
 		if (this.returnFocusTarget && this.returnFocusTarget.isConnected) {
@@ -260,6 +266,10 @@ export class MagicMigrationModal extends Modal {
 		if (!selected) {
 			return;
 		}
+		this.applySampleSelection(selected);
+	}
+
+	private applySampleSelection(selected: string): void {
 		this.sampleValue = selected;
 		if (this.sampleInput) {
 			this.sampleInput.value = selected;
@@ -269,6 +279,36 @@ export class MagicMigrationModal extends Modal {
 			this.templateInput.value = selected;
 		}
 		this.refreshPreview();
+	}
+
+	private attachSelectionWatcher(ownerDoc: Document): void {
+		if (this.selectionChangeCleanup) {
+			return;
+		}
+		const handler = () => {
+			if (!this.sourceContentEl) {
+				return;
+			}
+			const selection = ownerDoc.getSelection();
+			if (!selection || selection.isCollapsed) {
+				return;
+			}
+			const anchorNode = selection.anchorNode;
+			const focusNode = selection.focusNode;
+			if (!anchorNode || !focusNode) {
+				return;
+			}
+			if (!this.sourceContentEl.contains(anchorNode) || !this.sourceContentEl.contains(focusNode)) {
+				return;
+			}
+			const text = selection.toString().trim();
+			if (!text) {
+				return;
+			}
+			this.applySampleSelection(text);
+		};
+		ownerDoc.addEventListener('selectionchange', handler);
+		this.selectionChangeCleanup = () => ownerDoc.removeEventListener('selectionchange', handler);
 	}
 
 	private renderPreview(): void {

@@ -53,13 +53,23 @@ export class ConversionSessionManager {
 
 	async restoreBaselineIfEligible(): Promise<boolean> {
 		const file = this.view.file;
-		if (!file || !this.baseline || this.filePath !== file.path || this.sessionHasMutations) {
+		const baseline = this.baseline;
+		if (!file || !baseline || this.filePath !== file.path || this.sessionHasMutations) {
 			return false;
 		}
 		this.view.persistenceService?.cancelScheduledSave();
 		try {
+			try {
+				const current = await this.view.app.vault.read(file);
+				if (current === baseline) {
+					logger.debug('restore: skipped (content unchanged)', { file: file.path });
+					return false;
+				}
+			} catch (error) {
+				logger.warn('restore: failed to read current content, falling back to write', error);
+			}
 			logger.debug('restore', { file: file.path });
-			await this.view.app.vault.modify(file, this.baseline);
+			await this.view.app.vault.modify(file, baseline);
 			return true;
 		} catch (error) {
 			logger.error('restore-failed', error);

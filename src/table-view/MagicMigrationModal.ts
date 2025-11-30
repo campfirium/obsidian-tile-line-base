@@ -506,15 +506,21 @@ export class MagicMigrationModal extends Modal {
 			return;
 		}
 		this.sourceHighlightLayer.empty();
+		const container = this.sourceHighlightLayer.parentElement ?? this.sourceContentEl.parentElement;
+		if (!container) {
+			return;
+		}
 		const rects = Array.from(this.savedHighlightRange.getClientRects());
 		if (rects.length === 0) {
 			return;
 		}
-		const containerRect = this.sourceContentEl.getBoundingClientRect();
+		const containerRect = container.getBoundingClientRect();
+		const scrollLeft = container.scrollLeft;
+		const scrollTop = container.scrollTop;
 		for (const rect of rects) {
 			const block = this.sourceHighlightLayer.createDiv({ cls: 'tlb-source-highlight-block' });
-			block.style.left = `${rect.left - containerRect.left + this.sourceContentEl.scrollLeft}px`;
-			block.style.top = `${rect.top - containerRect.top + this.sourceContentEl.scrollTop}px`;
+			block.style.left = `${rect.left - containerRect.left + scrollLeft}px`;
+			block.style.top = `${rect.top - containerRect.top + scrollTop}px`;
 			block.style.width = `${rect.width}px`;
 			block.style.height = `${rect.height}px`;
 		}

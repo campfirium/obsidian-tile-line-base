@@ -1684,6 +1684,21 @@
 	min-width: 0;
 }
 
+.tlb-conversion-field__actions {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.tlb-conversion-aux-button {
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+	cursor: pointer;
+}
+
 .tlb-conversion-textarea {
 	width: 100%;
 	min-height: 96px;
@@ -1694,6 +1709,12 @@
 	background: var(--background-primary);
 	font-family: var(--font-monospace);
 	line-height: 1.5;
+	resize: vertical;
+}
+
+.tlb-conversion-textarea--fixed {
+	height: 480px;
+	min-height: 480px;
 	resize: vertical;
 }
 
@@ -1747,6 +1768,10 @@
 	height: 100%;
 }
 
+.tlb-conversion-pane-title {
+	font-weight: 600;
+}
+
 .tlb-conversion-pane.is-active {
 	display: flex;
 }
@@ -1781,8 +1806,19 @@
 
 .tlb-conversion-status {
 	font-size: 12px;
-	color: var(--text-muted);
+	display: flex;
+	gap: 4px;
+	align-items: baseline;
 	margin-bottom: 6px;
+}
+
+.tlb-conversion-status__summary {
+	font-weight: 600;
+}
+
+.tlb-conversion-status__hint {
+	color: var(--text-muted);
+	font-size: 12px;
 }
 
 .tlb-conversion-preview__table {
@@ -1811,6 +1847,12 @@
 	padding: 4px 6px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
+	font-size: 12px;
+}
+
+.tlb-conversion-footnote {
+	margin-top: 6px;
+	color: var(--text-muted);
 	font-size: 12px;
 }
 

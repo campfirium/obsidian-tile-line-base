@@ -1,5 +1,4 @@
 import { App, Modal } from 'obsidian';
-import { t } from '../i18n';
 
 export interface MagicMigrationPreview {
 	columns: string[];
@@ -31,6 +30,9 @@ export class MagicMigrationModal extends Modal {
 	private preview: MagicMigrationPreview;
 	private previewContainer: HTMLElement | null = null;
 	private previewStatusEl: HTMLElement | null = null;
+	private previewSummaryEl: HTMLElement | null = null;
+	private previewHintEl: HTMLElement | null = null;
+	private previewFootnoteEl: HTMLElement | null = null;
 	private sourcePane: HTMLElement | null = null;
 	private previewPane: HTMLElement | null = null;
 	private sourceContentEl: HTMLElement | null = null;
@@ -147,8 +149,8 @@ export class MagicMigrationModal extends Modal {
 		const fieldRow = formArea.createDiv({ cls: 'tlb-conversion-field-row' });
 
 		this.sampleInput = this.createTextareaField(fieldRow, ownerDoc, {
-			label: '1. Reference Sample',
-			helper: 'Select text on the right. The selection represents one row of data in your table.',
+			label: 'Sample Row',
+			helper: 'Select text from the Source Text panel. The selection represents one row of data in your table.',
 			value: this.sampleValue,
 			rows: 4,
 			onInput: (value) => {
@@ -156,11 +158,18 @@ export class MagicMigrationModal extends Modal {
 				this.refreshPreview();
 			},
 			onFocus: () => this.setActiveView('source'),
-			wrapperClass: 'tlb-conversion-field--half'
+			wrapperClass: 'tlb-conversion-field--half',
+			actionSlot: (slot) => {
+				const button = slot.createEl('button', { cls: 'tlb-conversion-aux-button', text: 'Select from Source' });
+				button.addEventListener('click', () => {
+					this.applySelectionFromSource();
+				});
+			},
+			placeholder: 'Highlight text on the right to populate this sample.'
 		});
 
 		this.templateInput = this.createTextareaField(fieldRow, ownerDoc, {
-			label: '2. Extraction Pattern',
+			label: 'Extraction Pattern',
 			helper: 'Replace the content you want to extract (or that varies) with an asterisk *.',
 			value: this.templateValue,
 			rows: 6,
@@ -169,7 +178,8 @@ export class MagicMigrationModal extends Modal {
 				this.refreshPreview();
 			},
 			onFocus: () => this.setActiveView('preview'),
-			wrapperClass: 'tlb-conversion-field--half'
+			wrapperClass: 'tlb-conversion-field--half',
+			placeholder: 'Use * to capture variable content.'
 		});
 
 		this.previewPane = this.renderPreviewPane(formArea);
@@ -200,6 +210,8 @@ export class MagicMigrationModal extends Modal {
 			onInput: (value: string) => void;
 			onFocus: () => void;
 			wrapperClass?: string;
+			placeholder?: string;
+			actionSlot?: (container: HTMLElement) => void;
 		}
 	): HTMLTextAreaElement {
 		const wrapper = container.createDiv({ cls: 'tlb-conversion-field' });
@@ -208,11 +220,18 @@ export class MagicMigrationModal extends Modal {
 		}
 		const labelRow = wrapper.createDiv({ cls: 'tlb-conversion-label-row' });
 		labelRow.createEl('label', { text: options.label, cls: 'tlb-conversion-label' });
+		const actions = wrapper.createDiv({ cls: 'tlb-conversion-field__actions' });
+		if (options.actionSlot) {
+			options.actionSlot(actions);
+		}
 		wrapper.createEl('div', { text: options.helper, cls: 'tlb-conversion-helper' });
 		const textarea = ownerDoc.createElement('textarea');
 		textarea.value = options.value;
 		textarea.rows = options.rows;
-		textarea.className = 'tlb-conversion-textarea';
+		textarea.className = 'tlb-conversion-textarea tlb-conversion-textarea--fixed';
+		if (options.placeholder) {
+			textarea.placeholder = options.placeholder;
+		}
 		textarea.addEventListener('input', () => options.onInput(textarea.value));
 		textarea.addEventListener('focus', () => options.onFocus());
 		wrapper.appendChild(textarea);
@@ -221,7 +240,11 @@ export class MagicMigrationModal extends Modal {
 
 	private renderSourcePane(container: HTMLElement, ownerDoc: Document): HTMLElement {
 		const pane = container.createDiv({ cls: 'tlb-conversion-pane tlb-conversion-pane--source' });
-		pane.createDiv({ cls: 'tlb-conversion-tip', text: 'Highlight a representative line of text.' });
+		pane.createDiv({ cls: 'tlb-conversion-pane-title', text: 'Source Text' });
+		pane.createDiv({
+			cls: 'tlb-conversion-tip',
+			text: 'Highlight a representative line of text. It will be copied to the Sample panel.'
+		});
 		const sourceBox = pane.createDiv({ cls: 'tlb-conversion-source' });
 		const content = ownerDoc.createElement('pre');
 		content.tabIndex = 0;
@@ -236,12 +259,17 @@ export class MagicMigrationModal extends Modal {
 
 	private renderPreviewPane(container: HTMLElement): HTMLElement {
 		const pane = container.createDiv({ cls: 'tlb-conversion-pane tlb-conversion-pane--preview is-active' });
-		const tip = pane.createDiv({ cls: 'tlb-conversion-tip' });
-		tip.createSpan({ text: 'Preview' });
-		tip.createSpan({ text: ' · ' });
-		tip.createSpan({ text: '💡 Click table headers to rename columns.' });
-		this.previewStatusEl = pane.createDiv({ cls: 'tlb-conversion-status' });
+		pane.createDiv({ cls: 'tlb-conversion-pane-title', text: 'Preview Results' });
+		const statusRow = pane.createDiv({ cls: 'tlb-conversion-status' });
+		this.previewSummaryEl = statusRow.createSpan({ cls: 'tlb-conversion-status__summary' });
+		statusRow.createSpan({ text: ' ' });
+		this.previewHintEl = statusRow.createSpan({ cls: 'tlb-conversion-status__hint' });
+		this.previewStatusEl = statusRow;
 		this.previewContainer = pane.createDiv({ cls: 'tlb-conversion-preview' });
+		this.previewFootnoteEl = pane.createDiv({
+			cls: 'tlb-conversion-footnote',
+			text: '💡 Click table headers to rename columns.'
+		});
 		return pane;
 	}
 
@@ -321,6 +349,23 @@ export class MagicMigrationModal extends Modal {
 		this.selectionChangeCleanup = () => ownerDoc.removeEventListener('selectionchange', handler);
 	}
 
+	private applySelectionFromSource(): void {
+		if (!this.sourceContentEl) {
+			return;
+		}
+		const ownerDoc = this.sourceContentEl.ownerDocument ?? document;
+		const selection = ownerDoc.getSelection();
+		const anchorNode = selection?.anchorNode;
+		if (!selection || selection.isCollapsed || !anchorNode || !this.sourceContentEl.contains(anchorNode)) {
+			return;
+		}
+		const text = selection.toString().trim();
+		if (!text) {
+			return;
+		}
+		this.applySampleSelection(text);
+	}
+
 	private renderPreview(): void {
 		if (!this.previewContainer || !this.previewStatusEl) {
 			return;
@@ -328,24 +373,26 @@ export class MagicMigrationModal extends Modal {
 		this.previewContainer.empty();
 		const preview = this.preview;
 
+		const summaryEl = this.previewSummaryEl;
+		const hintEl = this.previewHintEl;
+
 		if (preview.error) {
-			this.previewStatusEl.setText(preview.error);
+			if (summaryEl) summaryEl.setText(preview.error);
+			if (hintEl) hintEl.setText('');
 			return;
 		}
 
 		if (preview.rows.length === 0) {
-			this.previewStatusEl.setText(t('magicMigration.previewEmpty'));
+			if (summaryEl) summaryEl.setText('No matches yet.');
+			if (hintEl) hintEl.setText('Content that does not match the template will be ignored automatically.');
 			return;
 		}
 
 		const countText = preview.truncated
-			? t('magicMigration.previewTruncated', {
-					shown: String(preview.rows.length),
-					total: String(preview.matchCount)
-				})
-			: t('magicMigration.previewCount', { count: String(preview.matchCount) });
-		const noiseHint = t('magicMigration.previewNoiseHint');
-		this.previewStatusEl.setText(`${countText} · ${noiseHint}`);
+			? `Found ${preview.rows.length} of ${preview.matchCount} matches.`
+			: `Found ${preview.matchCount} matches.`;
+		if (summaryEl) summaryEl.setText(countText);
+		if (hintEl) hintEl.setText('Content that does not match the template will be ignored automatically.');
 
 		const table = this.previewContainer.createEl('table', { cls: 'tlb-conversion-preview__table' });
 		const thead = table.createEl('thead');
@@ -372,6 +419,10 @@ export class MagicMigrationModal extends Modal {
 			for (let index = 0; index < this.columnNames.length; index++) {
 				tr.createEl('td', { text: row[index] ?? '' });
 			}
+		}
+
+		if (this.previewFootnoteEl) {
+			this.previewFootnoteEl.setText('💡 Click table headers to rename columns.');
 		}
 	}
 

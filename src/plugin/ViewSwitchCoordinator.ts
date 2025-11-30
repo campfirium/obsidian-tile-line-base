@@ -15,6 +15,7 @@ export interface ViewOpenContext {
 
 export class ViewSwitchCoordinator {
 	private readonly app: App;
+	private readonly autoSwitchStats = new Map<string, { hits: number; first: number }>();
 
 	constructor(
 		app: App,
@@ -91,6 +92,9 @@ export class ViewSwitchCoordinator {
 			logger.debug('maybeSwitchToTableView: view type not eligible', { file: file.path, viewType });
 			return;
 		}
+		if (this.recordAutoSwitchAttempt(file.path)) {
+			return;
+		}
 
 		const preferredWindow = this.windowContextManager.getLeafWindow(activeLeaf);
 		const workspace = this.windowContextManager.getWorkspaceForLeaf(activeLeaf) ?? this.app.workspace;
@@ -107,6 +111,7 @@ export class ViewSwitchCoordinator {
 	}
 
 	async openTableView(file: TFile, options?: ViewOpenContext): Promise<void> {
+		this.markAutoSwitchCooldown(file.path);
 		const requestedLeaf = options?.leaf ?? null;
 		const preferredWindow = options?.preferredWindow ?? this.windowContextManager.getLeafWindow(requestedLeaf);
 		const workspace = options?.workspace ?? this.windowContextManager.getWorkspaceForLeaf(requestedLeaf) ?? this.app.workspace;
@@ -125,13 +130,6 @@ export class ViewSwitchCoordinator {
 		if (existingTableLeaf) {
 			logger.debug('openTableView reuse existing table leaf', this.describeLeaf(existingTableLeaf));
 			await this.settingsService.setFileViewPreference(file.path, preferenceToSet);
-			if (requestedLeaf && requestedLeaf !== existingTableLeaf) {
-				try {
-					requestedLeaf.detach?.();
-				} catch (error) {
-					logger.warn('Failed to detach redundant leaf', this.describeLeaf(requestedLeaf), error);
-				}
-			}
 			await workspace.revealLeaf(existingTableLeaf);
 			await this.applyViewMode(existingTableLeaf, requestedMode);
 			return;
@@ -209,6 +207,31 @@ export class ViewSwitchCoordinator {
 		const view = leaf.view;
 		if (view instanceof TableView) {
 			await view.setActiveViewMode(mode);
+		}
+	}
+
+	private recordAutoSwitchAttempt(filePath: string): boolean {
+		const now = Date.now();
+		const entry = this.autoSwitchStats.get(filePath);
+		if (!entry || now - entry.first > 4000) {
+			this.autoSwitchStats.set(filePath, { hits: 1, first: now });
+			return false;
+		}
+		entry.hits += 1;
+		if (entry.hits >= 3) {
+			this.autoSwitchStats.delete(filePath);
+			this.suppressAutoSwitchUntil.set(filePath, now + 5000);
+			logger.warn('maybeSwitchToTableView: suppressed due to rapid auto-switch loop', { file: filePath });
+			return true;
+		}
+		return false;
+	}
+
+	private markAutoSwitchCooldown(filePath: string): void {
+		const now = Date.now();
+		const suppressUntil = this.suppressAutoSwitchUntil.get(filePath) ?? 0;
+		if (suppressUntil < now) {
+			this.suppressAutoSwitchUntil.set(filePath, now + 800);
 		}
 	}
 

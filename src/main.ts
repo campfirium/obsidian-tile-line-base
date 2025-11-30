@@ -157,6 +157,13 @@ export default class TileLineBasePlugin extends Plugin {
 				return;
 			}
 
+			const suppressUntil = this.suppressAutoSwitchUntil.get(file.path);
+			if (suppressUntil && suppressUntil > Date.now()) {
+				logger.debug('active-leaf-change: suppressed auto switch', { file: file.path });
+				return;
+			}
+			this.suppressAutoSwitchUntil.delete(file.path);
+
 			if (!this.settingsService.shouldAutoOpen(file.path)) {
 				return;
 			}

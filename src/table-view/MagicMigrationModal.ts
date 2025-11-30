@@ -168,6 +168,8 @@ export class MagicMigrationModal extends Modal {
 			onFocus: () => this.setActiveView('preview')
 		});
 
+		this.previewPane = this.renderPreviewPane(formArea);
+
 		const actions = left.createDiv({ cls: 'tlb-conversion-actions' });
 		const cancelButton = actions.createEl('button', { text: 'Cancel', cls: 'tlb-conversion-button' });
 		cancelButton.addEventListener('click', () => this.close());
@@ -181,7 +183,6 @@ export class MagicMigrationModal extends Modal {
 		this.convertButton = submitButton;
 
 		this.sourcePane = this.renderSourcePane(right, ownerDoc);
-		this.previewPane = this.renderPreviewPane(right);
 	}
 
 	private createTextareaField(
@@ -226,11 +227,11 @@ export class MagicMigrationModal extends Modal {
 	}
 
 	private renderPreviewPane(container: HTMLElement): HTMLElement {
-		const pane = container.createDiv({ cls: 'tlb-conversion-pane tlb-conversion-pane--preview' });
-		pane.createDiv({
-			cls: 'tlb-conversion-tip',
-			text: '💡 Click table headers to rename columns.'
-		});
+		const pane = container.createDiv({ cls: 'tlb-conversion-pane tlb-conversion-pane--preview is-active' });
+		const tip = pane.createDiv({ cls: 'tlb-conversion-tip' });
+		tip.createSpan({ text: 'Preview' });
+		tip.createSpan({ text: ' · ' });
+		tip.createSpan({ text: '💡 Click table headers to rename columns.' });
 		this.previewStatusEl = pane.createDiv({ cls: 'tlb-conversion-status' });
 		this.previewContainer = pane.createDiv({ cls: 'tlb-conversion-preview' });
 		return pane;

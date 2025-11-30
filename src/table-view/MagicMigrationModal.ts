@@ -36,6 +36,8 @@ export class MagicMigrationModal extends Modal {
 	private sourcePane: HTMLElement | null = null;
 	private previewPane: HTMLElement | null = null;
 	private sourceContentEl: HTMLElement | null = null;
+	private sourceHighlightLayer: HTMLElement | null = null;
+	private savedHighlightRange: Range | null = null;
 	private convertButton: HTMLButtonElement | null = null;
 	private sampleInput: HTMLTextAreaElement | null = null;
 	private templateInput: HTMLTextAreaElement | null = null;
@@ -245,6 +247,7 @@ export class MagicMigrationModal extends Modal {
 		content.addEventListener('mousedown', () => this.clearSourceHighlight());
 		content.addEventListener('mouseup', () => this.handleSourceSelection());
 		content.addEventListener('keyup', () => this.handleSourceSelection());
+		this.sourceHighlightLayer = sourceBox.createDiv({ cls: 'tlb-source-highlight-layer' });
 		sourceBox.appendChild(content);
 		this.sourceContentEl = content;
 		return pane;
@@ -301,7 +304,8 @@ export class MagicMigrationModal extends Modal {
 	}
 
 	private applySampleSelection(selected: string, range?: Range): void {
-		this.highlightSource(range ?? null);
+		this.savedHighlightRange = range ? range.cloneRange() : null;
+		this.renderSourceHighlight();
 		this.sampleValue = selected;
 		if (this.sampleInput) {
 			this.sampleInput.value = selected;
@@ -488,35 +492,30 @@ export class MagicMigrationModal extends Modal {
 		);
 	}
 
-	private highlightSource(range: Range | null): void {
-		if (!this.sourceContentEl) {
+	private clearSourceHighlight(): void {
+		if (!this.sourceContentEl || !this.sourceHighlightLayer) {
 			return;
 		}
-		this.clearSourceHighlight();
-		if (!range) {
-			return;
-		}
-		const mark = this.sourceContentEl.ownerDocument.createElement('mark');
-		mark.className = 'tlb-source-highlight';
-		try {
-			range.surroundContents(mark);
-		} catch {
-			// If surround fails (e.g., partial nodes), skip highlighting.
-		}
+		this.savedHighlightRange = null;
+		this.sourceHighlightLayer.empty();
 	}
 
-	private clearSourceHighlight(): void {
-		if (!this.sourceContentEl) {
+	private renderSourceHighlight(): void {
+		if (!this.sourceHighlightLayer || !this.savedHighlightRange || !this.sourceContentEl) {
 			return;
 		}
-		const highlights = Array.from(this.sourceContentEl.querySelectorAll('.tlb-source-highlight'));
-		for (const highlight of highlights) {
-			const parent = highlight.parentNode;
-			if (!parent) continue;
-			while (highlight.firstChild) {
-				parent.insertBefore(highlight.firstChild, highlight);
-			}
-			parent.removeChild(highlight);
+		this.sourceHighlightLayer.empty();
+		const rects = Array.from(this.savedHighlightRange.getClientRects());
+		if (rects.length === 0) {
+			return;
+		}
+		const containerRect = this.sourceContentEl.getBoundingClientRect();
+		for (const rect of rects) {
+			const block = this.sourceHighlightLayer.createDiv({ cls: 'tlb-source-highlight-block' });
+			block.style.left = `${rect.left - containerRect.left + this.sourceContentEl.scrollLeft}px`;
+			block.style.top = `${rect.top - containerRect.top + this.sourceContentEl.scrollTop}px`;
+			block.style.width = `${rect.width}px`;
+			block.style.height = `${rect.height}px`;
 		}
 	}
 }

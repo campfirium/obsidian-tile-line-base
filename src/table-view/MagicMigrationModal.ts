@@ -38,6 +38,7 @@ export class MagicMigrationModal extends Modal {
 	private sourceContentEl: HTMLElement | null = null;
 	private savedSelectionRange: Range | null = null;
 	private isRestoringSelection = false;
+	private pointerInSource = false;
 	private convertButton: HTMLButtonElement | null = null;
 	private sampleInput: HTMLTextAreaElement | null = null;
 	private templateInput: HTMLTextAreaElement | null = null;
@@ -244,6 +245,12 @@ export class MagicMigrationModal extends Modal {
 		content.textContent = sourceText && sourceText.length > 0
 			? this.options.sourceContent
 			: 'Highlight a representative line of text here to start.';
+		content.addEventListener('mousedown', () => {
+			this.pointerInSource = true;
+		});
+		content.addEventListener('mouseup', () => {
+			this.pointerInSource = false;
+		});
 		content.addEventListener('mouseup', () => this.handleSourceSelection());
 		content.addEventListener('keyup', () => this.handleSourceSelection());
 		sourceBox.appendChild(content);
@@ -306,9 +313,11 @@ export class MagicMigrationModal extends Modal {
 		if (this.sampleInput) {
 			this.sampleInput.value = selected;
 		}
-		this.templateValue = selected;
-		if (this.templateInput) {
-			this.templateInput.value = selected;
+		if (!this.templateValue || this.templateValue.trim().length === 0) {
+			this.templateValue = selected;
+			if (this.templateInput) {
+				this.templateInput.value = selected;
+			}
 		}
 		this.refreshPreview();
 	}
@@ -345,7 +354,13 @@ export class MagicMigrationModal extends Modal {
 				return;
 			}
 
-			if (selection.isCollapsed && this.savedSelectionRange && this.rangeIsInSource()) {
+			if (
+				selection.isCollapsed &&
+				this.savedSelectionRange &&
+				this.rangeIsInSource() &&
+				!this.pointerInSource &&
+				!this.isActiveInSource(ownerDoc)
+			) {
 				this.isRestoringSelection = true;
 				try {
 					selection.removeAllRanges();
@@ -492,5 +507,10 @@ export class MagicMigrationModal extends Modal {
 		const start = this.savedSelectionRange.startContainer;
 		const end = this.savedSelectionRange.endContainer;
 		return this.sourceContentEl.contains(start) && this.sourceContentEl.contains(end);
+	}
+
+	private isActiveInSource(ownerDoc: Document): boolean {
+		const active = ownerDoc.activeElement;
+		return Boolean(active && this.sourceContentEl && this.sourceContentEl.contains(active));
 	}
 }

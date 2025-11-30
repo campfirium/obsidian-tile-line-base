@@ -44,6 +44,7 @@ export class MagicMigrationModal extends Modal {
 	private templateInput: HTMLTextAreaElement | null = null;
 	private selectionChangeCleanup: (() => void) | null = null;
 	private isSubmitting = false;
+	private isPointerSelecting = false;
 	private returnFocusTarget: HTMLElement | null = null;
 	private keydownHandler?: (event: KeyboardEvent) => void;
 
@@ -246,8 +247,14 @@ export class MagicMigrationModal extends Modal {
 			? this.options.sourceContent
 			: 'Highlight a representative line of text here to start.';
 		this.sourcePlainText = content.textContent ?? '';
-		content.addEventListener('mousedown', () => this.clearSourceHighlight());
-		content.addEventListener('mouseup', () => this.handleSourceSelection());
+		content.addEventListener('mousedown', () => {
+			this.isPointerSelecting = true;
+			this.clearSourceHighlight();
+		});
+		content.addEventListener('mouseup', () => {
+			this.isPointerSelecting = false;
+			this.handleSourceSelection();
+		});
 		content.addEventListener('keyup', () => this.handleSourceSelection());
 		sourceBox.appendChild(content);
 		this.sourceContentEl = content;
@@ -334,6 +341,9 @@ export class MagicMigrationModal extends Modal {
 			}
 			const selection = ownerDoc.getSelection();
 			if (!selection) {
+				return;
+			}
+			if (this.isPointerSelecting) {
 				return;
 			}
 			const inSource = this.isSelectionInSource(selection);

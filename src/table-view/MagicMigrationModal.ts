@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal } from 'obsidian';
 import { t } from '../i18n';
 
 export interface MagicMigrationPreview {
@@ -13,19 +13,30 @@ interface MagicMigrationModalOptions {
 	initialTemplate: string;
 	initialSample: string;
 	targetFileName: string;
-	computePreview: (template: string, sample: string) => MagicMigrationPreview;
-	onSubmit: (template: string, sample: string) => Promise<boolean>;
-	onClose: (latestTemplate: string, latestSample: string) => void;
+	initialColumns: string[];
+	sourceContent: string;
+	computePreview: (template: string, sample: string, columnNames: string[]) => MagicMigrationPreview;
+	onSubmit: (template: string, sample: string, columnNames: string[]) => Promise<boolean>;
+	onClose: (latestTemplate: string, latestSample: string, latestColumns: string[]) => void;
 }
+
+type WizardViewMode = 'source' | 'preview';
+const DEFAULT_COLUMN_BASE = 'Column';
 
 export class MagicMigrationModal extends Modal {
 	private readonly options: MagicMigrationModalOptions;
 	private templateValue: string;
 	private sampleValue: string;
+	private columnNames: string[];
 	private preview: MagicMigrationPreview;
 	private previewContainer: HTMLElement | null = null;
 	private previewStatusEl: HTMLElement | null = null;
+	private sourcePane: HTMLElement | null = null;
+	private previewPane: HTMLElement | null = null;
+	private sourceContentEl: HTMLElement | null = null;
 	private convertButton: HTMLButtonElement | null = null;
+	private sampleInput: HTMLTextAreaElement | null = null;
+	private templateInput: HTMLTextAreaElement | null = null;
 	private isSubmitting = false;
 	private returnFocusTarget: HTMLElement | null = null;
 	private keydownHandler?: (event: KeyboardEvent) => void;
@@ -35,7 +46,9 @@ export class MagicMigrationModal extends Modal {
 		this.options = options;
 		this.templateValue = options.initialTemplate;
 		this.sampleValue = options.initialSample;
-		this.preview = options.computePreview(this.templateValue, this.sampleValue);
+		this.columnNames = options.initialColumns.slice();
+		this.preview = options.computePreview(this.templateValue, this.sampleValue, this.columnNames);
+		this.syncColumnNamesFromPreview();
 	}
 
 	onOpen(): void {
@@ -48,83 +61,13 @@ export class MagicMigrationModal extends Modal {
 
 		contentEl.empty();
 		contentEl.addClass('tlb-magic-migration-modal');
-		this.titleEl.setText(t('magicMigration.modalTitle'));
+		contentEl.addClass('tlb-conversion-wizard');
 
-		contentEl.createEl('p', { text: t('magicMigration.modalDescription') });
-
-		const targetSetting = new Setting(contentEl);
-		targetSetting.setName(t('magicMigration.targetFileLabel'));
-		targetSetting.setDesc(t('magicMigration.targetFileHint'));
-		targetSetting.addText((text) => {
-			text.setValue(this.options.targetFileName).setDisabled(true);
-		});
-
-		const sampleSetting = new Setting(contentEl);
-		sampleSetting.setName(t('magicMigration.sampleLabel'));
-		sampleSetting.setDesc(t('magicMigration.sampleHint'));
-		sampleSetting.controlEl.empty();
-		const sampleInput = ownerDoc.createElement('textarea');
-		sampleInput.className = 'tlb-magic-sample-input';
-		sampleInput.rows = 4;
-		sampleInput.placeholder = t('magicMigration.samplePlaceholder');
-		sampleInput.value = this.sampleValue;
-		sampleInput.addEventListener('input', () => {
-			this.sampleValue = sampleInput.value;
-			this.preview = this.options.computePreview(this.templateValue, this.sampleValue);
-			this.renderPreview();
-			this.syncConvertButton();
-		});
-		sampleSetting.controlEl.appendChild(sampleInput);
-
-		const templateSetting = new Setting(contentEl);
-		templateSetting.setName(t('magicMigration.templateLabel'));
-		templateSetting.setDesc(t('magicMigration.templateHint'));
-		templateSetting.controlEl.empty();
-		const textarea = ownerDoc.createElement('textarea');
-		textarea.className = 'tlb-magic-template-input';
-		textarea.rows = 6;
-		textarea.value = this.templateValue;
-		textarea.placeholder = t('magicMigration.templatePlaceholder');
-		textarea.addEventListener('input', () => {
-			this.templateValue = textarea.value;
-			this.preview = this.options.computePreview(this.templateValue, this.sampleValue);
-			this.renderPreview();
-			this.syncConvertButton();
-		});
-		templateSetting.controlEl.appendChild(textarea);
-
-		const previewSection = contentEl.createDiv({ cls: 'tlb-magic-preview' });
-		previewSection.createEl('div', {
-			text: t('magicMigration.previewTitle'),
-			cls: 'tlb-magic-preview__title'
-		});
-		this.previewStatusEl = previewSection.createDiv({ cls: 'tlb-magic-preview__status' });
-		this.previewContainer = previewSection.createDiv({ cls: 'tlb-magic-preview__table' });
-		this.renderPreview();
-
-		const actionSetting = new Setting(contentEl);
-		actionSetting.addButton((button) => {
-			button.setButtonText(t('magicMigration.convertButton')).setCta();
-			this.convertButton = button.buttonEl;
-			this.syncConvertButton();
-			button.onClick(() => {
-				void this.handleSubmit();
-			});
-		});
-		actionSetting.addButton((button) => {
-			button.setButtonText(t('magicMigration.cancelButton')).onClick(() => this.close());
-		});
-
-		const raf = ownerDoc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
-		const focusTemplate = () => {
-			textarea.focus({ preventScroll: true });
-			textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-		};
-		if (typeof raf === 'function') {
-			raf(() => focusTemplate());
-		} else {
-			window.setTimeout(() => focusTemplate(), 0);
-		}
+		this.renderLayout(ownerDoc);
+		this.refreshPreview();
+		this.setActiveView('source');
+		this.syncConvertButton();
+		this.focusSample(ownerDoc);
 
 		if (modalEl) {
 			this.keydownHandler = (event: KeyboardEvent) => {
@@ -143,7 +86,7 @@ export class MagicMigrationModal extends Modal {
 			this.modalEl.removeEventListener('keydown', this.keydownHandler, true);
 			this.keydownHandler = undefined;
 		}
-		this.options.onClose(this.templateValue, this.sampleValue);
+		this.options.onClose(this.templateValue, this.sampleValue, this.getNormalizedColumnNames());
 		if (this.returnFocusTarget && this.returnFocusTarget.isConnected) {
 			this.returnFocusTarget.focus({ preventScroll: true });
 		}
@@ -157,7 +100,11 @@ export class MagicMigrationModal extends Modal {
 		this.isSubmitting = true;
 		this.syncConvertButton();
 		try {
-			const success = await this.options.onSubmit(this.templateValue, this.sampleValue);
+			const success = await this.options.onSubmit(
+				this.templateValue,
+				this.sampleValue,
+				this.getNormalizedColumnNames()
+			);
 			if (success) {
 				this.close();
 			} else {
@@ -169,6 +116,160 @@ export class MagicMigrationModal extends Modal {
 			this.syncConvertButton();
 			console.error('[MagicMigrationModal] submit failed', error);
 		}
+	}
+
+	private renderLayout(ownerDoc: Document): void {
+		this.titleEl.setText('Conversion Wizard');
+		const shell = this.contentEl.createDiv({ cls: 'tlb-conversion-layout' });
+		const left = shell.createDiv({ cls: 'tlb-conversion-left' });
+		const right = shell.createDiv({ cls: 'tlb-conversion-right' });
+
+		const header = left.createDiv({ cls: 'tlb-conversion-header' });
+		header.createEl('h2', { text: 'Conversion Wizard' });
+		header.createEl('p', {
+			text: 'Extract data from text to create a structured note.',
+			cls: 'tlb-conversion-subtitle'
+		});
+		header.createEl('div', {
+			text: `Target: ${this.options.targetFileName}`,
+			cls: 'tlb-conversion-target'
+		});
+
+		this.sampleInput = this.createTextareaField(left, ownerDoc, {
+			label: '1. Reference Sample',
+			helper: 'Select text on the right. The selection represents one row of data in your table.',
+			value: this.sampleValue,
+			rows: 4,
+			onInput: (value) => {
+				this.sampleValue = value;
+				this.refreshPreview();
+			},
+			onFocus: () => this.setActiveView('source')
+		});
+
+		this.templateInput = this.createTextareaField(left, ownerDoc, {
+			label: '2. Extraction Pattern',
+			helper: 'Replace the content you want to extract (or that varies) with an asterisk *.',
+			value: this.templateValue,
+			rows: 6,
+			onInput: (value) => {
+				this.templateValue = value;
+				this.refreshPreview();
+			},
+			onFocus: () => this.setActiveView('preview')
+		});
+
+		const actions = left.createDiv({ cls: 'tlb-conversion-actions' });
+		const cancelButton = actions.createEl('button', { text: 'Cancel', cls: 'tlb-conversion-button' });
+		cancelButton.addEventListener('click', () => this.close());
+		const submitButton = actions.createEl('button', {
+			text: 'Create Note',
+			cls: 'tlb-conversion-button tlb-conversion-button--primary mod-cta'
+		});
+		submitButton.addEventListener('click', () => {
+			void this.handleSubmit();
+		});
+		this.convertButton = submitButton;
+
+		this.sourcePane = this.renderSourcePane(right, ownerDoc);
+		this.previewPane = this.renderPreviewPane(right);
+	}
+
+	private createTextareaField(
+		container: HTMLElement,
+		ownerDoc: Document,
+		options: {
+			label: string;
+			helper: string;
+			value: string;
+			rows: number;
+			onInput: (value: string) => void;
+			onFocus: () => void;
+		}
+	): HTMLTextAreaElement {
+		const wrapper = container.createDiv({ cls: 'tlb-conversion-field' });
+		const labelRow = wrapper.createDiv({ cls: 'tlb-conversion-label-row' });
+		labelRow.createEl('label', { text: options.label, cls: 'tlb-conversion-label' });
+		wrapper.createEl('div', { text: options.helper, cls: 'tlb-conversion-helper' });
+		const textarea = ownerDoc.createElement('textarea');
+		textarea.value = options.value;
+		textarea.rows = options.rows;
+		textarea.className = 'tlb-conversion-textarea';
+		textarea.addEventListener('input', () => options.onInput(textarea.value));
+		textarea.addEventListener('focus', () => options.onFocus());
+		wrapper.appendChild(textarea);
+		return textarea;
+	}
+
+	private renderSourcePane(container: HTMLElement, ownerDoc: Document): HTMLElement {
+		const pane = container.createDiv({ cls: 'tlb-conversion-pane tlb-conversion-pane--source' });
+		pane.createDiv({ cls: 'tlb-conversion-tip', text: 'Highlight a representative line of text.' });
+		const sourceBox = pane.createDiv({ cls: 'tlb-conversion-source' });
+		const content = ownerDoc.createElement('pre');
+		content.tabIndex = 0;
+		content.className = 'tlb-conversion-source__content';
+		content.textContent = this.options.sourceContent;
+		content.addEventListener('mouseup', () => this.handleSourceSelection());
+		content.addEventListener('keyup', () => this.handleSourceSelection());
+		sourceBox.appendChild(content);
+		this.sourceContentEl = content;
+		return pane;
+	}
+
+	private renderPreviewPane(container: HTMLElement): HTMLElement {
+		const pane = container.createDiv({ cls: 'tlb-conversion-pane tlb-conversion-pane--preview' });
+		pane.createDiv({
+			cls: 'tlb-conversion-tip',
+			text: '💡 Click table headers to rename columns.'
+		});
+		this.previewStatusEl = pane.createDiv({ cls: 'tlb-conversion-status' });
+		this.previewContainer = pane.createDiv({ cls: 'tlb-conversion-preview' });
+		return pane;
+	}
+
+	private refreshPreview(): void {
+		this.preview = this.options.computePreview(
+			this.templateValue,
+			this.sampleValue,
+			this.getNormalizedColumnNames()
+		);
+		this.syncColumnNamesFromPreview();
+		this.renderPreview();
+		this.syncConvertButton();
+	}
+
+	private setActiveView(view: WizardViewMode): void {
+		this.sourcePane?.toggleClass('is-active', view === 'source');
+		this.previewPane?.toggleClass('is-active', view === 'preview');
+	}
+
+	private handleSourceSelection(): void {
+		if (!this.sourceContentEl) {
+			return;
+		}
+		const ownerDoc = this.sourceContentEl.ownerDocument ?? document;
+		const selection = ownerDoc.getSelection();
+		const anchorNode = selection?.anchorNode;
+		if (!selection || selection.isCollapsed || !anchorNode || !this.sourceContentEl.contains(anchorNode)) {
+			return;
+		}
+		const selected = selection.toString().trim();
+		if (!selected) {
+			return;
+		}
+		this.sampleValue = selected;
+		if (this.sampleInput) {
+			this.sampleInput.value = selected;
+		}
+		this.templateValue = selected;
+		if (this.templateInput) {
+			this.templateInput.value = selected;
+			this.templateInput.focus({ preventScroll: true });
+			const end = this.templateInput.value.length;
+			this.templateInput.setSelectionRange(end, end);
+		}
+		this.setActiveView('preview');
+		this.refreshPreview();
 	}
 
 	private renderPreview(): void {
@@ -197,18 +298,30 @@ export class MagicMigrationModal extends Modal {
 		const noiseHint = t('magicMigration.previewNoiseHint');
 		this.previewStatusEl.setText(`${countText} · ${noiseHint}`);
 
-		const table = this.previewContainer.createEl('table', { cls: 'tlb-magic-preview-table' });
+		const table = this.previewContainer.createEl('table', { cls: 'tlb-conversion-preview__table' });
 		const thead = table.createEl('thead');
 		const headerRow = thead.createEl('tr');
-		for (const column of preview.columns) {
-			headerRow.createEl('th', { text: column });
+		for (let index = 0; index < this.columnNames.length; index++) {
+			const th = headerRow.createEl('th');
+			const input = th.createEl('input', {
+				attr: { type: 'text' },
+				cls: 'tlb-conversion-column-input'
+			}) as HTMLInputElement;
+			input.value = this.columnNames[index] ?? '';
+			input.placeholder = `${DEFAULT_COLUMN_BASE} ${index + 1}`;
+			input.addEventListener('input', () => {
+				this.columnNames[index] = input.value;
+			});
+			input.addEventListener('blur', () => {
+				this.columnNames[index] = input.value.trim() || `${DEFAULT_COLUMN_BASE} ${index + 1}`;
+			});
 		}
 
 		const tbody = table.createEl('tbody');
 		for (const row of preview.rows) {
 			const tr = tbody.createEl('tr');
-			for (const cell of row) {
-				tr.createEl('td', { text: cell });
+			for (let index = 0; index < this.columnNames.length; index++) {
+				tr.createEl('td', { text: row[index] ?? '' });
 			}
 		}
 	}
@@ -220,5 +333,62 @@ export class MagicMigrationModal extends Modal {
 		const shouldDisable = this.isSubmitting || Boolean(this.preview.error) || this.preview.rows.length === 0;
 		this.convertButton.toggleAttribute('disabled', shouldDisable);
 		this.convertButton.classList.toggle('is-loading', this.isSubmitting);
+	}
+
+	private buildColumnNames(count: number): string[] {
+		const names: string[] = [];
+		const target = Math.max(count, 1);
+		for (let index = 0; index < target; index++) {
+			names.push(`${DEFAULT_COLUMN_BASE} ${index + 1}`);
+		}
+		return names;
+	}
+
+	private syncColumnNamesFromPreview(): void {
+		const desired = Math.max(this.preview.columns.length, this.estimateColumnCount());
+		const defaults = this.buildColumnNames(desired);
+		const next: string[] = [];
+		for (let index = 0; index < desired; index++) {
+			const existing = (this.columnNames[index] ?? '').trim();
+			const previewName = (this.preview.columns[index] ?? '').trim();
+			next.push(existing || previewName || defaults[index]);
+		}
+		this.columnNames = next;
+	}
+
+	private estimateColumnCount(): number {
+		const count = this.countPlaceholders(this.templateValue);
+		return count > 0 ? count : 1;
+	}
+
+	private countPlaceholders(template: string): number {
+		return (template.match(/\*/g) ?? []).length;
+	}
+
+	private getNormalizedColumnNames(): string[] {
+		const desired = Math.max(this.preview.columns.length, this.estimateColumnCount());
+		const defaults = this.buildColumnNames(desired);
+		const normalized: string[] = [];
+		for (let index = 0; index < desired; index++) {
+			const value = (this.columnNames[index] ?? '').trim();
+			normalized.push(value || defaults[index]);
+		}
+		return normalized;
+	}
+
+	private focusSample(ownerDoc: Document): void {
+		const raf = ownerDoc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
+		const focus = () => {
+			if (this.sampleInput) {
+				this.sampleInput.focus({ preventScroll: true });
+				const end = this.sampleInput.value.length;
+				this.sampleInput.setSelectionRange(end, end);
+			}
+		};
+		if (typeof raf === 'function') {
+			raf(() => focus());
+		} else {
+			window.setTimeout(() => focus(), 0);
+		}
 	}
 }

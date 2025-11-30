@@ -27,63 +27,49 @@ interface ExtractionResult {
 
 const PREVIEW_ROW_LIMIT = 8;
 const MATCH_LIMIT = 20000;
+const COLUMN_LABEL_BASE = 'Column';
 
 export class MagicMigrationController {
 	private readonly logger = getLogger('table-view:magic-migration');
 	private activeModal: MagicMigrationModal | null = null;
-	private lastPromptedPath: string | null = null;
 	private readonly templateCache = new Map<string, string>();
 	private readonly sampleCache = new Map<string, string>();
+	private readonly columnCache = new Map<string, string[]>();
 
 	constructor(private readonly view: TableView) {}
 
 	handleNonStandardFile(context: MissingFormatContext): void {
-		this.renderInlinePrompt(context);
 		if (this.activeModal) {
 			return;
 		}
-		if (this.lastPromptedPath === context.file.path) {
-			return;
-		}
-		this.lastPromptedPath = context.file.path;
 		this.openWizard(context);
 	}
 
 	resetPromptState(): void {
-		this.lastPromptedPath = null;
-	}
-
-	private renderInlinePrompt(context: MissingFormatContext): void {
-		const { container, file, content } = context;
-		container.empty();
-		container.addClass('tlb-magic-inline');
-		container.createEl('h3', { text: t('magicMigration.inlineTitle') });
-		container.createEl('p', { text: t('magicMigration.inlineMessage') });
-		const button = container.createEl('button', {
-			text: t('magicMigration.inlineOpenButton'),
-			cls: 'mod-cta tlb-magic-inline__cta'
-		});
-		button.addEventListener('click', () => {
-			this.openWizard({ container, file, content });
-		});
 	}
 
 	private openWizard(context: MissingFormatContext): void {
 		const initialTemplate = this.getInitialTemplate(context);
 		const initialSample = this.getInitialSample(context);
+		const initialColumns = this.getInitialColumns(context, initialTemplate);
 		const modal = new MagicMigrationModal(this.view.app, {
 			initialTemplate,
 			initialSample,
+			initialColumns,
+			sourceContent: context.content,
 			targetFileName: this.buildTargetFileName(context.file),
-			computePreview: (template, sample) => this.buildPreview(template, sample, context.content),
-			onSubmit: async (template, sample) => {
+			computePreview: (template, sample, columnNames) =>
+				this.buildPreview(template, sample, context.content, columnNames),
+			onSubmit: async (template, sample, columnNames) => {
 				this.templateCache.set(context.file.path, template);
 				this.sampleCache.set(context.file.path, sample);
-				return this.convertFile(context.file, context.content, template, sample);
+				this.columnCache.set(context.file.path, columnNames);
+				return this.convertFile(context.file, context.content, template, sample, columnNames);
 			},
-			onClose: (latestTemplate, latestSample) => {
+			onClose: (latestTemplate, latestSample, latestColumns) => {
 				this.templateCache.set(context.file.path, latestTemplate);
 				this.sampleCache.set(context.file.path, latestSample);
+				this.columnCache.set(context.file.path, latestColumns);
 				this.activeModal = null;
 			}
 		});
@@ -91,8 +77,13 @@ export class MagicMigrationController {
 		modal.open();
 	}
 
-	private buildPreview(template: string, sample: string, content: string): MagicMigrationPreview {
-		const extraction = this.extractMatches(template, sample, content, PREVIEW_ROW_LIMIT);
+	private buildPreview(
+		template: string,
+		sample: string,
+		content: string,
+		columnNames: string[]
+	): MagicMigrationPreview {
+		const extraction = this.extractMatches(template, sample, content, PREVIEW_ROW_LIMIT, columnNames);
 		const previewRows = extraction.rows.slice(0, PREVIEW_ROW_LIMIT);
 		return {
 			columns: extraction.columns,
@@ -103,7 +94,13 @@ export class MagicMigrationController {
 		};
 	}
 
-	private extractMatches(template: string, sample: string, content: string, previewLimit: number): ExtractionResult {
+	private extractMatches(
+		template: string,
+		sample: string,
+		content: string,
+		previewLimit: number,
+		columnNames: string[]
+	): ExtractionResult {
 		const normalizedTemplate = template.trim();
 		if (!normalizedTemplate) {
 			return {
@@ -128,10 +125,11 @@ export class MagicMigrationController {
 			};
 		}
 
+		const columns = this.buildColumnNames(placeholderCount, columnNames);
 		const contentSlice = this.sliceFromSample(content.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), sample);
 		if (!contentSlice) {
 			return {
-				columns: [],
+				columns,
 				rows: [],
 				placeholderCount,
 				truncated: false,
@@ -140,7 +138,6 @@ export class MagicMigrationController {
 			};
 		}
 
-		const columns = this.buildColumnNames(placeholderCount);
 		const rows: string[][] = [];
 		let totalMatches = 0;
 		let truncated = false;
@@ -150,7 +147,7 @@ export class MagicMigrationController {
 		const regex = this.buildRegex(normalizedTemplate);
 		if (!regex) {
 			return {
-				columns: [],
+				columns,
 				rows: [],
 				placeholderCount,
 				truncated: false,
@@ -197,8 +194,14 @@ export class MagicMigrationController {
 		};
 	}
 
-	private async convertFile(file: TFile, content: string, template: string, sample: string): Promise<boolean> {
-		const extraction = this.extractMatches(template, sample, content, MATCH_LIMIT);
+	private async convertFile(
+		file: TFile,
+		content: string,
+		template: string,
+		sample: string,
+		columnNames: string[]
+	): Promise<boolean> {
+		const extraction = this.extractMatches(template, sample, content, MATCH_LIMIT, columnNames);
 		if (extraction.error) {
 			new Notice(extraction.error);
 			return false;
@@ -233,7 +236,7 @@ export class MagicMigrationController {
 	}
 
 	private buildBlocks(extraction: ExtractionResult): H2Block[] {
-		const primaryField = extraction.columns[0] ?? t('magicMigration.defaultPrimaryField');
+		const primaryField = extraction.columns[0] ?? `${COLUMN_LABEL_BASE} 1`;
 		const fieldNames = extraction.columns.slice(1);
 		const blocks: H2Block[] = [];
 		const statusTimestamp = getCurrentLocalDateTime();
@@ -283,6 +286,15 @@ export class MagicMigrationController {
 			return cached;
 		}
 		return this.extractSample(context.content);
+	}
+
+	private getInitialColumns(context: MissingFormatContext, template: string): string[] {
+		const placeholderCount = Math.max(this.countPlaceholders(template.trim()), 1);
+		const cached = this.columnCache.get(context.file.path);
+		if (cached && cached.length > 0) {
+			return this.buildColumnNames(placeholderCount, cached);
+		}
+		return this.buildColumnNames(placeholderCount, []);
 	}
 
 	private extractSample(content: string): string {
@@ -432,8 +444,13 @@ export class MagicMigrationController {
 			.join('');
 	}
 
-	public runExtractionForTest(template: string, sample: string, content: string): ExtractionResult {
-		return this.extractMatches(template, sample, content, MATCH_LIMIT);
+	public runExtractionForTest(
+		template: string,
+		sample: string,
+		content: string,
+		columnNames: string[] = []
+	): ExtractionResult {
+		return this.extractMatches(template, sample, content, MATCH_LIMIT, columnNames);
 	}
 
 	private buildRecordUnits(content: string, sample: string, isSingleStar: boolean, template: string): string[] {
@@ -467,14 +484,12 @@ export class MagicMigrationController {
 		return (template.match(/\*/g) ?? []).length;
 	}
 
-	private buildColumnNames(placeholderCount: number): string[] {
+	private buildColumnNames(placeholderCount: number, columnNames: string[]): string[] {
 		const columns: string[] = [];
-		const primary = t('magicMigration.defaultPrimaryField');
-		columns.push(primary);
-		const base = t('magicMigration.fieldBaseName');
-		const additional = Math.max(placeholderCount - 1, 0);
-		for (let index = 1; index <= additional; index++) {
-			columns.push(`${base} ${index}`);
+		const count = Math.max(placeholderCount, 1);
+		for (let index = 0; index < count; index++) {
+			const override = (columnNames[index] ?? '').trim();
+			columns.push(override || `${COLUMN_LABEL_BASE} ${index + 1}`);
 		}
 		return columns;
 	}

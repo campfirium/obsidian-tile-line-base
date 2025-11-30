@@ -165,7 +165,7 @@ export class MagicMigrationModal extends Modal {
 					this.applySelectionFromSource();
 				});
 			},
-			placeholder: 'Highlight text on the right to populate this sample.'
+			placeholder: 'Select text from the Source Text panel.'
 		});
 
 		this.templateInput = this.createTextareaField(fieldRow, ownerDoc, {
@@ -214,7 +214,7 @@ export class MagicMigrationModal extends Modal {
 			actionSlot?: (container: HTMLElement) => void;
 		}
 	): HTMLTextAreaElement {
-		const wrapper = container.createDiv({ cls: 'tlb-conversion-field' });
+		const wrapper = container.createDiv({ cls: 'tlb-conversion-field tlb-conversion-field--fixed' });
 		if (options.wrapperClass) {
 			wrapper.addClass(options.wrapperClass);
 		}
@@ -249,7 +249,10 @@ export class MagicMigrationModal extends Modal {
 		const content = ownerDoc.createElement('pre');
 		content.tabIndex = 0;
 		content.className = 'tlb-conversion-source__content';
-		content.textContent = this.options.sourceContent;
+		const sourceText = this.options.sourceContent?.trim();
+		content.textContent = sourceText && sourceText.length > 0
+			? this.options.sourceContent
+			: 'Highlight a representative line of text here to start.';
 		content.addEventListener('mouseup', () => this.handleSourceSelection());
 		content.addEventListener('keyup', () => this.handleSourceSelection());
 		sourceBox.appendChild(content);

@@ -1827,6 +1827,11 @@
 	border-radius: 4px;
 }
 
+.tlb-source-inline-highlight {
+	background: var(--tlb-highlight-bg);
+	border-radius: 4px;
+}
+
 .tlb-conversion-status {
 	font-size: 12px;
 	display: flex;

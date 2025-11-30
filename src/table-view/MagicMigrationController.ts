@@ -10,8 +10,8 @@ import { getPluginContext } from '../pluginContext';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 
-interface MissingFormatContext {
-	container: HTMLElement;
+interface MagicMigrationContext {
+	container?: HTMLElement;
 	content: string;
 	file: TFile;
 }
@@ -38,17 +38,46 @@ export class MagicMigrationController {
 
 	constructor(private readonly view: TableView) {}
 
-	handleNonStandardFile(context: MissingFormatContext): void {
-		if (this.activeModal) {
+	handleNonStandardFile(context: MagicMigrationContext): void {
+		if (!context.container) {
 			return;
 		}
-		this.openWizard(context);
+		this.renderInlinePrompt(context.container, context.content, context.file);
 	}
 
 	resetPromptState(): void {
+		if (this.activeModal) {
+			this.activeModal.close();
+			this.activeModal = null;
+		}
 	}
 
-	private openWizard(context: MissingFormatContext): void {
+	public launchWizard(context: MagicMigrationContext): void {
+		this.openWizard(context);
+	}
+
+	private renderInlinePrompt(container: HTMLElement, content: string, file: TFile): void {
+		container.empty();
+		const wrapper = container.createDiv({ cls: 'tlb-magic-inline' });
+		wrapper.createEl('h3', { text: t('magicMigration.inlineTitle') });
+		wrapper.createEl('p', { text: t('magicMigration.inlineMessage') });
+		const cta = wrapper.createDiv({ cls: 'tlb-magic-inline__cta' });
+		const openButton = cta.createEl('button', {
+			text: t('magicMigration.inlineOpenButton'),
+			cls: 'mod-cta'
+		});
+		openButton.addEventListener('click', () => {
+			if (this.activeModal) {
+				return;
+			}
+			this.openWizard({ content, file });
+		});
+	}
+
+	private openWizard(context: MagicMigrationContext): void {
+		if (this.activeModal) {
+			return;
+		}
 		const initialTemplate = this.getInitialTemplate(context);
 		const initialSample = this.getInitialSample(context);
 		const initialColumns = this.getInitialColumns(context, initialTemplate);
@@ -274,7 +303,7 @@ export class MagicMigrationController {
 		return `${dataStore.blocksToMarkdown().trimEnd()}\n`;
 	}
 
-	private getInitialTemplate(context: MissingFormatContext): string {
+	private getInitialTemplate(context: MagicMigrationContext): string {
 		const cached = this.templateCache.get(context.file.path);
 		if (cached && cached.trim().length > 0) {
 			return cached;
@@ -282,7 +311,7 @@ export class MagicMigrationController {
 		return this.extractSample(context.content);
 	}
 
-	private getInitialSample(context: MissingFormatContext): string {
+	private getInitialSample(context: MagicMigrationContext): string {
 		const cached = this.sampleCache.get(context.file.path);
 		if (cached && cached.trim().length > 0) {
 			return cached;
@@ -290,7 +319,7 @@ export class MagicMigrationController {
 		return this.extractSample(context.content);
 	}
 
-	private getInitialColumns(context: MissingFormatContext, template: string): string[] {
+	private getInitialColumns(context: MagicMigrationContext, template: string): string[] {
 		const placeholderCount = Math.max(this.countPlaceholders(template.trim()), 1);
 		const cached = this.columnCache.get(context.file.path);
 		if (cached && cached.length > 0) {

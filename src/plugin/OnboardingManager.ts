@@ -236,7 +236,8 @@ export class OnboardingManager {
 				await this.viewSwitch.openTableView(file, {
 					leaf,
 					preferredWindow: window,
-					workspace: this.app.workspace
+					workspace: this.app.workspace,
+					trigger: 'auto'
 				});
 				return;
 			}
@@ -247,7 +248,8 @@ export class OnboardingManager {
 		try {
 			await this.viewSwitch.openTableView(file, {
 				preferredWindow: window,
-				workspace: this.app.workspace
+				workspace: this.app.workspace,
+				trigger: 'auto'
 			});
 		} catch (error) {
 			this.logger.error('onboarding: failed to open help file in table view', { path: file.path, error });

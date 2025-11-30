@@ -1722,6 +1722,8 @@
 	height: 100%;
 	overflow: hidden;
 	flex: 1 1 auto;
+	user-select: text;
+	-webkit-user-select: text;
 }
 
 .tlb-conversion-pane {
@@ -1752,6 +1754,8 @@
 	border-radius: 8px;
 	background: var(--background-primary);
 	overflow: auto;
+	user-select: text;
+	-webkit-user-select: text;
 }
 
 .tlb-conversion-source__content {
@@ -1760,6 +1764,8 @@
 	word-break: break-word;
 	font-family: var(--font-monospace);
 	line-height: 1.5;
+	user-select: text;
+	-webkit-user-select: text;
 }
 
 .tlb-conversion-status {

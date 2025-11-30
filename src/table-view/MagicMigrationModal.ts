@@ -136,7 +136,9 @@ export class MagicMigrationModal extends Modal {
 			cls: 'tlb-conversion-target'
 		});
 
-		this.sampleInput = this.createTextareaField(left, ownerDoc, {
+		const formArea = left.createDiv({ cls: 'tlb-conversion-left-body' });
+
+		this.sampleInput = this.createTextareaField(formArea, ownerDoc, {
 			label: '1. Reference Sample',
 			helper: 'Select text on the right. The selection represents one row of data in your table.',
 			value: this.sampleValue,
@@ -148,7 +150,7 @@ export class MagicMigrationModal extends Modal {
 			onFocus: () => this.setActiveView('source')
 		});
 
-		this.templateInput = this.createTextareaField(left, ownerDoc, {
+		this.templateInput = this.createTextareaField(formArea, ownerDoc, {
 			label: '2. Extraction Pattern',
 			helper: 'Replace the content you want to extract (or that varies) with an asterisk *.',
 			value: this.templateValue,

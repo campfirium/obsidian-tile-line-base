@@ -33,6 +33,7 @@ import { snapshotLeaf } from './plugin/utils/snapshotLeaf';
 import { syncLocale } from './plugin/LocaleSync';
 import { RightSidebarController } from './plugin/RightSidebarController';
 import { resolveEnvironmentLocale } from './i18n/localeEnvironment';
+import { NavigatorCompatibilityPatcher } from './plugin/NavigatorCompatibilityPatcher';
 
 const logger = getLogger('plugin:main');
 
@@ -51,6 +52,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private activeLocale: LocaleCode = 'en';
 	private onboardingManager: OnboardingManager | null = null;
 	private commandTableCreationController: TableCreationController | null = null;
+	private navigatorCompatibilityPatcher: NavigatorCompatibilityPatcher | null = null;
 
 	async onload() {
 		setPluginContext(this);
@@ -60,6 +62,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
 		this.rightSidebarController = new RightSidebarController(this.app);
+		this.navigatorCompatibilityPatcher = new NavigatorCompatibilityPatcher(this.app, this.windowContextManager);
 		await this.loadSettings();
 		await this.updateLocalizedLocalePreferenceFromEnvironment();
 
@@ -107,11 +110,14 @@ export default class TileLineBasePlugin extends Plugin {
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 		this.viewActionManager.refreshAll();
+		this.navigatorCompatibilityPatcher?.enable();
+		this.registerNavigatorPluginListener();
 
 		this.app.workspace.onLayoutReady(() => {
 			this.tableTitleRefresher.refreshAll();
 			void this.applyLocaleSettings();
 			void this.updateLocalizedLocalePreferenceFromEnvironment();
+			this.navigatorCompatibilityPatcher?.enable();
 		});
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
@@ -350,6 +356,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager.clearInjectedActions();
 		logger.info('Plugin unload: cleaning up resources');
 		this.rightSidebarController.restoreIfNeeded();
+		this.navigatorCompatibilityPatcher?.dispose();
 
 		this.onboardingManager = null;
 		this.commandTableCreationController = null;
@@ -625,6 +632,30 @@ export default class TileLineBasePlugin extends Plugin {
 
 	private applyRightSidebarForLeaf(leaf: WorkspaceLeaf | null | undefined): void {
 		this.rightSidebarController.applyForLeaf(leaf, this.isHideRightSidebarEnabled());
+	}
+
+	private registerNavigatorPluginListener(): void {
+		const pluginManager = (this.app as any)?.plugins;
+		if (!pluginManager || typeof pluginManager.on !== 'function') {
+			return;
+		}
+		const handler = (pluginId: string) => {
+			if (pluginId === 'notebook-navigator') {
+				this.navigatorCompatibilityPatcher?.enable();
+			}
+		};
+		try {
+			pluginManager.on('load', handler);
+			this.register(() => {
+				try {
+					pluginManager.off?.('load', handler);
+				} catch (error) {
+					logger.debug('navigator-compat: failed to remove plugin-load listener', error);
+				}
+			});
+		} catch (error) {
+			logger.debug('navigator-compat: plugin-load listener unavailable', { error });
+		}
 	}
 
 	private async loadSettings(): Promise<void> {

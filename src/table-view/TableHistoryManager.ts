@@ -27,6 +27,11 @@ interface RowEntry {
 	snapshot: BlockSnapshot;
 }
 
+interface RowDeletionHistoryOptions {
+	focus?: HistoryFocusOptions;
+	fallbackRow?: { index: number; ref: H2Block; snapshot: BlockSnapshot } | null;
+}
+
 export interface BlockSnapshot {
 	title: string;
 	data: Record<string, string>;
@@ -297,7 +302,10 @@ export class TableHistoryManager {
 		});
 	}
 
-	recordRowDeletions(rows: Array<{ index: number; snapshot: BlockSnapshot }>, focus?: HistoryFocusOptions): void {
+	recordRowDeletions(
+		rows: Array<{ index: number; snapshot: BlockSnapshot }>,
+		options?: RowDeletionHistoryOptions
+	): void {
 		if (rows.length === 0) {
 			return;
 		}
@@ -309,6 +317,14 @@ export class TableHistoryManager {
 			}))
 			.sort((a, b) => a.index - b.index);
 
+		const fallbackEntry: RowEntry | null = options?.fallbackRow
+			? {
+				ref: options.fallbackRow.ref,
+				index: options.fallbackRow.index,
+				snapshot: cloneSnapshot(options.fallbackRow.snapshot)
+			}
+			: null;
+		const focus = options?.focus;
 		const undoFocus =
 			focus?.undo ?? {
 				rowIndex: entries[0].index,
@@ -322,15 +338,21 @@ export class TableHistoryManager {
 
 		this.record({
 			undo: () => {
-				logger.debug('recordRowDeletions:undo', { count: entries.length });
+				logger.debug('recordRowDeletions:undo', { count: entries.length, hasFallback: Boolean(fallbackEntry) });
 				this.applyChange(() => {
+					if (fallbackEntry) {
+						this.removeRowEntries([fallbackEntry]);
+					}
 					this.insertRowEntries(entries);
 				}, undoFocus);
 			},
 			redo: () => {
-				logger.debug('recordRowDeletions:redo', { count: entries.length });
+				logger.debug('recordRowDeletions:redo', { count: entries.length, hasFallback: Boolean(fallbackEntry) });
 				this.applyChange(() => {
 					this.removeRowEntries(entries);
+					if (fallbackEntry) {
+						this.insertRowEntries([fallbackEntry]);
+					}
 				}, redoFocus);
 			}
 		});

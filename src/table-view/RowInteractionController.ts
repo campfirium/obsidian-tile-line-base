@@ -1,5 +1,6 @@
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
+import type { H2Block } from './MarkdownBlockParser';
 import { getLogger } from '../utils/logger';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
@@ -14,6 +15,8 @@ interface RowActionOptions {
 interface FillColumnOptions extends RowActionOptions {
 	focusRowIndex?: number;
 }
+
+type FallbackRowEntry = { index: number; ref: H2Block; snapshot: BlockSnapshot };
 
 interface RowInteractionDeps {
 	dataStore: TableDataStore;
@@ -93,10 +96,13 @@ export class RowInteractionController {
 		const snapshot = this.history.snapshotBlock(blocks[rowIndex]);
 		const focusField = this.resolveFocusField(options);
 		const nextIndex = this.dataStore.deleteRow(rowIndex);
+		const fallbackRow = this.ensureFallbackRow();
+		const focusIndex =
+			fallbackRow?.index ?? (nextIndex !== null && nextIndex >= 0 ? nextIndex : null);
 		this.refreshGridData();
 
-		if (nextIndex !== null && nextIndex >= 0) {
-			this.focusRow(nextIndex, focusField);
+		if (focusIndex !== null && focusIndex >= 0) {
+			this.focusRow(focusIndex, focusField);
 		}
 
 		this.scheduleSave();
@@ -104,11 +110,14 @@ export class RowInteractionController {
 		this.history.recordRowDeletions(
 			[{ index: rowIndex, snapshot }],
 			{
-				undo: { rowIndex, field: focusField ?? null },
-				redo:
-					nextIndex !== null && nextIndex >= 0
-						? { rowIndex: nextIndex, field: focusField ?? null }
-						: { rowIndex: null, field: null }
+				focus: {
+					undo: { rowIndex, field: focusField ?? null },
+					redo:
+						focusIndex !== null
+							? { rowIndex: focusIndex, field: focusField ?? null }
+							: { rowIndex: null, field: null }
+				},
+				fallbackRow: fallbackRow ?? undefined
 			}
 		);
 	}
@@ -128,7 +137,8 @@ export class RowInteractionController {
 					.filter((index) => index >= 0 && index < blocks.length)
 					.map((index) => index)
 			)
-		).sort((a, b) => a - b);
+		)
+			.sort((a, b) => a - b);
 		if (normalized.length === 0) {
 			return;
 		}
@@ -139,20 +149,26 @@ export class RowInteractionController {
 		}));
 
 		const nextIndex = this.dataStore.deleteRows(normalized);
+		const fallbackRow = this.ensureFallbackRow();
+		const focusIndex =
+			fallbackRow?.index ?? (nextIndex !== null && nextIndex >= 0 ? nextIndex : null);
 		this.refreshGridData();
 
-		if (nextIndex !== null && nextIndex >= 0) {
-			this.focusRow(nextIndex);
+		if (focusIndex !== null && focusIndex >= 0) {
+			this.focusRow(focusIndex);
 		}
 
 		this.scheduleSave();
 
 		this.history.recordRowDeletions(snapshots, {
-			undo: { rowIndex: normalized[0], field: null },
-			redo:
-				nextIndex !== null && nextIndex >= 0
-					? { rowIndex: nextIndex, field: null }
-					: { rowIndex: null, field: null }
+			focus: {
+				undo: { rowIndex: normalized[0], field: null },
+				redo:
+					focusIndex !== null
+						? { rowIndex: focusIndex, field: null }
+						: { rowIndex: null, field: null }
+			},
+			fallbackRow: fallbackRow ?? undefined
 		});
 	}
 
@@ -386,6 +402,28 @@ export class RowInteractionController {
 
 		const placeAfter = this.shouldPlaceAfter(event.direction, sourceIndex, targetIndex);
 		this.reorderRow(sourceIndex, targetIndex, placeAfter ? 'after' : 'before');
+	}
+
+	private ensureFallbackRow(): FallbackRowEntry | null {
+		const blocks = this.dataStore.getBlocks();
+		if (blocks.length > 0) {
+			return null;
+		}
+		const insertIndex = this.dataStore.addRow(null, this.getActiveFilterPrefills());
+		if (insertIndex < 0) {
+			logger.error('Failed to add fallback row after deletion');
+			return null;
+		}
+		const newBlock = this.dataStore.getBlocks()[insertIndex];
+		if (!newBlock) {
+			logger.error('Fallback row missing after insertion');
+			return null;
+		}
+		return {
+			index: insertIndex,
+			ref: newBlock,
+			snapshot: this.history.snapshotBlock(newBlock)
+		};
 	}
 
 	private ensureSchema(): Schema | null {

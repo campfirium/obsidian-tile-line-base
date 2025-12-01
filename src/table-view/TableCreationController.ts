@@ -29,6 +29,7 @@ const MIN_ROWS = 1;
 const MAX_ROWS = 50;
 const MIN_COLUMNS = 3;
 const MAX_COLUMNS = 20;
+const RESERVED_SYSTEM_COLUMNS = 2;
 const LOGGER = getLogger('table-view:table-creation');
 
 export class TableCreationController {
@@ -116,7 +117,7 @@ export class TableCreationController {
 	private buildAdditionalFields(totalColumns: number): string[] {
 		const target = this.clamp(totalColumns, MIN_COLUMNS, MAX_COLUMNS);
 		const base = t('tableCreation.fieldBaseName');
-		const additionalCount = Math.max(target - 3, 0);
+		const additionalCount = Math.max(target - RESERVED_SYSTEM_COLUMNS, 0);
 		const fields: string[] = [];
 		for (let index = 1; index <= additionalCount; index++) {
 			fields.push(`${base} ${index}`);

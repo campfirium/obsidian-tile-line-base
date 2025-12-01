@@ -1,4 +1,4 @@
-import type { TaskStatus } from '../renderers/StatusCellRenderer';
+import { normalizeStatus, type TaskStatus } from '../renderers/StatusCellRenderer';
 import type { CellEditEvent } from '../grid/GridAdapter';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
@@ -20,31 +20,71 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 		return;
 	}
 
-	const block = view.blocks[blockIndex];
+	const selectedRows = view.gridAdapter.getSelectedRows();
+	const validSelection: number[] = [];
+	const seenRows = new Set<number>();
+	for (const index of selectedRows) {
+		if (!Number.isInteger(index)) {
+			continue;
+		}
+		if (index < 0 || index >= view.blocks.length) {
+			continue;
+		}
+		if (seenRows.has(index)) {
+			continue;
+		}
+		seenRows.add(index);
+		validSelection.push(index);
+	}
+	const targetIndexes = validSelection.length > 1 && validSelection.includes(blockIndex)
+		? validSelection
+		: [blockIndex];
+
 	const timestamp = getCurrentLocalDateTime();
+	const changedIndexes: number[] = [];
 
 	const recorded = view.historyManager.captureCellChanges(
-		[{ index: blockIndex, fields: ['status', 'statusChanged'] }],
+		targetIndexes.map((index) => ({ index, fields: ['status', 'statusChanged'] })),
 		() => {
-			block.data['status'] = newStatus;
-			block.data['statusChanged'] = timestamp;
+			for (const index of targetIndexes) {
+				const block = view.blocks[index];
+				if (!block) {
+					continue;
+				}
+				const currentStatus = normalizeStatus(block.data['status']);
+				if (currentStatus === newStatus) {
+					continue;
+				}
+				block.data['status'] = newStatus;
+				block.data['statusChanged'] = timestamp;
+				changedIndexes.push(index);
+			}
 		},
-		{
-			undo: { rowIndex: blockIndex, field: 'status' },
-			redo: { rowIndex: blockIndex, field: 'status' }
+		(changes) => {
+			const focusIndex = changes[0]?.index ?? blockIndex;
+			return {
+				undo: { rowIndex: focusIndex, field: 'status' },
+				redo: { rowIndex: focusIndex, field: 'status' }
+			};
 		}
 	);
-	if (!recorded) {
+	if (!recorded || changedIndexes.length === 0) {
 		return;
 	}
 
 	const gridApi = (view.gridAdapter as any).gridApi;
 	if (gridApi) {
-		const rowNode = gridApi.getRowNode(rowId);
-		if (rowNode) {
-			rowNode.setDataValue('status', newStatus);
-			rowNode.setDataValue('statusChanged', timestamp);
-			gridApi.redrawRows({ rowNodes: [rowNode] });
+		const rowNodes = [];
+		for (const index of changedIndexes) {
+			const rowNode = gridApi.getRowNode(String(index));
+			if (rowNode) {
+				rowNode.setDataValue('status', newStatus);
+				rowNode.setDataValue('statusChanged', timestamp);
+				rowNodes.push(rowNode);
+			}
+		}
+		if (rowNodes.length > 0) {
+			gridApi.redrawRows({ rowNodes });
 		}
 	}
 

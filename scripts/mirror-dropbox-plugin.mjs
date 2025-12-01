@@ -4,6 +4,7 @@ import path from "path";
 // 默认来源与目标目录，可通过环境变量覆盖
 const SOURCE_DIR = "D:\\X\\Dropbox\\obt\\.obsidian\\plugins\\tile-line-base";
 const TARGET_DIR = "D:\\X\\Dropbox\\obs\\.obsidian\\plugins\\tile-line-base";
+const FILES_TO_COPY = ["main.js", "manifest.json", "styles.css"];
 const isLinux = process.platform === "linux";
 
 function toWslPath(rawPath) {
@@ -46,34 +47,61 @@ function safeRealpath(targetPath) {
 	}
 }
 
-function clearTarget(dirPath) {
-	fs.rmSync(dirPath, { recursive: true, force: true });
-	fs.mkdirSync(dirPath, { recursive: true });
+function ensureWritableDir(dirPath) {
+	if (!fs.existsSync(dirPath)) {
+		fs.mkdirSync(dirPath, { recursive: true });
+		return;
+	}
+
+	if (!fs.statSync(dirPath).isDirectory()) {
+		console.log("⚠️ 目标路径不是目录，无法镜像。");
+		console.log(`   路径: ${dirPath}`);
+		process.exit(1);
+	}
+
+	try {
+		fs.accessSync(dirPath, fs.constants.W_OK);
+	} catch (error) {
+		console.log("⚠️ 目标目录不可写，无法镜像。");
+		console.log(`   路径: ${dirPath}`);
+		console.log(`   错误: ${error.code || error.message}`);
+		process.exit(1);
+	}
 }
 
-function copyDir(source, target) {
-	const entries = fs.readdirSync(source, { withFileTypes: true });
+function copyFileIfAvailable(sourceDir, targetDir, fileName) {
+	const sourcePath = path.join(sourceDir, fileName);
+	const targetPath = path.join(targetDir, fileName);
 
-	for (const entry of entries) {
-		const sourcePath = path.join(source, entry.name);
-		const targetPath = path.join(target, entry.name);
+	if (!fs.existsSync(sourcePath)) {
+		console.log(`⚠️ 源文件缺失，已跳过: ${fileName}`);
+		return;
+	}
 
-		if (entry.isDirectory()) {
-			fs.mkdirSync(targetPath, { recursive: true });
-			copyDir(sourcePath, targetPath);
-		} else if (entry.isSymbolicLink()) {
-			const realPath = fs.realpathSync(sourcePath);
-			const stats = fs.statSync(realPath);
+	const stats = fs.lstatSync(sourcePath);
+	if (stats.isDirectory()) {
+		console.log(`⚠️ 源路径是目录，已跳过: ${fileName}`);
+		return;
+	}
 
-			if (stats.isDirectory()) {
-				fs.mkdirSync(targetPath, { recursive: true });
-				copyDir(realPath, targetPath);
-			} else {
-				fs.copyFileSync(realPath, targetPath);
-			}
-		} else {
-			fs.copyFileSync(sourcePath, targetPath);
-		}
+	const realSourcePath = stats.isSymbolicLink() ? fs.realpathSync(sourcePath) : sourcePath;
+
+	try {
+		fs.copyFileSync(realSourcePath, targetPath);
+		console.log(`✅ 已覆盖: ${fileName}`);
+	} catch (error) {
+		console.log("⚠️ 复制文件失败。");
+		console.log(`   源: ${realSourcePath}`);
+		console.log(`   目标: ${targetPath}`);
+		console.log(`   错误: ${error.code || error.message}`);
+		process.exit(1);
+	}
+}
+
+function copySelectedFiles(sourceDir, targetDir) {
+	ensureWritableDir(targetDir);
+	for (const fileName of FILES_TO_COPY) {
+		copyFileIfAvailable(sourceDir, targetDir, fileName);
 	}
 }
 
@@ -93,11 +121,8 @@ if (sourceReal === targetReal) {
 	process.exit(1);
 }
 
-console.log("🧹 清空目标目录...");
-clearTarget(resolvedTarget);
-
-console.log("📦 复制文件...");
-copyDir(resolvedSource, resolvedTarget);
+console.log("📦 覆盖核心文件（不清空目标目录）...");
+copySelectedFiles(resolvedSource, resolvedTarget);
 
 console.log("\n✅ 镜像完成，目标已与源对齐。");
 console.log(`🕒 结束时间: ${new Date().toLocaleString()}`);

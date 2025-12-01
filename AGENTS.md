@@ -19,38 +19,64 @@
 - `main.js`：构建产物，任何改动都应来源于 `src/` 的 TypeScript 编译。
 
 ## 开发流程
-- 分支策略：`main`（生产）、`dev`（集成）、`feat/T000X-topic`（功能）、`fix/T000X-topic`（缺陷）。禁止直接在 `main` 提交或对公共分支执行 rebase，合并回 `dev` 时使用 `--no-ff`。
-- 任务驱动：1) 在 `docs/tasks/T000X_英文描述` 建立任务记录；2) 从 `dev` 切出对应分支开发；3) 完成阶段性工作后合并回 `dev` 并保留 feature 分支；4) 定期由 `dev` 合并进入 `main`。
-- 提交流程：每次提交前必须通过 `npm run build`，确保 `git status -sb` 仅含本次任务改动；不要添加 AI 协作者信息。
-- PR 规范：提供摘要、构建和操作系统信息、关联任务编号；若涉及 UI，附截图或 GIF，并标注主要入口和受影响文件。
-- 工作区（git worktree）：统一放置在仓库根目录的 `trees/` 目录下，例如执行 `git worktree add .\\trees\\feat-T000X-topic feat/T000X-topic` 创建，完成后使用 `git worktree remove .\\trees\\feat-T000X-topic` 清理；`trees/` 已加入 `.gitignore`，请勿提交其中的内容。新工作区建成后，请将仓库根目录的 .vscode/tasks.json 复制到工作区的 .vscode/ 目录，以沿用 Ctrl+Shift+B 的默认任务（注意不要提交复制出的 .vscode/）。
-dev 分支禁止任何直接写操作（包括修改文件和提交），只允许从其他分支向 dev 执行合并。
-- 所有语言文件（如 en.json、zh.json、ja.json 等 i18n 文件）在未收到明确指令前一律视为只读（read-only）。
-除非用户明确提出“翻译 / 修改语言文件”，否则禁止生成、修改或同步任何语言文件内容
+- **分支策略**：`main`（生产）、`dev`（集成）。**严禁**在 `dev` 分支直接提交代码。
+- **工作区隔离 (Git Worktree)**：
+    - 所有任务必须在独立工作区进行：`trees/feat-T{分支}-{任务名}`。
+    - **操作铁律**：所有 Shell 命令（`apply_patch`、`edit`）必须在工作区目录下执行；严禁使用 `../../` 跳出目录修改根文件。
+    - **环境准备**：新建工作区后，必须立即执行 `pwd` 确认路径，并修正 `.git` 指向及同步 `.vscode/tasks.json`。
+- **提交流程**：
+    - 提交前必做：`npm run build` 确保无报错。
+    - 状态确认：`git status -sb` 确认仅包含本次任务文件。
+    - 协作者：不要添加 AI 协作者信息。
+- **语言文件管理**：
+    - **英文 (en.json)**：允许为当前任务新增必要的 Key。
+    - **其他语言**：绝对只读。除非任务明确要求“翻译/本地化”，否则禁止 AI 修改。
+
+## 任务执行 SOP (标准作业程序)
+
+当启动新任务时，遵循 **“隔离优先，交付导向”** 的原则：
+
+1.  **环境建立**：
+    - 根据任务 ID 和描述，自动生成简短英文目录名。
+    - 创建并进入 `git worktree`，**强制核验当前路径 (`pwd`)**。
+    - 确保所有后续代码修改操作都“锁”在这个目录下。
+
+2.  **开发边界**：
+    - 仅修改与任务直接相关的代码逻辑。
+    - 默认仅修改英文 (en) 配置，不触碰其他语言文件。
+
+3.  **交付汇报**：
+    - 完成构建后，用中文汇报：
+        - **功能摘要**：一句话概括业务逻辑变更（非代码细节）。
+        - **验收步骤**：提供 PM 可操作的黑盒测试步骤（界面操作路径）。
+        - **风险提示**：副作用或潜在冲突。
 
 ## 构建与验证
-- `npm install`：安装依赖，更新 `package.json` 后必须重新执行。
-- `npm run dev`：监听模式运行 `esbuild.config.mjs`，适合迭代开发，保持终端开启以获取增量构建。
-- `npm run build`：先执行 `tsc` 再输出最新 `main.js`，作为发布前的必备质量闸。
-- `npm run deploy`：在构建后将 `dist` 内容复制到固定目录（`D:\X\Dropbox\obt\.obsidian\plugins\tile-line-base`）。
-- `npm run version`：同步更新 `manifest.json` 与 `versions.json` 的版本信息，执行后需在提交中包含相关变更并推送标签。
-- 构建问题排查：先尝试 `npm cache clean --force` 与删除 `node_modules` 后重装；必要时检查 `npm ls ag-grid-community` 以确认依赖版本。
-- 手工回归：验证 TileLineBase 视图的切换、H2 块解析、列配置加载、窗口尺寸响应；重点检查基础交互（最后一行 `Enter` 自动增行、`Delete/Backspace` 清除单元格、单选/多选逻辑）。
-- 调试建议：使用 Obsidian 开发者工具（Ctrl+Shift+I）查看 console 与 DOM 结构，必要时记录截图或日志以支持问题复现。
+- `npm install`：更新依赖后执行。
+- `npm run dev`：监听模式开发。
+- `npm run build`：**提交前必须执行**，作为质量闸。
+- `npm run deploy`：部署到测试 Vault。
+- `npm run version`：更新版本号并打标签。
+- **手工回归**：重点验证 TileLineBase 视图切换、H2 解析、交互逻辑（Enter 增行、Delete 清除）。
+- **冲突排查**：遇到插件冲突时，优先使用 Log 脚本抓取调用栈，而非盲目猜测。
 
 ## 静态检查与提交流程
 - Lint 依赖：使用 `eslint`、`@typescript-eslint/parser`、`@typescript-eslint/eslint-plugin`，通过 `.eslintrc.cjs` 管理规则并指向当前 `tsconfig.json`。
+- **规则红线 (Zero Tolerance)**：
+    - **严禁** 修改 `.eslintrc.cjs`、`tsconfig.json` 或使用 `// @ts-ignore`、`// eslint-disable` 来绕过报错。
+    - 如果 Lint/Build 失败，必须**修复代码本身**，而不是降低检查标准。
 - 命令规范：在 `package.json` 中定义 `lint` 脚本（`eslint "src/**/*.{ts,tsx}" --max-warnings=0`），与 `npm run build` 共同组成提交前的必须项。
-- 提交流水线：推荐 `husky + lint-staged`，备选 `simple-git-hooks`；无论采用何种方案，lint 或 build 失败必须立刻阻断提交。
+- **阻断机制**：lint 或 build 失败必须立刻阻断提交。
 - 依赖变更：调整 ESLint 或相关插件版本后，需要重新执行 `npm install` 并在 PR 中说明兼容性验证范围。
 
 ## 质量审查维度
-- **Complexity**：新增功能应尊重现有模块边界；若核心文件趋于臃肿，先在 `docs/specs/` 撰写拆分计划，再实施迁移，持续维持 `src/TableView.ts` 的行数目标。
-- **i18n**：所有 UI 字符串通过 `src/i18n/index.ts` 注入，并同步维护 `src/locales/en.json` 与 `src/locales/zh.json`；新增字段在 PR 中注明翻译状态。
+- **Complexity**：新增功能应尊重现有模块边界；若核心文件趋于臃肿，先先撰写拆分计划再实施。
+- **i18n**：所有 UI 字符串通过 `src/i18n` 注入，并同步维护 `src/locales/en.json`；新增字段在 PR 中注明翻译状态。
 - **a11y**：确保 UI 可聚焦、可键盘操作，必要时提供 `aria-label` 或 `title`；新增网格组件需记录辅助功能验证步骤。
 - **Security**：任何 Markdown 或外部输入必须经既有解析链路，禁止直接写入 `innerHTML`；引入第三方库时附带简要安全评估。
 - **Testability**：核心解析、数据映射与网格交互逻辑保持可单独调用，避免与 Obsidian API 紧耦合；若无法避免，请在 `specs/` 记录手动验证步骤。
-- **Performance**：以 10k 行数据为压力基准评估新逻辑；说明时间复杂度和潜在内存成本，必要时提供基准数据或采用延迟加载/批处理策略。
+- **Performance**：高频事件（滚动、输入）需考虑防抖 (Debounce) 或节流 (Throttle)。
+- **Log Hygiene**：生产环境代码禁止包含 console.trace；调试日志应使用统一前缀并可配置开关。
 
 ## 代码规范
 - 语言与格式：统一使用 TypeScript，采用制表符缩进；引号风格与周边保持一致，导入语句按功能分组。
@@ -68,6 +94,6 @@ dev 分支禁止任何直接写操作（包括修改文件和提交），只允�
 - 发布前确认仓库未包含私人 Vault 数据、临时令牌或测试文件。
 
 ## 文档与沟通
-- `docs/specs/` 用于记录需求、方案、实验与缺陷排查，保持时间顺序命名，并在章节中注明结论。
+- `docs/specs/` 用于记录需求、方案、实验与缺陷排查，使用MMYYDD开头命名，并在章节中注明结论。
 - 与团队沟通统一使用中文，保留必要的英文术语以避免歧义；重要决策或边界情况请在 `docs/specs/` 备案。
 - 进行可访问性或性能排查时，记录复现 Markdown 样例、操作步骤及结果，方便后续回溯。

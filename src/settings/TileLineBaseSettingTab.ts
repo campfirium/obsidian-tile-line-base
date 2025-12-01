@@ -45,7 +45,6 @@ const ENGLISH_LOCALE: LocaleCode = 'en';
 function isLogLevel(value: string): value is LogLevelName {
 	return (LOG_LEVEL_OPTIONS as readonly string[]).includes(value);
 }
-
 export class TileLineBaseSettingTab extends PluginSettingTab {
 	private readonly plugin: SidebarSettingHost;
 	private readonly logger = getLogger('settings:tab');

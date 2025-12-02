@@ -230,94 +230,138 @@ export class FilterViewBar {
 
 	private openSettingsMenu(): void {
 		const menu = new Menu();
-		menu.addItem((item) => {
-			item
-				.setTitle(t('tableCreation.menuLabel'))
-				.setIcon('table')
-				.onClick(() => {
-					this.options.callbacks.onOpenTableCreation(this.settingsButtonEl);
+		let hasGroup = false;
+		const addGroup = (adders: Array<() => void>) => {
+			if (hasGroup) {
+				menu.addSeparator();
+			}
+			for (const addItem of adders) {
+				addItem();
+			}
+			hasGroup = true;
+		};
+
+		addGroup([
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuAutoWidthLabel'))
+						.setIcon('maximize-2')
+						.onClick(() => {
+							this.adjustWidthsHandler();
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuDuplicateFileLabel'))
-				.setIcon('copy')
-				.onClick(() => {
-					this.options.callbacks.onDuplicateCurrentFile(this.settingsButtonEl);
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuColumnLabel'))
+						.setIcon('layout-grid')
+						.onClick(() => {
+							this.options.callbacks.onOpenColumnSettings(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuExportWithConfigLabel'))
-				.setIcon('share-2')
-				.onClick(() => {
-					this.options.callbacks.onExportWithConfigBlock(this.settingsButtonEl);
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('rowOrder.menuLabel'))
+						.setIcon('arrow-up-down')
+						.onClick(() => {
+							this.options.callbacks.onOpenRowOrder(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuExportCsvLabel'))
-				.setIcon('download')
-				.onClick(() => {
-					this.options.callbacks.onExportCsv(this.settingsButtonEl);
+			}
+		]);
+
+		addGroup([
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuImportCsvAsTableLabel'))
+						.setIcon('file-plus')
+						.onClick(() => {
+							this.options.callbacks.onImportCsvAsTable(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuImportCsvLabel'))
-				.setIcon('upload')
-				.onClick(() => {
-					this.options.callbacks.onImportCsv(this.settingsButtonEl);
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuImportCsvLabel'))
+						.setIcon('upload')
+						.onClick(() => {
+							this.options.callbacks.onImportCsv(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuImportCsvAsTableLabel'))
-				.setIcon('file-plus')
-				.onClick(() => {
-					this.options.callbacks.onImportCsvAsTable(this.settingsButtonEl);
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuExportCsvLabel'))
+						.setIcon('download')
+						.onClick(() => {
+							this.options.callbacks.onExportCsv(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuAutoWidthLabel'))
-				.setIcon('maximize-2')
-				.onClick(() => {
-					this.adjustWidthsHandler();
+			}
+		]);
+
+		addGroup([
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('tableCreation.menuLabel'))
+						.setIcon('table')
+						.onClick(() => {
+							this.options.callbacks.onOpenTableCreation(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuColumnLabel'))
-				.setIcon('layout-grid')
-				.onClick(() => {
-					this.options.callbacks.onOpenColumnSettings(this.settingsButtonEl);
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuDuplicateFileLabel'))
+						.setIcon('copy')
+						.onClick(() => {
+							this.options.callbacks.onDuplicateCurrentFile(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('rowOrder.menuLabel'))
-				.setIcon('arrow-up-down')
-				.onClick(() => {
-					this.options.callbacks.onOpenRowOrder(this.settingsButtonEl);
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuExportWithConfigLabel'))
+						.setIcon('share-2')
+						.onClick(() => {
+							this.options.callbacks.onExportWithConfigBlock(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('backup.menuLabel'))
-				.setIcon('history')
-				.onClick(() => {
-					this.options.callbacks.onOpenBackupRestore(this.settingsButtonEl);
+			}
+		]);
+
+		addGroup([
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('backup.menuLabel'))
+						.setIcon('history')
+						.onClick(() => {
+							this.options.callbacks.onOpenBackupRestore(this.settingsButtonEl);
+						});
 				});
-		});
-		menu.addItem((item) => {
-			item
-				.setTitle(t('filterViewBar.settingsMenuHelpLabel'))
-				.setIcon('info')
-				.onClick(() => {
-					this.options.callbacks.onOpenHelp();
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('filterViewBar.settingsMenuHelpLabel'))
+						.setIcon('info')
+						.onClick(() => {
+							this.options.callbacks.onOpenHelp();
+						});
 				});
-		});
+			}
+		]);
 
 		const rect = this.settingsButtonEl.getBoundingClientRect();
 		const ownerDoc = this.settingsButtonEl.ownerDocument;

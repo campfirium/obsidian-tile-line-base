@@ -104,8 +104,7 @@ export class ColumnEditorModal extends Modal {
 			dropdown.addOption('text', t('columnEditorModal.typeTextOption'));
 			dropdown.addOption('date', t('columnEditorModal.typeDateOption'));
 			dropdown.addOption('time', t('columnEditorModal.typeTimeOption'));
-			const imageLabel = t('columnEditorModal.typeImageOption' as any);
-			dropdown.addOption('image', imageLabel === 'columnEditorModal.typeImageOption' ? 'Image' : imageLabel);
+			dropdown.addOption('image', t('columnEditorModal.typeImageOption'));
 			dropdown.addOption('formula', t('columnEditorModal.typeFormulaOption'));
 			dropdown.setValue(this.type);
 			dropdown.onChange((value) => {

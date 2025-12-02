@@ -193,6 +193,7 @@
     "typeTextOption": "Text",
     "typeDateOption": "Date",
     "typeTimeOption": "Time",
+    "typeImageOption": "Image",
     "typeFormulaOption": "Formula",
     "formulaLabel": "Formula",
     "formulaDescription": "Reference a column with {field}; supports + - * / operators and \"text\" concatenation.",
@@ -398,7 +399,7 @@
     "noSchema": "Unable to build data schema"
   },
   "magicMigration": {
-    "modalTitle": "Magic Migration Wizard",
+    "modalTitle": "Conversion Assistant",
     "modalDescription": "This note is missing TileLineBase H2 sections. Use a star template to convert it automatically.",
     "templateLabel": "Star template",
     "templateHint": "Replace the data you want to extract with * and keep the surrounding text as context.",
@@ -415,8 +416,11 @@
     "sampleLabel": "Sample scope",
     "sampleHint": "Only paragraphs containing this text will be scanned. Leave empty to scan the whole note.",
     "samplePlaceholder": "Paste a few lines that represent one row (e.g. the bullet block you want to convert)",
-    "inlineTitle": "Magic Migration Wizard",
-    "inlineMessage": "This note is not using TileLineBase H2 blocks. Convert it with a star template to continue.",
+    "sourcePaneTitle": "Source Text",
+    "sourcePaneHint": "Highlight a representative line of text. It will be copied to the Sample panel.",
+    "sourcePanePlaceholder": "Highlight a representative line of text here to start.",
+    "inlineTitle": "Conversion assistant",
+    "inlineMessage": "This note is not using TileLineBase H2 blocks. Use a star template to convert and continue.",
     "inlineOpenButton": "Open wizard",
     "errorTemplateRequired": "Enter a template with * placeholders.",
     "errorNeedPlaceholder": "Add at least one * to mark the data you want to extract.",
@@ -427,7 +431,8 @@
     "fieldBaseName": "Field",
     "defaultFileName": "Converted note",
     "successNotice": "Converted to {{fileName}}",
-    "failureNotice": "Conversion failed. Please try again."
+    "failureNotice": "Conversion failed. Please try again.",
+    "previewRenameHint": "Click table headers to rename columns."
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView constructor start ===",

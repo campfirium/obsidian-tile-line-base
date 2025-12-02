@@ -3,10 +3,79 @@
     "displayName": "Tabela TileLineBase",
     "mode": {
       "table": "Tabela",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Slajd"
     }
   },
-  "viewControls": { "openTableView": "Przełącz na widok tabeli TileLineBase", "openMarkdownView": "Wróć do edytora Markdown" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "Przełącz na widok slajdów",
+      "openTemplate": "Edytuj szablon slajdu",
+      "enterFullscreen": "Włącz pełny ekran",
+      "exitFullscreen": "Wyłącz pełny ekran"
+    },
+    "emptyState": "Brak slajdów. Dodaj nagłówki H2 do tej notatki.",
+    "filteredCountLabel": "{{count}} slajdów spełnia bieżące filtry",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Slajd {{current}} z {{total}}",
+    "untitledSlide": "Slajd bez tytułu {{index}}",
+    "emptyValue": "(puste)",
+    "nav": { "prev": "Poprzedni slajd", "next": "Następny slajd" },
+    "edit": { "heading": "Edytuj slajd" },
+    "templateModal": {
+      "title": "Szablon slajdu",
+      "titleFieldLabel": "Szablon tytułu",
+      "titleFieldDesc": "Użyj symboli zastępczych, np. {Title}, aby zbudować tytuł slajdu.",
+      "bodyFieldsLabel": "Szablon treści",
+      "bodyFieldsDesc": "Użyj symboli zastępczych, np. {Description}, w osobnych liniach; puste linie są pomijane.",
+      "textColorLabel": "Kolor tekstu",
+      "backgroundColorLabel": "Tło",
+      "resetColorLabel": "Domyślne",
+      "layoutTitle": "Układ",
+      "titleLayoutLabel": "Układ tytułu",
+      "bodyLayoutLabel": "Układ treści",
+      "widthPctLabel": "Szerokość (%)",
+      "topPctLabel": "Góra (%)",
+      "alignLeft": "Lewo",
+      "alignCenter": "Środek",
+      "alignRight": "Prawo",
+      "alignLabel": "Wyrównanie",
+      "titleContentLabel": "Zawartość tytułu",
+      "bodyContentLabel": "Zawartość treści",
+      "lineHeightLabel": "Interlinia",
+      "fontSizeLabel": "Rozmiar czcionki (rem)",
+      "fontWeightLabel": "Grubość czcionki",
+      "addFieldPlaceholder": "Wybierz pole",
+      "insertField": "Wstaw pole",
+      "insertFieldDesc": "Wstaw symbole zastępcze, np. {Title}, do szablonów.",
+      "showYamlLabel": "Edytuj YAML",
+      "backToFormLabel": "Wróć do formularza",
+      "yamlViewLabel": "YAML szablonu slajdu",
+      "yamlViewDesc": "Skopiuj lub wklej YAML, aby przenieść lub ponownie użyć ten szablon slajdu.",
+      "presetsLabel": "Presety",
+      "setDefaultLabel": "Ustaw jako domyślny globalny",
+      "resetToGlobalDefaultLabel": "Wczytaj globalny domyślny",
+      "resetToBuiltInDefaultLabel": "Wczytaj wbudowany domyślny",
+      "copyPresetLabel": "Kopiuj preset",
+      "pastePresetLabel": "Wklej preset",
+      "copyPresetSuccess": "Skopiowano preset slajdu.",
+      "copyPresetFailed": "Nie udało się skopiować presetu slajdu.",
+      "pastePresetSuccess": "Zastosowano preset slajdu.",
+      "pastePresetInvalid": "Schowek nie zawiera prawidłowego presetu slajdu.",
+      "pastePresetFailed": "Nie udało się zastosować presetu slajdu.",
+      "clipboardUnavailable": "Schowek jest niedostępny w tym kontekście.",
+      "setDefaultSuccess": "Bieżący szablon slajdu zapisano jako domyślny.",
+      "setDefaultError": "Nie udało się zapisać jako domyślny. Sprawdź konsolę.",
+      "noGlobalDefault": "Nie ma jeszcze globalnego presetu.",
+      "saveLabel": "Zapisz",
+      "cancelLabel": "Anuluj"
+    }
+  },
+  "viewControls": {
+    "openTableView": "Przełącz na widok tabeli TileLineBase",
+    "openMarkdownView": "Wróć do edytora Markdown",
+    "switchViewMenu": "Zmień widok (obecny: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "Widok kanban wymaga prawidłowego schematu tabeli. Wczytaj notatkę ponownie i spróbuj jeszcze raz.",
 		"missingLaneField": "Widok kanban potrzebuje kolumny \"{{field}}\". Dodaj ją w widoku tabeli albo wróć.",
@@ -24,6 +93,9 @@
     "untitledCardFallback": "Karta bez tytułu",
     "moreFieldsLabel": "+{{count}} więcej",
     "laneNotConfigured": "Wybierz kolumnę kanban z paska narzędzi, aby zacząć korzystać z tablicy.",
+    "defaultBoard": {
+      "name": "Tablica statusów"
+    },
     "actions": {
       "openFromMarkdown": "Otwórz widok kanban TileLineBase",
       "switchToKanban": "Przełącz na widok kanban",
@@ -52,7 +124,7 @@
     "settings": { "multiRowToggle": "Pozwól kolumnom zawijać się w wiele rzędów" },
     "showAllButtonLabel": "Pokaż wszystkie ({{count}} więcej)"
   },
-  "commands": { "undoTableHistory": "Cofnij ostatnią zmianę tabeli", "redoTableHistory": "Ponów zmianę tabeli", "openHelpDocument": "Otwórz dokument pomocy TileLineBase", "createTable": "Utwórz notatkę tabeli TileLineBase", "exportCsv": "Eksportuj bieżącą tabelę do CSV", "importCsv": "Zaimportuj CSV do bieżącej tabeli", "importCsvAsTable": "Zaimportuj CSV jako nową tabelę", "toggleTableView": "Przełącz widok tabeli", "openKanbanView": "Otwórz widok kanban TileLineBase" },
+  "commands": { "undoTableHistory": "Cofnij ostatnią zmianę tabeli", "redoTableHistory": "Ponów zmianę tabeli", "openHelpDocument": "Otwórz dokument pomocy TileLineBase", "createTable": "Utwórz notatkę tabeli TileLineBase", "exportCsv": "Eksportuj bieżącą tabelę do CSV", "importCsv": "Zaimportuj CSV do bieżącej tabeli", "importCsvAsTable": "Zaimportuj CSV jako nową tabelę", "toggleTableView": "Przełącz widok tabeli", "openKanbanView": "Otwórz widok kanban TileLineBase", "openSlideView": "Otwórz widok slajdów TileLineBase" },
   "csv": {
     "errorNoFile": "Zapisz notatkę przed eksportem; bieżącego pliku nie znaleziono.",
     "exportFailure": "Nie udało się wyeksportować pliku CSV. Sprawdź konsolę, aby uzyskać szczegóły.",
@@ -70,6 +142,11 @@
     "interfaceLanguageLabel": "Zawsze używaj angielskiego interfejsu", "interfaceLanguageDesc": "Domyślnie: używaj języka Obsidiana. Włącz, aby wymusić angielski interfejs TileLineBase.",
     "hideRightSidebarLabel": "Ukryj prawy pasek boczny w widoku tabeli",
     "hideRightSidebarDesc": "Zwiń prawy pasek boczny Obsidiana zawsze, gdy aktywny jest widok tabeli TileLineBase. Inne widoki pozostają bez zmian.",
+    "tableViewHeading": "Widok tabeli",
+    "rowStripeStrengthLabel": "Intensywność pasków wierszy",
+    "rowStripeStrengthDesc": "0 wyłącza paski, 100 ustawia je najsilniej.",
+    "borderContrastLabel": "Kontrast obramowania",
+    "borderContrastDesc": "0 ukrywa obramowania, 100 ustawia je najsilniej.",
     "loggingHeading": "Rejestrowanie",
     "loggingLevelLabel": "Globalny poziom logowania",
     "loggingLevelDesc": "Wybierz, ile szczegółów TileLineBase zapisuje w konsoli deweloperskiej. Wyższe poziomy ułatwiają debugowanie, ale generują więcej szumu.",
@@ -116,6 +193,7 @@
     "typeTextOption": "Tekst",
     "typeDateOption": "Data",
     "typeTimeOption": "Czas",
+    "typeImageOption": "Obraz",
     "typeFormulaOption": "Formuła",
     "formulaLabel": "Formuła",
     "formulaDescription": "Odwołaj się do kolumny przez {field}; obsługiwane są operatory + - * / oraz łączenie \"tekstów\".",
@@ -320,6 +398,42 @@
     "missingH2": "Plik nie zawiera sekcji H2 i nie może być wyświetlony jako tabela",
     "noSchema": "Nie udało się zbudować schematu danych"
   },
+  "magicMigration": {
+    "modalTitle": "Asystent konwersji",
+    "modalDescription": "Ta notatka nie ma sekcji H2 TileLineBase. Użyj szablonu z gwiazdkami, aby automatycznie ją przekonwertować.",
+    "templateLabel": "Szablon z gwiazdką",
+    "templateHint": "Zastąp dane do wyodrębnienia znakiem * i pozostaw otaczający tekst jako kontekst.",
+    "templatePlaceholder": "Przykład: ### *\\n- Status: *\\n- Właściciel: *",
+    "previewTitle": "Podgląd na żywo",
+    "previewCount": "Podgląd {{count}} dopasowań",
+    "previewTruncated": "Pokazuję pierwsze {{shown}} z {{total}} dopasowań",
+    "previewEmpty": "Brak dopasowań. Dostosuj szablon, aby wyróżnić potrzebne pola.",
+    "previewNoiseHint": "Treść, która nie pasuje do szablonu, zostanie automatycznie pominięta.",
+    "convertButton": "Konwertuj i otwórz",
+    "cancelButton": "Anuluj",
+    "targetFileLabel": "Plik docelowy",
+    "targetFileHint": "Nowa notatka TileLineBase zostanie utworzona z tą nazwą.",
+    "sampleLabel": "Zakres próbki",
+    "sampleHint": "Skanuj tylko akapity zawierające ten tekst. Pozostaw puste, aby skanować całą notatkę.",
+    "samplePlaceholder": "Wklej kilka wierszy reprezentujących jeden rekord (np. blok listy, który chcesz przekonwertować)",
+    "sourcePaneTitle": "Tekst źródłowy",
+    "sourcePaneHint": "Zaznacz reprezentatywną linię; zostanie skopiowana do panelu przykładu.",
+    "sourcePanePlaceholder": "Zaznacz tutaj reprezentatywną linię, aby rozpocząć.",
+    "inlineTitle": "Asystent konwersji",
+    "inlineMessage": "Ta notatka nie używa bloków H2 TileLineBase. Użyj szablonu z gwiazdkami, aby przekonwertować i kontynuować.",
+    "inlineOpenButton": "Otwórz asystenta",
+    "errorTemplateRequired": "Wprowadź szablon z symbolami *.",
+    "errorNeedPlaceholder": "Dodaj co najmniej jedną * w miejscu danych do wyodrębnienia.",
+    "errorInvalidPattern": "Nie udało się skompilować szablonu. Uprość go.",
+    "errorSampleNoMatch": "Żaden akapit nie pasuje do zakresu próbki. Dostosuj tekst próbki.",
+    "errorNoMatch": "Brak dopasowań dla tego szablonu.",
+    "defaultPrimaryField": "Tytuł",
+    "fieldBaseName": "Pole",
+    "defaultFileName": "Przekonwertowana notatka",
+    "successNotice": "Przekonwertowano do {{fileName}}",
+    "failureNotice": "Konwersja nie powiodła się. Spróbuj ponownie.",
+    "previewRenameHint": "Kliknij nagłówki tabeli, aby zmienić nazwy kolumn."
+  },
   "tableViewSetup": {
     "constructorStart": "=== Początek konstruktora TableView ===",
     "constructorComplete": "=== Koniec konstruktora TableView ===",
@@ -339,6 +453,11 @@
     "settingsMenuImportCsvAsTableLabel": "Importuj CSV jako nową tabelę",
     "settingsMenuHelpLabel": "Otwórz notatkę pomocy",
     "unnamedViewLabel": "Widok bez nazwy"
+  },
+  "rowOrder": {
+    "menuLabel": "Zmień kolejność wierszy (w pliku)",
+    "modalTitle": "Zmień kolejność wierszy",
+    "modalWarning": "Spowoduje to zapisanie nowej kolejności w pliku."
   },
   "fileDuplication": {
     "errorNoFile": "Bieżący plik jest niedostępny.",
@@ -443,7 +562,8 @@
     "iconMatchAriaLabel": "Użyj ikony {{icon}}",
     "iconNavPrev": "Poprzednie ikony",
     "iconNavNext": "Następne ikony",
-    "iconStatusEmpty": "Nie wybrano ikony"
+    "iconStatusEmpty": "Nie wybrano ikony",
+    "iconPickerAdd": "Dodaj ikonę"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Nie można zresetować kursora podczas compositionstart",

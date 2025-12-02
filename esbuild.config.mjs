@@ -1,7 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
-import { copyFile, mkdir, rm } from "fs/promises";
+import { cp, rm } from "fs/promises";
 import path from "path";
 
 const banner =
@@ -33,8 +33,7 @@ const cleanDistPlugin = {
 
 async function copyStaticAssets() {
 	await Promise.all(staticAssets.map(async ({ src, dest }) => {
-		await mkdir(path.dirname(dest), { recursive: true });
-		await copyFile(src, dest);
+		await cp(src, dest, { recursive: true, force: true });
 	}));
 }
 

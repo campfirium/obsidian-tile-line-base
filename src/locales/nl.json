@@ -3,10 +3,79 @@
     "displayName": "TileLineBase-tabel",
     "mode": {
       "table": "Tabel",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Dia"
     }
   },
-  "viewControls": { "openTableView": "Overschakelen naar TileLineBase-tabelweergave", "openMarkdownView": "Terugschakelen naar Markdown-editor" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "Overschakelen naar diaweergave",
+      "openTemplate": "Dia-template bewerken",
+      "enterFullscreen": "Volledig scherm openen",
+      "exitFullscreen": "Volledig scherm afsluiten"
+    },
+    "emptyState": "Nog geen dia's. Voeg H2-kopteksten toe aan deze notitie.",
+    "filteredCountLabel": "{{count}} dia's komen overeen met de huidige filters",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Dia {{current}} van {{total}}",
+    "untitledSlide": "Naamloze dia {{index}}",
+    "emptyValue": "(leeg)",
+    "nav": { "prev": "Vorige dia", "next": "Volgende dia" },
+    "edit": { "heading": "Dia bewerken" },
+    "templateModal": {
+      "title": "Dia-template",
+      "titleFieldLabel": "Titeltemplate",
+      "titleFieldDesc": "Gebruik placeholders zoals {Title} om de diatitel op te bouwen.",
+      "bodyFieldsLabel": "Bodytemplate",
+      "bodyFieldsDesc": "Gebruik placeholders zoals {Description} op aparte regels; lege regels worden overgeslagen.",
+      "textColorLabel": "Tekstkleur",
+      "backgroundColorLabel": "Achtergrond",
+      "resetColorLabel": "Standaard",
+      "layoutTitle": "Lay-out",
+      "titleLayoutLabel": "Titel-lay-out",
+      "bodyLayoutLabel": "Body-lay-out",
+      "widthPctLabel": "Breedte (%)",
+      "topPctLabel": "Boven (%)",
+      "alignLeft": "Links",
+      "alignCenter": "Midden",
+      "alignRight": "Rechts",
+      "alignLabel": "Uitlijning",
+      "titleContentLabel": "Titelinhoud",
+      "bodyContentLabel": "Body-inhoud",
+      "lineHeightLabel": "Regelhoogte",
+      "fontSizeLabel": "Lettergrootte (rem)",
+      "fontWeightLabel": "Letterdikte",
+      "addFieldPlaceholder": "Selecteer een veld",
+      "insertField": "Veld invoegen",
+      "insertFieldDesc": "Voeg placeholders zoals {Title} in je templates in.",
+      "showYamlLabel": "YAML bewerken",
+      "backToFormLabel": "Terug naar formulier",
+      "yamlViewLabel": "Dia-template YAML",
+      "yamlViewDesc": "Kopieer of plak YAML om deze dia-template te migreren of hergebruiken.",
+      "presetsLabel": "Presets",
+      "setDefaultLabel": "Instellen als globale standaard",
+      "resetToGlobalDefaultLabel": "Globale standaard laden",
+      "resetToBuiltInDefaultLabel": "Ingebouwde standaard laden",
+      "copyPresetLabel": "Preset kopiëren",
+      "pastePresetLabel": "Preset plakken",
+      "copyPresetSuccess": "Dia-preset gekopieerd.",
+      "copyPresetFailed": "Dia-preset kopiëren mislukt.",
+      "pastePresetSuccess": "Dia-preset toegepast.",
+      "pastePresetInvalid": "Klembordinhoud is geen geldige dia-preset.",
+      "pastePresetFailed": "Dia-preset toepassen mislukt.",
+      "clipboardUnavailable": "Klembord is in deze context niet beschikbaar.",
+      "setDefaultSuccess": "Huidige dia-template als standaard opgeslagen.",
+      "setDefaultError": "Opslaan als standaard mislukt. Zie de console voor details.",
+      "noGlobalDefault": "Er is nog geen globale preset beschikbaar.",
+      "saveLabel": "Opslaan",
+      "cancelLabel": "Annuleren"
+    }
+  },
+  "viewControls": {
+    "openTableView": "Overschakelen naar TileLineBase-tabelweergave",
+    "openMarkdownView": "Terugschakelen naar Markdown-editor",
+    "switchViewMenu": "Weergave wisselen (huidig: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "Kanbanweergave vereist een geldig tabelschema. Laad de notitie opnieuw en probeer het opnieuw.",
 		"missingLaneField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig. Voeg hem toe in de tabelweergave of schakel terug.",
@@ -24,6 +93,9 @@
     "untitledCardFallback": "Naamloze kaart",
     "moreFieldsLabel": "+{{count}} extra",
     "laneNotConfigured": "Kies een kanbankolom in de toolbar om het board te gebruiken.",
+    "defaultBoard": {
+      "name": "Statusboard"
+    },
     "actions": {
       "openFromMarkdown": "TileLineBase-kanbanweergave openen",
       "switchToKanban": "Overschakelen naar kanbanweergave",
@@ -52,7 +124,7 @@
     "settings": { "multiRowToggle": "Kolommen toestaan om over meerdere rijen te lopen" },
     "showAllButtonLabel": "Alles tonen ({{count}} extra)"
   },
-  "commands": { "undoTableHistory": "Laatste tabelwijziging ongedaan maken", "redoTableHistory": "Tabelwijziging opnieuw uitvoeren", "openHelpDocument": "TileLineBase-hulpdocument openen", "createTable": "TileLineBase-tabelnotitie maken", "exportCsv": "Huidige tabel als CSV exporteren", "importCsv": "CSV in huidige tabel importeren", "importCsvAsTable": "CSV als nieuwe tabel importeren", "toggleTableView": "Tabelweergave schakelen", "openKanbanView": "TileLineBase-kanbanweergave openen" },
+  "commands": { "undoTableHistory": "Laatste tabelwijziging ongedaan maken", "redoTableHistory": "Tabelwijziging opnieuw uitvoeren", "openHelpDocument": "TileLineBase-hulpdocument openen", "createTable": "TileLineBase-tabelnotitie maken", "exportCsv": "Huidige tabel als CSV exporteren", "importCsv": "CSV in huidige tabel importeren", "importCsvAsTable": "CSV als nieuwe tabel importeren", "toggleTableView": "Tabelweergave schakelen", "openKanbanView": "TileLineBase-kanbanweergave openen", "openSlideView": "TileLineBase-diaweergave openen" },
   "csv": {
     "errorNoFile": "Sla de notitie op voordat je exporteert; het huidige bestand is niet gevonden.",
     "exportFailure": "CSV exporteren mislukt. Controleer de console voor details.",
@@ -71,6 +143,11 @@
     "interfaceLanguageDesc": "Standaard: volg de taal van Obsidian. Schakel in om TileLineBase in het Engels te houden.",
     "hideRightSidebarLabel": "Rechterzijbalk verbergen in tabelweergave",
     "hideRightSidebarDesc": "Klap de rechterzijbalk van Obsidian in zodra de TileLineBase-tabelweergave actief is. Andere weergaven blijven ongemoeid.",
+    "tableViewHeading": "Tabelweergave",
+    "rowStripeStrengthLabel": "Sterkte rijstrepen",
+    "rowStripeStrengthDesc": "0 schakelt strepen uit, 100 maakt ze het sterkst.",
+    "borderContrastLabel": "Randcontrast",
+    "borderContrastDesc": "0 verbergt randen, 100 maakt ze het sterkst.",
     "loggingHeading": "Logboek",
     "loggingLevelLabel": "Globaal logniveau",
     "loggingLevelDesc": "Kies hoeveel detail TileLineBase naar de ontwikkelaarsconsole schrijft. Hogere niveaus helpen bij debuggen maar maken meer lawaai.",
@@ -117,6 +194,7 @@
     "typeTextOption": "Tekst",
     "typeDateOption": "Datum",
     "typeTimeOption": "Tijd",
+    "typeImageOption": "Afbeelding",
     "typeFormulaOption": "Formule",
     "formulaLabel": "Formule",
     "formulaDescription": "Verwijs naar een kolom met {field}; ondersteunt de operatoren + - * / en \"tekst\"-concatenatie.",
@@ -321,6 +399,42 @@
     "missingH2": "Het bestand mist H2-secties en kan niet als tabel worden weergegeven",
     "noSchema": "Kan dataschema niet opbouwen"
   },
+  "magicMigration": {
+    "modalTitle": "Conversie-assistent",
+    "modalDescription": "Deze notitie mist TileLineBase H2-secties. Gebruik een ster-template om automatisch te converteren.",
+    "templateLabel": "Ster-template",
+    "templateHint": "Vervang de gegevens die je wilt extraheren door * en laat de omliggende tekst staan als context.",
+    "templatePlaceholder": "Voorbeeld: ### *\\n- Status: *\\n- Eigenaar: *",
+    "previewTitle": "Livevoorbeeld",
+    "previewCount": "{{count}} overeenkomsten in voorbeeld",
+    "previewTruncated": "Eerste {{shown}} van {{total}} overeenkomsten getoond",
+    "previewEmpty": "Nog geen overeenkomsten. Pas de template aan om de gewenste velden uit te lichten.",
+    "previewNoiseHint": "Inhoud die niet bij de template past, wordt automatisch genegeerd.",
+    "convertButton": "Converteren en openen",
+    "cancelButton": "Annuleren",
+    "targetFileLabel": "Doelbestand",
+    "targetFileHint": "Er wordt een nieuwe TileLineBase-notitie met deze naam gemaakt.",
+    "sampleLabel": "Voorbeeldbereik",
+    "sampleHint": "Alleen paragrafen met deze tekst worden gescand. Laat leeg om de hele notitie te scannen.",
+    "samplePlaceholder": "Plak een paar regels die één rij voorstellen (bijv. de bullet die je wilt converteren)",
+    "sourcePaneTitle": "Brontekst",
+    "sourcePaneHint": "Markeer een representatieve regel; die wordt gekopieerd naar het voorbeeldpaneel.",
+    "sourcePanePlaceholder": "Markeer hier een representatieve regel om te beginnen.",
+    "inlineTitle": "Conversie-assistent",
+    "inlineMessage": "Deze notitie gebruikt geen TileLineBase H2-blokken. Gebruik een ster-template om te converteren en door te gaan.",
+    "inlineOpenButton": "Assistent openen",
+    "errorTemplateRequired": "Voer een template met *-plaatsaanduidingen in.",
+    "errorNeedPlaceholder": "Voeg ten minste één * toe om de te extraheren gegevens te markeren.",
+    "errorInvalidPattern": "De template kan niet worden gecompileerd. Maak hem eenvoudiger.",
+    "errorSampleNoMatch": "Geen paragraaf komt overeen met het voorbeeldbereik. Pas de voorbeeldtekst aan.",
+    "errorNoMatch": "Geen overeenkomsten gevonden voor deze template.",
+    "defaultPrimaryField": "Titel",
+    "fieldBaseName": "Veld",
+    "defaultFileName": "Geconverteerde notitie",
+    "successNotice": "Geconverteerd naar {{fileName}}",
+    "failureNotice": "Conversie mislukt. Probeer het opnieuw.",
+    "previewRenameHint": "Klik op kolomkoppen om kolommen te hernoemen."
+  },
   "tableViewSetup": {
     "constructorStart": "=== TableView-constructor start ===",
     "constructorComplete": "=== TableView-constructor voltooid ===",
@@ -340,6 +454,11 @@
     "settingsMenuImportCsvAsTableLabel": "CSV als nieuwe tabel importeren",
     "settingsMenuHelpLabel": "Hulpnotitie openen",
     "unnamedViewLabel": "Naamloze weergave"
+  },
+  "rowOrder": {
+    "menuLabel": "Rijen herschikken (fysiek)",
+    "modalTitle": "Rijen herschikken",
+    "modalWarning": "Dit herschrijft de rijvolgorde in het bestand."
   },
   "fileDuplication": {
     "errorNoFile": "Huidig bestand is niet beschikbaar.",
@@ -444,7 +563,8 @@
     "iconMatchAriaLabel": "Pictogram {{icon}} gebruiken",
     "iconNavPrev": "Vorige pictogrammen",
     "iconNavNext": "Volgende pictogrammen",
-    "iconStatusEmpty": "Geen pictogram geselecteerd"
+    "iconStatusEmpty": "Geen pictogram geselecteerd",
+    "iconPickerAdd": "Pictogram toevoegen"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Kan caret niet resetten tijdens compositionstart",

@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "description": "TileLineBase - A federated paragraph database for Obsidian.",
   "main": "dist/main.js",
- "scripts": {
+  "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "npm run lint && npx tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run check:release",
     "lint": "node scripts/run-lint.mjs",
+    "check:i18n-hardcoded": "node scripts/check-i18n-hardcoded.mjs",
     "test:magic": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\"}' scripts/test-magic-migration.ts",
     "deploy": "npm run build && node scripts/deploy.mjs",
     "deploy:wsl": "npm run build && node scripts/deploy-wsl.mjs",

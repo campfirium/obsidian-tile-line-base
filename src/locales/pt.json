@@ -3,10 +3,15 @@
     "displayName": "Tabela TileLineBase",
     "mode": {
       "table": "Tabela",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Slides"
     }
   },
-  "viewControls": { "openTableView": "Alternar para a visualização em tabela do TileLineBase", "openMarkdownView": "Voltar para o editor Markdown" },
+  "viewControls": {
+    "openTableView": "Alternar para a visualização em tabela do TileLineBase",
+    "openMarkdownView": "Voltar para o editor Markdown",
+    "switchViewMenu": "Alternar visualização (atual: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "A visualização Kanban requer um esquema de tabela válido. Recarregue a nota e tente novamente.",
 		"missingLaneField": "A visualização Kanban precisa da coluna \"{{field}}\". Adicione-a na visualização em tabela ou volte para lá.",
@@ -24,6 +29,9 @@
     "untitledCardFallback": "Cartão sem título",
     "moreFieldsLabel": "+{{count}} a mais",
     "laneNotConfigured": "Escolha uma coluna Kanban na barra de ferramentas para começar a usar o quadro.",
+    "defaultBoard": {
+      "name": "Quadro de status"
+    },
     "actions": {
       "openFromMarkdown": "Abrir a visualização Kanban do TileLineBase",
       "switchToKanban": "Alternar para a visualização Kanban",
@@ -53,7 +61,71 @@
     "showAllButtonLabel": "Mostrar tudo (mais {{count}})"
 	}
 ,
-  "commands": { "undoTableHistory": "Desfazer a última alteração da tabela", "redoTableHistory": "Refazer alteração da tabela", "openHelpDocument": "Abrir o documento de ajuda do TileLineBase", "createTable": "Criar nota de tabela do TileLineBase", "exportCsv": "Exportar a tabela atual como CSV", "importCsv": "Importar CSV na tabela atual", "importCsvAsTable": "Importar CSV como nova tabela", "toggleTableView": "Alternar visualização da tabela", "openKanbanView": "Abrir a visualização Kanban do TileLineBase" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "Alternar para a visualização de slides",
+      "openTemplate": "Editar modelo de slide",
+      "enterFullscreen": "Entrar em tela cheia",
+      "exitFullscreen": "Sair da tela cheia"
+    },
+    "emptyState": "Ainda não há slides. Adicione títulos H2 a esta nota.",
+    "filteredCountLabel": "{{count}} slides correspondem aos filtros atuais",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Slide {{current}} de {{total}}",
+    "untitledSlide": "Slide sem título {{index}}",
+    "emptyValue": "(vazio)",
+    "nav": { "prev": "Slide anterior", "next": "Próximo slide" },
+    "edit": { "heading": "Editar slide" },
+    "templateModal": {
+      "title": "Modelo de slide",
+      "titleFieldLabel": "Modelo de título",
+      "titleFieldDesc": "Use marcadores como {Title} para montar o título do slide.",
+      "bodyFieldsLabel": "Modelo de corpo",
+      "bodyFieldsDesc": "Use marcadores como {Description} em linhas separadas; linhas vazias são ignoradas.",
+      "textColorLabel": "Cor do texto",
+      "backgroundColorLabel": "Fundo",
+      "resetColorLabel": "Padrão",
+      "layoutTitle": "Layout",
+      "titleLayoutLabel": "Layout do título",
+      "bodyLayoutLabel": "Layout do corpo",
+      "widthPctLabel": "Largura (%)",
+      "topPctLabel": "Superior (%)",
+      "alignLeft": "Esquerda",
+      "alignCenter": "Centro",
+      "alignRight": "Direita",
+      "alignLabel": "Alinhamento",
+      "titleContentLabel": "Conteúdo do título",
+      "bodyContentLabel": "Conteúdo do corpo",
+      "lineHeightLabel": "Altura de linha",
+      "fontSizeLabel": "Tamanho da fonte (rem)",
+      "fontWeightLabel": "Espessura da fonte",
+      "addFieldPlaceholder": "Selecione um campo",
+      "insertField": "Inserir campo",
+      "insertFieldDesc": "Insira marcadores como {Title} nos modelos.",
+      "showYamlLabel": "Editar YAML",
+      "backToFormLabel": "Voltar para o formulário",
+      "yamlViewLabel": "YAML do modelo de slide",
+      "yamlViewDesc": "Copie ou cole YAML para migrar ou reutilizar este modelo de slide.",
+      "presetsLabel": "Predefinições",
+      "setDefaultLabel": "Definir como padrão global",
+      "resetToGlobalDefaultLabel": "Carregar padrão global",
+      "resetToBuiltInDefaultLabel": "Carregar padrão integrado",
+      "copyPresetLabel": "Copiar predefinição",
+      "pastePresetLabel": "Colar predefinição",
+      "copyPresetSuccess": "Predefinição de slide copiada.",
+      "copyPresetFailed": "Falha ao copiar a predefinição de slide.",
+      "pastePresetSuccess": "Predefinição de slide aplicada.",
+      "pastePresetInvalid": "O conteúdo da área de transferência não é uma predefinição de slide válida.",
+      "pastePresetFailed": "Falha ao aplicar a predefinição de slide.",
+      "clipboardUnavailable": "Área de transferência indisponível neste contexto.",
+      "setDefaultSuccess": "Modelo de slide salvo como padrão.",
+      "setDefaultError": "Falha ao salvar como padrão. Verifique o console para detalhes.",
+      "noGlobalDefault": "Ainda não há predefinição global disponível.",
+      "saveLabel": "Salvar",
+      "cancelLabel": "Cancelar"
+    }
+  },
+  "commands": { "undoTableHistory": "Desfazer a última alteração da tabela", "redoTableHistory": "Refazer alteração da tabela", "openHelpDocument": "Abrir o documento de ajuda do TileLineBase", "createTable": "Criar nota de tabela do TileLineBase", "exportCsv": "Exportar a tabela atual como CSV", "importCsv": "Importar CSV na tabela atual", "importCsvAsTable": "Importar CSV como nova tabela", "toggleTableView": "Alternar visualização da tabela", "openKanbanView": "Abrir a visualização Kanban do TileLineBase", "openSlideView": "Abrir a visualização de slides do TileLineBase" },
   "csv": {
     "errorNoFile": "Salve a nota antes de exportar; o arquivo atual não foi encontrado.",
     "exportFailure": "Falha ao exportar o CSV. Verifique o console para mais detalhes.",
@@ -71,6 +143,11 @@
     "interfaceLanguageLabel": "Sempre usar interface em inglês", "interfaceLanguageDesc": "Padrão: seguir o idioma do Obsidian. Ative para forçar a interface do TileLineBase a permanecer em inglês.",
     "hideRightSidebarLabel": "Ocultar a barra lateral direita na visualização em tabela",
     "hideRightSidebarDesc": "Recolhe a barra lateral direita do Obsidian sempre que a visualização em tabela do TileLineBase estiver ativa. Outras visualizações não são afetadas.",
+    "tableViewHeading": "Visualização em tabela",
+    "rowStripeStrengthLabel": "Intensidade das faixas de linhas",
+    "rowStripeStrengthDesc": "0 desativa as faixas, 100 as deixa mais fortes.",
+    "borderContrastLabel": "Contraste das bordas",
+    "borderContrastDesc": "0 oculta as bordas, 100 as deixa mais marcadas.",
     "loggingHeading": "Registro",
     "loggingLevelLabel": "Nível global de registro",
     "loggingLevelDesc": "Escolha quanto detalhe o TileLineBase registra no console do desenvolvedor. Níveis mais altos ajudam na depuração, mas geram mais ruído.",
@@ -118,6 +195,7 @@
     "typeTextOption": "Texto",
     "typeDateOption": "Data",
     "typeTimeOption": "Hora",
+    "typeImageOption": "Imagem",
     "typeFormulaOption": "Fórmula",
     "formulaLabel": "Fórmula",
     "formulaDescription": "Faça referência a uma coluna com {field}; oferece suporte aos operadores + - * / e à concatenação de \"texto\".",
@@ -325,6 +403,42 @@
     "missingH2": "O arquivo não possui seções H2 e não pode ser renderizado como tabela",
     "noSchema": "Não foi possível construir o esquema de dados"
   },
+  "magicMigration": {
+    "modalTitle": "Assistente de conversão",
+    "modalDescription": "Esta nota não tem seções H2 do TileLineBase. Use um modelo com asteriscos para convertê-la automaticamente.",
+    "templateLabel": "Modelo com asterisco",
+    "templateHint": "Substitua os dados que deseja extrair por * e mantenha o texto ao redor como contexto.",
+    "templatePlaceholder": "Exemplo: ### *\\n- Status: *\\n- Responsável: *",
+    "previewTitle": "Pré-visualização ao vivo",
+    "previewCount": "Pré-visualizando {{count}} correspondências",
+    "previewTruncated": "Mostrando as primeiras {{shown}} de {{total}} correspondências",
+    "previewEmpty": "Nenhuma correspondência ainda. Ajuste o modelo para destacar os campos desejados.",
+    "previewNoiseHint": "Conteúdo que não corresponder ao modelo será ignorado automaticamente.",
+    "convertButton": "Converter e abrir",
+    "cancelButton": "Cancelar",
+    "targetFileLabel": "Arquivo de destino",
+    "targetFileHint": "Uma nova nota TileLineBase será criada com este nome.",
+    "sampleLabel": "Escopo da amostra",
+    "sampleHint": "Somente parágrafos que contêm este texto serão verificados. Deixe em branco para examinar a nota inteira.",
+    "samplePlaceholder": "Cole algumas linhas que representem uma linha (por exemplo, o bloco em lista que deseja converter)",
+    "sourcePaneTitle": "Texto de origem",
+    "sourcePaneHint": "Realce uma linha representativa; ela será copiada para o painel de amostra.",
+    "sourcePanePlaceholder": "Realce aqui uma linha representativa para começar.",
+    "inlineTitle": "Assistente de conversão",
+    "inlineMessage": "Esta nota não usa blocos H2 do TileLineBase. Use um modelo com asteriscos para converter e continuar.",
+    "inlineOpenButton": "Abrir assistente",
+    "errorTemplateRequired": "Insira um modelo com marcadores *.",
+    "errorNeedPlaceholder": "Adicione pelo menos um * para marcar os dados a extrair.",
+    "errorInvalidPattern": "Não foi possível compilar o modelo. Tente simplificá-lo.",
+    "errorSampleNoMatch": "Nenhum parágrafo corresponde ao escopo da amostra. Ajuste o texto de exemplo.",
+    "errorNoMatch": "Nenhuma correspondência encontrada para este modelo.",
+    "defaultPrimaryField": "Título",
+    "fieldBaseName": "Campo",
+    "defaultFileName": "Nota convertida",
+    "successNotice": "Convertido para {{fileName}}",
+    "failureNotice": "Falha na conversão. Tente novamente.",
+    "previewRenameHint": "Clique nos cabeçalhos da tabela para renomear colunas."
+  },
   "tableViewSetup": {
     "constructorStart": "=== Início do construtor TableView ===",
     "constructorComplete": "=== Construtor TableView concluído ===",
@@ -345,6 +459,11 @@
     "settingsMenuImportCsvAsTableLabel": "Importar CSV como nova tabela",
     "settingsMenuHelpLabel": "Abrir nota de ajuda",
     "unnamedViewLabel": "Visualização sem nome"
+  },
+  "rowOrder": {
+    "menuLabel": "Reordenar linhas (no arquivo)",
+    "modalTitle": "Reordenar linhas",
+    "modalWarning": "Isto reescreverá a ordem das linhas no arquivo."
   },
   "fileDuplication": {
     "errorNoFile": "O arquivo atual está indisponível.",
@@ -450,7 +569,8 @@
     "iconMatchAriaLabel": "Usar ícone {{icon}}",
     "iconNavPrev": "Ícones anteriores",
     "iconNavNext": "Próximos ícones",
-    "iconStatusEmpty": "Nenhum ícone selecionado"
+    "iconStatusEmpty": "Nenhum ícone selecionado",
+    "iconPickerAdd": "Adicionar ícone"
   }
   ,
   "compositionProxy": {

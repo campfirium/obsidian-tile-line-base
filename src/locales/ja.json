@@ -3,10 +3,79 @@
     "displayName": "TileLineBase テーブル",
     "mode": {
       "table": "テーブル",
-      "kanban": "カンバン"
+      "kanban": "カンバン",
+      "slide": "スライド"
     }
   },
-  "viewControls": { "openTableView": "TileLineBase テーブルビューに切り替える", "openMarkdownView": "Markdown エディターに戻る" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "スライドビューに切り替える",
+      "openTemplate": "スライドテンプレートを編集",
+      "enterFullscreen": "全画面表示にする",
+      "exitFullscreen": "全画面表示を終了"
+    },
+    "emptyState": "スライドがまだありません。このノートに H2 見出しを追加してください。",
+    "filteredCountLabel": "{{count}} 件のスライドが現在のフィルターに一致します",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "スライド {{current}} / {{total}}",
+    "untitledSlide": "無題のスライド {{index}}",
+    "emptyValue": "(空)",
+    "nav": { "prev": "前のスライド", "next": "次のスライド" },
+    "edit": { "heading": "スライドを編集" },
+    "templateModal": {
+      "title": "スライドテンプレート",
+      "titleFieldLabel": "タイトルテンプレート",
+      "titleFieldDesc": "{Title} のようなプレースホルダーを使ってスライドのタイトルを作成します。",
+      "bodyFieldsLabel": "本文テンプレート",
+      "bodyFieldsDesc": "{Description} などのプレースホルダーを行ごとに使用します。空行はスキップされます。",
+      "textColorLabel": "文字色",
+      "backgroundColorLabel": "背景",
+      "resetColorLabel": "デフォルト",
+      "layoutTitle": "レイアウト",
+      "titleLayoutLabel": "タイトルレイアウト",
+      "bodyLayoutLabel": "本文レイアウト",
+      "widthPctLabel": "幅 (%)",
+      "topPctLabel": "上 (%)",
+      "alignLeft": "左",
+      "alignCenter": "中央",
+      "alignRight": "右",
+      "alignLabel": "配置",
+      "titleContentLabel": "タイトル内容",
+      "bodyContentLabel": "本文内容",
+      "lineHeightLabel": "行の高さ",
+      "fontSizeLabel": "フォントサイズ (rem)",
+      "fontWeightLabel": "フォントの太さ",
+      "addFieldPlaceholder": "フィールドを選択",
+      "insertField": "フィールドを挿入",
+      "insertFieldDesc": "{Title} のようなプレースホルダーをテンプレートに挿入します。",
+      "showYamlLabel": "YAML を編集",
+      "backToFormLabel": "フォームに戻る",
+      "yamlViewLabel": "スライドテンプレート YAML",
+      "yamlViewDesc": "このスライドテンプレートを移行・再利用するために YAML をコピーまたは貼り付けます。",
+      "presetsLabel": "プリセット",
+      "setDefaultLabel": "グローバル既定として設定",
+      "resetToGlobalDefaultLabel": "グローバル既定を読み込む",
+      "resetToBuiltInDefaultLabel": "組み込み既定を読み込む",
+      "copyPresetLabel": "プリセットをコピー",
+      "pastePresetLabel": "プリセットを貼り付け",
+      "copyPresetSuccess": "スライドプリセットをコピーしました。",
+      "copyPresetFailed": "スライドプリセットのコピーに失敗しました。",
+      "pastePresetSuccess": "スライドプリセットを適用しました。",
+      "pastePresetInvalid": "クリップボードのデータは有効なスライドプリセットではありません。",
+      "pastePresetFailed": "スライドプリセットを適用できませんでした。",
+      "clipboardUnavailable": "この環境ではクリップボードが利用できません。",
+      "setDefaultSuccess": "現在のスライドテンプレートをデフォルトとして保存しました。",
+      "setDefaultError": "デフォルトとして保存できませんでした。詳細はコンソールを確認してください。",
+      "noGlobalDefault": "グローバルなプリセットはまだありません。",
+      "saveLabel": "保存",
+      "cancelLabel": "キャンセル"
+    }
+  },
+  "viewControls": {
+    "openTableView": "TileLineBase テーブルビューに切り替える",
+    "openMarkdownView": "Markdown エディターに戻る",
+    "switchViewMenu": "ビューを切り替え (現在: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "カンバン表示には有効なテーブルスキーマが必要です。ノートを再読み込みしてからもう一度お試しください。",
 		"missingLaneField": "カンバン表示には「{{field}}」列が必要です。テーブルビューで追加するか元の表示に戻ってください。",
@@ -24,6 +93,9 @@
     "untitledCardFallback": "無題のカード",
     "moreFieldsLabel": "+{{count}} 件",
     "laneNotConfigured": "ボードを使い始めるにはツールバーからカンバン列を選択してください。",
+    "defaultBoard": {
+      "name": "ステータスボード"
+    },
     "actions": {
       "openFromMarkdown": "TileLineBase のカンバンビューを開く",
       "switchToKanban": "カンバンビューに切り替える",
@@ -52,7 +124,7 @@
     "settings": { "multiRowToggle": "レーンを複数行に折り返す" },
     "showAllButtonLabel": "すべて表示 (残り {{count}} 件)"
   },
-  "commands": { "undoTableHistory": "直前のテーブル変更を元に戻す", "redoTableHistory": "テーブルの変更をやり直す", "openHelpDocument": "TileLineBase のヘルプドキュメントを開く", "createTable": "TileLineBase のテーブルノートを作成", "exportCsv": "現在のテーブルを CSV にエクスポート", "importCsv": "CSV を現在のテーブルに取り込む", "importCsvAsTable": "CSV を新しいテーブルとして取り込む", "toggleTableView": "テーブルビューを切り替える", "openKanbanView": "TileLineBase のカンバンビューを開く" },
+  "commands": { "undoTableHistory": "直前のテーブル変更を元に戻す", "redoTableHistory": "テーブルの変更をやり直す", "openHelpDocument": "TileLineBase のヘルプドキュメントを開く", "createTable": "TileLineBase のテーブルノートを作成", "exportCsv": "現在のテーブルを CSV にエクスポート", "importCsv": "CSV を現在のテーブルに取り込む", "importCsvAsTable": "CSV を新しいテーブルとして取り込む", "toggleTableView": "テーブルビューを切り替える", "openKanbanView": "TileLineBase のカンバンビューを開く", "openSlideView": "TileLineBase のスライドビューを開く" },
   "csv": {
     "errorNoFile": "エクスポートする前にノートを保存してください。現在のファイルが見つかりません。",
     "exportFailure": "CSV のエクスポートに失敗しました。詳細はコンソールを確認してください。",
@@ -70,6 +142,11 @@
     "interfaceLanguageLabel": "常に英語インターフェースを使用する", "interfaceLanguageDesc": "既定: Obsidian の言語に従います。オンにすると TileLineBase の UI を英語に固定します。",
     "hideRightSidebarLabel": "テーブルビューでは右サイドバーを隠す",
     "hideRightSidebarDesc": "TileLineBase のテーブルビューがアクティブな間は Obsidian の右サイドバーを折りたたみます。他のビューには影響しません。",
+    "tableViewHeading": "テーブルビュー",
+    "rowStripeStrengthLabel": "行のストライプ強度",
+    "rowStripeStrengthDesc": "0 でストライプなし、100 で最も強くなります。",
+    "borderContrastLabel": "枠線のコントラスト",
+    "borderContrastDesc": "0 で枠線非表示、100 で最も濃くなります。",
     "loggingHeading": "ログ",
     "loggingLevelLabel": "全体のログレベル",
     "loggingLevelDesc": "TileLineBase が開発者コンソールに記録する詳細度を選択します。高いほどデバッグしやすくなりますが出力が増えます。",
@@ -116,6 +193,7 @@
     "typeTextOption": "テキスト",
     "typeDateOption": "日付",
     "typeTimeOption": "時刻",
+    "typeImageOption": "画像",
     "typeFormulaOption": "計算式",
     "formulaLabel": "計算式",
     "formulaDescription": "{field} で列を参照します。+ - * / の各演算子と \"text\" の連結をサポートします。",
@@ -320,6 +398,42 @@
     "missingH2": "このファイルには H2 セクションがないためテーブルとして表示できません",
     "noSchema": "データスキーマを構築できません"
   },
+  "magicMigration": {
+    "modalTitle": "変換アシスタント",
+    "modalDescription": "このノートには TileLineBase の H2 セクションがありません。スター付きテンプレートで自動変換してください。",
+    "templateLabel": "スター付きテンプレート",
+    "templateHint": "抽出したい部分を * に置き換え、周辺のテキストを文脈として残します。",
+    "templatePlaceholder": "例: ### *\\n- ステータス: *\\n- 担当: *",
+    "previewTitle": "ライブプレビュー",
+    "previewCount": "{{count}} 件の一致をプレビュー中",
+    "previewTruncated": "最初の {{shown}} / {{total}} 件を表示しています",
+    "previewEmpty": "まだ一致がありません。欲しいフィールドが目立つようテンプレートを調整してください。",
+    "previewNoiseHint": "テンプレートに合わない内容は自動的に無視されます。",
+    "convertButton": "変換して開く",
+    "cancelButton": "キャンセル",
+    "targetFileLabel": "保存先ファイル",
+    "targetFileHint": "この名前で新しい TileLineBase ノートが作成されます。",
+    "sampleLabel": "サンプル範囲",
+    "sampleHint": "このテキストを含む段落のみをスキャンします。空欄でノート全体をスキャンします。",
+    "samplePlaceholder": "1 行を表す数行を貼り付けてください（変換したい箇条書きブロックなど）",
+    "sourcePaneTitle": "ソーステキスト",
+    "sourcePaneHint": "代表的な1行をハイライトするとサンプル欄にコピーされます。",
+    "sourcePanePlaceholder": "ここで代表的な1行をハイライトして開始してください。",
+    "inlineTitle": "変換アシスタント",
+    "inlineMessage": "このノートは TileLineBase の H2 ブロックを使用していません。スター付きテンプレートで変換して続行してください。",
+    "inlineOpenButton": "ウィザードを開く",
+    "errorTemplateRequired": "* を含むテンプレートを入力してください。",
+    "errorNeedPlaceholder": "抽出したい部分に * を少なくとも 1 つ追加してください。",
+    "errorInvalidPattern": "テンプレートをコンパイルできませんでした。簡素化してください。",
+    "errorSampleNoMatch": "サンプル範囲に一致する段落がありません。サンプルテキストを調整してください。",
+    "errorNoMatch": "このテンプレートに一致する結果が見つかりません。",
+    "defaultPrimaryField": "タイトル",
+    "fieldBaseName": "フィールド",
+    "defaultFileName": "変換されたノート",
+    "successNotice": "{{fileName}} に変換しました",
+    "failureNotice": "変換に失敗しました。もう一度お試しください。",
+    "previewRenameHint": "列ヘッダーをクリックして列名を変更します。"
+  },
   "tableViewSetup": {
     "constructorStart": "=== TableView コンストラクター開始 ===",
     "constructorComplete": "=== TableView コンストラクター完了 ===",
@@ -339,6 +453,11 @@
     "settingsMenuImportCsvAsTableLabel": "CSV を新しいテーブルとしてインポート",
     "settingsMenuHelpLabel": "ヘルプノートを開く",
     "unnamedViewLabel": "無題のビュー"
+  },
+  "rowOrder": {
+    "menuLabel": "行を並べ替える (ファイル書き換え)",
+    "modalTitle": "行を並べ替える",
+    "modalWarning": "ファイル内の行順が書き換えられます。"
   },
   "fileDuplication": {
     "errorNoFile": "現在のファイルを利用できません。",
@@ -422,7 +541,8 @@
     "iconMatchAriaLabel": "アイコン {{icon}} を使用",
     "iconNavPrev": "前のアイコン",
     "iconNavNext": "次のアイコン",
-    "iconStatusEmpty": "アイコンが選択されていません"
+    "iconStatusEmpty": "アイコンが選択されていません",
+    "iconPickerAdd": "アイコンを追加"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] compositionstart 中にキャレットをリセットできません",

@@ -3,10 +3,15 @@
     "displayName": "TileLineBase-Tabelle",
     "mode": {
       "table": "Tabelle",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Folie"
     }
   },
-  "viewControls": { "openTableView": "Zur TileLineBase-Tabellenansicht wechseln", "openMarkdownView": "Zurück zum Markdown-Editor wechseln" },
+  "viewControls": {
+    "openTableView": "Zur TileLineBase-Tabellenansicht wechseln",
+    "openMarkdownView": "Zurück zum Markdown-Editor wechseln",
+    "switchViewMenu": "Ansicht wechseln (aktuell: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "Die Kanban-Ansicht benötigt ein gültiges Tabellenschema. Notiz neu laden und erneut versuchen.",
 		"missingLaneField": "Die Kanban-Ansicht benötigt die Spalte \"{{field}}\". In der Tabelle hinzufügen oder zurückwechseln.",
@@ -24,6 +29,9 @@
     "untitledCardFallback": "Unbenannte Karte",
     "moreFieldsLabel": "+{{count}} weitere",
     "laneNotConfigured": "Eine Kanban-Spalte in der Toolbar wählen, um das Board zu verwenden.",
+    "defaultBoard": {
+      "name": "Statusboard"
+    },
     "actions": {
       "openFromMarkdown": "TileLineBase-Kanban-Ansicht öffnen",
       "switchToKanban": "Zur Kanban-Ansicht wechseln",
@@ -52,7 +60,71 @@
     "settings": { "multiRowToggle": "Spuren dürfen in mehrere Zeilen umbrechen" },
     "showAllButtonLabel": "Alle anzeigen ({{count}} weitere)"
   },
-  "commands": { "undoTableHistory": "Letzte Tabellenänderung rückgängig machen", "redoTableHistory": "Tabellenänderung wiederholen", "openHelpDocument": "TileLineBase-Hilfedokument öffnen", "createTable": "TileLineBase-Tabellennotiz erstellen", "exportCsv": "Aktuelle Tabelle als CSV exportieren", "importCsv": "CSV in aktuelle Tabelle importieren", "importCsvAsTable": "CSV als neue Tabelle importieren", "toggleTableView": "Tabellenansicht umschalten", "openKanbanView": "TileLineBase-Kanban-Ansicht öffnen" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "Zur Folienansicht wechseln",
+      "openTemplate": "Folienvorlage bearbeiten",
+      "enterFullscreen": "Vollbildmodus starten",
+      "exitFullscreen": "Vollbildmodus verlassen"
+    },
+    "emptyState": "Noch keine Folien. H2-Überschriften in diese Notiz einfügen.",
+    "filteredCountLabel": "{{count}} Folien entsprechen den aktuellen Filtern",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Folie {{current}} von {{total}}",
+    "untitledSlide": "Unbetitelte Folie {{index}}",
+    "emptyValue": "(leer)",
+    "nav": { "prev": "Vorherige Folie", "next": "Nächste Folie" },
+    "edit": { "heading": "Folie bearbeiten" },
+    "templateModal": {
+      "title": "Folienvorlage",
+      "titleFieldLabel": "Titelvorlage",
+      "titleFieldDesc": "Platzhalter wie {Title} verwenden, um den Folientitel zu bilden.",
+      "bodyFieldsLabel": "Textvorlage",
+      "bodyFieldsDesc": "Platzhalter wie {Description} in getrennten Zeilen verwenden; leere Zeilen werden übersprungen.",
+      "textColorLabel": "Textfarbe",
+      "backgroundColorLabel": "Hintergrund",
+      "resetColorLabel": "Standard",
+      "layoutTitle": "Layout",
+      "titleLayoutLabel": "Titellayout",
+      "bodyLayoutLabel": "Textlayout",
+      "widthPctLabel": "Breite (%)",
+      "topPctLabel": "Abstand oben (%)",
+      "alignLeft": "Links",
+      "alignCenter": "Zentriert",
+      "alignRight": "Rechts",
+      "alignLabel": "Ausrichtung",
+      "titleContentLabel": "Titelinhalt",
+      "bodyContentLabel": "Textinhalt",
+      "lineHeightLabel": "Zeilenhöhe",
+      "fontSizeLabel": "Schriftgröße (rem)",
+      "fontWeightLabel": "Schriftstärke",
+      "addFieldPlaceholder": "Feld auswählen",
+      "insertField": "Feld einfügen",
+      "insertFieldDesc": "Platzhalter wie {Title} in Vorlagen einfügen.",
+      "showYamlLabel": "YAML bearbeiten",
+      "backToFormLabel": "Zurück zum Formular",
+      "yamlViewLabel": "Folienvorlage YAML",
+      "yamlViewDesc": "YAML kopieren oder einfügen, um diese Folienvorlage zu migrieren oder wiederzuverwenden.",
+      "presetsLabel": "Voreinstellungen",
+      "setDefaultLabel": "Als globale Vorgabe setzen",
+      "resetToGlobalDefaultLabel": "Globale Vorgabe laden",
+      "resetToBuiltInDefaultLabel": "Eingebaute Vorgabe laden",
+      "copyPresetLabel": "Voreinstellung kopieren",
+      "pastePresetLabel": "Voreinstellung einfügen",
+      "copyPresetSuccess": "Folienvoreinstellung kopiert.",
+      "copyPresetFailed": "Folienvoreinstellung konnte nicht kopiert werden.",
+      "pastePresetSuccess": "Folienvoreinstellung angewendet.",
+      "pastePresetInvalid": "Zwischenspeicher enthält keine gültige Folienvoreinstellung.",
+      "pastePresetFailed": "Folienvoreinstellung konnte nicht angewendet werden.",
+      "clipboardUnavailable": "Zwischenablage ist in diesem Kontext nicht verfügbar.",
+      "setDefaultSuccess": "Aktuelle Folienvorlage als Standard gespeichert.",
+      "setDefaultError": "Konnte nicht als Standard speichern. Details in der Konsole prüfen.",
+      "noGlobalDefault": "Es ist noch keine globale Vorgabe verfügbar.",
+      "saveLabel": "Speichern",
+      "cancelLabel": "Abbrechen"
+    }
+  },
+  "commands": { "undoTableHistory": "Letzte Tabellenänderung rückgängig machen", "redoTableHistory": "Tabellenänderung wiederholen", "openHelpDocument": "TileLineBase-Hilfedokument öffnen", "createTable": "TileLineBase-Tabellennotiz erstellen", "exportCsv": "Aktuelle Tabelle als CSV exportieren", "importCsv": "CSV in aktuelle Tabelle importieren", "importCsvAsTable": "CSV als neue Tabelle importieren", "toggleTableView": "Tabellenansicht umschalten", "openKanbanView": "TileLineBase-Kanban-Ansicht öffnen", "openSlideView": "TileLineBase-Folienansicht öffnen" },
   "csv": {
     "errorNoFile": "Notiz vor dem Export speichern; die aktuelle Datei wurde nicht gefunden.",
     "exportFailure": "CSV konnte nicht exportiert werden. Details in der Konsole prüfen.",
@@ -71,6 +143,11 @@
     "interfaceLanguageDesc": "Standard: folgt der Obsidian-Sprache. Aktivieren, um die TileLineBase-Oberfläche auf Englisch zu erzwingen.",
     "hideRightSidebarLabel": "Rechte Seitenleiste in der Tabellenansicht ausblenden",
     "hideRightSidebarDesc": "Die rechte Obsidian-Seitenleiste einklappen, sobald die TileLineBase-Tabellenansicht aktiv ist. Andere Ansichten bleiben unverändert.",
+    "tableViewHeading": "Tabellenansicht",
+    "rowStripeStrengthLabel": "Zeilenstreifen-Intensität",
+    "rowStripeStrengthDesc": "0 deaktiviert Streifen, 100 macht Streifen am stärksten.",
+    "borderContrastLabel": "Rahmenkontrast",
+    "borderContrastDesc": "0 blendet Rahmen aus, 100 macht sie am stärksten.",
     "loggingHeading": "Protokollierung",
     "loggingLevelLabel": "Globales Protokollierungslevel",
     "loggingLevelDesc": "Steuert, wie viele Details TileLineBase in die Entwicklerkonsole schreibt. Höhere Stufen helfen beim Debuggen, erzeugen aber mehr Rauschen.",
@@ -117,6 +194,7 @@
     "typeTextOption": "Text",
     "typeDateOption": "Datum",
     "typeTimeOption": "Uhrzeit",
+    "typeImageOption": "Bild",
     "typeFormulaOption": "Formel",
     "formulaLabel": "Formel",
     "formulaDescription": "Eine Spalte mit {field} referenzieren; unterstützt die Operatoren + - * / sowie \"Text\"-Verkettung.",
@@ -321,6 +399,42 @@
     "missingH2": "Die Datei enthält keine H2-Abschnitte und kann nicht als Tabelle dargestellt werden",
     "noSchema": "Datenschema konnte nicht erstellt werden"
   },
+  "magicMigration": {
+    "modalTitle": "Konvertierungsassistent",
+    "modalDescription": "Diese Notiz enthält keine TileLineBase-H2-Abschnitte. Verwende eine Sternvorlage, um sie automatisch zu konvertieren.",
+    "templateLabel": "Sternvorlage",
+    "templateHint": "Ersetze die Daten, die du extrahieren möchtest, durch * und lass den umgebenden Text als Kontext stehen.",
+    "templatePlaceholder": "Beispiel: ### *\\n- Status: *\\n- Owner: *",
+    "previewTitle": "Live-Vorschau",
+    "previewCount": "Zeige {{count}} Treffer in der Vorschau",
+    "previewTruncated": "Erste {{shown}} von {{total}} Treffern werden angezeigt",
+    "previewEmpty": "Noch keine Treffer. Vorlage anpassen, um gewünschte Felder hervorzuheben.",
+    "previewNoiseHint": "Inhalt, der nicht zur Vorlage passt, wird automatisch ignoriert.",
+    "convertButton": "Konvertieren und öffnen",
+    "cancelButton": "Abbrechen",
+    "targetFileLabel": "Zieldatei",
+    "targetFileHint": "Eine neue TileLineBase-Notiz wird mit diesem Namen erstellt.",
+    "sampleLabel": "Beispielbereich",
+    "sampleHint": "Nur Absätze mit diesem Text werden durchsucht. Leer lassen, um die gesamte Notiz zu scannen.",
+    "samplePlaceholder": "Füge ein paar Zeilen ein, die eine Zeile darstellen (z. B. den Bullet-Block, den du konvertieren möchtest)",
+    "sourcePaneTitle": "Quelltext",
+    "sourcePaneHint": "Markiere eine repräsentative Textzeile; sie wird in das Feld „Beispiel“ kopiert.",
+    "sourcePanePlaceholder": "Markiere hier eine repräsentative Textzeile, um zu starten.",
+    "inlineTitle": "Konvertierungsassistent",
+    "inlineMessage": "Diese Notiz verwendet keine TileLineBase-H2-Blöcke. Mit einer Sternvorlage konvertieren, um fortzufahren.",
+    "inlineOpenButton": "Assistent öffnen",
+    "errorTemplateRequired": "Eine Vorlage mit * Platzhaltern eingeben.",
+    "errorNeedPlaceholder": "Mindestens ein * hinzufügen, um die zu extrahierenden Daten zu markieren.",
+    "errorInvalidPattern": "Vorlage konnte nicht kompiliert werden. Bitte vereinfachen.",
+    "errorSampleNoMatch": "Kein Absatz entspricht dem Beispielbereich. Beispieltext anpassen.",
+    "errorNoMatch": "Keine Übereinstimmungen für diese Vorlage gefunden.",
+    "defaultPrimaryField": "Titel",
+    "fieldBaseName": "Feld",
+    "defaultFileName": "Konvertierte Notiz",
+    "successNotice": "Konvertiert zu {{fileName}}",
+    "failureNotice": "Konvertierung fehlgeschlagen. Bitte erneut versuchen.",
+    "previewRenameHint": "Spaltenüberschriften anklicken, um sie umzubenennen."
+  },
   "tableViewSetup": {
     "constructorStart": "=== TableView-Konstruktor startet ===",
     "constructorComplete": "=== TableView-Konstruktor abgeschlossen ===",
@@ -340,6 +454,11 @@
     "settingsMenuImportCsvAsTableLabel": "CSV als neue Tabelle importieren",
     "settingsMenuHelpLabel": "Hilfsnotiz öffnen",
     "unnamedViewLabel": "Unbenannte Ansicht"
+  },
+  "rowOrder": {
+    "menuLabel": "Zeilen neu anordnen (physisch)",
+    "modalTitle": "Zeilen neu anordnen",
+    "modalWarning": "Dadurch wird die Zeilenreihenfolge in der Datei neu geschrieben."
   },
   "fileDuplication": {
     "errorNoFile": "Aktuelle Datei ist nicht verfügbar.",
@@ -444,7 +563,8 @@
     "iconMatchAriaLabel": "Symbol {{icon}} verwenden",
     "iconNavPrev": "Vorherige Symbole",
     "iconNavNext": "Nächste Symbole",
-    "iconStatusEmpty": "Kein Symbol ausgewählt"
+    "iconStatusEmpty": "Kein Symbol ausgewählt",
+    "iconPickerAdd": "Symbol hinzufügen"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Cursor konnte während compositionstart nicht zurückgesetzt werden",

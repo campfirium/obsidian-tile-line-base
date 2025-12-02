@@ -3,10 +3,15 @@
     "displayName": "Tabla TileLineBase",
     "mode": {
       "table": "Tabla",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Diapositivas"
     }
   },
-  "viewControls": { "openTableView": "Cambiar a la vista de tabla de TileLineBase", "openMarkdownView": "Volver al editor de Markdown" },
+  "viewControls": {
+    "openTableView": "Cambiar a la vista de tabla de TileLineBase",
+    "openMarkdownView": "Volver al editor de Markdown",
+    "switchViewMenu": "Cambiar vista (actual: {{mode}})"
+  },
 	"kanbanView": {
 		"schemaUnavailable": "La vista Kanban requiere un esquema de tabla válido. Recarga la nota e inténtalo de nuevo.",
 		"missingLaneField": "La vista Kanban necesita la columna \"{{field}}\". Agrégala en la vista de tabla o vuelve atrás.",
@@ -24,6 +29,9 @@
     "untitledCardFallback": "Tarjeta sin título",
     "moreFieldsLabel": "+{{count}} más",
     "laneNotConfigured": "Elige una columna de Kanban en la barra de herramientas para empezar a usar el tablero.",
+    "defaultBoard": {
+      "name": "Tablero de estado"
+    },
     "actions": {
       "openFromMarkdown": "Abrir la vista Kanban de TileLineBase",
       "switchToKanban": "Cambiar a la vista Kanban",
@@ -52,7 +60,71 @@
     "settings": { "multiRowToggle": "Permitir que las vías ocupen varias filas" },
     "showAllButtonLabel": "Mostrar todo ({{count}} más)"
   },
-  "commands": { "undoTableHistory": "Deshacer el último cambio de la tabla", "redoTableHistory": "Rehacer el cambio de la tabla", "openHelpDocument": "Abrir el documento de ayuda de TileLineBase", "createTable": "Crear nota de tabla TileLineBase", "exportCsv": "Exportar la tabla actual como CSV", "importCsv": "Importar un CSV en la tabla actual", "importCsvAsTable": "Importar CSV como nueva tabla", "toggleTableView": "Alternar vista de tabla", "openKanbanView": "Abrir la vista Kanban de TileLineBase" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "Cambiar a la vista de diapositivas",
+      "openTemplate": "Editar plantilla de diapositivas",
+      "enterFullscreen": "Entrar en pantalla completa",
+      "exitFullscreen": "Salir de pantalla completa"
+    },
+    "emptyState": "Aún no hay diapositivas. Añade encabezados H2 a esta nota.",
+    "filteredCountLabel": "{{count}} diapositivas coinciden con los filtros actuales",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Diapositiva {{current}} de {{total}}",
+    "untitledSlide": "Diapositiva sin título {{index}}",
+    "emptyValue": "(vacío)",
+    "nav": { "prev": "Diapositiva anterior", "next": "Siguiente diapositiva" },
+    "edit": { "heading": "Editar diapositiva" },
+    "templateModal": {
+      "title": "Plantilla de diapositivas",
+      "titleFieldLabel": "Plantilla de título",
+      "titleFieldDesc": "Usa marcadores como {Title} para construir el título de la diapositiva.",
+      "bodyFieldsLabel": "Plantilla del cuerpo",
+      "bodyFieldsDesc": "Usa marcadores como {Description} en líneas separadas; se omiten las líneas vacías.",
+      "textColorLabel": "Color del texto",
+      "backgroundColorLabel": "Fondo",
+      "resetColorLabel": "Predeterminado",
+      "layoutTitle": "Diseño",
+      "titleLayoutLabel": "Diseño del título",
+      "bodyLayoutLabel": "Diseño del cuerpo",
+      "widthPctLabel": "Ancho (%)",
+      "topPctLabel": "Margen superior (%)",
+      "alignLeft": "Izquierda",
+      "alignCenter": "Centro",
+      "alignRight": "Derecha",
+      "alignLabel": "Alinear",
+      "titleContentLabel": "Contenido del título",
+      "bodyContentLabel": "Contenido del cuerpo",
+      "lineHeightLabel": "Altura de línea",
+      "fontSizeLabel": "Tamaño de fuente (rem)",
+      "fontWeightLabel": "Peso de fuente",
+      "addFieldPlaceholder": "Selecciona un campo",
+      "insertField": "Insertar campo",
+      "insertFieldDesc": "Inserta marcadores como {Title} en las plantillas.",
+      "showYamlLabel": "Editar YAML",
+      "backToFormLabel": "Volver al formulario",
+      "yamlViewLabel": "YAML de la plantilla de diapositivas",
+      "yamlViewDesc": "Copia o pega YAML para migrar o reutilizar esta plantilla de diapositivas.",
+      "presetsLabel": "Preajustes",
+      "setDefaultLabel": "Definir como predeterminado global",
+      "resetToGlobalDefaultLabel": "Cargar predeterminado global",
+      "resetToBuiltInDefaultLabel": "Cargar predeterminado integrado",
+      "copyPresetLabel": "Copiar preajuste",
+      "pastePresetLabel": "Pegar preajuste",
+      "copyPresetSuccess": "Preajuste de diapositivas copiado.",
+      "copyPresetFailed": "No se pudo copiar el preajuste de diapositivas.",
+      "pastePresetSuccess": "Preajuste de diapositivas aplicado.",
+      "pastePresetInvalid": "El portapapeles no contiene un preajuste de diapositivas válido.",
+      "pastePresetFailed": "No se pudo aplicar el preajuste de diapositivas.",
+      "clipboardUnavailable": "El portapapeles no está disponible en este contexto.",
+      "setDefaultSuccess": "Plantilla de diapositivas guardada como predeterminada.",
+      "setDefaultError": "No se pudo guardar como predeterminada. Consulta la consola para más detalles.",
+      "noGlobalDefault": "Aún no hay un preajuste global disponible.",
+      "saveLabel": "Guardar",
+      "cancelLabel": "Cancelar"
+    }
+  },
+  "commands": { "undoTableHistory": "Deshacer el último cambio de la tabla", "redoTableHistory": "Rehacer el cambio de la tabla", "openHelpDocument": "Abrir el documento de ayuda de TileLineBase", "createTable": "Crear nota de tabla TileLineBase", "exportCsv": "Exportar la tabla actual como CSV", "importCsv": "Importar un CSV en la tabla actual", "importCsvAsTable": "Importar CSV como nueva tabla", "toggleTableView": "Alternar vista de tabla", "openKanbanView": "Abrir la vista Kanban de TileLineBase", "openSlideView": "Abrir la vista de diapositivas de TileLineBase" },
   "csv": {
     "errorNoFile": "Guarda la nota antes de exportar; no se encontró el archivo actual.",
     "exportFailure": "No se pudo exportar el CSV. Revisa la consola para obtener detalles.",
@@ -70,6 +142,11 @@
     "interfaceLanguageLabel": "Usar siempre la interfaz en inglés", "interfaceLanguageDesc": "Predeterminado: seguir el idioma de Obsidian. Actívalo para forzar que la interfaz de TileLineBase permanezca en inglés.",
     "hideRightSidebarLabel": "Ocultar la barra lateral derecha en la vista de tabla",
     "hideRightSidebarDesc": "Contrae la barra lateral derecha de Obsidian cada vez que la vista de tabla de TileLineBase está activa. Las demás vistas no se ven afectadas.",
+    "tableViewHeading": "Vista de tabla",
+    "rowStripeStrengthLabel": "Intensidad de las franjas",
+    "rowStripeStrengthDesc": "0 desactiva las franjas, 100 las hace más fuertes.",
+    "borderContrastLabel": "Contraste de bordes",
+    "borderContrastDesc": "0 oculta los bordes, 100 los hace más fuertes.",
     "loggingHeading": "Registros",
     "loggingLevelLabel": "Nivel global de registro",
     "loggingLevelDesc": "Elige cuánto detalle guarda TileLineBase en la consola de desarrollador. Los niveles superiores ayudan a depurar pero generan más ruido.",
@@ -116,6 +193,7 @@
     "typeTextOption": "Texto",
     "typeDateOption": "Fecha",
     "typeTimeOption": "Hora",
+    "typeImageOption": "Imagen",
     "typeFormulaOption": "Fórmula",
     "formulaLabel": "Fórmula",
     "formulaDescription": "Referencia una columna con {field}; admite los operadores + - * / y la concatenación con \"texto\".",
@@ -320,6 +398,42 @@
     "missingH2": "El archivo no tiene secciones H2 y no se puede mostrar como tabla",
     "noSchema": "No se pudo construir el esquema de datos"
   },
+  "magicMigration": {
+    "modalTitle": "Asistente de conversión",
+    "modalDescription": "Esta nota no tiene secciones H2 de TileLineBase. Usa una plantilla con asteriscos para convertirla automáticamente.",
+    "templateLabel": "Plantilla con asterisco",
+    "templateHint": "Reemplaza los datos que quieras extraer con * y deja el texto alrededor como contexto.",
+    "templatePlaceholder": "Ejemplo: ### *\\n- Estado: *\\n- Responsable: *",
+    "previewTitle": "Vista previa en vivo",
+    "previewCount": "Vista previa de {{count}} coincidencias",
+    "previewTruncated": "Mostrando las primeras {{shown}} de {{total}} coincidencias",
+    "previewEmpty": "Aún no hay coincidencias. Ajusta la plantilla para resaltar los campos que quieres.",
+    "previewNoiseHint": "El contenido que no coincida con la plantilla se ignorará automáticamente.",
+    "convertButton": "Convertir y abrir",
+    "cancelButton": "Cancelar",
+    "targetFileLabel": "Archivo de destino",
+    "targetFileHint": "Se creará una nueva nota de TileLineBase con este nombre.",
+    "sampleLabel": "Alcance de muestra",
+    "sampleHint": "Solo se analizarán los párrafos que contengan este texto. Déjalo vacío para escanear toda la nota.",
+    "samplePlaceholder": "Pega unas líneas que representen una fila (p. ej., el bloque de viñetas que quieres convertir)",
+    "sourcePaneTitle": "Texto de origen",
+    "sourcePaneHint": "Resalta una línea representativa; se copiará al panel de muestra.",
+    "sourcePanePlaceholder": "Resalta aquí una línea representativa para empezar.",
+    "inlineTitle": "Asistente de conversión",
+    "inlineMessage": "Esta nota no usa bloques H2 de TileLineBase. Usa una plantilla con asteriscos para convertir y continuar.",
+    "inlineOpenButton": "Abrir asistente",
+    "errorTemplateRequired": "Introduce una plantilla con marcadores *.",
+    "errorNeedPlaceholder": "Añade al menos un * para marcar los datos que quieres extraer.",
+    "errorInvalidPattern": "No se pudo compilar la plantilla. Simplifícala.",
+    "errorSampleNoMatch": "Ningún párrafo coincide con el alcance de muestra. Ajusta el texto de muestra.",
+    "errorNoMatch": "No se encontraron coincidencias para esta plantilla.",
+    "defaultPrimaryField": "Título",
+    "fieldBaseName": "Campo",
+    "defaultFileName": "Nota convertida",
+    "successNotice": "Convertido a {{fileName}}",
+    "failureNotice": "La conversión falló. Inténtalo de nuevo.",
+    "previewRenameHint": "Haz clic en los encabezados de tabla para renombrar columnas."
+  },
   "tableViewSetup": {
     "constructorStart": "=== Inicio del constructor de TableView ===",
     "constructorComplete": "=== Constructor de TableView completado ===",
@@ -339,6 +453,11 @@
     "settingsMenuImportCsvAsTableLabel": "Importar CSV como nueva tabla",
     "settingsMenuHelpLabel": "Abrir la nota de ayuda",
     "unnamedViewLabel": "Vista sin nombre"
+  },
+  "rowOrder": {
+    "menuLabel": "Reordenar filas (físico)",
+    "modalTitle": "Reordenar filas",
+    "modalWarning": "Esto reescribe el orden de las filas en el archivo."
   },
   "fileDuplication": {
     "errorNoFile": "El archivo actual no está disponible.",
@@ -422,7 +541,8 @@
     "iconMatchAriaLabel": "Usar el icono {{icon}}",
     "iconNavPrev": "Iconos anteriores",
     "iconNavNext": "Siguientes iconos",
-    "iconStatusEmpty": "No se seleccionó ningún icono"
+    "iconStatusEmpty": "No se seleccionó ningún icono",
+    "iconPickerAdd": "Añadir icono"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] No se pudo restablecer el cursor durante compositionstart",

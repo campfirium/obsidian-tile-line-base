@@ -3,10 +3,15 @@
     "displayName": "Tableau TileLineBase",
     "mode": {
       "table": "Tableau",
-      "kanban": "Kanban"
+      "kanban": "Kanban",
+      "slide": "Diapositive"
     }
   },
-  "viewControls": { "openTableView": "Basculer vers la vue tableau TileLineBase", "openMarkdownView": "Revenir à l'éditeur Markdown" },
+  "viewControls": {
+    "openTableView": "Basculer vers la vue tableau TileLineBase",
+    "openMarkdownView": "Revenir à l'éditeur Markdown",
+    "switchViewMenu": "Changer de vue (actuelle : {{mode}})"
+  },
   "kanbanView": {
     "schemaUnavailable": "La vue kanban nécessite un schéma de table valide. Rechargez la note et réessayez.",
     "missingLaneField": "La vue kanban a besoin de la colonne \"{{field}}\". Ajoutez-la dans la vue tableau ou revenez en arrière.",
@@ -24,6 +29,9 @@
     "untitledCardFallback": "Carte sans titre",
     "moreFieldsLabel": "+{{count}} de plus",
     "laneNotConfigured": "Choisissez une colonne kanban dans la barre d'outils pour commencer à utiliser le tableau.",
+    "defaultBoard": {
+      "name": "Tableau des statuts"
+    },
     "actions": {
       "openFromMarkdown": "Ouvrir la vue kanban TileLineBase",
       "switchToKanban": "Passer en vue kanban",
@@ -54,6 +62,70 @@
     },
     "showAllButtonLabel": "Tout afficher ({{count}} de plus)"
   },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "Passer en vue diapositive",
+      "openTemplate": "Modifier le modèle de diapositive",
+      "enterFullscreen": "Passer en plein écran",
+      "exitFullscreen": "Quitter le plein écran"
+    },
+    "emptyState": "Aucune diapositive pour le moment. Ajoutez des titres H2 à cette note.",
+    "filteredCountLabel": "{{count}} diapositives correspondent aux filtres actuels",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "Diapositive {{current}} sur {{total}}",
+    "untitledSlide": "Diapositive sans titre {{index}}",
+    "emptyValue": "(vide)",
+    "nav": { "prev": "Diapositive précédente", "next": "Diapositive suivante" },
+    "edit": { "heading": "Modifier la diapositive" },
+    "templateModal": {
+      "title": "Modèle de diapositive",
+      "titleFieldLabel": "Modèle de titre",
+      "titleFieldDesc": "Utilisez des marqueurs comme {Title} pour construire le titre de la diapositive.",
+      "bodyFieldsLabel": "Modèle du corps",
+      "bodyFieldsDesc": "Utilisez des marqueurs comme {Description} sur des lignes séparées ; les lignes vides sont ignorées.",
+      "textColorLabel": "Couleur du texte",
+      "backgroundColorLabel": "Arrière-plan",
+      "resetColorLabel": "Par défaut",
+      "layoutTitle": "Disposition",
+      "titleLayoutLabel": "Disposition du titre",
+      "bodyLayoutLabel": "Disposition du corps",
+      "widthPctLabel": "Largeur (%)",
+      "topPctLabel": "Haut (%)",
+      "alignLeft": "Gauche",
+      "alignCenter": "Centre",
+      "alignRight": "Droite",
+      "alignLabel": "Alignement",
+      "titleContentLabel": "Contenu du titre",
+      "bodyContentLabel": "Contenu du corps",
+      "lineHeightLabel": "Interligne",
+      "fontSizeLabel": "Taille de police (rem)",
+      "fontWeightLabel": "Graisse de police",
+      "addFieldPlaceholder": "Sélectionner un champ",
+      "insertField": "Insérer un champ",
+      "insertFieldDesc": "Insérez des marqueurs comme {Title} dans les modèles.",
+      "showYamlLabel": "Modifier le YAML",
+      "backToFormLabel": "Retour au formulaire",
+      "yamlViewLabel": "YAML du modèle de diapositive",
+      "yamlViewDesc": "Copiez ou collez du YAML pour migrer ou réutiliser ce modèle de diapositive.",
+      "presetsLabel": "Préréglages",
+      "setDefaultLabel": "Définir comme valeur par défaut globale",
+      "resetToGlobalDefaultLabel": "Charger la valeur par défaut globale",
+      "resetToBuiltInDefaultLabel": "Charger le modèle intégré",
+      "copyPresetLabel": "Copier le préréglage",
+      "pastePresetLabel": "Coller le préréglage",
+      "copyPresetSuccess": "Préréglage de diapositive copié.",
+      "copyPresetFailed": "Échec de la copie du préréglage de diapositive.",
+      "pastePresetSuccess": "Préréglage de diapositive appliqué.",
+      "pastePresetInvalid": "Le presse-papiers ne contient pas un préréglage de diapositive valide.",
+      "pastePresetFailed": "Échec de l'application du préréglage de diapositive.",
+      "clipboardUnavailable": "Le presse-papiers n'est pas disponible dans ce contexte.",
+      "setDefaultSuccess": "Modèle de diapositive enregistré comme valeur par défaut.",
+      "setDefaultError": "Impossible d'enregistrer comme valeur par défaut. Consultez la console pour plus de détails.",
+      "noGlobalDefault": "Aucun préréglage global n'est encore disponible.",
+      "saveLabel": "Enregistrer",
+      "cancelLabel": "Annuler"
+    }
+  },
   "commands": {
     "undoTableHistory": "Annuler la dernière modification du tableau",
     "redoTableHistory": "Rétablir la modification du tableau",
@@ -63,7 +135,8 @@
     "importCsv": "Importer un CSV dans le tableau actuel",
     "importCsvAsTable": "Importer un CSV comme nouveau tableau",
     "toggleTableView": "Basculer la vue tableau",
-    "openKanbanView": "Ouvrir la vue kanban TileLineBase"
+    "openKanbanView": "Ouvrir la vue kanban TileLineBase",
+    "openSlideView": "Ouvrir la vue diapositive TileLineBase"
   },
   "csv": {
     "errorNoFile": "Enregistrez la note avant d'exporter ; le fichier actuel est introuvable.",
@@ -83,6 +156,11 @@
     "interfaceLanguageDesc": "Par défaut : suivre la langue d'Obsidian. Activez cette option pour forcer l'interface TileLineBase à rester en anglais.",
     "hideRightSidebarLabel": "Masquer le panneau latéral droit en vue tableau",
     "hideRightSidebarDesc": "Replier le panneau droit d'Obsidian lorsque la vue tableau TileLineBase est active. Les autres vues restent inchangées.",
+    "tableViewHeading": "Vue tableau",
+    "rowStripeStrengthLabel": "Intensité des bandes de lignes",
+    "rowStripeStrengthDesc": "0 désactive les bandes, 100 les rend maximales.",
+    "borderContrastLabel": "Contraste des bordures",
+    "borderContrastDesc": "0 masque les bordures, 100 les rend maximales.",
     "loggingHeading": "Journalisation",
     "loggingLevelLabel": "Niveau global de journalisation",
     "loggingLevelDesc": "Choisissez la quantité de détails enregistrée par TileLineBase dans la console développeur. Plus le niveau est élevé, plus le journal est bruyant mais utile pour le débogage.",
@@ -131,6 +209,7 @@
     "typeTextOption": "Texte",
     "typeDateOption": "Date",
     "typeTimeOption": "Heure",
+    "typeImageOption": "Image",
     "typeFormulaOption": "Formule",
     "formulaLabel": "Formule",
     "formulaDescription": "Référencez une colonne avec {field} ; prend en charge les opérateurs + - * / et la concaténation \"texte\".",
@@ -335,6 +414,42 @@
     "missingH2": "Le fichier n'a pas de sections H2 et ne peut pas être affiché en tableau",
     "noSchema": "Impossible de construire le schéma de données"
   },
+  "magicMigration": {
+    "modalTitle": "Assistant de conversion",
+    "modalDescription": "Cette note n'a pas de sections H2 TileLineBase. Utilisez un modèle à astérisques pour la convertir automatiquement.",
+    "templateLabel": "Modèle à astérisques",
+    "templateHint": "Remplacez les données à extraire par * et conservez le texte autour comme contexte.",
+    "templatePlaceholder": "Exemple : ### *\\n- Statut : *\\n- Responsable : *",
+    "previewTitle": "Aperçu en direct",
+    "previewCount": "Prévisualisation de {{count}} correspondances",
+    "previewTruncated": "Affichage des {{shown}} premières sur {{total}} correspondances",
+    "previewEmpty": "Aucune correspondance pour l'instant. Ajustez le modèle pour mettre en avant les champs souhaités.",
+    "previewNoiseHint": "Le contenu qui ne correspond pas au modèle sera ignoré automatiquement.",
+    "convertButton": "Convertir et ouvrir",
+    "cancelButton": "Annuler",
+    "targetFileLabel": "Fichier cible",
+    "targetFileHint": "Une nouvelle note TileLineBase sera créée avec ce nom.",
+    "sampleLabel": "Portée de l'échantillon",
+    "sampleHint": "Seuls les paragraphes contenant ce texte seront analysés. Laissez vide pour analyser toute la note.",
+    "samplePlaceholder": "Collez quelques lignes représentant une ligne (par ex. le bloc à puces que vous voulez convertir)",
+    "sourcePaneTitle": "Texte source",
+    "sourcePaneHint": "Surlignez une ligne représentative ; elle sera copiée dans le panneau Exemple.",
+    "sourcePanePlaceholder": "Surlignez ici une ligne représentative pour commencer.",
+    "inlineTitle": "Assistant de conversion",
+    "inlineMessage": "Cette note n'utilise pas de blocs H2 TileLineBase. Utilisez un modèle à astérisques pour convertir et continuer.",
+    "inlineOpenButton": "Ouvrir l'assistant",
+    "errorTemplateRequired": "Saisissez un modèle avec des marqueurs *.",
+    "errorNeedPlaceholder": "Ajoutez au moins un * pour marquer les données à extraire.",
+    "errorInvalidPattern": "Impossible de compiler le modèle. Simplifiez-le.",
+    "errorSampleNoMatch": "Aucun paragraphe ne correspond à la portée d'échantillon. Ajustez le texte d'exemple.",
+    "errorNoMatch": "Aucune correspondance trouvée pour ce modèle.",
+    "defaultPrimaryField": "Titre",
+    "fieldBaseName": "Champ",
+    "defaultFileName": "Note convertie",
+    "successNotice": "Converti en {{fileName}}",
+    "failureNotice": "La conversion a échoué. Réessayez.",
+    "previewRenameHint": "Cliquez sur les en-têtes de colonne pour les renommer."
+  },
   "tableViewSetup": {
     "constructorStart": "=== Début du constructeur TableView ===",
     "constructorComplete": "=== Fin du constructeur TableView ===",
@@ -354,6 +469,11 @@
     "settingsMenuImportCsvAsTableLabel": "Importer un CSV comme nouveau tableau",
     "settingsMenuHelpLabel": "Ouvrir la note d'aide",
     "unnamedViewLabel": "Vue sans titre"
+  },
+  "rowOrder": {
+    "menuLabel": "Réorganiser les lignes (physique)",
+    "modalTitle": "Réorganiser les lignes",
+    "modalWarning": "Cela réécrit l'ordre des lignes dans le fichier."
   },
   "fileDuplication": {
     "errorNoFile": "Le fichier actuel est indisponible.",
@@ -458,7 +578,8 @@
     "iconMatchAriaLabel": "Utiliser l'icône {{icon}}",
     "iconNavPrev": "Icônes précédentes",
     "iconNavNext": "Icônes suivantes",
-    "iconStatusEmpty": "Aucune icône sélectionnée"
+    "iconStatusEmpty": "Aucune icône sélectionnée",
+    "iconPickerAdd": "Ajouter une icône"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Impossible de réinitialiser le curseur pendant compositionstart",

@@ -3,10 +3,79 @@
     "displayName": "TileLineBase 테이블",
     "mode": {
       "table": "테이블",
-      "kanban": "칸반"
+      "kanban": "칸반",
+      "slide": "슬라이드"
     }
   },
-  "viewControls": { "openTableView": "TileLineBase 테이블 보기로 전환", "openMarkdownView": "Markdown 편집기로 돌아가기" },
+  "slideView": {
+    "actions": {
+      "switchToSlide": "슬라이드 보기로 전환",
+      "openTemplate": "슬라이드 템플릿 편집",
+      "enterFullscreen": "전체 화면으로 전환",
+      "exitFullscreen": "전체 화면 종료"
+    },
+    "emptyState": "슬라이드가 없습니다. 이 노트에 H2 제목을 추가하세요.",
+    "filteredCountLabel": "현재 필터와 일치하는 슬라이드 {{count}}개",
+    "counter": "{{current}} / {{total}}",
+    "pageLabel": "슬라이드 {{current}} / {{total}}",
+    "untitledSlide": "제목 없는 슬라이드 {{index}}",
+    "emptyValue": "(비어 있음)",
+    "nav": { "prev": "이전 슬라이드", "next": "다음 슬라이드" },
+    "edit": { "heading": "슬라이드 편집" },
+    "templateModal": {
+      "title": "슬라이드 템플릿",
+      "titleFieldLabel": "제목 템플릿",
+      "titleFieldDesc": "{Title} 같은 플레이스홀더로 슬라이드 제목을 만듭니다.",
+      "bodyFieldsLabel": "본문 템플릿",
+      "bodyFieldsDesc": "{Description} 같은 플레이스홀더를 줄마다 사용합니다. 빈 줄은 건너뜁니다.",
+      "textColorLabel": "텍스트 색상",
+      "backgroundColorLabel": "배경",
+      "resetColorLabel": "기본값",
+      "layoutTitle": "레이아웃",
+      "titleLayoutLabel": "제목 레이아웃",
+      "bodyLayoutLabel": "본문 레이아웃",
+      "widthPctLabel": "너비 (%)",
+      "topPctLabel": "위쪽 (%)",
+      "alignLeft": "왼쪽",
+      "alignCenter": "가운데",
+      "alignRight": "오른쪽",
+      "alignLabel": "정렬",
+      "titleContentLabel": "제목 내용",
+      "bodyContentLabel": "본문 내용",
+      "lineHeightLabel": "줄 간격",
+      "fontSizeLabel": "글꼴 크기 (rem)",
+      "fontWeightLabel": "글꼴 두께",
+      "addFieldPlaceholder": "필드 선택",
+      "insertField": "필드 삽입",
+      "insertFieldDesc": "{Title} 같은 플레이스홀더를 템플릿에 삽입합니다.",
+      "showYamlLabel": "YAML 편집",
+      "backToFormLabel": "폼으로 돌아가기",
+      "yamlViewLabel": "슬라이드 템플릿 YAML",
+      "yamlViewDesc": "이 슬라이드 템플릿을 마이그레이션하거나 재사용하려면 YAML을 복사/붙여넣기하세요.",
+      "presetsLabel": "프리셋",
+      "setDefaultLabel": "전역 기본값으로 설정",
+      "resetToGlobalDefaultLabel": "전역 기본값 불러오기",
+      "resetToBuiltInDefaultLabel": "기본 내장값 불러오기",
+      "copyPresetLabel": "프리셋 복사",
+      "pastePresetLabel": "프리셋 붙여넣기",
+      "copyPresetSuccess": "슬라이드 프리셋을 복사했습니다.",
+      "copyPresetFailed": "슬라이드 프리셋 복사에 실패했습니다.",
+      "pastePresetSuccess": "슬라이드 프리셋을 적용했습니다.",
+      "pastePresetInvalid": "클립보드 데이터가 올바른 슬라이드 프리셋이 아닙니다.",
+      "pastePresetFailed": "슬라이드 프리셋을 적용하지 못했습니다.",
+      "clipboardUnavailable": "이 환경에서는 클립보드를 사용할 수 없습니다.",
+      "setDefaultSuccess": "현재 슬라이드 템플릿을 기본값으로 저장했습니다.",
+      "setDefaultError": "기본값으로 저장하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
+      "noGlobalDefault": "전역 프리셋이 아직 없습니다.",
+      "saveLabel": "저장",
+      "cancelLabel": "취소"
+    }
+  },
+  "viewControls": {
+    "openTableView": "TileLineBase 테이블 보기로 전환",
+    "openMarkdownView": "Markdown 편집기로 돌아가기",
+    "switchViewMenu": "보기 전환 (현재: {{mode}})"
+  },
   "kanbanView": {
     "schemaUnavailable": "칸반 보기를 사용하려면 유효한 테이블 스키마가 필요합니다. 노트를 다시 불러온 뒤 다시 시도하세요.",
     "missingLaneField": "칸반 보기에는 \"{{field}}\" 열이 필요합니다. 테이블 보기에서 추가하거나 테이블로 돌아가세요.",
@@ -24,6 +93,9 @@
     "untitledCardFallback": "제목 없는 카드",
     "moreFieldsLabel": "+{{count}}개 더",
     "laneNotConfigured": "도구 모음에서 칸반 열을 선택한 후 보드를 사용하세요.",
+    "defaultBoard": {
+      "name": "상태 보드"
+    },
     "actions": {
       "openFromMarkdown": "TileLineBase 칸반 보기 열기",
       "switchToKanban": "칸반 보기로 전환",
@@ -52,7 +124,7 @@
     "settings": { "multiRowToggle": "레인을 여러 줄로 감싸기 허용" },
     "showAllButtonLabel": "모두 보기 ({{count}}개 더)"
   },
-  "commands": { "undoTableHistory": "최근 테이블 변경 취소", "redoTableHistory": "테이블 변경 다시 실행", "openHelpDocument": "TileLineBase 도움말 문서 열기", "createTable": "TileLineBase 테이블 노트 만들기", "exportCsv": "현재 테이블을 CSV로 내보내기", "importCsv": "현재 테이블에 CSV 가져오기", "importCsvAsTable": "CSV를 새 테이블로 가져오기", "toggleTableView": "테이블 보기 토글", "openKanbanView": "TileLineBase 칸반 보기 열기" },
+  "commands": { "undoTableHistory": "최근 테이블 변경 취소", "redoTableHistory": "테이블 변경 다시 실행", "openHelpDocument": "TileLineBase 도움말 문서 열기", "createTable": "TileLineBase 테이블 노트 만들기", "exportCsv": "현재 테이블을 CSV로 내보내기", "importCsv": "현재 테이블에 CSV 가져오기", "importCsvAsTable": "CSV를 새 테이블로 가져오기", "toggleTableView": "테이블 보기 토글", "openKanbanView": "TileLineBase 칸반 보기 열기", "openSlideView": "TileLineBase 슬라이드 보기 열기" },
   "csv": {
     "errorNoFile": "내보내기 전에 노트를 저장하세요. 현재 파일을 찾을 수 없습니다.",
     "exportFailure": "CSV 내보내기에 실패했습니다. 자세한 내용은 콘솔을 확인하세요.",
@@ -70,6 +142,11 @@
     "interfaceLanguageLabel": "항상 영어 인터페이스 사용", "interfaceLanguageDesc": "기본값: Obsidian 언어를 따릅니다. 켜면 TileLineBase UI를 항상 영어로 고정합니다.",
     "hideRightSidebarLabel": "테이블 보기에서 오른쪽 사이드바 숨기기",
     "hideRightSidebarDesc": "TileLineBase 테이블 보기가 활성화될 때 Obsidian 오른쪽 사이드바를 접습니다. 다른 보기에는 영향을 주지 않습니다.",
+    "tableViewHeading": "테이블 보기",
+    "rowStripeStrengthLabel": "행 줄무늬 강도",
+    "rowStripeStrengthDesc": "0은 줄무늬 없음, 100은 가장 진하게 표시합니다.",
+    "borderContrastLabel": "테두리 대비",
+    "borderContrastDesc": "0은 테두리 숨김, 100은 가장 진하게 표시합니다.",
     "loggingHeading": "로그",
     "loggingLevelLabel": "전역 로그 수준",
     "loggingLevelDesc": "개발자 콘솔에 기록할 상세 수준을 선택하세요. 높을수록 디버깅에 유리하지만 더 시끄럽습니다.",
@@ -116,6 +193,7 @@
     "typeTextOption": "텍스트",
     "typeDateOption": "날짜",
     "typeTimeOption": "시간",
+    "typeImageOption": "이미지",
     "typeFormulaOption": "수식",
     "formulaLabel": "수식",
     "formulaDescription": "{field}로 열을 참조하세요. + - * / 연산자와 \"text\" 연결을 지원합니다.",
@@ -320,6 +398,42 @@
     "missingH2": "파일에 H2 구역이 없어 테이블로 렌더링할 수 없습니다",
     "noSchema": "데이터 스키마를 만들 수 없습니다"
   },
+  "magicMigration": {
+    "modalTitle": "변환 도우미",
+    "modalDescription": "이 노트에는 TileLineBase H2 섹션이 없습니다. 별표 템플릿으로 자동 변환하세요.",
+    "templateLabel": "별표 템플릿",
+    "templateHint": "추출할 데이터를 *로 바꾸고 주변 텍스트를 맥락으로 남겨두세요.",
+    "templatePlaceholder": "예: ### *\\n- 상태: *\\n- 담당: *",
+    "previewTitle": "실시간 미리보기",
+    "previewCount": "{{count}}개 일치 항목 미리보기",
+    "previewTruncated": "처음 {{shown}} / {{total}}개를 표시합니다",
+    "previewEmpty": "아직 일치 항목이 없습니다. 원하는 필드가 드러나도록 템플릿을 조정하세요.",
+    "previewNoiseHint": "템플릿과 맞지 않는 내용은 자동으로 무시됩니다.",
+    "convertButton": "변환 후 열기",
+    "cancelButton": "취소",
+    "targetFileLabel": "대상 파일",
+    "targetFileHint": "이 이름으로 새 TileLineBase 노트가 만들어집니다.",
+    "sampleLabel": "샘플 범위",
+    "sampleHint": "이 텍스트를 포함하는 문단만 스캔합니다. 비워 두면 노트 전체를 스캔합니다.",
+    "samplePlaceholder": "한 행을 나타내는 몇 줄을 붙여넣으세요(예: 변환하려는 글머리 기호 블록)",
+    "sourcePaneTitle": "소스 텍스트",
+    "sourcePaneHint": "대표 문장을 강조하면 샘플 패널에 복사됩니다.",
+    "sourcePanePlaceholder": "여기서 대표 문장을 강조하여 시작하세요.",
+    "inlineTitle": "변환 도우미",
+    "inlineMessage": "이 노트는 TileLineBase H2 블록을 사용하지 않습니다. 별표 템플릿으로 변환해 계속 진행하세요.",
+    "inlineOpenButton": "마법사 열기",
+    "errorTemplateRequired": "* 플레이스홀더가 있는 템플릿을 입력하세요.",
+    "errorNeedPlaceholder": "추출할 위치에 *를 하나 이상 추가하세요.",
+    "errorInvalidPattern": "템플릿을 컴파일할 수 없습니다. 더 단순하게 만들어 주세요.",
+    "errorSampleNoMatch": "샘플 범위에 맞는 문단이 없습니다. 샘플 텍스트를 조정하세요.",
+    "errorNoMatch": "이 템플릿과 일치하는 결과가 없습니다.",
+    "defaultPrimaryField": "제목",
+    "fieldBaseName": "필드",
+    "defaultFileName": "변환된 노트",
+    "successNotice": "{{fileName}}(으)로 변환했습니다",
+    "failureNotice": "변환에 실패했습니다. 다시 시도해 주세요.",
+    "previewRenameHint": "열 헤더를 클릭해 열 이름을 변경하세요."
+  },
   "tableViewSetup": {
     "constructorStart": "=== TableView 생성자 시작 ===",
     "constructorComplete": "=== TableView 생성자 완료 ===",
@@ -339,6 +453,11 @@
     "settingsMenuImportCsvAsTableLabel": "CSV를 새 테이블로 가져오기",
     "settingsMenuHelpLabel": "도움말 노트 열기",
     "unnamedViewLabel": "제목 없는 보기"
+  },
+  "rowOrder": {
+    "menuLabel": "행 재정렬 (실제 순서)",
+    "modalTitle": "행 재정렬",
+    "modalWarning": "파일의 행 순서가 다시 기록됩니다."
   },
   "fileDuplication": {
     "errorNoFile": "현재 파일을 사용할 수 없습니다.",
@@ -422,7 +541,8 @@
     "iconMatchAriaLabel": "아이콘 {{icon}} 사용",
     "iconNavPrev": "이전 아이콘",
     "iconNavNext": "다음 아이콘",
-    "iconStatusEmpty": "선택된 아이콘 없음"
+    "iconStatusEmpty": "선택된 아이콘 없음",
+    "iconPickerAdd": "아이콘 추가"
   },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] compositionstart 동안 캐럿을 재설정할 수 없습니다",

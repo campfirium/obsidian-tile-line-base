@@ -12,11 +12,11 @@
     "openMarkdownView": "Switch back to Markdown editor",
     "switchViewMenu": "Switch view (current: {{mode}})"
   },
-	"kanbanView": {
-		"schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
-		"missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
-		"missingSortField": "Kanban view needs the \"{{field}}\" column to keep card ordering.",
-		"unassignedLaneLabel": "Unassigned",
+  "kanbanView": {
+    "schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
+    "missingLaneField": "Kanban view needs the \"{{field}}\" column. Add it in the table view or switch back.",
+    "missingSortField": "Kanban view needs the \"{{field}}\" column to keep card ordering.",
+    "unassignedLaneLabel": "Unassigned",
     "filteredCountLabel": "{{count}} cards match the current filters",
     "totalCountLabel": "{{count}} cards",
     "dragHint": "Drag cards to reorder within a lane or move them across lanes.",
@@ -28,7 +28,7 @@
     "emptyLanePlaceholder": "Drop cards here",
     "untitledCardFallback": "Untitled card",
     "moreFieldsLabel": "+{{count}} more",
-		"laneNotConfigured": "Choose a kanban column from the toolbar to start using the board.",
+    "laneNotConfigured": "Choose a kanban column from the toolbar to start using the board.",
     "defaultBoard": {
       "name": "Status board"
     },
@@ -37,27 +37,81 @@
       "switchToKanban": "Switch to kanban view",
       "switchToTable": "Switch to table view"
     },
-		"fieldModal": {
-			"title": "Select kanban column",
-			"description": "Pick the column whose values should form the lanes in the kanban board.",
-			"laneFieldLabel": "Kanban column",
-			"confirmLabel": "Use column",
-			"cancelLabel": "Cancel",
-			"schemaUnavailable": "Load the table first before choosing a kanban column.",
-			"noColumns": "No available columns to use as kanban lanes."
-		},
-		"lanePresetModal": { "title": "Create lane", "description": "Name a lane for the \"{{field}}\" column; it will appear even before any cards exist.", "fieldLabel": "Lane name", "fieldDescription": "Use a unique value so cards dropped here can reuse it.", "placeholder": "Example: Ready for review", "confirmLabel": "Add lane", "cancelLabel": "Cancel", "emptyError": "Enter a lane name before continuing.", "duplicateError": "That lane already exists.", "successNotice": "Created lane \"{{name}}\".", "statusFieldBlocked": "Status lanes already cover the Status column. Edit the Status options in the table instead.", "missingLaneField": "Pick a kanban column before creating a new lane." },
-		"content": { "sectionTitle": "Card content", "insertFieldButton": "Insert field", "titleLabel": "Title template", "titlePlaceholder": "Example: {Title}", "bodyLabel": "Body template", "bodyPlaceholder": "Example: {Description}\\n{Notes}", "tagsLabel": "Tags template", "tagsPlaceholder": "Separate placeholders with commas, e.g. {Tag1}, {Tag2}", "showBodyToggle": "Show body inside card", "showBodyToggleDesc": "When disabled, the body appears as a hover tooltip.", "tagsBelowBodyToggle": "Show tags under body", "tagsBelowBodyToggleDesc": "Keep unchecked to show tags next to the title.", "noFieldOption": "No fields available" },
-		"toolbar": {
-			"defaultBoardLabel": "Default board", "unnamedBoardLabel": "Untitled board",
-			"addBoardButtonAriaLabel": "Add kanban board", "createBoardTitle": "New kanban board",
-			"editBoardTitle": "Edit kanban board", "editBoardLabel": "Edit board",
-			"deleteBoardLabel": "Delete board", "deleteBoardConfirm": "Delete \"{{name}}\"? Cards remain available from other boards.",
-      "cannotDeleteLastBoard": "Keep at least one board.", "newBoardPlaceholder": "Kanban board",
-      "deleteBoardConfirmAction": "Delete", "laneFieldMissingNotice": "The kanban board no longer has a valid lane column. Pick a new column to continue.", "noBoardsPlaceholder": "No kanban boards yet. Use the + button to create one.", "laneFieldLabel": "Kanban column", "duplicateBoardLabel": "Duplicate board", "duplicateBoardTitle": "Duplicate board: {{name}}", "duplicateBoardNotice": "Duplicated board: {{name}}", "duplicateNameSuffix": "copy", "laneWidthLabel": "Lane width (rem)", "laneWidthDescription": "Enter a value between {{min}} and {{max}} rem to control the column width.", "initialVisibleCountLabel": "Initial cards per lane", "initialVisibleCountDesc": "Show this many cards in each lane before revealing the rest.", "sortSettingLabel": "Lane order", "sortSettingDesc": "Choose a column and direction to order cards within each lane.", "sortFieldLabel": "Sort column", "sortFieldNone": "No sorting", "sortDirectionLabel": "Direction", "sortDirectionAsc": "Ascending (A -> Z)", "sortDirectionDesc": "Descending (Z -> A)"
-      , "fontScaleLabel": "Card font scale", "fontScaleDescription": "Enter a value between {{min}} and {{max}} to scale titles, body text, tags, and tooltips.", "addLanePresetMenuLabel": "New lane"
+    "fieldModal": {
+      "title": "Select kanban column",
+      "description": "Pick the column whose values should form the lanes in the kanban board.",
+      "laneFieldLabel": "Kanban column",
+      "confirmLabel": "Use column",
+      "cancelLabel": "Cancel",
+      "schemaUnavailable": "Load the table first before choosing a kanban column.",
+      "noColumns": "No available columns to use as kanban lanes."
     },
-    "settings": { "multiRowToggle": "Allow lanes to wrap into multiple rows" },
+    "lanePresetModal": {
+      "title": "Create lane",
+      "description": "Name a lane for the \"{{field}}\" column; it will appear even before any cards exist.",
+      "fieldLabel": "Lane name",
+      "fieldDescription": "Use a unique value so cards dropped here can reuse it.",
+      "placeholder": "Example: Ready for review",
+      "confirmLabel": "Add lane",
+      "cancelLabel": "Cancel",
+      "emptyError": "Enter a lane name before continuing.",
+      "duplicateError": "That lane already exists.",
+      "successNotice": "Created lane \"{{name}}\".",
+      "statusFieldBlocked": "Status lanes already cover the Status column. Edit the Status options in the table instead.",
+      "missingLaneField": "Pick a kanban column before creating a new lane."
+    },
+    "content": {
+      "sectionTitle": "Card content",
+      "insertFieldButton": "Insert field",
+      "titleLabel": "Title template",
+      "titlePlaceholder": "Example: {Title}",
+      "bodyLabel": "Body template",
+      "bodyPlaceholder": "Example: {Description}\\n{Notes}",
+      "tagsLabel": "Tags template",
+      "tagsPlaceholder": "Separate placeholders with commas, e.g. {Tag1}, {Tag2}",
+      "showBodyToggle": "Show body inside card",
+      "showBodyToggleDesc": "When disabled, the body appears as a hover tooltip.",
+      "tagsBelowBodyToggle": "Show tags under body",
+      "tagsBelowBodyToggleDesc": "Keep unchecked to show tags next to the title.",
+      "noFieldOption": "No fields available"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "Default board",
+      "unnamedBoardLabel": "Untitled board",
+      "addBoardButtonAriaLabel": "Add kanban board",
+      "createBoardTitle": "New kanban board",
+      "editBoardTitle": "Edit kanban board",
+      "editBoardLabel": "Edit board",
+      "deleteBoardLabel": "Delete board",
+      "deleteBoardConfirm": "Delete \"{{name}}\"? Cards remain available from other boards.",
+      "cannotDeleteLastBoard": "Keep at least one board.",
+      "newBoardPlaceholder": "Kanban board",
+      "deleteBoardConfirmAction": "Delete",
+      "laneFieldMissingNotice": "The kanban board no longer has a valid lane column. Pick a new column to continue.",
+      "noBoardsPlaceholder": "No kanban boards yet. Use the + button to create one.",
+      "laneFieldLabel": "Kanban column",
+      "duplicateBoardLabel": "Duplicate board",
+      "duplicateBoardTitle": "Duplicate board: {{name}}",
+      "duplicateBoardNotice": "Duplicated board: {{name}}",
+      "duplicateNameSuffix": "copy",
+      "laneWidthLabel": "Lane width (rem)",
+      "laneWidthDescription": "Enter a value between {{min}} and {{max}} rem to control the column width.",
+      "initialVisibleCountLabel": "Initial cards per lane",
+      "initialVisibleCountDesc": "Show this many cards in each lane before revealing the rest.",
+      "sortSettingLabel": "Lane order",
+      "sortSettingDesc": "Choose a column and direction to order cards within each lane.",
+      "sortFieldLabel": "Sort column",
+      "sortFieldNone": "No sorting",
+      "sortDirectionLabel": "Direction",
+      "sortDirectionAsc": "Ascending (A -> Z)",
+      "sortDirectionDesc": "Descending (Z -> A)",
+      "fontScaleLabel": "Card font scale",
+      "fontScaleDescription": "Enter a value between {{min}} and {{max}} to scale titles, body text, tags, and tooltips.",
+      "addLanePresetMenuLabel": "New lane"
+    },
+    "settings": {
+      "multiRowToggle": "Allow lanes to wrap into multiple rows"
+    },
     "showAllButtonLabel": "Show all ({{count}} more)"
   },
   "slideView": {
@@ -71,11 +125,29 @@
     "filteredCountLabel": "{{count}} slides match the current filters",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "Slide {{current}} of {{total}}",
+    "thumbnailAriaLabel": "Go to slide {{index}}",
+    "thumbnailTitle": "Slide {{index}}: {{title}}",
     "untitledSlide": "Untitled slide {{index}}",
     "emptyValue": "(empty)",
-    "nav": { "prev": "Previous slide", "next": "Next slide" },
-    "edit": { "heading": "Edit slide" },
+    "nav": {
+      "prev": "Previous slide",
+      "next": "Next slide"
+    },
+    "edit": {
+      "heading": "Edit slide"
+    },
     "templateModal": {
+      "modeSingleLabel": "Combined slide",
+      "modeSplitLabel": "Split slides",
+      "modeSingleDesc": "Generates a single slide per row. Displays text and image side-by-side if an image exists.",
+      "noImageTabLabel": "Layout: No image",
+      "withImageTabLabel": "Layout: With image",
+      "modeSplitDesc": "Generates two sequential slides per row: 1. Text slide -> 2. Image slide (if image exists).",
+      "splitTextTabLabel": "Slide 1: Text",
+      "splitImageTabLabel": "Slide 2: Image",
+      "imageContentLabel": "Image content",
+      "imageLayoutLabel": "Image layout",
+      "globalSettingsLabel": "Global settings",
       "title": "Slide template",
       "titleFieldLabel": "Title template",
       "titleFieldDesc": "Use placeholders like {Title} to build the slide title.",
@@ -121,10 +193,24 @@
       "setDefaultError": "Failed to save as default. Check the console for details.",
       "noGlobalDefault": "No global default preset is available yet.",
       "saveLabel": "Save",
-      "cancelLabel": "Cancel"
+      "cancelLabel": "Cancel",
+      "leftOffsetLabel": "Left offset (%)",
+      "rightOffsetLabel": "Right offset (%)",
+      "topOffsetLabel": "Top offset (%)"
     }
   },
-  "commands": { "undoTableHistory": "Undo last table change", "redoTableHistory": "Redo table change", "openHelpDocument": "Open TileLineBase help document", "createTable": "Create TileLineBase table note", "exportCsv": "Export current table as CSV", "importCsv": "Import CSV into current table", "importCsvAsTable": "Import CSV as new table", "toggleTableView": "Toggle table view", "openKanbanView": "Open TileLineBase kanban view", "openSlideView": "Open TileLineBase slide view" },
+  "commands": {
+    "undoTableHistory": "Undo last table change",
+    "redoTableHistory": "Redo table change",
+    "openHelpDocument": "Open TileLineBase help document",
+    "createTable": "Create TileLineBase table note",
+    "exportCsv": "Export current table as CSV",
+    "importCsv": "Import CSV into current table",
+    "importCsvAsTable": "Import CSV as new table",
+    "toggleTableView": "Toggle table view",
+    "openKanbanView": "Open TileLineBase kanban view",
+    "openSlideView": "Open TileLineBase slide view"
+  },
   "csv": {
     "errorNoFile": "Save the note before exporting; the current file could not be found.",
     "exportFailure": "Failed to export CSV. Check the console for details.",
@@ -157,6 +243,11 @@
     "hideRightSidebarLabel": "Hide right sidebar in table view",
     "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever the TileLineBase table view is active. Other views remain unaffected.",
     "tableViewHeading": "Table view",
+    "stripeColorLabel": "Row stripe color",
+    "stripeColorDesc": "Default uses theme-based stripes (±4% lightness).",
+    "stripeColorOptionRecommended": "Default",
+    "stripeColorOptionPrimary": "No stripes",
+    "stripeColorOptionCustom": "Custom",
     "rowStripeStrengthLabel": "Row stripe intensity",
     "rowStripeStrengthDesc": "0 disables striping, 100 makes stripes strongest.",
     "borderContrastLabel": "Border contrast",
@@ -175,7 +266,9 @@
     "backupCapacityLabel": "Backup vault size limit (MB)",
     "backupCapacityDesc": "When the total size exceeds this limit, the oldest snapshots are deleted. Default: 200 MB."
   },
-  "readingView": { "configBlockTitle": "TLB CONFIG BLOCK" },
+  "readingView": {
+    "configBlockTitle": "TLB CONFIG BLOCK"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Encountered an unrecognized character",
@@ -484,7 +577,28 @@
     "fallbackName": "Copied note",
     "exportFallbackName": "Exported note"
   },
-  "backup": { "menuLabel": "Restore backup", "modalTitle": "Backups for {{file}}", "modalTitleConfirm": "Restore backup", "errorNoFile": "Current file is unavailable.", "errorUnavailable": "Backup service is not ready yet.", "errorLoadFailed": "Failed to load backups. Please try again later.", "emptyState": "No backups recorded yet.", "restoreButton": "Restore", "restoreButtonAria": "Restore backup from {{timestamp}}", "restoreInitialTooltip": "Restore note to its original Markdown from {{timestamp}}", "initialEntryLabel": "Original Markdown (before first table conversion)", "confirmRestore": "Restore the file to the version from {{timestamp}}?", "noticeRestoreSuccess": "Restored file to the backup from {{timestamp}}.", "noticeRestoreFailed": "Failed to restore backup. Check the console for details.", "restoreCancelButton": "Cancel", "sizeLabel": "Size: {{size}}", "exportButton": "Export", "exportButtonAria": "Export backup from {{timestamp}} as a new file", "noticeExportSuccess": "Exported backup to {{file}}.", "noticeExportFailed": "Failed to export backup. Check the console for details." },
+  "backup": {
+    "menuLabel": "Restore backup",
+    "modalTitle": "Backups for {{file}}",
+    "modalTitleConfirm": "Restore backup",
+    "errorNoFile": "Current file is unavailable.",
+    "errorUnavailable": "Backup service is not ready yet.",
+    "errorLoadFailed": "Failed to load backups. Please try again later.",
+    "emptyState": "No backups recorded yet.",
+    "restoreButton": "Restore",
+    "restoreButtonAria": "Restore backup from {{timestamp}}",
+    "restoreInitialTooltip": "Restore note to its original Markdown from {{timestamp}}",
+    "initialEntryLabel": "Original Markdown (before first table conversion)",
+    "confirmRestore": "Restore the file to the version from {{timestamp}}?",
+    "noticeRestoreSuccess": "Restored file to the backup from {{timestamp}}.",
+    "noticeRestoreFailed": "Failed to restore backup. Check the console for details.",
+    "restoreCancelButton": "Cancel",
+    "sizeLabel": "Size: {{size}}",
+    "exportButton": "Export",
+    "exportButtonAria": "Export backup from {{timestamp}} as a new file",
+    "noticeExportSuccess": "Exported backup to {{file}}.",
+    "noticeExportFailed": "Failed to export backup. Check the console for details."
+  },
   "filterViewController": {
     "noColumns": "Unable to fetch column information, please try again later",
     "createModalTitle": "Create filter view",

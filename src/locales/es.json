@@ -12,11 +12,11 @@
     "openMarkdownView": "Volver al editor de Markdown",
     "switchViewMenu": "Cambiar vista (actual: {{mode}})"
   },
-	"kanbanView": {
-		"schemaUnavailable": "La vista Kanban requiere un esquema de tabla válido. Recarga la nota e inténtalo de nuevo.",
-		"missingLaneField": "La vista Kanban necesita la columna \"{{field}}\". Agrégala en la vista de tabla o vuelve atrás.",
-		"missingSortField": "La vista Kanban necesita la columna \"{{field}}\" para mantener el orden de las tarjetas.",
-		"unassignedLaneLabel": "Sin asignar",
+  "kanbanView": {
+    "schemaUnavailable": "La vista Kanban requiere un esquema de tabla válido. Recarga la nota e inténtalo de nuevo.",
+    "missingLaneField": "La vista Kanban necesita la columna \"{{field}}\". Agrégala en la vista de tabla o vuelve atrás.",
+    "missingSortField": "La vista Kanban necesita la columna \"{{field}}\" para mantener el orden de las tarjetas.",
+    "unassignedLaneLabel": "Sin asignar",
     "filteredCountLabel": "{{count}} tarjetas coinciden con los filtros actuales",
     "totalCountLabel": "{{count}} tarjetas",
     "dragHint": "Arrastra las tarjetas para reordenarlas dentro de una vía o moverlas entre vías.",
@@ -37,27 +37,81 @@
       "switchToKanban": "Cambiar a la vista Kanban",
       "switchToTable": "Cambiar a la vista de tabla"
     },
-		"fieldModal": {
-			"title": "Seleccionar columna de Kanban",
-			"description": "Elige la columna cuyos valores deben formar las vías en el tablero Kanban.",
-			"laneFieldLabel": "Columna de Kanban",
-			"confirmLabel": "Usar columna",
-			"cancelLabel": "Cancelar",
-			"schemaUnavailable": "Carga primero la tabla antes de elegir una columna de Kanban.",
-			"noColumns": "No hay columnas disponibles para usar como vías de Kanban."
-		},
-		"lanePresetModal": { "title": "Crear vía", "description": "Asigna un nombre a una vía para la columna \"{{field}}\"; aparecerá incluso antes de que existan tarjetas.", "fieldLabel": "Nombre de la vía", "fieldDescription": "Usa un valor único para que las tarjetas que se suelten aquí puedan reutilizarlo.", "placeholder": "Ejemplo: Listo para revisión", "confirmLabel": "Añadir vía", "cancelLabel": "Cancelar", "emptyError": "Ingresa un nombre de vía antes de continuar.", "duplicateError": "Esa vía ya existe.", "successNotice": "Se creó la vía \"{{name}}\".", "statusFieldBlocked": "Las vías de estado ya cubren la columna Status. Edita las opciones de Status en la tabla.", "missingLaneField": "Selecciona una columna de Kanban antes de crear una nueva vía." },
-		"content": { "sectionTitle": "Contenido de la tarjeta", "insertFieldButton": "Insertar campo", "titleLabel": "Plantilla de título", "titlePlaceholder": "Ejemplo: {Title}", "bodyLabel": "Plantilla del cuerpo", "bodyPlaceholder": "Ejemplo: {Description}\\n{Notes}", "tagsLabel": "Plantilla de etiquetas", "tagsPlaceholder": "Separa los marcadores con comas, p. ej. {Tag1}, {Tag2}", "showBodyToggle": "Mostrar el cuerpo dentro de la tarjeta", "showBodyToggleDesc": "Cuando está desactivado, el cuerpo aparece como un tooltip al pasar el cursor.", "tagsBelowBodyToggle": "Mostrar etiquetas debajo del cuerpo", "tagsBelowBodyToggleDesc": "Déjalo sin marcar para mostrar las etiquetas junto al título.", "noFieldOption": "No hay campos disponibles" },
-		"toolbar": {
-			"defaultBoardLabel": "Tablero predeterminado", "unnamedBoardLabel": "Tablero sin título",
-			"addBoardButtonAriaLabel": "Añadir tablero Kanban", "createBoardTitle": "Nuevo tablero Kanban",
-			"editBoardTitle": "Editar tablero Kanban", "editBoardLabel": "Editar tablero",
-			"deleteBoardLabel": "Eliminar tablero", "deleteBoardConfirm": "¿Eliminar \"{{name}}\"? Las tarjetas seguirán disponibles en otros tableros.",
-      "cannotDeleteLastBoard": "Mantén al menos un tablero.", "newBoardPlaceholder": "Tablero Kanban",
-      "deleteBoardConfirmAction": "Eliminar", "laneFieldMissingNotice": "El tablero Kanban ya no tiene una columna de vía válida. Elige una nueva columna para continuar.", "noBoardsPlaceholder": "Todavía no hay tableros Kanban. Usa el botón + para crear uno.", "laneFieldLabel": "Columna de Kanban", "duplicateBoardLabel": "Duplicar tablero", "duplicateBoardTitle": "Duplicar tablero: {{name}}", "duplicateBoardNotice": "Tablero duplicado: {{name}}", "duplicateNameSuffix": "copia", "laneWidthLabel": "Ancho de la vía (rem)", "laneWidthDescription": "Ingresa un valor entre {{min}} y {{max}} rem para controlar el ancho de la columna.", "initialVisibleCountLabel": "Tarjetas iniciales por vía", "initialVisibleCountDesc": "Muestra esta cantidad de tarjetas en cada vía antes de revelar el resto.", "sortSettingLabel": "Orden de las vías", "sortSettingDesc": "Elige una columna y una dirección para ordenar las tarjetas dentro de cada vía.", "sortFieldLabel": "Columna de ordenación", "sortFieldNone": "Sin ordenar", "sortDirectionLabel": "Dirección", "sortDirectionAsc": "Ascendente (A -> Z)", "sortDirectionDesc": "Descendente (Z -> A)"
-      , "fontScaleLabel": "Escala de fuente de las tarjetas", "fontScaleDescription": "Ingresa un valor entre {{min}} y {{max}} para escalar títulos, cuerpo, etiquetas y los mensajes emergentes.", "addLanePresetMenuLabel": "Nueva vía"
+    "fieldModal": {
+      "title": "Seleccionar columna de Kanban",
+      "description": "Elige la columna cuyos valores deben formar las vías en el tablero Kanban.",
+      "laneFieldLabel": "Columna de Kanban",
+      "confirmLabel": "Usar columna",
+      "cancelLabel": "Cancelar",
+      "schemaUnavailable": "Carga primero la tabla antes de elegir una columna de Kanban.",
+      "noColumns": "No hay columnas disponibles para usar como vías de Kanban."
     },
-    "settings": { "multiRowToggle": "Permitir que las vías ocupen varias filas" },
+    "lanePresetModal": {
+      "title": "Crear vía",
+      "description": "Asigna un nombre a una vía para la columna \"{{field}}\"; aparecerá incluso antes de que existan tarjetas.",
+      "fieldLabel": "Nombre de la vía",
+      "fieldDescription": "Usa un valor único para que las tarjetas que se suelten aquí puedan reutilizarlo.",
+      "placeholder": "Ejemplo: Listo para revisión",
+      "confirmLabel": "Añadir vía",
+      "cancelLabel": "Cancelar",
+      "emptyError": "Ingresa un nombre de vía antes de continuar.",
+      "duplicateError": "Esa vía ya existe.",
+      "successNotice": "Se creó la vía \"{{name}}\".",
+      "statusFieldBlocked": "Las vías de estado ya cubren la columna Status. Edita las opciones de Status en la tabla.",
+      "missingLaneField": "Selecciona una columna de Kanban antes de crear una nueva vía."
+    },
+    "content": {
+      "sectionTitle": "Contenido de la tarjeta",
+      "insertFieldButton": "Insertar campo",
+      "titleLabel": "Plantilla de título",
+      "titlePlaceholder": "Ejemplo: {Title}",
+      "bodyLabel": "Plantilla del cuerpo",
+      "bodyPlaceholder": "Ejemplo: {Description}\\n{Notes}",
+      "tagsLabel": "Plantilla de etiquetas",
+      "tagsPlaceholder": "Separa los marcadores con comas, p. ej. {Tag1}, {Tag2}",
+      "showBodyToggle": "Mostrar el cuerpo dentro de la tarjeta",
+      "showBodyToggleDesc": "Cuando está desactivado, el cuerpo aparece como un tooltip al pasar el cursor.",
+      "tagsBelowBodyToggle": "Mostrar etiquetas debajo del cuerpo",
+      "tagsBelowBodyToggleDesc": "Déjalo sin marcar para mostrar las etiquetas junto al título.",
+      "noFieldOption": "No hay campos disponibles"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "Tablero predeterminado",
+      "unnamedBoardLabel": "Tablero sin título",
+      "addBoardButtonAriaLabel": "Añadir tablero Kanban",
+      "createBoardTitle": "Nuevo tablero Kanban",
+      "editBoardTitle": "Editar tablero Kanban",
+      "editBoardLabel": "Editar tablero",
+      "deleteBoardLabel": "Eliminar tablero",
+      "deleteBoardConfirm": "¿Eliminar \"{{name}}\"? Las tarjetas seguirán disponibles en otros tableros.",
+      "cannotDeleteLastBoard": "Mantén al menos un tablero.",
+      "newBoardPlaceholder": "Tablero Kanban",
+      "deleteBoardConfirmAction": "Eliminar",
+      "laneFieldMissingNotice": "El tablero Kanban ya no tiene una columna de vía válida. Elige una nueva columna para continuar.",
+      "noBoardsPlaceholder": "Todavía no hay tableros Kanban. Usa el botón + para crear uno.",
+      "laneFieldLabel": "Columna de Kanban",
+      "duplicateBoardLabel": "Duplicar tablero",
+      "duplicateBoardTitle": "Duplicar tablero: {{name}}",
+      "duplicateBoardNotice": "Tablero duplicado: {{name}}",
+      "duplicateNameSuffix": "copia",
+      "laneWidthLabel": "Ancho de la vía (rem)",
+      "laneWidthDescription": "Ingresa un valor entre {{min}} y {{max}} rem para controlar el ancho de la columna.",
+      "initialVisibleCountLabel": "Tarjetas iniciales por vía",
+      "initialVisibleCountDesc": "Muestra esta cantidad de tarjetas en cada vía antes de revelar el resto.",
+      "sortSettingLabel": "Orden de las vías",
+      "sortSettingDesc": "Elige una columna y una dirección para ordenar las tarjetas dentro de cada vía.",
+      "sortFieldLabel": "Columna de ordenación",
+      "sortFieldNone": "Sin ordenar",
+      "sortDirectionLabel": "Dirección",
+      "sortDirectionAsc": "Ascendente (A -> Z)",
+      "sortDirectionDesc": "Descendente (Z -> A)",
+      "fontScaleLabel": "Escala de fuente de las tarjetas",
+      "fontScaleDescription": "Ingresa un valor entre {{min}} y {{max}} para escalar títulos, cuerpo, etiquetas y los mensajes emergentes.",
+      "addLanePresetMenuLabel": "Nueva vía"
+    },
+    "settings": {
+      "multiRowToggle": "Permitir que las vías ocupen varias filas"
+    },
     "showAllButtonLabel": "Mostrar todo ({{count}} más)"
   },
   "slideView": {
@@ -71,11 +125,23 @@
     "filteredCountLabel": "{{count}} diapositivas coinciden con los filtros actuales",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "Diapositiva {{current}} de {{total}}",
+    "thumbnailAriaLabel": "Ir a la diapositiva {{index}}",
+    "thumbnailTitle": "Diapositiva {{index}}: {{title}}",
     "untitledSlide": "Diapositiva sin título {{index}}",
     "emptyValue": "(vacío)",
-    "nav": { "prev": "Diapositiva anterior", "next": "Siguiente diapositiva" },
-    "edit": { "heading": "Editar diapositiva" },
+    "nav": {
+      "prev": "Diapositiva anterior",
+      "next": "Siguiente diapositiva"
+    },
+    "edit": {
+      "heading": "Editar diapositiva"
+    },
     "templateModal": {
+      "modeSingleLabel": "Diapositiva combinada",
+      "modeSplitLabel": "Dividir diapositivas",
+      "modeSingleDesc": "Genera una sola diapositiva por fila. Si hay imagen, muestra texto e imagen en paralelo.",
+      "noImageTabLabel": "Diseño: sin imagen",
+      "withImageTabLabel": "Diseño: con imagen",
       "title": "Plantilla de diapositivas",
       "titleFieldLabel": "Plantilla de título",
       "titleFieldDesc": "Usa marcadores como {Title} para construir el título de la diapositiva.",
@@ -121,10 +187,30 @@
       "setDefaultError": "No se pudo guardar como predeterminada. Consulta la consola para más detalles.",
       "noGlobalDefault": "Aún no hay un preajuste global disponible.",
       "saveLabel": "Guardar",
-      "cancelLabel": "Cancelar"
+      "cancelLabel": "Cancelar",
+      "modeSplitDesc": "Genera dos diapositivas secuenciales por fila: 1. Diapositiva de texto -> 2. Diapositiva de imagen (si existe imagen).",
+      "splitTextTabLabel": "Diapositiva 1: texto",
+      "splitImageTabLabel": "Diapositiva 2: imagen",
+      "imageContentLabel": "Contenido de la imagen",
+      "imageLayoutLabel": "Diseño de la imagen",
+      "globalSettingsLabel": "Configuración global",
+      "leftOffsetLabel": "Desplazamiento izquierdo (%)",
+      "rightOffsetLabel": "Desplazamiento derecho (%)",
+      "topOffsetLabel": "Desplazamiento superior (%)"
     }
   },
-  "commands": { "undoTableHistory": "Deshacer el último cambio de la tabla", "redoTableHistory": "Rehacer el cambio de la tabla", "openHelpDocument": "Abrir el documento de ayuda de TileLineBase", "createTable": "Crear nota de tabla TileLineBase", "exportCsv": "Exportar la tabla actual como CSV", "importCsv": "Importar un CSV en la tabla actual", "importCsvAsTable": "Importar CSV como nueva tabla", "toggleTableView": "Alternar vista de tabla", "openKanbanView": "Abrir la vista Kanban de TileLineBase", "openSlideView": "Abrir la vista de diapositivas de TileLineBase" },
+  "commands": {
+    "undoTableHistory": "Deshacer el último cambio de la tabla",
+    "redoTableHistory": "Rehacer el cambio de la tabla",
+    "openHelpDocument": "Abrir el documento de ayuda de TileLineBase",
+    "createTable": "Crear nota de tabla TileLineBase",
+    "exportCsv": "Exportar la tabla actual como CSV",
+    "importCsv": "Importar un CSV en la tabla actual",
+    "importCsvAsTable": "Importar CSV como nueva tabla",
+    "toggleTableView": "Alternar vista de tabla",
+    "openKanbanView": "Abrir la vista Kanban de TileLineBase",
+    "openSlideView": "Abrir la vista de diapositivas de TileLineBase"
+  },
   "csv": {
     "errorNoFile": "Guarda la nota antes de exportar; no se encontró el archivo actual.",
     "exportFailure": "No se pudo exportar el CSV. Revisa la consola para obtener detalles.",
@@ -139,7 +225,8 @@
   },
   "settings": {
     "generalHeading": "General",
-    "interfaceLanguageLabel": "Idioma de la interfaz", "interfaceLanguageDesc": "",
+    "interfaceLanguageLabel": "Idioma de la interfaz",
+    "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Usar idioma de Obsidian",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -156,6 +243,11 @@
     "hideRightSidebarLabel": "Ocultar la barra lateral derecha en la vista de tabla",
     "hideRightSidebarDesc": "Contrae la barra lateral derecha de Obsidian cada vez que la vista de tabla de TileLineBase está activa. Las demás vistas no se ven afectadas.",
     "tableViewHeading": "Vista de tabla",
+    "stripeColorLabel": "Color de las franjas de filas",
+    "stripeColorDesc": "El predeterminado usa franjas basadas en el tema (±4% de luminosidad).",
+    "stripeColorOptionRecommended": "Predeterminado",
+    "stripeColorOptionPrimary": "Sin franjas",
+    "stripeColorOptionCustom": "Personalizado",
     "rowStripeStrengthLabel": "Intensidad de las franjas",
     "rowStripeStrengthDesc": "0 desactiva las franjas, 100 las hace más fuertes.",
     "borderContrastLabel": "Contraste de bordes",
@@ -174,7 +266,9 @@
     "backupCapacityLabel": "Límite de tamaño del almacén de copias (MB)",
     "backupCapacityDesc": "Cuando el tamaño total supera este límite, se eliminan las instantáneas más antiguas. Predeterminado: 200 MB."
   },
-  "readingView": { "configBlockTitle": "BLOQUE DE CONFIGURACIÓN TLB" },
+  "readingView": {
+    "configBlockTitle": "BLOQUE DE CONFIGURACIÓN TLB"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Se encontró un carácter no reconocido",
@@ -483,7 +577,28 @@
     "fallbackName": "Nota copiada",
     "exportFallbackName": "Nota exportada"
   },
-  "backup": { "menuLabel": "Restaurar copia de seguridad", "modalTitle": "Copias de seguridad de {{file}}", "modalTitleConfirm": "Restaurar copia de seguridad", "errorNoFile": "El archivo actual no está disponible.", "errorUnavailable": "El servicio de copias de seguridad aún no está listo.", "errorLoadFailed": "No se pudieron cargar las copias de seguridad. Inténtalo de nuevo más tarde.", "emptyState": "Todavía no hay copias de seguridad.", "restoreButton": "Restaurar", "restoreButtonAria": "Restaurar copia de seguridad de {{timestamp}}", "restoreInitialTooltip": "Restaurar la nota a su Markdown original de {{timestamp}}", "initialEntryLabel": "Markdown original (antes de la primera conversión a tabla)", "confirmRestore": "¿Restaurar el archivo a la versión de {{timestamp}}?", "noticeRestoreSuccess": "El archivo se restauró a la copia de seguridad de {{timestamp}}.", "noticeRestoreFailed": "No se pudo restaurar la copia de seguridad. Revisa la consola para obtener detalles.", "restoreCancelButton": "Cancelar", "sizeLabel": "Tamaño: {{size}}", "exportButton": "Exportar", "exportButtonAria": "Exportar la copia de {{timestamp}} como archivo nuevo", "noticeExportSuccess": "Se exportó la copia de seguridad a {{file}}.", "noticeExportFailed": "No se pudo exportar la copia de seguridad. Revisa la consola para obtener detalles." },
+  "backup": {
+    "menuLabel": "Restaurar copia de seguridad",
+    "modalTitle": "Copias de seguridad de {{file}}",
+    "modalTitleConfirm": "Restaurar copia de seguridad",
+    "errorNoFile": "El archivo actual no está disponible.",
+    "errorUnavailable": "El servicio de copias de seguridad aún no está listo.",
+    "errorLoadFailed": "No se pudieron cargar las copias de seguridad. Inténtalo de nuevo más tarde.",
+    "emptyState": "Todavía no hay copias de seguridad.",
+    "restoreButton": "Restaurar",
+    "restoreButtonAria": "Restaurar copia de seguridad de {{timestamp}}",
+    "restoreInitialTooltip": "Restaurar la nota a su Markdown original de {{timestamp}}",
+    "initialEntryLabel": "Markdown original (antes de la primera conversión a tabla)",
+    "confirmRestore": "¿Restaurar el archivo a la versión de {{timestamp}}?",
+    "noticeRestoreSuccess": "El archivo se restauró a la copia de seguridad de {{timestamp}}.",
+    "noticeRestoreFailed": "No se pudo restaurar la copia de seguridad. Revisa la consola para obtener detalles.",
+    "restoreCancelButton": "Cancelar",
+    "sizeLabel": "Tamaño: {{size}}",
+    "exportButton": "Exportar",
+    "exportButtonAria": "Exportar la copia de {{timestamp}} como archivo nuevo",
+    "noticeExportSuccess": "Se exportó la copia de seguridad a {{file}}.",
+    "noticeExportFailed": "No se pudo exportar la copia de seguridad. Revisa la consola para obtener detalles."
+  },
   "filterViewController": {
     "noColumns": "No se pudo obtener la información de columnas, inténtalo de nuevo más tarde",
     "createModalTitle": "Crear vista de filtros",

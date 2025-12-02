@@ -18,11 +18,23 @@
     "filteredCountLabel": "{{count}} 件のスライドが現在のフィルターに一致します",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "スライド {{current}} / {{total}}",
+    "thumbnailAriaLabel": "スライド {{index}} へ移動",
+    "thumbnailTitle": "スライド{{index}}：{{title}}",
     "untitledSlide": "無題のスライド {{index}}",
     "emptyValue": "(空)",
-    "nav": { "prev": "前のスライド", "next": "次のスライド" },
-    "edit": { "heading": "スライドを編集" },
+    "nav": {
+      "prev": "前のスライド",
+      "next": "次のスライド"
+    },
+    "edit": {
+      "heading": "スライドを編集"
+    },
     "templateModal": {
+      "modeSingleLabel": "結合スライド",
+      "modeSplitLabel": "スライドを分割",
+      "modeSingleDesc": "1 行につき 1 枚のスライドを生成します。画像がある場合はテキストと画像を横並びで表示します。",
+      "noImageTabLabel": "レイアウト: 画像なし",
+      "withImageTabLabel": "レイアウト: 画像あり",
       "title": "スライドテンプレート",
       "titleFieldLabel": "タイトルテンプレート",
       "titleFieldDesc": "{Title} のようなプレースホルダーを使ってスライドのタイトルを作成します。",
@@ -68,7 +80,16 @@
       "setDefaultError": "デフォルトとして保存できませんでした。詳細はコンソールを確認してください。",
       "noGlobalDefault": "グローバルなプリセットはまだありません。",
       "saveLabel": "保存",
-      "cancelLabel": "キャンセル"
+      "cancelLabel": "キャンセル",
+      "modeSplitDesc": "1 行につき 2 枚のスライドを順番に生成します: 1. テキストスライド -> 2. 画像スライド（画像がある場合）。",
+      "splitTextTabLabel": "スライド1：テキスト",
+      "splitImageTabLabel": "スライド2：画像",
+      "imageContentLabel": "画像コンテンツ",
+      "imageLayoutLabel": "画像レイアウト",
+      "globalSettingsLabel": "グローバル設定",
+      "leftOffsetLabel": "左のオフセット (%)",
+      "rightOffsetLabel": "右のオフセット (%)",
+      "topOffsetLabel": "上オフセット (%)"
     }
   },
   "viewControls": {
@@ -76,11 +97,11 @@
     "openMarkdownView": "Markdown エディターに戻る",
     "switchViewMenu": "ビューを切り替え (現在: {{mode}})"
   },
-	"kanbanView": {
-		"schemaUnavailable": "カンバン表示には有効なテーブルスキーマが必要です。ノートを再読み込みしてからもう一度お試しください。",
-		"missingLaneField": "カンバン表示には「{{field}}」列が必要です。テーブルビューで追加するか元の表示に戻ってください。",
-		"missingSortField": "カンバン表示ではカードの順序を維持するために「{{field}}」列が必要です。",
-		"unassignedLaneLabel": "未割り当て",
+  "kanbanView": {
+    "schemaUnavailable": "カンバン表示には有効なテーブルスキーマが必要です。ノートを再読み込みしてからもう一度お試しください。",
+    "missingLaneField": "カンバン表示には「{{field}}」列が必要です。テーブルビューで追加するか元の表示に戻ってください。",
+    "missingSortField": "カンバン表示ではカードの順序を維持するために「{{field}}」列が必要です。",
+    "unassignedLaneLabel": "未割り当て",
     "filteredCountLabel": "{{count}} 件のカードが現在のフィルターに一致しています",
     "totalCountLabel": "カード {{count}} 件",
     "dragHint": "カードをドラッグして同じレーン内で並べ替えるか別のレーンに移動します。",
@@ -101,30 +122,95 @@
       "switchToKanban": "カンバンビューに切り替える",
       "switchToTable": "テーブルビューに切り替える"
     },
-		"fieldModal": {
-			"title": "カンバン列を選択",
-			"description": "カンバンボードのレーンを構成する列を選んでください。",
-			"laneFieldLabel": "カンバン列",
-			"confirmLabel": "この列を使う",
-			"cancelLabel": "キャンセル",
-			"schemaUnavailable": "カンバン列を選ぶ前に、まずテーブルを読み込んでください。",
-			"noColumns": "カンバンのレーンに使える列がありません。"
-		},
-		"lanePresetModal": { "title": "レーンを作成", "description": "「{{field}}」列のためのレーンに名前を付けます。カードがまだなくても表示されます。", "fieldLabel": "レーン名", "fieldDescription": "ここにドロップされたカードが再利用できるよう一意の値を使用してください。", "placeholder": "例: レビュー待ち", "confirmLabel": "レーンを追加", "cancelLabel": "キャンセル", "emptyError": "続行する前にレーン名を入力してください。", "duplicateError": "そのレーンはすでに存在します。", "successNotice": "レーン「{{name}}」を作成しました。", "statusFieldBlocked": "ステータスレーンはステータス列をすでにカバーしています。テーブルでステータスのオプションを編集してください。", "missingLaneField": "新しいレーンを作成する前にカンバン列を選択してください。" },
-		"content": { "sectionTitle": "カードの内容", "insertFieldButton": "フィールドを挿入", "titleLabel": "タイトルテンプレート", "titlePlaceholder": "例: {Title}", "bodyLabel": "本文テンプレート", "bodyPlaceholder": "例: {Description}\\n{Notes}", "tagsLabel": "タグテンプレート", "tagsPlaceholder": "プレースホルダーはカンマで区切ります。例: {Tag1}, {Tag2}", "showBodyToggle": "本文をカード内に表示", "showBodyToggleDesc": "オフにすると本文はホバー時のツールチップとして表示されます。", "tagsBelowBodyToggle": "本文の下にタグを表示", "tagsBelowBodyToggleDesc": "オフのままにするとタグはタイトルの横に表示されます。", "noFieldOption": "使用できるフィールドがありません" },
-		"toolbar": {
-			"defaultBoardLabel": "デフォルトボード", "unnamedBoardLabel": "無題のボード",
-			"addBoardButtonAriaLabel": "カンバンボードを追加", "createBoardTitle": "新しいカンバンボード",
-			"editBoardTitle": "カンバンボードを編集", "editBoardLabel": "ボードを編集",
-			"deleteBoardLabel": "ボードを削除", "deleteBoardConfirm": "「{{name}}」を削除しますか？カードは他のボードから引き続き利用できます。",
-      "cannotDeleteLastBoard": "少なくとも 1 つのボードを保持してください。", "newBoardPlaceholder": "カンバンボード",
-      "deleteBoardConfirmAction": "削除", "laneFieldMissingNotice": "このカンバンボードにはもう有効なレーン列がありません。続行するには新しい列を選択してください。", "noBoardsPlaceholder": "まだカンバンボードがありません。+ ボタンで作成してください。", "laneFieldLabel": "カンバン列", "duplicateBoardLabel": "ボードを複製", "duplicateBoardTitle": "ボードを複製: {{name}}", "duplicateBoardNotice": "ボードを複製しました: {{name}}", "duplicateNameSuffix": "コピー", "laneWidthLabel": "レーン幅（rem）", "laneWidthDescription": "列幅を調整するには {{min}} から {{max}} rem の値を入力してください。", "initialVisibleCountLabel": "レーンごとの初期表示枚数", "initialVisibleCountDesc": "各レーンでこの枚数のカードを表示した後に残りを展開します。", "sortSettingLabel": "レーン内の並び順", "sortSettingDesc": "各レーンでカードを並べ替える列と方向を選択してください。", "sortFieldLabel": "ソート列", "sortFieldNone": "並べ替えなし", "sortDirectionLabel": "方向", "sortDirectionAsc": "昇順 (A -> Z)", "sortDirectionDesc": "降順 (Z -> A)"
-      , "fontScaleLabel": "カードの文字スケール", "fontScaleDescription": "タイトル・本文・タグ・ツールチップのサイズを調整するには {{min}} から {{max}} の値を入力してください。", "addLanePresetMenuLabel": "新しいレーン"
+    "fieldModal": {
+      "title": "カンバン列を選択",
+      "description": "カンバンボードのレーンを構成する列を選んでください。",
+      "laneFieldLabel": "カンバン列",
+      "confirmLabel": "この列を使う",
+      "cancelLabel": "キャンセル",
+      "schemaUnavailable": "カンバン列を選ぶ前に、まずテーブルを読み込んでください。",
+      "noColumns": "カンバンのレーンに使える列がありません。"
     },
-    "settings": { "multiRowToggle": "レーンを複数行に折り返す" },
+    "lanePresetModal": {
+      "title": "レーンを作成",
+      "description": "「{{field}}」列のためのレーンに名前を付けます。カードがまだなくても表示されます。",
+      "fieldLabel": "レーン名",
+      "fieldDescription": "ここにドロップされたカードが再利用できるよう一意の値を使用してください。",
+      "placeholder": "例: レビュー待ち",
+      "confirmLabel": "レーンを追加",
+      "cancelLabel": "キャンセル",
+      "emptyError": "続行する前にレーン名を入力してください。",
+      "duplicateError": "そのレーンはすでに存在します。",
+      "successNotice": "レーン「{{name}}」を作成しました。",
+      "statusFieldBlocked": "ステータスレーンはステータス列をすでにカバーしています。テーブルでステータスのオプションを編集してください。",
+      "missingLaneField": "新しいレーンを作成する前にカンバン列を選択してください。"
+    },
+    "content": {
+      "sectionTitle": "カードの内容",
+      "insertFieldButton": "フィールドを挿入",
+      "titleLabel": "タイトルテンプレート",
+      "titlePlaceholder": "例: {Title}",
+      "bodyLabel": "本文テンプレート",
+      "bodyPlaceholder": "例: {Description}\\n{Notes}",
+      "tagsLabel": "タグテンプレート",
+      "tagsPlaceholder": "プレースホルダーはカンマで区切ります。例: {Tag1}, {Tag2}",
+      "showBodyToggle": "本文をカード内に表示",
+      "showBodyToggleDesc": "オフにすると本文はホバー時のツールチップとして表示されます。",
+      "tagsBelowBodyToggle": "本文の下にタグを表示",
+      "tagsBelowBodyToggleDesc": "オフのままにするとタグはタイトルの横に表示されます。",
+      "noFieldOption": "使用できるフィールドがありません"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "デフォルトボード",
+      "unnamedBoardLabel": "無題のボード",
+      "addBoardButtonAriaLabel": "カンバンボードを追加",
+      "createBoardTitle": "新しいカンバンボード",
+      "editBoardTitle": "カンバンボードを編集",
+      "editBoardLabel": "ボードを編集",
+      "deleteBoardLabel": "ボードを削除",
+      "deleteBoardConfirm": "「{{name}}」を削除しますか？カードは他のボードから引き続き利用できます。",
+      "cannotDeleteLastBoard": "少なくとも 1 つのボードを保持してください。",
+      "newBoardPlaceholder": "カンバンボード",
+      "deleteBoardConfirmAction": "削除",
+      "laneFieldMissingNotice": "このカンバンボードにはもう有効なレーン列がありません。続行するには新しい列を選択してください。",
+      "noBoardsPlaceholder": "まだカンバンボードがありません。+ ボタンで作成してください。",
+      "laneFieldLabel": "カンバン列",
+      "duplicateBoardLabel": "ボードを複製",
+      "duplicateBoardTitle": "ボードを複製: {{name}}",
+      "duplicateBoardNotice": "ボードを複製しました: {{name}}",
+      "duplicateNameSuffix": "コピー",
+      "laneWidthLabel": "レーン幅（rem）",
+      "laneWidthDescription": "列幅を調整するには {{min}} から {{max}} rem の値を入力してください。",
+      "initialVisibleCountLabel": "レーンごとの初期表示枚数",
+      "initialVisibleCountDesc": "各レーンでこの枚数のカードを表示した後に残りを展開します。",
+      "sortSettingLabel": "レーン内の並び順",
+      "sortSettingDesc": "各レーンでカードを並べ替える列と方向を選択してください。",
+      "sortFieldLabel": "ソート列",
+      "sortFieldNone": "並べ替えなし",
+      "sortDirectionLabel": "方向",
+      "sortDirectionAsc": "昇順 (A -> Z)",
+      "sortDirectionDesc": "降順 (Z -> A)",
+      "fontScaleLabel": "カードの文字スケール",
+      "fontScaleDescription": "タイトル・本文・タグ・ツールチップのサイズを調整するには {{min}} から {{max}} の値を入力してください。",
+      "addLanePresetMenuLabel": "新しいレーン"
+    },
+    "settings": {
+      "multiRowToggle": "レーンを複数行に折り返す"
+    },
     "showAllButtonLabel": "すべて表示 (残り {{count}} 件)"
   },
-  "commands": { "undoTableHistory": "直前のテーブル変更を元に戻す", "redoTableHistory": "テーブルの変更をやり直す", "openHelpDocument": "TileLineBase のヘルプドキュメントを開く", "createTable": "TileLineBase のテーブルノートを作成", "exportCsv": "現在のテーブルを CSV にエクスポート", "importCsv": "CSV を現在のテーブルに取り込む", "importCsvAsTable": "CSV を新しいテーブルとして取り込む", "toggleTableView": "テーブルビューを切り替える", "openKanbanView": "TileLineBase のカンバンビューを開く", "openSlideView": "TileLineBase のスライドビューを開く" },
+  "commands": {
+    "undoTableHistory": "直前のテーブル変更を元に戻す",
+    "redoTableHistory": "テーブルの変更をやり直す",
+    "openHelpDocument": "TileLineBase のヘルプドキュメントを開く",
+    "createTable": "TileLineBase のテーブルノートを作成",
+    "exportCsv": "現在のテーブルを CSV にエクスポート",
+    "importCsv": "CSV を現在のテーブルに取り込む",
+    "importCsvAsTable": "CSV を新しいテーブルとして取り込む",
+    "toggleTableView": "テーブルビューを切り替える",
+    "openKanbanView": "TileLineBase のカンバンビューを開く",
+    "openSlideView": "TileLineBase のスライドビューを開く"
+  },
   "csv": {
     "errorNoFile": "エクスポートする前にノートを保存してください。現在のファイルが見つかりません。",
     "exportFailure": "CSV のエクスポートに失敗しました。詳細はコンソールを確認してください。",
@@ -139,7 +225,8 @@
   },
   "settings": {
     "generalHeading": "一般",
-    "interfaceLanguageLabel": "インターフェースの言語", "interfaceLanguageDesc": "",
+    "interfaceLanguageLabel": "インターフェースの言語",
+    "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Obsidian の言語に合わせる",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -156,6 +243,11 @@
     "hideRightSidebarLabel": "テーブルビューでは右サイドバーを隠す",
     "hideRightSidebarDesc": "TileLineBase のテーブルビューがアクティブな間は Obsidian の右サイドバーを折りたたみます。他のビューには影響しません。",
     "tableViewHeading": "テーブルビュー",
+    "stripeColorLabel": "行ストライプの色",
+    "stripeColorDesc": "デフォルトはテーマに合わせたストライプ（明度±4%）を使用します。",
+    "stripeColorOptionRecommended": "デフォルト",
+    "stripeColorOptionPrimary": "ストライプなし",
+    "stripeColorOptionCustom": "カスタム",
     "rowStripeStrengthLabel": "行のストライプ強度",
     "rowStripeStrengthDesc": "0 でストライプなし、100 で最も強くなります。",
     "borderContrastLabel": "枠線のコントラスト",
@@ -174,7 +266,9 @@
     "backupCapacityLabel": "バックアップ保管庫の上限 (MB)",
     "backupCapacityDesc": "合計サイズがこの上限を超えると最も古いスナップショットから削除されます。既定値: 200 MB。"
   },
-  "readingView": { "configBlockTitle": "TLB 設定ブロック" },
+  "readingView": {
+    "configBlockTitle": "TLB 設定ブロック"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "不明な文字が検出されました",
@@ -483,7 +577,28 @@
     "fallbackName": "コピーしたノート",
     "exportFallbackName": "書き出したノート"
   },
-  "backup": { "menuLabel": "バックアップを復元", "modalTitle": "{{file}} のバックアップ", "modalTitleConfirm": "バックアップを復元", "errorNoFile": "現在のファイルを利用できません。", "errorUnavailable": "バックアップサービスの準備がまだできていません。", "errorLoadFailed": "バックアップの読み込みに失敗しました。後でもう一度お試しください。", "emptyState": "バックアップはまだありません。", "restoreButton": "復元", "restoreButtonAria": "{{timestamp}} のバックアップを復元", "restoreInitialTooltip": "{{timestamp}} 時点の元の Markdown に戻します", "initialEntryLabel": "元の Markdown (テーブル変換前)", "confirmRestore": "ファイルを {{timestamp}} の内容に戻しますか？", "noticeRestoreSuccess": "{{timestamp}} のバックアップに戻しました。", "noticeRestoreFailed": "バックアップの復元に失敗しました。詳細はコンソールを確認してください。", "restoreCancelButton": "キャンセル", "sizeLabel": "サイズ: {{size}}", "exportButton": "エクスポート", "exportButtonAria": "{{timestamp}} のバックアップを新しいファイルとしてエクスポート", "noticeExportSuccess": "バックアップを {{file}} にエクスポートしました。", "noticeExportFailed": "バックアップのエクスポートに失敗しました。詳細はコンソールを確認してください。" },
+  "backup": {
+    "menuLabel": "バックアップを復元",
+    "modalTitle": "{{file}} のバックアップ",
+    "modalTitleConfirm": "バックアップを復元",
+    "errorNoFile": "現在のファイルを利用できません。",
+    "errorUnavailable": "バックアップサービスの準備がまだできていません。",
+    "errorLoadFailed": "バックアップの読み込みに失敗しました。後でもう一度お試しください。",
+    "emptyState": "バックアップはまだありません。",
+    "restoreButton": "復元",
+    "restoreButtonAria": "{{timestamp}} のバックアップを復元",
+    "restoreInitialTooltip": "{{timestamp}} 時点の元の Markdown に戻します",
+    "initialEntryLabel": "元の Markdown (テーブル変換前)",
+    "confirmRestore": "ファイルを {{timestamp}} の内容に戻しますか？",
+    "noticeRestoreSuccess": "{{timestamp}} のバックアップに戻しました。",
+    "noticeRestoreFailed": "バックアップの復元に失敗しました。詳細はコンソールを確認してください。",
+    "restoreCancelButton": "キャンセル",
+    "sizeLabel": "サイズ: {{size}}",
+    "exportButton": "エクスポート",
+    "exportButtonAria": "{{timestamp}} のバックアップを新しいファイルとしてエクスポート",
+    "noticeExportSuccess": "バックアップを {{file}} にエクスポートしました。",
+    "noticeExportFailed": "バックアップのエクスポートに失敗しました。詳細はコンソールを確認してください。"
+  },
   "filterViewController": {
     "noColumns": "列情報を取得できません。後でもう一度お試しください",
     "createModalTitle": "フィルタービューを作成",

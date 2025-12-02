@@ -12,11 +12,11 @@
     "openMarkdownView": "Voltar para o editor Markdown",
     "switchViewMenu": "Alternar visualização (atual: {{mode}})"
   },
-	"kanbanView": {
-		"schemaUnavailable": "A visualização Kanban requer um esquema de tabela válido. Recarregue a nota e tente novamente.",
-		"missingLaneField": "A visualização Kanban precisa da coluna \"{{field}}\". Adicione-a na visualização em tabela ou volte para lá.",
-		"missingSortField": "A visualização Kanban precisa da coluna \"{{field}}\" para manter a ordem dos cartões.",
-		"unassignedLaneLabel": "Sem raia",
+  "kanbanView": {
+    "schemaUnavailable": "A visualização Kanban requer um esquema de tabela válido. Recarregue a nota e tente novamente.",
+    "missingLaneField": "A visualização Kanban precisa da coluna \"{{field}}\". Adicione-a na visualização em tabela ou volte para lá.",
+    "missingSortField": "A visualização Kanban precisa da coluna \"{{field}}\" para manter a ordem dos cartões.",
+    "unassignedLaneLabel": "Sem raia",
     "filteredCountLabel": "{{count}} cartões correspondem aos filtros atuais",
     "totalCountLabel": "{{count}} cartões",
     "dragHint": "Arraste cartões para reordená-los em uma raia ou movê-los entre raias.",
@@ -37,30 +37,83 @@
       "switchToKanban": "Alternar para a visualização Kanban",
       "switchToTable": "Alternar para a visualização em tabela"
     },
-		"fieldModal": {
-			"title": "Selecionar coluna Kanban",
-			"description": "Escolha a coluna cujos valores formarão as raias do quadro Kanban.",
-			"laneFieldLabel": "Coluna Kanban",
-			"confirmLabel": "Usar coluna",
-			"cancelLabel": "Cancelar",
-			"schemaUnavailable": "Carregue a tabela antes de escolher uma coluna Kanban.",
-			"noColumns": "Não há colunas disponíveis para usar como raias do Kanban."
-		},
-		"lanePresetModal": { "title": "Criar raia", "description": "Nomeie uma raia para a coluna \"{{field}}\"; ela aparecerá mesmo antes de existirem cartões.", "fieldLabel": "Nome da raia", "fieldDescription": "Use um valor exclusivo para que os cartões soltos aqui possam reutilizá-lo.", "placeholder": "Exemplo: Pronto para revisão", "confirmLabel": "Adicionar raia", "cancelLabel": "Cancelar", "emptyError": "Digite um nome de raia antes de continuar.", "duplicateError": "Essa raia já existe.", "successNotice": "Raia \"{{name}}\" criada.", "statusFieldBlocked": "As raias de Status já cobrem a coluna Status. Edite as opções de Status na tabela.", "missingLaneField": "Escolha uma coluna Kanban antes de criar uma nova raia." },
-		"content": { "sectionTitle": "Conteúdo do cartão", "insertFieldButton": "Inserir campo", "titleLabel": "Modelo de título", "titlePlaceholder": "Exemplo: {Título}", "bodyLabel": "Modelo de corpo", "bodyPlaceholder": "Exemplo: {Descrição}\\n{Notas}", "tagsLabel": "Modelo de etiquetas", "tagsPlaceholder": "Separe os placeholders com vírgulas, por exemplo {Etiqueta1}, {Etiqueta2}", "showBodyToggle": "Mostrar corpo dentro do cartão", "showBodyToggleDesc": "Quando desativado, o corpo aparece como uma dica ao passar o cursor.", "tagsBelowBodyToggle": "Mostrar etiquetas abaixo do corpo", "tagsBelowBodyToggleDesc": "Deixe desmarcado para mostrar as etiquetas ao lado do título.", "noFieldOption": "Nenhum campo disponível" },
-		"toolbar": {
-			"defaultBoardLabel": "Quadro padrão", "unnamedBoardLabel": "Quadro sem título",
-			"addBoardButtonAriaLabel": "Adicionar quadro Kanban", "createBoardTitle": "Novo quadro Kanban",
-			"editBoardTitle": "Editar quadro Kanban", "editBoardLabel": "Editar quadro",
-			"deleteBoardLabel": "Excluir quadro", "deleteBoardConfirm": "Excluir \"{{name}}\"? Os cartões permanecem disponíveis em outros quadros.",
-      "cannotDeleteLastBoard": "Mantenha pelo menos um quadro.", "newBoardPlaceholder": "Quadro Kanban",
-      "deleteBoardConfirmAction": "Excluir", "laneFieldMissingNotice": "O quadro Kanban não tem mais uma coluna de raia válida. Escolha uma nova coluna para continuar.", "noBoardsPlaceholder": "Ainda não há quadros Kanban. Use o botão + para criar um.", "laneFieldLabel": "Coluna Kanban", "duplicateBoardLabel": "Duplicar quadro", "duplicateBoardTitle": "Duplicar quadro: {{name}}", "duplicateBoardNotice": "Quadro duplicado: {{name}}", "duplicateNameSuffix": "cópia", "laneWidthLabel": "Largura da raia (rem)", "laneWidthDescription": "Insira um valor entre {{min}} e {{max}} rem para controlar a largura da coluna.", "initialVisibleCountLabel": "Cartões iniciais por raia", "initialVisibleCountDesc": "Mostre esta quantidade de cartões em cada raia antes de revelar o restante.", "sortSettingLabel": "Ordem das raias", "sortSettingDesc": "Escolha uma coluna e direção para ordenar os cartões dentro de cada raia.", "sortFieldLabel": "Coluna de ordenação", "sortFieldNone": "Sem ordenação", "sortDirectionLabel": "Direção", "sortDirectionAsc": "Ascendente (A -> Z)", "sortDirectionDesc": "Descendente (Z -> A)"
-      , "fontScaleLabel": "Escala da fonte do cartão", "fontScaleDescription": "Digite um valor entre {{min}} e {{max}} para dimensionar títulos, corpo, etiquetas e dicas.", "addLanePresetMenuLabel": "Nova raia"
+    "fieldModal": {
+      "title": "Selecionar coluna Kanban",
+      "description": "Escolha a coluna cujos valores formarão as raias do quadro Kanban.",
+      "laneFieldLabel": "Coluna Kanban",
+      "confirmLabel": "Usar coluna",
+      "cancelLabel": "Cancelar",
+      "schemaUnavailable": "Carregue a tabela antes de escolher uma coluna Kanban.",
+      "noColumns": "Não há colunas disponíveis para usar como raias do Kanban."
     },
-    "settings": { "multiRowToggle": "Permitir que as raias ocupem várias linhas" },
+    "lanePresetModal": {
+      "title": "Criar raia",
+      "description": "Nomeie uma raia para a coluna \"{{field}}\"; ela aparecerá mesmo antes de existirem cartões.",
+      "fieldLabel": "Nome da raia",
+      "fieldDescription": "Use um valor exclusivo para que os cartões soltos aqui possam reutilizá-lo.",
+      "placeholder": "Exemplo: Pronto para revisão",
+      "confirmLabel": "Adicionar raia",
+      "cancelLabel": "Cancelar",
+      "emptyError": "Digite um nome de raia antes de continuar.",
+      "duplicateError": "Essa raia já existe.",
+      "successNotice": "Raia \"{{name}}\" criada.",
+      "statusFieldBlocked": "As raias de Status já cobrem a coluna Status. Edite as opções de Status na tabela.",
+      "missingLaneField": "Escolha uma coluna Kanban antes de criar uma nova raia."
+    },
+    "content": {
+      "sectionTitle": "Conteúdo do cartão",
+      "insertFieldButton": "Inserir campo",
+      "titleLabel": "Modelo de título",
+      "titlePlaceholder": "Exemplo: {Título}",
+      "bodyLabel": "Modelo de corpo",
+      "bodyPlaceholder": "Exemplo: {Descrição}\\n{Notas}",
+      "tagsLabel": "Modelo de etiquetas",
+      "tagsPlaceholder": "Separe os placeholders com vírgulas, por exemplo {Etiqueta1}, {Etiqueta2}",
+      "showBodyToggle": "Mostrar corpo dentro do cartão",
+      "showBodyToggleDesc": "Quando desativado, o corpo aparece como uma dica ao passar o cursor.",
+      "tagsBelowBodyToggle": "Mostrar etiquetas abaixo do corpo",
+      "tagsBelowBodyToggleDesc": "Deixe desmarcado para mostrar as etiquetas ao lado do título.",
+      "noFieldOption": "Nenhum campo disponível"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "Quadro padrão",
+      "unnamedBoardLabel": "Quadro sem título",
+      "addBoardButtonAriaLabel": "Adicionar quadro Kanban",
+      "createBoardTitle": "Novo quadro Kanban",
+      "editBoardTitle": "Editar quadro Kanban",
+      "editBoardLabel": "Editar quadro",
+      "deleteBoardLabel": "Excluir quadro",
+      "deleteBoardConfirm": "Excluir \"{{name}}\"? Os cartões permanecem disponíveis em outros quadros.",
+      "cannotDeleteLastBoard": "Mantenha pelo menos um quadro.",
+      "newBoardPlaceholder": "Quadro Kanban",
+      "deleteBoardConfirmAction": "Excluir",
+      "laneFieldMissingNotice": "O quadro Kanban não tem mais uma coluna de raia válida. Escolha uma nova coluna para continuar.",
+      "noBoardsPlaceholder": "Ainda não há quadros Kanban. Use o botão + para criar um.",
+      "laneFieldLabel": "Coluna Kanban",
+      "duplicateBoardLabel": "Duplicar quadro",
+      "duplicateBoardTitle": "Duplicar quadro: {{name}}",
+      "duplicateBoardNotice": "Quadro duplicado: {{name}}",
+      "duplicateNameSuffix": "cópia",
+      "laneWidthLabel": "Largura da raia (rem)",
+      "laneWidthDescription": "Insira um valor entre {{min}} e {{max}} rem para controlar a largura da coluna.",
+      "initialVisibleCountLabel": "Cartões iniciais por raia",
+      "initialVisibleCountDesc": "Mostre esta quantidade de cartões em cada raia antes de revelar o restante.",
+      "sortSettingLabel": "Ordem das raias",
+      "sortSettingDesc": "Escolha uma coluna e direção para ordenar os cartões dentro de cada raia.",
+      "sortFieldLabel": "Coluna de ordenação",
+      "sortFieldNone": "Sem ordenação",
+      "sortDirectionLabel": "Direção",
+      "sortDirectionAsc": "Ascendente (A -> Z)",
+      "sortDirectionDesc": "Descendente (Z -> A)",
+      "fontScaleLabel": "Escala da fonte do cartão",
+      "fontScaleDescription": "Digite um valor entre {{min}} e {{max}} para dimensionar títulos, corpo, etiquetas e dicas.",
+      "addLanePresetMenuLabel": "Nova raia"
+    },
+    "settings": {
+      "multiRowToggle": "Permitir que as raias ocupem várias linhas"
+    },
     "showAllButtonLabel": "Mostrar tudo (mais {{count}})"
-	}
-,
+  },
   "slideView": {
     "actions": {
       "switchToSlide": "Alternar para a visualização de slides",
@@ -72,11 +125,23 @@
     "filteredCountLabel": "{{count}} slides correspondem aos filtros atuais",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "Slide {{current}} de {{total}}",
+    "thumbnailAriaLabel": "Ir para o slide {{index}}",
+    "thumbnailTitle": "Slide {{index}}: {{title}}",
     "untitledSlide": "Slide sem título {{index}}",
     "emptyValue": "(vazio)",
-    "nav": { "prev": "Slide anterior", "next": "Próximo slide" },
-    "edit": { "heading": "Editar slide" },
+    "nav": {
+      "prev": "Slide anterior",
+      "next": "Próximo slide"
+    },
+    "edit": {
+      "heading": "Editar slide"
+    },
     "templateModal": {
+      "modeSingleLabel": "Slide combinado",
+      "modeSplitLabel": "Dividir slides",
+      "modeSingleDesc": "Gera um único slide por linha. Se houver imagem, mostra texto e imagem lado a lado.",
+      "noImageTabLabel": "Layout: sem imagem",
+      "withImageTabLabel": "Layout: com imagem",
       "title": "Modelo de slide",
       "titleFieldLabel": "Modelo de título",
       "titleFieldDesc": "Use marcadores como {Title} para montar o título do slide.",
@@ -122,10 +187,30 @@
       "setDefaultError": "Falha ao salvar como padrão. Verifique o console para detalhes.",
       "noGlobalDefault": "Ainda não há predefinição global disponível.",
       "saveLabel": "Salvar",
-      "cancelLabel": "Cancelar"
+      "cancelLabel": "Cancelar",
+      "modeSplitDesc": "Gera duas páginas sequenciais por linha: 1. Slide de texto -> 2. Slide de imagem (se existir).",
+      "splitTextTabLabel": "Slide 1: texto",
+      "splitImageTabLabel": "Slide 2: imagem",
+      "imageContentLabel": "Conteúdo da imagem",
+      "imageLayoutLabel": "Layout da imagem",
+      "globalSettingsLabel": "Configurações globais",
+      "leftOffsetLabel": "Deslocamento à esquerda (%)",
+      "rightOffsetLabel": "Deslocamento à direita (%)",
+      "topOffsetLabel": "Deslocamento superior (%)"
     }
   },
-  "commands": { "undoTableHistory": "Desfazer a última alteração da tabela", "redoTableHistory": "Refazer alteração da tabela", "openHelpDocument": "Abrir o documento de ajuda do TileLineBase", "createTable": "Criar nota de tabela do TileLineBase", "exportCsv": "Exportar a tabela atual como CSV", "importCsv": "Importar CSV na tabela atual", "importCsvAsTable": "Importar CSV como nova tabela", "toggleTableView": "Alternar visualização da tabela", "openKanbanView": "Abrir a visualização Kanban do TileLineBase", "openSlideView": "Abrir a visualização de slides do TileLineBase" },
+  "commands": {
+    "undoTableHistory": "Desfazer a última alteração da tabela",
+    "redoTableHistory": "Refazer alteração da tabela",
+    "openHelpDocument": "Abrir o documento de ajuda do TileLineBase",
+    "createTable": "Criar nota de tabela do TileLineBase",
+    "exportCsv": "Exportar a tabela atual como CSV",
+    "importCsv": "Importar CSV na tabela atual",
+    "importCsvAsTable": "Importar CSV como nova tabela",
+    "toggleTableView": "Alternar visualização da tabela",
+    "openKanbanView": "Abrir a visualização Kanban do TileLineBase",
+    "openSlideView": "Abrir a visualização de slides do TileLineBase"
+  },
   "csv": {
     "errorNoFile": "Salve a nota antes de exportar; o arquivo atual não foi encontrado.",
     "exportFailure": "Falha ao exportar o CSV. Verifique o console para mais detalhes.",
@@ -140,7 +225,8 @@
   },
   "settings": {
     "generalHeading": "Geral",
-    "interfaceLanguageLabel": "Idioma da interface", "interfaceLanguageDesc": "",
+    "interfaceLanguageLabel": "Idioma da interface",
+    "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Seguir o idioma do Obsidian",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -157,6 +243,11 @@
     "hideRightSidebarLabel": "Ocultar a barra lateral direita na visualização em tabela",
     "hideRightSidebarDesc": "Recolhe a barra lateral direita do Obsidian sempre que a visualização em tabela do TileLineBase estiver ativa. Outras visualizações não são afetadas.",
     "tableViewHeading": "Visualização em tabela",
+    "stripeColorLabel": "Cor das faixas de linhas",
+    "stripeColorDesc": "O padrão usa faixas baseadas no tema (±4% de luminosidade).",
+    "stripeColorOptionRecommended": "Padrão",
+    "stripeColorOptionPrimary": "Sem faixas",
+    "stripeColorOptionCustom": "Personalizado",
     "rowStripeStrengthLabel": "Intensidade das faixas de linhas",
     "rowStripeStrengthDesc": "0 desativa as faixas, 100 as deixa mais fortes.",
     "borderContrastLabel": "Contraste das bordas",
@@ -175,7 +266,9 @@
     "backupCapacityLabel": "Limite de tamanho do cofre de backups (MB)",
     "backupCapacityDesc": "Quando o tamanho total exceder esse limite, os instantâneos mais antigos serão excluídos. Padrão: 200 MB."
   },
-  "readingView": { "configBlockTitle": "BLOCO DE CONFIGURAÇÃO TLB" },
+  "readingView": {
+    "configBlockTitle": "BLOCO DE CONFIGURAÇÃO TLB"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Caractere não reconhecido encontrado",
@@ -198,8 +291,7 @@
     "editorWaitTimeout": "Tempo limite ao aguardar a entrada do editor",
     "compositionCaptureFailed": "[AgGridAdapter] Falha ao capturar CompositionProxy",
     "copyFailed": "[AgGridAdapter] execCommand copy falhou"
-  }
-  ,
+  },
   "columnEditorModal": {
     "title": "Editar coluna: {{columnName}}",
     "nameLabel": "Nome da coluna",
@@ -258,8 +350,7 @@
     "hMmSsA": "12 horas local com segundos (ex.: {{example}})",
     "enHMmA": "12 horas em inglês ({{example}})",
     "enHMmSsA": "12 horas em inglês com segundos ({{example}})"
-  }
-  ,
+  },
   "columnInteraction": {
     "menuEdit": "Editar coluna",
     "menuDuplicate": "Duplicar coluna",
@@ -341,8 +432,7 @@
     "defaultFileName": "Linhas migradas",
     "multiSuffix": " (seleção múltipla)",
     "duplicatePattern": "{{base}} ({{index}})"
-  }
-  ,
+  },
   "gridFillModal": {
     "title": "Preencher coluna: {{column}}",
     "valueLabel": "Novo valor",
@@ -372,8 +462,7 @@
     "saveButton": "Salvar",
     "resetButton": "Restaurar para o padrão",
     "cancelButton": "Cancelar"
-  }
-  ,
+  },
   "tableDataStore": {
     "newRowPrefix": "Novo item",
     "newColumnName": "Campo",
@@ -456,8 +545,7 @@
     "constructorStart": "=== Início do construtor TableView ===",
     "constructorComplete": "=== Construtor TableView concluído ===",
     "formulaLimitNotice": "Cálculo da fórmula pausado; limite de {{limit}} linhas excedido"
-  }
-  ,
+  },
   "filterViewBar": {
     "allTabLabel": "Todas",
     "tagGroupButtonLabel": "Grupo de visualizações",
@@ -510,8 +598,7 @@
     "exportButtonAria": "Exportar backup de {{timestamp}} como um novo arquivo",
     "noticeExportSuccess": "Backup exportado para {{file}}.",
     "noticeExportFailed": "Falha ao exportar o backup. Verifique o console para detalhes."
-  }
-  ,
+  },
   "filterViewController": {
     "noColumns": "Não foi possível obter as informações das colunas, tente novamente mais tarde",
     "createModalTitle": "Criar visualização de filtro",
@@ -584,8 +671,7 @@
     "iconNavNext": "Próximos ícones",
     "iconStatusEmpty": "Nenhum ícone selecionado",
     "iconPickerAdd": "Adicionar ícone"
-  }
-  ,
+  },
   "compositionProxy": {
     "compositionResetFailed": "[CompositionProxy] Não foi possível redefinir o cursor durante compositionstart",
     "caretResetFailed": "[CompositionProxy] Não foi possível redefinir a posição do cursor"
@@ -634,8 +720,7 @@
     "createFieldNoViews": "Falha ao gerar visualizações de filtro para o campo selecionado.",
     "createFieldNoColumns": "Não há colunas disponíveis para grupos de visualizações.",
     "emptyValueName": "(Vazio) {{field}}"
-  }
-  ,
+  },
   "paragraphPromotion": {
     "menuLabel": "Promover para nota",
     "modalTitle": "Promover para nota",

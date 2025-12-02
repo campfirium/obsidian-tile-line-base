@@ -18,11 +18,23 @@
     "filteredCountLabel": "{{count}} dia's komen overeen met de huidige filters",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "Dia {{current}} van {{total}}",
+    "thumbnailAriaLabel": "Ga naar dia {{index}}",
+    "thumbnailTitle": "Dia {{index}}: {{title}}",
     "untitledSlide": "Naamloze dia {{index}}",
     "emptyValue": "(leeg)",
-    "nav": { "prev": "Vorige dia", "next": "Volgende dia" },
-    "edit": { "heading": "Dia bewerken" },
+    "nav": {
+      "prev": "Vorige dia",
+      "next": "Volgende dia"
+    },
+    "edit": {
+      "heading": "Dia bewerken"
+    },
     "templateModal": {
+      "modeSingleLabel": "Samengevoegde dia",
+      "modeSplitLabel": "Dia's splitsen",
+      "modeSingleDesc": "Maakt één dia per rij. Toont tekst en afbeelding naast elkaar als er een afbeelding is.",
+      "noImageTabLabel": "Lay-out: geen afbeelding",
+      "withImageTabLabel": "Lay-out: met afbeelding",
       "title": "Dia-template",
       "titleFieldLabel": "Titeltemplate",
       "titleFieldDesc": "Gebruik placeholders zoals {Title} om de diatitel op te bouwen.",
@@ -68,7 +80,16 @@
       "setDefaultError": "Opslaan als standaard mislukt. Zie de console voor details.",
       "noGlobalDefault": "Er is nog geen globale preset beschikbaar.",
       "saveLabel": "Opslaan",
-      "cancelLabel": "Annuleren"
+      "cancelLabel": "Annuleren",
+      "modeSplitDesc": "Maakt twee opeenvolgende dia's per rij: 1. tekstdia -> 2. afbeeldingsdia (indien beschikbaar).",
+      "splitTextTabLabel": "Dia 1: tekst",
+      "splitImageTabLabel": "Dia 2: afbeelding",
+      "imageContentLabel": "Afbeeldingsinhoud",
+      "imageLayoutLabel": "Afbeeldingslay-out",
+      "globalSettingsLabel": "Globale instellingen",
+      "leftOffsetLabel": "Linker offset (%)",
+      "rightOffsetLabel": "Rechter offset (%)",
+      "topOffsetLabel": "Bovenste offset (%)"
     }
   },
   "viewControls": {
@@ -76,11 +97,11 @@
     "openMarkdownView": "Terugschakelen naar Markdown-editor",
     "switchViewMenu": "Weergave wisselen (huidig: {{mode}})"
   },
-	"kanbanView": {
-		"schemaUnavailable": "Kanbanweergave vereist een geldig tabelschema. Laad de notitie opnieuw en probeer het opnieuw.",
-		"missingLaneField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig. Voeg hem toe in de tabelweergave of schakel terug.",
-		"missingSortField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig om de kaartvolgorde te behouden.",
-		"unassignedLaneLabel": "Niet toegewezen",
+  "kanbanView": {
+    "schemaUnavailable": "Kanbanweergave vereist een geldig tabelschema. Laad de notitie opnieuw en probeer het opnieuw.",
+    "missingLaneField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig. Voeg hem toe in de tabelweergave of schakel terug.",
+    "missingSortField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig om de kaartvolgorde te behouden.",
+    "unassignedLaneLabel": "Niet toegewezen",
     "filteredCountLabel": "{{count}} kaarten komen overeen met de huidige filters",
     "totalCountLabel": "{{count}} kaarten",
     "dragHint": "Sleep kaarten om ze binnen een kolom opnieuw te rangschikken of tussen kolommen te verplaatsen.",
@@ -101,30 +122,95 @@
       "switchToKanban": "Overschakelen naar kanbanweergave",
       "switchToTable": "Overschakelen naar tabelweergave"
     },
-		"fieldModal": {
-			"title": "Kanbankolom selecteren",
-			"description": "Kies de kolom waarvan de waarden de kolommen in het kanbanbord vormen.",
-			"laneFieldLabel": "Kanbankolom",
-			"confirmLabel": "Kolom gebruiken",
-			"cancelLabel": "Annuleren",
-			"schemaUnavailable": "Laad eerst de tabel voordat je een kanbankolom kiest.",
-			"noColumns": "Geen kolommen beschikbaar om als kanbankolommen te gebruiken."
-		},
-		"lanePresetModal": { "title": "Kolom aanmaken", "description": "Geef een kolomnaam voor de kolom \"{{field}}\"; hij verschijnt al voordat er kaarten zijn.", "fieldLabel": "Kolomnaam", "fieldDescription": "Gebruik een unieke waarde zodat kaarten die hier worden neergezet die opnieuw kunnen gebruiken.", "placeholder": "Voorbeeld: Klaar voor review", "confirmLabel": "Kolom toevoegen", "cancelLabel": "Annuleren", "emptyError": "Voer een kolomnaam in voordat je doorgaat.", "duplicateError": "Die kolom bestaat al.", "successNotice": "Kolom \"{{name}}\" aangemaakt.", "statusFieldBlocked": "Statuskolommen dekken de Status-kolom al. Bewerk de Statusopties in de tabel.", "missingLaneField": "Kies een kanbankolom voordat je een nieuwe kolom maakt." },
-		"content": { "sectionTitle": "Kaartinhoud", "insertFieldButton": "Veld invoegen", "titleLabel": "Titeltemplate", "titlePlaceholder": "Voorbeeld: {Title}", "bodyLabel": "Tekstsjabloon", "bodyPlaceholder": "Voorbeeld: {Description}\\n{Notes}", "tagsLabel": "Tagtemplate", "tagsPlaceholder": "Scheid placeholders met komma's, bijv. {Tag1}, {Tag2}", "showBodyToggle": "Hoofdtekst in kaart tonen", "showBodyToggleDesc": "Wanneer uitgeschakeld verschijnt de tekst als een tooltip bij hover.", "tagsBelowBodyToggle": "Tags onder de tekst tonen", "tagsBelowBodyToggleDesc": "Laat uitgeschakeld om tags naast de titel te tonen.", "noFieldOption": "Geen velden beschikbaar" },
-		"toolbar": {
-			"defaultBoardLabel": "Standaardboard", "unnamedBoardLabel": "Naamloos board",
-			"addBoardButtonAriaLabel": "Kanbanboard toevoegen", "createBoardTitle": "Nieuw kanbanboard",
-			"editBoardTitle": "Kanbanboard bewerken", "editBoardLabel": "Board bewerken",
-			"deleteBoardLabel": "Board verwijderen", "deleteBoardConfirm": "\"{{name}}\" verwijderen? Kaarten blijven beschikbaar vanuit andere boards.",
-      "cannotDeleteLastBoard": "Behoud minstens één board.", "newBoardPlaceholder": "Kanbanboard",
-      "deleteBoardConfirmAction": "Verwijderen", "laneFieldMissingNotice": "Het kanbanboard heeft geen geldige kolom meer. Kies een nieuwe kolom om door te gaan.", "noBoardsPlaceholder": "Nog geen kanbanboards. Gebruik de +-knop om er een te maken.", "laneFieldLabel": "Kanbankolom", "duplicateBoardLabel": "Board dupliceren", "duplicateBoardTitle": "Board dupliceren: {{name}}", "duplicateBoardNotice": "Board gedupliceerd: {{name}}", "duplicateNameSuffix": "kopie", "laneWidthLabel": "Kolombreedte (rem)", "laneWidthDescription": "Voer een waarde tussen {{min}} en {{max}} rem in om de kolombreedte te bepalen.", "initialVisibleCountLabel": "Startkaarten per kolom", "initialVisibleCountDesc": "Toon zoveel kaarten in elke kolom voordat de rest verschijnt.", "sortSettingLabel": "Kolomvolgorde", "sortSettingDesc": "Kies een kolom en richting om kaarten binnen elke kolom te sorteren.", "sortFieldLabel": "Sorteerkolom", "sortFieldNone": "Niet sorteren", "sortDirectionLabel": "Richting", "sortDirectionAsc": "Oplopend (A -> Z)", "sortDirectionDesc": "Aflopend (Z -> A)"
-      , "fontScaleLabel": "Lettergrootte van kaarten", "fontScaleDescription": "Voer een waarde tussen {{min}} en {{max}} in om titels, tekst, tags en tooltips te schalen.", "addLanePresetMenuLabel": "Nieuwe kolom"
+    "fieldModal": {
+      "title": "Kanbankolom selecteren",
+      "description": "Kies de kolom waarvan de waarden de kolommen in het kanbanbord vormen.",
+      "laneFieldLabel": "Kanbankolom",
+      "confirmLabel": "Kolom gebruiken",
+      "cancelLabel": "Annuleren",
+      "schemaUnavailable": "Laad eerst de tabel voordat je een kanbankolom kiest.",
+      "noColumns": "Geen kolommen beschikbaar om als kanbankolommen te gebruiken."
     },
-    "settings": { "multiRowToggle": "Kolommen toestaan om over meerdere rijen te lopen" },
+    "lanePresetModal": {
+      "title": "Kolom aanmaken",
+      "description": "Geef een kolomnaam voor de kolom \"{{field}}\"; hij verschijnt al voordat er kaarten zijn.",
+      "fieldLabel": "Kolomnaam",
+      "fieldDescription": "Gebruik een unieke waarde zodat kaarten die hier worden neergezet die opnieuw kunnen gebruiken.",
+      "placeholder": "Voorbeeld: Klaar voor review",
+      "confirmLabel": "Kolom toevoegen",
+      "cancelLabel": "Annuleren",
+      "emptyError": "Voer een kolomnaam in voordat je doorgaat.",
+      "duplicateError": "Die kolom bestaat al.",
+      "successNotice": "Kolom \"{{name}}\" aangemaakt.",
+      "statusFieldBlocked": "Statuskolommen dekken de Status-kolom al. Bewerk de Statusopties in de tabel.",
+      "missingLaneField": "Kies een kanbankolom voordat je een nieuwe kolom maakt."
+    },
+    "content": {
+      "sectionTitle": "Kaartinhoud",
+      "insertFieldButton": "Veld invoegen",
+      "titleLabel": "Titeltemplate",
+      "titlePlaceholder": "Voorbeeld: {Title}",
+      "bodyLabel": "Tekstsjabloon",
+      "bodyPlaceholder": "Voorbeeld: {Description}\\n{Notes}",
+      "tagsLabel": "Tagtemplate",
+      "tagsPlaceholder": "Scheid placeholders met komma's, bijv. {Tag1}, {Tag2}",
+      "showBodyToggle": "Hoofdtekst in kaart tonen",
+      "showBodyToggleDesc": "Wanneer uitgeschakeld verschijnt de tekst als een tooltip bij hover.",
+      "tagsBelowBodyToggle": "Tags onder de tekst tonen",
+      "tagsBelowBodyToggleDesc": "Laat uitgeschakeld om tags naast de titel te tonen.",
+      "noFieldOption": "Geen velden beschikbaar"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "Standaardboard",
+      "unnamedBoardLabel": "Naamloos board",
+      "addBoardButtonAriaLabel": "Kanbanboard toevoegen",
+      "createBoardTitle": "Nieuw kanbanboard",
+      "editBoardTitle": "Kanbanboard bewerken",
+      "editBoardLabel": "Board bewerken",
+      "deleteBoardLabel": "Board verwijderen",
+      "deleteBoardConfirm": "\"{{name}}\" verwijderen? Kaarten blijven beschikbaar vanuit andere boards.",
+      "cannotDeleteLastBoard": "Behoud minstens één board.",
+      "newBoardPlaceholder": "Kanbanboard",
+      "deleteBoardConfirmAction": "Verwijderen",
+      "laneFieldMissingNotice": "Het kanbanboard heeft geen geldige kolom meer. Kies een nieuwe kolom om door te gaan.",
+      "noBoardsPlaceholder": "Nog geen kanbanboards. Gebruik de +-knop om er een te maken.",
+      "laneFieldLabel": "Kanbankolom",
+      "duplicateBoardLabel": "Board dupliceren",
+      "duplicateBoardTitle": "Board dupliceren: {{name}}",
+      "duplicateBoardNotice": "Board gedupliceerd: {{name}}",
+      "duplicateNameSuffix": "kopie",
+      "laneWidthLabel": "Kolombreedte (rem)",
+      "laneWidthDescription": "Voer een waarde tussen {{min}} en {{max}} rem in om de kolombreedte te bepalen.",
+      "initialVisibleCountLabel": "Startkaarten per kolom",
+      "initialVisibleCountDesc": "Toon zoveel kaarten in elke kolom voordat de rest verschijnt.",
+      "sortSettingLabel": "Kolomvolgorde",
+      "sortSettingDesc": "Kies een kolom en richting om kaarten binnen elke kolom te sorteren.",
+      "sortFieldLabel": "Sorteerkolom",
+      "sortFieldNone": "Niet sorteren",
+      "sortDirectionLabel": "Richting",
+      "sortDirectionAsc": "Oplopend (A -> Z)",
+      "sortDirectionDesc": "Aflopend (Z -> A)",
+      "fontScaleLabel": "Lettergrootte van kaarten",
+      "fontScaleDescription": "Voer een waarde tussen {{min}} en {{max}} in om titels, tekst, tags en tooltips te schalen.",
+      "addLanePresetMenuLabel": "Nieuwe kolom"
+    },
+    "settings": {
+      "multiRowToggle": "Kolommen toestaan om over meerdere rijen te lopen"
+    },
     "showAllButtonLabel": "Alles tonen ({{count}} extra)"
   },
-  "commands": { "undoTableHistory": "Laatste tabelwijziging ongedaan maken", "redoTableHistory": "Tabelwijziging opnieuw uitvoeren", "openHelpDocument": "TileLineBase-hulpdocument openen", "createTable": "TileLineBase-tabelnotitie maken", "exportCsv": "Huidige tabel als CSV exporteren", "importCsv": "CSV in huidige tabel importeren", "importCsvAsTable": "CSV als nieuwe tabel importeren", "toggleTableView": "Tabelweergave schakelen", "openKanbanView": "TileLineBase-kanbanweergave openen", "openSlideView": "TileLineBase-diaweergave openen" },
+  "commands": {
+    "undoTableHistory": "Laatste tabelwijziging ongedaan maken",
+    "redoTableHistory": "Tabelwijziging opnieuw uitvoeren",
+    "openHelpDocument": "TileLineBase-hulpdocument openen",
+    "createTable": "TileLineBase-tabelnotitie maken",
+    "exportCsv": "Huidige tabel als CSV exporteren",
+    "importCsv": "CSV in huidige tabel importeren",
+    "importCsvAsTable": "CSV als nieuwe tabel importeren",
+    "toggleTableView": "Tabelweergave schakelen",
+    "openKanbanView": "TileLineBase-kanbanweergave openen",
+    "openSlideView": "TileLineBase-diaweergave openen"
+  },
   "csv": {
     "errorNoFile": "Sla de notitie op voordat je exporteert; het huidige bestand is niet gevonden.",
     "exportFailure": "CSV exporteren mislukt. Controleer de console voor details.",
@@ -157,6 +243,11 @@
     "hideRightSidebarLabel": "Rechterzijbalk verbergen in tabelweergave",
     "hideRightSidebarDesc": "Klap de rechterzijbalk van Obsidian in zodra de TileLineBase-tabelweergave actief is. Andere weergaven blijven ongemoeid.",
     "tableViewHeading": "Tabelweergave",
+    "stripeColorLabel": "Kleur rijstrepen",
+    "stripeColorDesc": "Standaard gebruikt themagebaseerde strepen (±4% lichtheid).",
+    "stripeColorOptionRecommended": "Standaard",
+    "stripeColorOptionPrimary": "Geen strepen",
+    "stripeColorOptionCustom": "Aangepast",
     "rowStripeStrengthLabel": "Sterkte rijstrepen",
     "rowStripeStrengthDesc": "0 schakelt strepen uit, 100 maakt ze het sterkst.",
     "borderContrastLabel": "Randcontrast",
@@ -175,7 +266,9 @@
     "backupCapacityLabel": "Opslaglimiet voor back-ups (MB)",
     "backupCapacityDesc": "Wanneer de totale grootte deze limiet overschrijdt, worden de oudste snapshots verwijderd. Standaard: 200 MB."
   },
-  "readingView": { "configBlockTitle": "TLB CONFIG BLOCK" },
+  "readingView": {
+    "configBlockTitle": "TLB CONFIG BLOCK"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Onbekend teken aangetroffen",

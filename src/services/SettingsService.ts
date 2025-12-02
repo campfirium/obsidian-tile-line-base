@@ -156,10 +156,6 @@ export class SettingsService {
 			: null;
 		merged.localizedLocale = normalizeLocaleCode(localizedCandidate) ?? DEFAULT_SETTINGS.localizedLocale;
 
-		if (merged.locale && merged.locale !== 'en') {
-			merged.locale = null;
-		}
-
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
 			for (const path of legacyList) {

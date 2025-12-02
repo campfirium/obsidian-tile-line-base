@@ -1,5 +1,5 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { t, getLocaleCode, setLocale } from '../i18n';
+import { t, getAvailableLocales, getLocaleCode, setLocale } from '../i18n';
 import { computeRecommendedStripeColor } from '../table-view/stripeStyles';
 import type { BorderColorMode, StripeColorMode } from '../types/appearance';
 import type { LocaleCode, TranslationKey } from '../i18n';
@@ -40,7 +40,21 @@ const LOG_LEVEL_LABEL_KEYS: Record<LogLevelName, TranslationKey> = {
 	debug: 'settings.loggingLevelOptionDebug',
 	trace: 'settings.loggingLevelOptionTrace'
 };
-const ENGLISH_LOCALE: LocaleCode = 'en';
+const LOCALE_LABEL_KEYS: Record<LocaleCode, TranslationKey> = {
+	en: 'settings.interfaceLanguageOptionEn',
+	de: 'settings.interfaceLanguageOptionDe',
+	es: 'settings.interfaceLanguageOptionEs',
+	fr: 'settings.interfaceLanguageOptionFr',
+	it: 'settings.interfaceLanguageOptionIt',
+	nl: 'settings.interfaceLanguageOptionNl',
+	pl: 'settings.interfaceLanguageOptionPl',
+	pt: 'settings.interfaceLanguageOptionPt',
+	ja: 'settings.interfaceLanguageOptionJa',
+	ko: 'settings.interfaceLanguageOptionKo',
+	'zh-hans': 'settings.interfaceLanguageOptionZhHans',
+	'zh-hant': 'settings.interfaceLanguageOptionZhHant'
+};
+const AUTO_LOCALE_OPTION = 'auto';
 
 function isLogLevel(value: string): value is LogLevelName {
 	return (LOG_LEVEL_OPTIONS as readonly string[]).includes(value);
@@ -72,16 +86,27 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 			.setName(t('settings.generalHeading'))
 			.setHeading();
 
-		const isForceEnglish = this.plugin.getLocaleOverride() === ENGLISH_LOCALE;
+		const availableLocales = getAvailableLocales();
+		const isLocaleCode = (value: string): value is LocaleCode =>
+			availableLocales.includes(value as LocaleCode);
 
 		new Setting(containerEl)
 			.setName(t('settings.interfaceLanguageLabel'))
-			.setDesc(t('settings.interfaceLanguageDesc'))
-			.addToggle((toggle) => {
-				toggle.setValue(isForceEnglish);
-				toggle.onChange(async (value) => {
-					if (value) {
-						await this.plugin.setLocaleOverride(ENGLISH_LOCALE);
+			.addDropdown((dropdown) => {
+				dropdown.addOption(AUTO_LOCALE_OPTION, t('settings.interfaceLanguageOptionAuto'));
+				for (const locale of availableLocales) {
+					const label = this.getLocaleLabel(locale);
+					dropdown.addOption(locale, label);
+				}
+				const currentOverride = this.plugin.getLocaleOverride();
+				dropdown.setValue(currentOverride ?? AUTO_LOCALE_OPTION);
+				dropdown.selectEl.setAttribute('aria-label', t('settings.interfaceLanguageLabel'));
+				dropdown.onChange(async (value) => {
+					const selectedLocale = value === AUTO_LOCALE_OPTION
+						? null
+						: isLocaleCode(value) ? value : null;
+					if (selectedLocale) {
+						await this.plugin.setLocaleOverride(selectedLocale);
 					} else {
 						await this.plugin.useLocalizedLocalePreference();
 					}
@@ -263,6 +288,12 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 
 	private normalizeStripeMode(value: string | null | undefined): StripeColorMode {
 		return value === 'primary' || value === 'custom' ? value : 'recommended';
+	}
+
+	private getLocaleLabel(locale: LocaleCode): string {
+		const labelKey = LOCALE_LABEL_KEYS[locale];
+		const localized = labelKey ? t(labelKey) : null;
+		return localized ?? locale;
 	}
 
 	private getPrimaryColor(containerEl: HTMLElement): string {

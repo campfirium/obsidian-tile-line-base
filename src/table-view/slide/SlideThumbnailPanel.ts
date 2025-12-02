@@ -3,133 +3,8 @@ import { buildSlideMarkdown, renderMarkdownBlock } from './SlideRenderUtils';
 import { t } from '../../i18n';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import { computeOverlayBackground } from './SlideColorUtils';
+import { THUMBNAIL_STYLES } from './thumbnailStyles';
 
-// --- CSS 样式重构 ---
-const THUMBNAIL_STYLES = `
-.tlb-slide-thumb {
-	position: absolute;
-	inset: 0;
-	display: none;
-	padding: 18px 20px;
-	background: var(--background-primary);
-	overflow: auto;
-	z-index: 8;
-	opacity: 0;
-	transition: opacity 0.2s ease;
-	align-items: center;
-	justify-content: flex-start;
-	flex-direction: column;
-}
-
-.tlb-slide-thumb--visible {
-	display: flex;
-	opacity: 1;
-}
-
-.tlb-slide-thumb--centered {
-	justify-content: center;
-}
-
-.tlb-slide-thumb__grid {
-	display: grid;
-	/* 初始占位，实际列宽/间距由 JS layoutGrid 写入 */
-	grid-template-columns: repeat(5, minmax(0, 1fr));
-	column-gap: var(--tlb-thumb-gap-x, 12px);
-	row-gap: var(--tlb-thumb-gap-y, 12px);
-	grid-auto-rows: var(--tlb-thumb-card-height, auto);
-	width: auto;
-	margin: 0 auto;
-	justify-items: stretch;
-	align-items: start;
-}
-
-.tlb-slide-thumb__item {
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	height: 100%;
-	box-sizing: border-box;
-	appearance: none;
-	border: none;
-	background: transparent;
-	padding: 0;
-	cursor: pointer;
-	transition: transform 0.1s ease;
-}
-
-.tlb-slide-thumb__item:hover {
-	transform: translateY(-4px);
-}
-
-.tlb-slide-thumb__item:focus-visible {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: 4px;
-	border-radius: 8px;
-}
-.tlb-slide-thumb__item:focus { outline: none; }
-
-/* 缩略图画布：强制 16:9 */
-.tlb-slide-thumb__canvas {
-	position: relative;
-	width: 100%;
-	height: 100%;
-	aspect-ratio: 16 / 9;
-	background: color-mix(in srgb, var(--background-secondary) 88%, transparent 12%);
-	border-radius: 10px;
-	overflow: hidden;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
-	border: 1px solid var(--background-modifier-border);
-}
-
-.tlb-slide-thumb__item--active .tlb-slide-thumb__canvas {
-	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 2px var(--interactive-accent);
-}
-
-/* 缩略图内容容器：绝对定位，通过 scale 适应画布 */
-.tlb-slide-thumb__root {
-	position: absolute;
-	top: 0;
-	left: 0;
-	/* 这里的宽高必须与 JS 中的 baseWidth/baseHeight 一致 */
-	width: 1200px;
-	height: 675px;
-	transform-origin: top left;
-	transform: scale(var(--tlb-thumb-scale, 1));
-	pointer-events: none; /* 禁止缩略图内部交互 */
-}
-
-.tlb-slide-thumb__slide {
-	width: 100%;
-	height: 100%;
-	max-width: none;
-	max-height: none;
-	aspect-ratio: 16 / 9;
-	padding: 36px 48px;
-	box-sizing: border-box;
-	transform: none;
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-start;
-}
-
-.tlb-slide-thumb__slide .tlb-slide-full__content {
-	gap: 14px;
-}
-
-.tlb-slide-thumb__block--text {
-	white-space: normal;
-}
-
-.tlb-slide-thumb__block--text p:last-child {
-	margin-bottom: 0;
-}
-
-.tlb-slide-thumb__block--image {
-	align-items: center;
-}
-`;
 
 export interface SlideThumbnail {
 	index: number;
@@ -186,6 +61,10 @@ export class SlideThumbnailPanel {
 	private readonly thumbSurfaces: ThumbSurface[] = [];
 
 	private scaleRaf: number | null = null;
+	private scrollRaf: number | null = null;
+	private rowHeight = 0;
+	private isScrollable = false;
+	private readonly wheelHandler: (evt: WheelEvent) => void;
 
 	constructor(options: SlideThumbnailPanelOptions) {
 		this.options = options;
@@ -197,6 +76,8 @@ export class SlideThumbnailPanel {
 		this.grid = this.overlay.createDiv({ cls: 'tlb-slide-thumb__grid' });
 		this.injectStyles();
 		this.cssChangeRef = this.app.workspace.on('css-change', () => this.applyOverlayBackground());
+		this.wheelHandler = (evt) => this.onWheel(evt);
+		this.grid.addEventListener('wheel', this.wheelHandler, { passive: false });
 
         // 点击遮罩层关闭
 		this.overlay.addEventListener('click', (evt) => {
@@ -426,6 +307,7 @@ export class SlideThumbnailPanel {
 			this.app.workspace.offref(this.cssChangeRef);
 			this.cssChangeRef = null;
 		}
+		this.grid.removeEventListener('wheel', this.wheelHandler);
 		this.overlay.remove();
 		this.items = [];
 		this.cleanupSurfaces();
@@ -434,6 +316,10 @@ export class SlideThumbnailPanel {
 			this.ownerWindow.cancelAnimationFrame(this.scaleRaf);
 		}
 		this.scaleRaf = null;
+		if (this.scrollRaf != null && this.ownerWindow) {
+			this.ownerWindow.cancelAnimationFrame(this.scrollRaf);
+		}
+		this.scrollRaf = null;
 	}
 
 	private registerSurface(surface: Omit<ThumbSurface, 'observer'>): void {
@@ -508,15 +394,17 @@ export class SlideThumbnailPanel {
 
 	private layoutGrid(): void {
 		if (!this.ownerWindow) return;
-		const paddingX = 20 * 2;
-		const paddingY = 18 * 2;
+		const paddingX = 24 * 2;
+		const paddingY = 28 * 2;
 		const usableWidth = (this.overlay.clientWidth || this.ownerWindow.innerWidth || 0) - paddingX;
 		const usableHeight = (this.overlay.clientHeight || this.ownerWindow.innerHeight || 0) - paddingY;
 		if (usableWidth <= 0 || usableHeight <= 0) return;
 
 		const cols = 5;
 		const count = Math.max(1, this.slideCount || this.items.length || 1);
-		const rows = Math.max(1, Math.ceil(count / cols));
+		const totalRows = Math.max(1, Math.ceil(count / cols));
+		const maxRowsPerScreen = 4;
+		const visibleRows = Math.min(totalRows, maxRowsPerScreen);
 		const gapRatio = 0.05;
 
 		let cardWidth = usableWidth / (cols + (cols - 1) * gapRatio);
@@ -524,13 +412,15 @@ export class SlideThumbnailPanel {
 		let cardHeight = cardWidth * (9 / 16);
 		let gapY = cardHeight * gapRatio;
 
-		let totalHeight = rows * cardHeight + (rows - 1) * gapY;
-		if (totalHeight > usableHeight) {
-			cardHeight = usableHeight / (rows + (rows - 1) * gapRatio);
+		const getHeightForRows = (rows: number): number => rows * cardHeight + (rows - 1) * gapY;
+
+		let visibleHeight = getHeightForRows(visibleRows);
+		if (visibleHeight > usableHeight) {
+			cardHeight = usableHeight / (visibleRows + (visibleRows - 1) * gapRatio);
 			gapY = cardHeight * gapRatio;
 			cardWidth = cardHeight * (16 / 9);
 			gapX = cardWidth * gapRatio;
-			totalHeight = rows * cardHeight + (rows - 1) * gapY;
+			visibleHeight = getHeightForRows(visibleRows);
 		}
 
 		this.currentCardHeight = cardHeight;
@@ -540,11 +430,40 @@ export class SlideThumbnailPanel {
 		this.grid.style.setProperty('--tlb-thumb-gap-x', `${gapX}px`);
 		this.grid.style.setProperty('--tlb-thumb-gap-y', `${gapY}px`);
 		this.grid.style.setProperty('--tlb-thumb-card-height', `${cardHeight}px`);
-		this.grid.style.width = `${cols * cardWidth + (cols - 1) * gapX}px`;
-		this.grid.style.height = `${rows * cardHeight + (rows - 1) * gapY}px`;
+		const gridWidth = Math.min(
+			usableWidth,
+			cols * cardWidth + (cols - 1) * gapX
+		);
+		this.grid.style.width = `${gridWidth}px`;
+		this.grid.style.height = `${visibleHeight}px`;
 
-		const leftover = usableHeight - totalHeight;
-		const shouldCenter = leftover > cardHeight * 0.2;
-		this.overlay.classList.toggle('tlb-slide-thumb--centered', shouldCenter);
+		this.rowHeight = cardHeight + gapY;
+		this.isScrollable = totalRows > maxRowsPerScreen;
+		this.grid.classList.toggle('tlb-slide-thumb__grid--scrollable', this.isScrollable);
+	}
+
+	private onWheel(evt: WheelEvent): void {
+		if (!this.isScrollable) return;
+		if (!this.ownerWindow) return;
+		const target = evt.currentTarget as HTMLElement | null;
+		if (!target) return;
+
+		const normalizedDelta = evt.deltaMode === WheelEvent.DOM_DELTA_LINE ? evt.deltaY * 16 : evt.deltaY;
+		const direction = Math.sign(normalizedDelta);
+		if (!direction) return;
+
+		evt.preventDefault();
+
+		const baseStep = Math.max(1, Math.round(Math.abs(normalizedDelta) / Math.max(1, this.rowHeight / 2)));
+		const step = baseStep * direction;
+		const nextTop = Math.max(0, Math.min(target.scrollHeight - target.clientHeight, target.scrollTop + step * this.rowHeight));
+
+		if (this.scrollRaf != null) {
+			this.ownerWindow.cancelAnimationFrame(this.scrollRaf);
+		}
+		this.scrollRaf = this.ownerWindow.requestAnimationFrame(() => {
+			this.scrollRaf = null;
+			target.scrollTo({ top: nextTop, behavior: 'smooth' });
+		});
 	}
 }

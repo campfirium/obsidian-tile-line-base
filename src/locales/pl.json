@@ -18,11 +18,23 @@
     "filteredCountLabel": "{{count}} slajdów spełnia bieżące filtry",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "Slajd {{current}} z {{total}}",
+    "thumbnailAriaLabel": "Przejdź do slajdu {{index}}",
+    "thumbnailTitle": "Slajd {{index}}: {{title}}",
     "untitledSlide": "Slajd bez tytułu {{index}}",
     "emptyValue": "(puste)",
-    "nav": { "prev": "Poprzedni slajd", "next": "Następny slajd" },
-    "edit": { "heading": "Edytuj slajd" },
+    "nav": {
+      "prev": "Poprzedni slajd",
+      "next": "Następny slajd"
+    },
+    "edit": {
+      "heading": "Edytuj slajd"
+    },
     "templateModal": {
+      "modeSingleLabel": "Połączony slajd",
+      "modeSplitLabel": "Podzielone slajdy",
+      "modeSingleDesc": "Generuje jeden slajd na wiersz. Jeśli istnieje obraz, tekst i obraz są wyświetlane obok siebie.",
+      "noImageTabLabel": "Układ: bez obrazu",
+      "withImageTabLabel": "Układ: z obrazem",
       "title": "Szablon slajdu",
       "titleFieldLabel": "Szablon tytułu",
       "titleFieldDesc": "Użyj symboli zastępczych, np. {Title}, aby zbudować tytuł slajdu.",
@@ -68,7 +80,16 @@
       "setDefaultError": "Nie udało się zapisać jako domyślny. Sprawdź konsolę.",
       "noGlobalDefault": "Nie ma jeszcze globalnego presetu.",
       "saveLabel": "Zapisz",
-      "cancelLabel": "Anuluj"
+      "cancelLabel": "Anuluj",
+      "modeSplitDesc": "Tworzy dwie kolejne plansze w wierszu: 1. plansza tekstowa -> 2. plansza z obrazem (jeśli istnieje).",
+      "splitTextTabLabel": "Plansza 1: tekst",
+      "splitImageTabLabel": "Plansza 2: obraz",
+      "imageContentLabel": "Zawartość obrazu",
+      "imageLayoutLabel": "Układ obrazu",
+      "globalSettingsLabel": "Ustawienia globalne",
+      "leftOffsetLabel": "Przesunięcie w lewo (%)",
+      "rightOffsetLabel": "Przesunięcie w prawo (%)",
+      "topOffsetLabel": "Przesunięcie w górę (%)"
     }
   },
   "viewControls": {
@@ -76,11 +97,11 @@
     "openMarkdownView": "Wróć do edytora Markdown",
     "switchViewMenu": "Zmień widok (obecny: {{mode}})"
   },
-	"kanbanView": {
-		"schemaUnavailable": "Widok kanban wymaga prawidłowego schematu tabeli. Wczytaj notatkę ponownie i spróbuj jeszcze raz.",
-		"missingLaneField": "Widok kanban potrzebuje kolumny \"{{field}}\". Dodaj ją w widoku tabeli albo wróć.",
-		"missingSortField": "Widok kanban potrzebuje kolumny \"{{field}}\", aby zachować kolejność kart.",
-		"unassignedLaneLabel": "Nieprzypisane",
+  "kanbanView": {
+    "schemaUnavailable": "Widok kanban wymaga prawidłowego schematu tabeli. Wczytaj notatkę ponownie i spróbuj jeszcze raz.",
+    "missingLaneField": "Widok kanban potrzebuje kolumny \"{{field}}\". Dodaj ją w widoku tabeli albo wróć.",
+    "missingSortField": "Widok kanban potrzebuje kolumny \"{{field}}\", aby zachować kolejność kart.",
+    "unassignedLaneLabel": "Nieprzypisane",
     "filteredCountLabel": "{{count}} kart spełnia bieżące filtry",
     "totalCountLabel": "{{count}} kart",
     "dragHint": "Przeciągnij karty, aby zmienić kolejność w kolumnie albo przenieść je między kolumnami.",
@@ -101,30 +122,95 @@
       "switchToKanban": "Przełącz na widok kanban",
       "switchToTable": "Przełącz na widok tabeli"
     },
-		"fieldModal": {
-			"title": "Wybierz kolumnę kanban",
-			"description": "Wskaż kolumnę, której wartości utworzą kolumny w tablicy kanban.",
-			"laneFieldLabel": "Kolumna kanban",
-			"confirmLabel": "Użyj kolumny",
-			"cancelLabel": "Anuluj",
-			"schemaUnavailable": "Najpierw wczytaj tabelę, a potem wybierz kolumnę kanban.",
-			"noColumns": "Brak dostępnych kolumn do użycia jako kolumny kanban."
-		},
-		"lanePresetModal": { "title": "Utwórz kolumnę", "description": "Nazwij kolumnę dla pola \"{{field}}\"; pojawi się, zanim powstaną jakiekolwiek karty.", "fieldLabel": "Nazwa kolumny", "fieldDescription": "Użyj unikalnej wartości, aby karty upuszczane tutaj mogły ją ponownie wykorzystać.", "placeholder": "Przykład: Gotowe do sprawdzenia", "confirmLabel": "Dodaj kolumnę", "cancelLabel": "Anuluj", "emptyError": "Podaj nazwę kolumny przed kontynuowaniem.", "duplicateError": "Taka kolumna już istnieje.", "successNotice": "Utworzono kolumnę \"{{name}}\".", "statusFieldBlocked": "Kolumny statusu już obsługują pole Status. Zmień opcje statusu w tabeli.", "missingLaneField": "Wybierz kolumnę kanban przed utworzeniem nowej kolumny." },
-		"content": { "sectionTitle": "Zawartość karty", "insertFieldButton": "Wstaw pole", "titleLabel": "Szablon tytułu", "titlePlaceholder": "Przykład: {Title}", "bodyLabel": "Szablon treści", "bodyPlaceholder": "Przykład: {Description}\\n{Notes}", "tagsLabel": "Szablon tagów", "tagsPlaceholder": "Oddzielaj symbole zastępcze przecinkami, np. {Tag1}, {Tag2}", "showBodyToggle": "Pokaż treść w karcie", "showBodyToggleDesc": "Po wyłączeniu treść pojawi się jako podpowiedź po najechaniu.", "tagsBelowBodyToggle": "Pokaż tagi pod treścią", "tagsBelowBodyToggleDesc": "Pozostaw wyłączone, aby pokazywać tagi obok tytułu.", "noFieldOption": "Brak dostępnych pól" },
-		"toolbar": {
-			"defaultBoardLabel": "Tablica domyślna", "unnamedBoardLabel": "Tablica bez nazwy",
-			"addBoardButtonAriaLabel": "Dodaj tablicę kanban", "createBoardTitle": "Nowa tablica kanban",
-			"editBoardTitle": "Edytuj tablicę kanban", "editBoardLabel": "Edytuj tablicę",
-			"deleteBoardLabel": "Usuń tablicę", "deleteBoardConfirm": "Usunąć \"{{name}}\"? Karty pozostaną dostępne w innych tablicach.",
-      "cannotDeleteLastBoard": "Pozostaw przynajmniej jedną tablicę.", "newBoardPlaceholder": "Tablica kanban",
-      "deleteBoardConfirmAction": "Usuń", "laneFieldMissingNotice": "Tablica kanban nie ma już prawidłowej kolumny. Wybierz nową kolumnę, aby kontynuować.", "noBoardsPlaceholder": "Brak tablic kanban. Użyj przycisku +, aby utworzyć jedną.", "laneFieldLabel": "Kolumna kanban", "duplicateBoardLabel": "Duplikuj tablicę", "duplicateBoardTitle": "Duplikuj tablicę: {{name}}", "duplicateBoardNotice": "Zduplikowano tablicę: {{name}}", "duplicateNameSuffix": "kopia", "laneWidthLabel": "Szerokość kolumny (rem)", "laneWidthDescription": "Wprowadź wartość między {{min}} a {{max}} rem, aby kontrolować szerokość kolumn.", "initialVisibleCountLabel": "Początkowa liczba kart na kolumnę", "initialVisibleCountDesc": "Pokaż tyle kart w każdej kolumnie przed odsłonięciem pozostałych.", "sortSettingLabel": "Kolejność kolumn", "sortSettingDesc": "Wybierz kolumnę i kierunek, aby uporządkować karty w każdej kolumnie.", "sortFieldLabel": "Kolumna sortowania", "sortFieldNone": "Bez sortowania", "sortDirectionLabel": "Kierunek", "sortDirectionAsc": "Rosnąco (A -> Z)", "sortDirectionDesc": "Malejąco (Z -> A)"
-      , "fontScaleLabel": "Skala czcionki kart", "fontScaleDescription": "Podaj wartość między {{min}} a {{max}}, aby skalować tytuły, treść, tagi i podpowiedzi.", "addLanePresetMenuLabel": "Nowa kolumna"
+    "fieldModal": {
+      "title": "Wybierz kolumnę kanban",
+      "description": "Wskaż kolumnę, której wartości utworzą kolumny w tablicy kanban.",
+      "laneFieldLabel": "Kolumna kanban",
+      "confirmLabel": "Użyj kolumny",
+      "cancelLabel": "Anuluj",
+      "schemaUnavailable": "Najpierw wczytaj tabelę, a potem wybierz kolumnę kanban.",
+      "noColumns": "Brak dostępnych kolumn do użycia jako kolumny kanban."
     },
-    "settings": { "multiRowToggle": "Pozwól kolumnom zawijać się w wiele rzędów" },
+    "lanePresetModal": {
+      "title": "Utwórz kolumnę",
+      "description": "Nazwij kolumnę dla pola \"{{field}}\"; pojawi się, zanim powstaną jakiekolwiek karty.",
+      "fieldLabel": "Nazwa kolumny",
+      "fieldDescription": "Użyj unikalnej wartości, aby karty upuszczane tutaj mogły ją ponownie wykorzystać.",
+      "placeholder": "Przykład: Gotowe do sprawdzenia",
+      "confirmLabel": "Dodaj kolumnę",
+      "cancelLabel": "Anuluj",
+      "emptyError": "Podaj nazwę kolumny przed kontynuowaniem.",
+      "duplicateError": "Taka kolumna już istnieje.",
+      "successNotice": "Utworzono kolumnę \"{{name}}\".",
+      "statusFieldBlocked": "Kolumny statusu już obsługują pole Status. Zmień opcje statusu w tabeli.",
+      "missingLaneField": "Wybierz kolumnę kanban przed utworzeniem nowej kolumny."
+    },
+    "content": {
+      "sectionTitle": "Zawartość karty",
+      "insertFieldButton": "Wstaw pole",
+      "titleLabel": "Szablon tytułu",
+      "titlePlaceholder": "Przykład: {Title}",
+      "bodyLabel": "Szablon treści",
+      "bodyPlaceholder": "Przykład: {Description}\\n{Notes}",
+      "tagsLabel": "Szablon tagów",
+      "tagsPlaceholder": "Oddzielaj symbole zastępcze przecinkami, np. {Tag1}, {Tag2}",
+      "showBodyToggle": "Pokaż treść w karcie",
+      "showBodyToggleDesc": "Po wyłączeniu treść pojawi się jako podpowiedź po najechaniu.",
+      "tagsBelowBodyToggle": "Pokaż tagi pod treścią",
+      "tagsBelowBodyToggleDesc": "Pozostaw wyłączone, aby pokazywać tagi obok tytułu.",
+      "noFieldOption": "Brak dostępnych pól"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "Tablica domyślna",
+      "unnamedBoardLabel": "Tablica bez nazwy",
+      "addBoardButtonAriaLabel": "Dodaj tablicę kanban",
+      "createBoardTitle": "Nowa tablica kanban",
+      "editBoardTitle": "Edytuj tablicę kanban",
+      "editBoardLabel": "Edytuj tablicę",
+      "deleteBoardLabel": "Usuń tablicę",
+      "deleteBoardConfirm": "Usunąć \"{{name}}\"? Karty pozostaną dostępne w innych tablicach.",
+      "cannotDeleteLastBoard": "Pozostaw przynajmniej jedną tablicę.",
+      "newBoardPlaceholder": "Tablica kanban",
+      "deleteBoardConfirmAction": "Usuń",
+      "laneFieldMissingNotice": "Tablica kanban nie ma już prawidłowej kolumny. Wybierz nową kolumnę, aby kontynuować.",
+      "noBoardsPlaceholder": "Brak tablic kanban. Użyj przycisku +, aby utworzyć jedną.",
+      "laneFieldLabel": "Kolumna kanban",
+      "duplicateBoardLabel": "Duplikuj tablicę",
+      "duplicateBoardTitle": "Duplikuj tablicę: {{name}}",
+      "duplicateBoardNotice": "Zduplikowano tablicę: {{name}}",
+      "duplicateNameSuffix": "kopia",
+      "laneWidthLabel": "Szerokość kolumny (rem)",
+      "laneWidthDescription": "Wprowadź wartość między {{min}} a {{max}} rem, aby kontrolować szerokość kolumn.",
+      "initialVisibleCountLabel": "Początkowa liczba kart na kolumnę",
+      "initialVisibleCountDesc": "Pokaż tyle kart w każdej kolumnie przed odsłonięciem pozostałych.",
+      "sortSettingLabel": "Kolejność kolumn",
+      "sortSettingDesc": "Wybierz kolumnę i kierunek, aby uporządkować karty w każdej kolumnie.",
+      "sortFieldLabel": "Kolumna sortowania",
+      "sortFieldNone": "Bez sortowania",
+      "sortDirectionLabel": "Kierunek",
+      "sortDirectionAsc": "Rosnąco (A -> Z)",
+      "sortDirectionDesc": "Malejąco (Z -> A)",
+      "fontScaleLabel": "Skala czcionki kart",
+      "fontScaleDescription": "Podaj wartość między {{min}} a {{max}}, aby skalować tytuły, treść, tagi i podpowiedzi.",
+      "addLanePresetMenuLabel": "Nowa kolumna"
+    },
+    "settings": {
+      "multiRowToggle": "Pozwól kolumnom zawijać się w wiele rzędów"
+    },
     "showAllButtonLabel": "Pokaż wszystkie ({{count}} więcej)"
   },
-  "commands": { "undoTableHistory": "Cofnij ostatnią zmianę tabeli", "redoTableHistory": "Ponów zmianę tabeli", "openHelpDocument": "Otwórz dokument pomocy TileLineBase", "createTable": "Utwórz notatkę tabeli TileLineBase", "exportCsv": "Eksportuj bieżącą tabelę do CSV", "importCsv": "Zaimportuj CSV do bieżącej tabeli", "importCsvAsTable": "Zaimportuj CSV jako nową tabelę", "toggleTableView": "Przełącz widok tabeli", "openKanbanView": "Otwórz widok kanban TileLineBase", "openSlideView": "Otwórz widok slajdów TileLineBase" },
+  "commands": {
+    "undoTableHistory": "Cofnij ostatnią zmianę tabeli",
+    "redoTableHistory": "Ponów zmianę tabeli",
+    "openHelpDocument": "Otwórz dokument pomocy TileLineBase",
+    "createTable": "Utwórz notatkę tabeli TileLineBase",
+    "exportCsv": "Eksportuj bieżącą tabelę do CSV",
+    "importCsv": "Zaimportuj CSV do bieżącej tabeli",
+    "importCsvAsTable": "Zaimportuj CSV jako nową tabelę",
+    "toggleTableView": "Przełącz widok tabeli",
+    "openKanbanView": "Otwórz widok kanban TileLineBase",
+    "openSlideView": "Otwórz widok slajdów TileLineBase"
+  },
   "csv": {
     "errorNoFile": "Zapisz notatkę przed eksportem; bieżącego pliku nie znaleziono.",
     "exportFailure": "Nie udało się wyeksportować pliku CSV. Sprawdź konsolę, aby uzyskać szczegóły.",
@@ -139,7 +225,8 @@
   },
   "settings": {
     "generalHeading": "Ogólne",
-    "interfaceLanguageLabel": "Język interfejsu", "interfaceLanguageDesc": "",
+    "interfaceLanguageLabel": "Język interfejsu",
+    "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Użyj języka Obsidian",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -156,6 +243,11 @@
     "hideRightSidebarLabel": "Ukryj prawy pasek boczny w widoku tabeli",
     "hideRightSidebarDesc": "Zwiń prawy pasek boczny Obsidiana zawsze, gdy aktywny jest widok tabeli TileLineBase. Inne widoki pozostają bez zmian.",
     "tableViewHeading": "Widok tabeli",
+    "stripeColorLabel": "Kolor pasków wierszy",
+    "stripeColorDesc": "Domyślnie używa pasków opartych na motywie (±4% jasności).",
+    "stripeColorOptionRecommended": "Domyślnie",
+    "stripeColorOptionPrimary": "Bez pasków",
+    "stripeColorOptionCustom": "Własny",
     "rowStripeStrengthLabel": "Intensywność pasków wierszy",
     "rowStripeStrengthDesc": "0 wyłącza paski, 100 ustawia je najsilniej.",
     "borderContrastLabel": "Kontrast obramowania",
@@ -174,7 +266,9 @@
     "backupCapacityLabel": "Limit miejsca na kopie (MB)",
     "backupCapacityDesc": "Po przekroczeniu limitu najstarsze migawki są usuwane. Domyślnie: 200 MB."
   },
-  "readingView": { "configBlockTitle": "BLOK KONFIG TLB" },
+  "readingView": {
+    "configBlockTitle": "BLOK KONFIG TLB"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "Wykryto nierozpoznany znak",

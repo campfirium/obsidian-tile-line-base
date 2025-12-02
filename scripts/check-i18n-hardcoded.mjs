@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
  * Scan for hard-coded UI strings that should go through i18n.
- * Rules are intentionally simple: flag literal English text passed to setText/text/placeholder/title.
+ * Coverage:
+ * - getText second argument (forbidden fallback)
+ * - common UI properties: text/title/placeholder/aria-label
+ * - helper calls: numberRow/createDiv/createSpan/createEl text, setAttribute(title/aria-label)
  */
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
@@ -11,10 +14,36 @@ const SRC_DIR = path.join(ROOT, 'src');
 const TARGET_EXT = new Set(['.ts', '.tsx']);
 
 const DETECTORS = [
-	{ name: 'setText', regex: /\bsetText\(\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/ },
-	{ name: 'textProp', regex: /\btext:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/ },
-	{ name: 'placeholderProp', regex: /\bplaceholder:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/ },
-	{ name: 'titleProp', regex: /\btitle:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/ }
+	{ name: 'getTextFallback', regex: /getText\(\s*[^,]+,\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms, group: 2 },
+	{ name: 'setText', regex: /\bsetText\(\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms, group: 2 },
+	{ name: 'textProp', regex: /\btext:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms, group: 2 },
+	{ name: 'placeholderProp', regex: /\bplaceholder:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms, group: 2 },
+	{ name: 'titleProp', regex: /\btitle:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms, group: 2 },
+	{
+		name: 'createNodeText',
+		regex: /create(?:Div|Span)\(\s*{[^}]*?\btext:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms,
+		group: 2
+	},
+	{
+		name: 'createElText',
+		regex: /createEl\([^,]+,\s*{[^}]*?\btext:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms,
+		group: 2
+	},
+	{
+		name: 'setAttributeTitle',
+		regex: /setAttribute\(\s*(['"`])(title|aria-label)\1\s*,\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\3/gms,
+		group: 4
+	},
+	{
+		name: 'attrTitle',
+		regex: /attr:\s*{[^}]*?(['"`])(title|aria-label)\1\s*:\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\3/gms,
+		group: 4
+	},
+	{
+		name: 'numberRowLabel',
+		regex: /numberRow\(\s*(['"`])([^'"`]*[A-Za-z][^'"`]*)\1/gms,
+		group: 2
+	}
 ];
 
 function collectFiles(dir) {
@@ -34,22 +63,26 @@ function collectFiles(dir) {
 	return files;
 }
 
+function lineOf(content, index) {
+	return content.slice(0, index).split(/\r?\n/).length;
+}
+
 const findings = [];
+const seen = new Set();
+
 for (const file of collectFiles(SRC_DIR)) {
 	const content = readFileSync(file, 'utf8');
-	const lines = content.split(/\r?\n/);
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		for (const detector of DETECTORS) {
-			const match = detector.regex.exec(line);
-			if (match) {
-				findings.push({
-					file,
-					line: i + 1,
-					kind: detector.name,
-					snippet: match[2].trim()
-				});
-			}
+	for (const detector of DETECTORS) {
+		detector.regex.lastIndex = 0;
+		let match;
+		while ((match = detector.regex.exec(content)) !== null) {
+			const snippet = match[detector.group ?? 2]?.trim();
+			if (!snippet) continue;
+			const line = lineOf(content, match.index);
+			const key = `${file}:${line}:${detector.name}:${snippet}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			findings.push({ file, line, kind: detector.name, snippet });
 		}
 	}
 }

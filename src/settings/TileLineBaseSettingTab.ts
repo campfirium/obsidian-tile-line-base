@@ -55,6 +55,11 @@ const LOCALE_LABEL_KEYS: Record<LocaleCode, TranslationKey> = {
 	'zh-hant': 'settings.interfaceLanguageOptionZhHant'
 };
 const AUTO_LOCALE_OPTION = 'auto';
+const STRIPE_COLOR_OPTION_LABEL_KEYS: Record<StripeColorMode, TranslationKey> = {
+	recommended: 'settings.stripeColorOptionRecommended',
+	primary: 'settings.stripeColorOptionPrimary',
+	custom: 'settings.stripeColorOptionCustom'
+};
 
 function isLogLevel(value: string): value is LogLevelName {
 	return (LOG_LEVEL_OPTIONS as readonly string[]).includes(value);
@@ -133,8 +138,8 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		const stripeRecommended = this.getRecommendedStripeColor(containerEl);
 
 		const stripeSetting = new Setting(containerEl)
-			.setName('Row stripe color')
-			.setDesc('Default uses theme-based stripes (±4% lightness).');
+			.setName(t('settings.stripeColorLabel'))
+			.setDesc(t('settings.stripeColorDesc'));
 		const controls = stripeSetting.controlEl;
 
 		const colorInput = controls.createEl('input', { type: 'color', cls: 'tlb-color-input' });
@@ -159,12 +164,12 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		};
 
 		[
-			{ value: 'recommended', label: 'Default' },
-			{ value: 'primary', label: 'No stripes' },
-			{ value: 'custom', label: 'Custom' }
+			{ value: 'recommended', labelKey: STRIPE_COLOR_OPTION_LABEL_KEYS.recommended },
+			{ value: 'primary', labelKey: STRIPE_COLOR_OPTION_LABEL_KEYS.primary },
+			{ value: 'custom', labelKey: STRIPE_COLOR_OPTION_LABEL_KEYS.custom }
 		].forEach((option) => {
 			const opt = dropdown.createEl('option', { value: option.value });
-			opt.textContent = option.label;
+			opt.textContent = t(option.labelKey);
 		});
 
 		dropdown.addEventListener('change', () => {

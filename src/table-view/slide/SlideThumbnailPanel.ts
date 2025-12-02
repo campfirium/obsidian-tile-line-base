@@ -250,9 +250,16 @@ export class SlideThumbnailPanel {
 			btn.type = 'button';
 			btn.className = 'tlb-slide-thumb__item';
 			btn.dataset.index = String(slide.index);
-			btn.setAttribute('aria-label', `Go to slide ${slide.index + 1}`);
-            // 序号标记
-            btn.setAttribute('title', `Slide ${slide.index + 1}: ${slide.title}`);
+			const slideNumber = slide.index + 1;
+			const slideTitle = slide.title && slide.title.trim().length > 0
+				? slide.title
+				: t('slideView.untitledSlide', { index: String(slideNumber) });
+			btn.setAttribute('aria-label', t('slideView.thumbnailAriaLabel', { index: String(slideNumber) }));
+			// 序号标记
+			btn.setAttribute(
+				'title',
+				t('slideView.thumbnailTitle', { index: String(slideNumber), title: slideTitle })
+			);
 
 			const canvas = this.ownerDocument.createElement('div');
 			canvas.className = 'tlb-slide-thumb__canvas';

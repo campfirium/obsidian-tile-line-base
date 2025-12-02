@@ -18,11 +18,23 @@
     "filteredCountLabel": "현재 필터와 일치하는 슬라이드 {{count}}개",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "슬라이드 {{current}} / {{total}}",
+    "thumbnailAriaLabel": "{{index}}번 슬라이드로 이동",
+    "thumbnailTitle": "슬라이드 {{index}}: {{title}}",
     "untitledSlide": "제목 없는 슬라이드 {{index}}",
     "emptyValue": "(비어 있음)",
-    "nav": { "prev": "이전 슬라이드", "next": "다음 슬라이드" },
-    "edit": { "heading": "슬라이드 편집" },
+    "nav": {
+      "prev": "이전 슬라이드",
+      "next": "다음 슬라이드"
+    },
+    "edit": {
+      "heading": "슬라이드 편집"
+    },
     "templateModal": {
+      "modeSingleLabel": "통합 슬라이드",
+      "modeSplitLabel": "슬라이드 분할",
+      "modeSingleDesc": "행마다 하나의 슬라이드를 생성합니다. 이미지가 있으면 텍스트와 이미지를 나란히 표시합니다.",
+      "noImageTabLabel": "레이아웃: 이미지 없음",
+      "withImageTabLabel": "레이아웃: 이미지 있음",
       "title": "슬라이드 템플릿",
       "titleFieldLabel": "제목 템플릿",
       "titleFieldDesc": "{Title} 같은 플레이스홀더로 슬라이드 제목을 만듭니다.",
@@ -68,7 +80,16 @@
       "setDefaultError": "기본값으로 저장하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
       "noGlobalDefault": "전역 프리셋이 아직 없습니다.",
       "saveLabel": "저장",
-      "cancelLabel": "취소"
+      "cancelLabel": "취소",
+      "modeSplitDesc": "행마다 두 개의 슬라이드를 순서대로 생성합니다: 1. 텍스트 슬라이드 -> 2. 이미지 슬라이드(이미지가 있을 때).",
+      "splitTextTabLabel": "슬라이드 1: 텍스트",
+      "splitImageTabLabel": "슬라이드 2: 이미지",
+      "imageContentLabel": "이미지 내용",
+      "imageLayoutLabel": "이미지 레이아웃",
+      "globalSettingsLabel": "글로벌 설정",
+      "leftOffsetLabel": "왼쪽 오프셋 (%)",
+      "rightOffsetLabel": "오른쪽 오프셋 (%)",
+      "topOffsetLabel": "위쪽 오프셋 (%)"
     }
   },
   "viewControls": {
@@ -110,21 +131,86 @@
       "schemaUnavailable": "칸반 열을 선택하기 전에 테이블을 먼저 불러오세요.",
       "noColumns": "칸반 레인으로 사용할 수 있는 열이 없습니다."
     },
-    "lanePresetModal": { "title": "레인 만들기", "description": "\"{{field}}\" 열에 사용할 레인 이름을 지정하세요. 카드가 없어도 미리 표시됩니다.", "fieldLabel": "레인 이름", "fieldDescription": "여기에 드롭한 카드가 다시 사용할 수 있도록 고유한 값을 사용하세요.", "placeholder": "예: 검토 준비", "confirmLabel": "레인 추가", "cancelLabel": "취소", "emptyError": "계속하기 전에 레인 이름을 입력하세요.", "duplicateError": "이미 존재하는 레인입니다.", "successNotice": "\"{{name}}\" 레인을 만들었습니다.", "statusFieldBlocked": "상태 레인이 이미 상태 열을 담당하고 있습니다. 테이블에서 상태 옵션을 수정하세요.", "missingLaneField": "새 레인을 만들기 전에 칸반 열을 먼저 선택하세요." },
-    "content": { "sectionTitle": "카드 내용", "insertFieldButton": "필드 삽입", "titleLabel": "제목 템플릿", "titlePlaceholder": "예: {Title}", "bodyLabel": "본문 템플릿", "bodyPlaceholder": "예: {Description}\\n{Notes}", "tagsLabel": "태그 템플릿", "tagsPlaceholder": "쉼표로 플레이스홀더를 구분하세요. 예: {Tag1}, {Tag2}", "showBodyToggle": "카드 내부에 본문 표시", "showBodyToggleDesc": "비활성화하면 마우스 오버 시 툴팁으로 본문이 표시됩니다.", "tagsBelowBodyToggle": "본문 아래에 태그 표시", "tagsBelowBodyToggleDesc": "체크 해제 시 태그가 제목 옆에 표시됩니다.", "noFieldOption": "사용 가능한 필드가 없음" },
-    "toolbar": {
-      "defaultBoardLabel": "기본 보드", "unnamedBoardLabel": "제목 없는 보드",
-      "addBoardButtonAriaLabel": "칸반 보드 추가", "createBoardTitle": "새 칸반 보드",
-      "editBoardTitle": "칸반 보드 편집", "editBoardLabel": "보드 편집",
-      "deleteBoardLabel": "보드 삭제", "deleteBoardConfirm": "\"{{name}}\"을 삭제할까요? 카드는 다른 보드에서 계속 사용할 수 있습니다.",
-      "cannotDeleteLastBoard": "최소 한 개의 보드는 유지하세요.", "newBoardPlaceholder": "칸반 보드",
-      "deleteBoardConfirmAction": "삭제", "laneFieldMissingNotice": "이 칸반 보드에는 유효한 레인 열이 더 이상 없습니다. 계속하려면 새 열을 선택하세요.", "noBoardsPlaceholder": "아직 칸반 보드가 없습니다. + 버튼으로 새 보드를 만드세요.", "laneFieldLabel": "칸반 열", "duplicateBoardLabel": "보드 복제", "duplicateBoardTitle": "보드 복제: {{name}}", "duplicateBoardNotice": "보드를 복제했습니다: {{name}}", "duplicateNameSuffix": "사본", "laneWidthLabel": "레인 너비 (rem)", "laneWidthDescription": "열 너비를 조절하려면 {{min}}~{{max}} rem 값을 입력하세요.", "initialVisibleCountLabel": "레인당 초기 카드 수", "initialVisibleCountDesc": "나머지를 보기 전에 각 레인마다 이 수만큼 카드를 표시합니다.", "sortSettingLabel": "레인 순서", "sortSettingDesc": "각 레인 안의 카드 순서를 정할 열과 방향을 선택하세요.", "sortFieldLabel": "정렬 열", "sortFieldNone": "정렬 안 함", "sortDirectionLabel": "방향", "sortDirectionAsc": "오름차순 (A -> Z)", "sortDirectionDesc": "내림차순 (Z -> A)",
-      "fontScaleLabel": "카드 글꼴 배율", "fontScaleDescription": "제목, 본문, 태그, 툴팁을 조절하려면 {{min}}~{{max}} 사이의 값을 입력하세요.", "addLanePresetMenuLabel": "새 레인"
+    "lanePresetModal": {
+      "title": "레인 만들기",
+      "description": "\"{{field}}\" 열에 사용할 레인 이름을 지정하세요. 카드가 없어도 미리 표시됩니다.",
+      "fieldLabel": "레인 이름",
+      "fieldDescription": "여기에 드롭한 카드가 다시 사용할 수 있도록 고유한 값을 사용하세요.",
+      "placeholder": "예: 검토 준비",
+      "confirmLabel": "레인 추가",
+      "cancelLabel": "취소",
+      "emptyError": "계속하기 전에 레인 이름을 입력하세요.",
+      "duplicateError": "이미 존재하는 레인입니다.",
+      "successNotice": "\"{{name}}\" 레인을 만들었습니다.",
+      "statusFieldBlocked": "상태 레인이 이미 상태 열을 담당하고 있습니다. 테이블에서 상태 옵션을 수정하세요.",
+      "missingLaneField": "새 레인을 만들기 전에 칸반 열을 먼저 선택하세요."
     },
-    "settings": { "multiRowToggle": "레인을 여러 줄로 감싸기 허용" },
+    "content": {
+      "sectionTitle": "카드 내용",
+      "insertFieldButton": "필드 삽입",
+      "titleLabel": "제목 템플릿",
+      "titlePlaceholder": "예: {Title}",
+      "bodyLabel": "본문 템플릿",
+      "bodyPlaceholder": "예: {Description}\\n{Notes}",
+      "tagsLabel": "태그 템플릿",
+      "tagsPlaceholder": "쉼표로 플레이스홀더를 구분하세요. 예: {Tag1}, {Tag2}",
+      "showBodyToggle": "카드 내부에 본문 표시",
+      "showBodyToggleDesc": "비활성화하면 마우스 오버 시 툴팁으로 본문이 표시됩니다.",
+      "tagsBelowBodyToggle": "본문 아래에 태그 표시",
+      "tagsBelowBodyToggleDesc": "체크 해제 시 태그가 제목 옆에 표시됩니다.",
+      "noFieldOption": "사용 가능한 필드가 없음"
+    },
+    "toolbar": {
+      "defaultBoardLabel": "기본 보드",
+      "unnamedBoardLabel": "제목 없는 보드",
+      "addBoardButtonAriaLabel": "칸반 보드 추가",
+      "createBoardTitle": "새 칸반 보드",
+      "editBoardTitle": "칸반 보드 편집",
+      "editBoardLabel": "보드 편집",
+      "deleteBoardLabel": "보드 삭제",
+      "deleteBoardConfirm": "\"{{name}}\"을 삭제할까요? 카드는 다른 보드에서 계속 사용할 수 있습니다.",
+      "cannotDeleteLastBoard": "최소 한 개의 보드는 유지하세요.",
+      "newBoardPlaceholder": "칸반 보드",
+      "deleteBoardConfirmAction": "삭제",
+      "laneFieldMissingNotice": "이 칸반 보드에는 유효한 레인 열이 더 이상 없습니다. 계속하려면 새 열을 선택하세요.",
+      "noBoardsPlaceholder": "아직 칸반 보드가 없습니다. + 버튼으로 새 보드를 만드세요.",
+      "laneFieldLabel": "칸반 열",
+      "duplicateBoardLabel": "보드 복제",
+      "duplicateBoardTitle": "보드 복제: {{name}}",
+      "duplicateBoardNotice": "보드를 복제했습니다: {{name}}",
+      "duplicateNameSuffix": "사본",
+      "laneWidthLabel": "레인 너비 (rem)",
+      "laneWidthDescription": "열 너비를 조절하려면 {{min}}~{{max}} rem 값을 입력하세요.",
+      "initialVisibleCountLabel": "레인당 초기 카드 수",
+      "initialVisibleCountDesc": "나머지를 보기 전에 각 레인마다 이 수만큼 카드를 표시합니다.",
+      "sortSettingLabel": "레인 순서",
+      "sortSettingDesc": "각 레인 안의 카드 순서를 정할 열과 방향을 선택하세요.",
+      "sortFieldLabel": "정렬 열",
+      "sortFieldNone": "정렬 안 함",
+      "sortDirectionLabel": "방향",
+      "sortDirectionAsc": "오름차순 (A -> Z)",
+      "sortDirectionDesc": "내림차순 (Z -> A)",
+      "fontScaleLabel": "카드 글꼴 배율",
+      "fontScaleDescription": "제목, 본문, 태그, 툴팁을 조절하려면 {{min}}~{{max}} 사이의 값을 입력하세요.",
+      "addLanePresetMenuLabel": "새 레인"
+    },
+    "settings": {
+      "multiRowToggle": "레인을 여러 줄로 감싸기 허용"
+    },
     "showAllButtonLabel": "모두 보기 ({{count}}개 더)"
   },
-  "commands": { "undoTableHistory": "최근 테이블 변경 취소", "redoTableHistory": "테이블 변경 다시 실행", "openHelpDocument": "TileLineBase 도움말 문서 열기", "createTable": "TileLineBase 테이블 노트 만들기", "exportCsv": "현재 테이블을 CSV로 내보내기", "importCsv": "현재 테이블에 CSV 가져오기", "importCsvAsTable": "CSV를 새 테이블로 가져오기", "toggleTableView": "테이블 보기 토글", "openKanbanView": "TileLineBase 칸반 보기 열기", "openSlideView": "TileLineBase 슬라이드 보기 열기" },
+  "commands": {
+    "undoTableHistory": "최근 테이블 변경 취소",
+    "redoTableHistory": "테이블 변경 다시 실행",
+    "openHelpDocument": "TileLineBase 도움말 문서 열기",
+    "createTable": "TileLineBase 테이블 노트 만들기",
+    "exportCsv": "현재 테이블을 CSV로 내보내기",
+    "importCsv": "현재 테이블에 CSV 가져오기",
+    "importCsvAsTable": "CSV를 새 테이블로 가져오기",
+    "toggleTableView": "테이블 보기 토글",
+    "openKanbanView": "TileLineBase 칸반 보기 열기",
+    "openSlideView": "TileLineBase 슬라이드 보기 열기"
+  },
   "csv": {
     "errorNoFile": "내보내기 전에 노트를 저장하세요. 현재 파일을 찾을 수 없습니다.",
     "exportFailure": "CSV 내보내기에 실패했습니다. 자세한 내용은 콘솔을 확인하세요.",
@@ -139,7 +225,8 @@
   },
   "settings": {
     "generalHeading": "일반",
-    "interfaceLanguageLabel": "인터페이스 언어", "interfaceLanguageDesc": "",
+    "interfaceLanguageLabel": "인터페이스 언어",
+    "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Obsidian 언어 따르기",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -156,6 +243,11 @@
     "hideRightSidebarLabel": "테이블 보기에서 오른쪽 사이드바 숨기기",
     "hideRightSidebarDesc": "TileLineBase 테이블 보기가 활성화될 때 Obsidian 오른쪽 사이드바를 접습니다. 다른 보기에는 영향을 주지 않습니다.",
     "tableViewHeading": "테이블 보기",
+    "stripeColorLabel": "행 줄무늬 색상",
+    "stripeColorDesc": "기본값은 테마 기반 줄무늬(명도 ±4%)를 사용합니다.",
+    "stripeColorOptionRecommended": "기본값",
+    "stripeColorOptionPrimary": "줄무늬 없음",
+    "stripeColorOptionCustom": "사용자 설정",
     "rowStripeStrengthLabel": "행 줄무늬 강도",
     "rowStripeStrengthDesc": "0은 줄무늬 없음, 100은 가장 진하게 표시합니다.",
     "borderContrastLabel": "테두리 대비",
@@ -174,7 +266,9 @@
     "backupCapacityLabel": "백업 볼트 용량 제한(MB)",
     "backupCapacityDesc": "총 용량이 제한을 넘으면 가장 오래된 스냅샷을 삭제합니다. 기본값: 200MB."
   },
-  "readingView": { "configBlockTitle": "TLB 구성 블록" },
+  "readingView": {
+    "configBlockTitle": "TLB 구성 블록"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "알 수 없는 문자를 만났습니다",
@@ -483,7 +577,28 @@
     "fallbackName": "복사된 노트",
     "exportFallbackName": "내보낸 노트"
   },
-  "backup": { "menuLabel": "백업 복원", "modalTitle": "{{file}}의 백업", "modalTitleConfirm": "백업 복원", "errorNoFile": "현재 파일을 사용할 수 없습니다.", "errorUnavailable": "백업 서비스를 아직 사용할 수 없습니다.", "errorLoadFailed": "백업을 불러오지 못했습니다. 잠시 후 다시 시도하세요.", "emptyState": "아직 백업이 기록되지 않았습니다.", "restoreButton": "복원", "restoreButtonAria": "{{timestamp}}의 백업 복원", "restoreInitialTooltip": "{{timestamp}} 시점의 원본 Markdown으로 복원", "initialEntryLabel": "원본 Markdown(첫 테이블 변환 이전)", "confirmRestore": "{{timestamp}} 버전으로 파일을 복원할까요?", "noticeRestoreSuccess": "{{timestamp}}의 백업으로 파일을 복원했습니다.", "noticeRestoreFailed": "백업을 복원하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.", "restoreCancelButton": "취소", "sizeLabel": "크기: {{size}}", "exportButton": "내보내기", "exportButtonAria": "{{timestamp}} 백업을 새 파일로 내보내기", "noticeExportSuccess": "백업을 {{file}}에 내보냈습니다.", "noticeExportFailed": "백업을 내보내지 못했습니다. 자세한 내용은 콘솔을 확인하세요." },
+  "backup": {
+    "menuLabel": "백업 복원",
+    "modalTitle": "{{file}}의 백업",
+    "modalTitleConfirm": "백업 복원",
+    "errorNoFile": "현재 파일을 사용할 수 없습니다.",
+    "errorUnavailable": "백업 서비스를 아직 사용할 수 없습니다.",
+    "errorLoadFailed": "백업을 불러오지 못했습니다. 잠시 후 다시 시도하세요.",
+    "emptyState": "아직 백업이 기록되지 않았습니다.",
+    "restoreButton": "복원",
+    "restoreButtonAria": "{{timestamp}}의 백업 복원",
+    "restoreInitialTooltip": "{{timestamp}} 시점의 원본 Markdown으로 복원",
+    "initialEntryLabel": "원본 Markdown(첫 테이블 변환 이전)",
+    "confirmRestore": "{{timestamp}} 버전으로 파일을 복원할까요?",
+    "noticeRestoreSuccess": "{{timestamp}}의 백업으로 파일을 복원했습니다.",
+    "noticeRestoreFailed": "백업을 복원하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
+    "restoreCancelButton": "취소",
+    "sizeLabel": "크기: {{size}}",
+    "exportButton": "내보내기",
+    "exportButtonAria": "{{timestamp}} 백업을 새 파일로 내보내기",
+    "noticeExportSuccess": "백업을 {{file}}에 내보냈습니다.",
+    "noticeExportFailed": "백업을 내보내지 못했습니다. 자세한 내용은 콘솔을 확인하세요."
+  },
   "filterViewController": {
     "noColumns": "열 정보를 가져오지 못했습니다. 잠시 후 다시 시도하세요",
     "createModalTitle": "필터 보기 만들기",

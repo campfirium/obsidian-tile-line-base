@@ -71,7 +71,7 @@
 
 ## 质量审查维度
 - **Complexity**：新增功能应尊重现有模块边界；若核心文件趋于臃肿，先先撰写拆分计划再实施。
-- **i18n**：所有 UI 字符串通过 `src/i18n` 注入，并同步维护 `src/locales/en.json`；新增字段在 PR 中注明翻译状态。
+- **i18n**：所有 UI 字符串通过 `src/i18n` 注入，并同步维护 `src/locales/en.json`；新增字段在 PR 中注明翻译状态。禁止使用 `getText` 的第二参数或任何英文兜底，新增/调整 UI 文案前后必须先运行 `node scripts/check-i18n-hardcoded.mjs` 确认无硬编码，再执行 lint/build。
 - **a11y**：确保 UI 可聚焦、可键盘操作，必要时提供 `aria-label` 或 `title`；新增网格组件需记录辅助功能验证步骤。
 - **Security**：任何 Markdown 或外部输入必须经既有解析链路，禁止直接写入 `innerHTML`；引入第三方库时附带简要安全评估。
 - **Testability**：核心解析、数据映射与网格交互逻辑保持可单独调用，避免与 Obsidian API 紧耦合；若无法避免，请在 `specs/` 记录手动验证步骤。

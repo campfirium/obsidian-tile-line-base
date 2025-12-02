@@ -46,18 +46,72 @@
       "schemaUnavailable": "請先載入表格再選擇看板欄。",
       "noColumns": "目前沒有可用欄位可做為看板泳道。"
     },
-		"lanePresetModal": { "title": "新增泳道", "description": "替「{{field}}」欄加入泳道名稱，即使尚無卡片也會預先顯示。", "fieldLabel": "泳道名稱", "fieldDescription": "請使用唯一值，拖入卡片時會自動寫入該欄位。", "placeholder": "範例：待審查", "confirmLabel": "新增泳道", "cancelLabel": "取消", "emptyError": "請先輸入泳道名稱。", "duplicateError": "該泳道已存在。", "successNotice": "已建立泳道「{{name}}」。", "statusFieldBlocked": "狀態欄已有內建泳道，請在表格中調整狀態選項。", "missingLaneField": "請先選擇看板欄再建立泳道。" },
-		"content": { "sectionTitle": "卡片內容", "insertFieldButton": "插入欄位", "titleLabel": "標題範本", "titlePlaceholder": "範例：{標題}", "bodyLabel": "正文範本", "bodyPlaceholder": "範例：{描述}\\n{備註}", "tagsLabel": "標籤範本", "tagsPlaceholder": "以逗號分隔欄位占位符，例如 {標籤1}, {標籤2}", "showBodyToggle": "在卡片內顯示正文", "showBodyToggleDesc": "停用後，正文會改為滑鼠懸停提示。", "tagsBelowBodyToggle": "標籤顯示在正文下方", "tagsBelowBodyToggleDesc": "若不勾選，標籤會與標題並排顯示。", "noFieldOption": "暫無可用欄位" },
+    "lanePresetModal": {
+      "title": "新增泳道",
+      "description": "替「{{field}}」欄加入泳道名稱，即使尚無卡片也會預先顯示。",
+      "fieldLabel": "泳道名稱",
+      "fieldDescription": "請使用唯一值，拖入卡片時會自動寫入該欄位。",
+      "placeholder": "範例：待審查",
+      "confirmLabel": "新增泳道",
+      "cancelLabel": "取消",
+      "emptyError": "請先輸入泳道名稱。",
+      "duplicateError": "該泳道已存在。",
+      "successNotice": "已建立泳道「{{name}}」。",
+      "statusFieldBlocked": "狀態欄已有內建泳道，請在表格中調整狀態選項。",
+      "missingLaneField": "請先選擇看板欄再建立泳道。"
+    },
+    "content": {
+      "sectionTitle": "卡片內容",
+      "insertFieldButton": "插入欄位",
+      "titleLabel": "標題範本",
+      "titlePlaceholder": "範例：{標題}",
+      "bodyLabel": "正文範本",
+      "bodyPlaceholder": "範例：{描述}\\n{備註}",
+      "tagsLabel": "標籤範本",
+      "tagsPlaceholder": "以逗號分隔欄位占位符，例如 {標籤1}, {標籤2}",
+      "showBodyToggle": "在卡片內顯示正文",
+      "showBodyToggleDesc": "停用後，正文會改為滑鼠懸停提示。",
+      "tagsBelowBodyToggle": "標籤顯示在正文下方",
+      "tagsBelowBodyToggleDesc": "若不勾選，標籤會與標題並排顯示。",
+      "noFieldOption": "暫無可用欄位"
+    },
     "toolbar": {
-      "defaultBoardLabel": "預設看板", "unnamedBoardLabel": "未命名看板",
-      "addBoardButtonAriaLabel": "新增看板", "createBoardTitle": "新增看板",
-      "editBoardTitle": "編輯看板", "editBoardLabel": "編輯看板",
-      "deleteBoardLabel": "刪除看板", "deleteBoardConfirm": "確認刪除「{{name}}」嗎？卡片仍可在其他看板檢視。",
-      "cannotDeleteLastBoard": "至少保留一個看板。", "newBoardPlaceholder": "看板",
-        "deleteBoardConfirmAction": "刪除", "laneFieldMissingNotice": "目前看板缺少有效的泳道欄，請選擇新的欄後繼續使用。", "noBoardsPlaceholder": "現在還沒有看板，請點擊左側的加號建立一個。", "laneFieldLabel": "看板欄", "duplicateBoardLabel": "複製看板", "duplicateBoardTitle": "複製看板：{{name}}", "duplicateBoardNotice": "已複製看板：{{name}}", "duplicateNameSuffix": "副本", "laneWidthLabel": "欄寬（rem）", "laneWidthDescription": "輸入介於 {{min}} 與 {{max}} rem 的數值以控制看板欄寬。", "initialVisibleCountLabel": "每欄預設顯示數量", "initialVisibleCountDesc": "每欄僅顯示設定數量的卡片，剩餘卡片可透過「顯示全部」展開。", "sortSettingLabel": "項目排序", "sortSettingDesc": "選擇要排序的欄位與順序。", "sortFieldLabel": "排序欄位", "sortFieldNone": "不排序", "sortDirectionLabel": "排序方向", "sortDirectionAsc": "升序（A -> Z）", "sortDirectionDesc": "降序（Z -> A）"
-        , "fontScaleLabel": "卡片字體縮放", "fontScaleDescription": "請輸入 {{min}} 至 {{max}} 之間的數值，以同時調整標題、正文、標籤與提示文字大小。", "addLanePresetMenuLabel": "新增泳道"
-      },
-    "settings": { "multiRowToggle": "允許泳道自動換行" },
+      "defaultBoardLabel": "預設看板",
+      "unnamedBoardLabel": "未命名看板",
+      "addBoardButtonAriaLabel": "新增看板",
+      "createBoardTitle": "新增看板",
+      "editBoardTitle": "編輯看板",
+      "editBoardLabel": "編輯看板",
+      "deleteBoardLabel": "刪除看板",
+      "deleteBoardConfirm": "確認刪除「{{name}}」嗎？卡片仍可在其他看板檢視。",
+      "cannotDeleteLastBoard": "至少保留一個看板。",
+      "newBoardPlaceholder": "看板",
+      "deleteBoardConfirmAction": "刪除",
+      "laneFieldMissingNotice": "目前看板缺少有效的泳道欄，請選擇新的欄後繼續使用。",
+      "noBoardsPlaceholder": "現在還沒有看板，請點擊左側的加號建立一個。",
+      "laneFieldLabel": "看板欄",
+      "duplicateBoardLabel": "複製看板",
+      "duplicateBoardTitle": "複製看板：{{name}}",
+      "duplicateBoardNotice": "已複製看板：{{name}}",
+      "duplicateNameSuffix": "副本",
+      "laneWidthLabel": "欄寬（rem）",
+      "laneWidthDescription": "輸入介於 {{min}} 與 {{max}} rem 的數值以控制看板欄寬。",
+      "initialVisibleCountLabel": "每欄預設顯示數量",
+      "initialVisibleCountDesc": "每欄僅顯示設定數量的卡片，剩餘卡片可透過「顯示全部」展開。",
+      "sortSettingLabel": "項目排序",
+      "sortSettingDesc": "選擇要排序的欄位與順序。",
+      "sortFieldLabel": "排序欄位",
+      "sortFieldNone": "不排序",
+      "sortDirectionLabel": "排序方向",
+      "sortDirectionAsc": "升序（A -> Z）",
+      "sortDirectionDesc": "降序（Z -> A）",
+      "fontScaleLabel": "卡片字體縮放",
+      "fontScaleDescription": "請輸入 {{min}} 至 {{max}} 之間的數值，以同時調整標題、正文、標籤與提示文字大小。",
+      "addLanePresetMenuLabel": "新增泳道"
+    },
+    "settings": {
+      "multiRowToggle": "允許泳道自動換行"
+    },
     "showAllButtonLabel": "顯示全部（剩餘 {{count}} 筆）"
   },
   "slideView": {
@@ -71,11 +125,23 @@
     "filteredCountLabel": "{{count}} 頁符合目前的篩選",
     "counter": "{{current}} / {{total}}",
     "pageLabel": "第 {{current}} / {{total}} 頁",
+    "thumbnailAriaLabel": "跳至第 {{index}} 頁",
+    "thumbnailTitle": "第 {{index}} 頁：{{title}}",
     "untitledSlide": "未命名投影片 {{index}}",
     "emptyValue": "（空）",
-    "nav": { "prev": "上一頁", "next": "下一頁" },
-    "edit": { "heading": "編輯投影片" },
+    "nav": {
+      "prev": "上一頁",
+      "next": "下一頁"
+    },
+    "edit": {
+      "heading": "編輯投影片"
+    },
     "templateModal": {
+      "modeSingleLabel": "合併幻燈片",
+      "modeSplitLabel": "拆分幻燈片",
+      "modeSingleDesc": "每行生成一頁幻燈片。如有圖片，文字與圖片並排顯示。",
+      "noImageTabLabel": "佈局：無圖片",
+      "withImageTabLabel": "佈局：含圖片",
       "title": "投影片模板",
       "titleFieldLabel": "標題模板",
       "titleFieldDesc": "使用 {標題} 之類的占位符組合投影片標題。",
@@ -121,10 +187,30 @@
       "setDefaultError": "無法儲存為預設，請查看主控台詳情。",
       "noGlobalDefault": "尚無可用的全域預設。",
       "saveLabel": "保存模板",
-      "cancelLabel": "取消"
+      "cancelLabel": "取消",
+      "modeSplitDesc": "每行生成兩頁幻燈片：1. 文字頁 -> 2. 圖片頁（如有圖片）。",
+      "splitTextTabLabel": "幻燈片 1：文字",
+      "splitImageTabLabel": "幻燈片 2：圖片",
+      "imageContentLabel": "圖片內容",
+      "imageLayoutLabel": "圖片版面",
+      "globalSettingsLabel": "全局設定",
+      "leftOffsetLabel": "左側偏移 (%)",
+      "rightOffsetLabel": "右側偏移 (%)",
+      "topOffsetLabel": "頂部偏移 (%)"
     }
   },
-  "commands": { "undoTableHistory": "復原上一筆表格變更", "redoTableHistory": "重做表格變更", "openHelpDocument": "開啟 TileLineBase 說明文件", "createTable": "建立 TileLineBase 表格筆記", "exportCsv": "將目前表格匯出為 CSV", "importCsv": "將 CSV 匯入目前表格", "toggleTableView": "切換表格視圖", "importCsvAsTable": "匯入 CSV 並建立新表格", "openKanbanView": "開啟 TileLineBase 看板視圖", "openSlideView": "開啟 TileLineBase 投影片視圖" },
+  "commands": {
+    "undoTableHistory": "復原上一筆表格變更",
+    "redoTableHistory": "重做表格變更",
+    "openHelpDocument": "開啟 TileLineBase 說明文件",
+    "createTable": "建立 TileLineBase 表格筆記",
+    "exportCsv": "將目前表格匯出為 CSV",
+    "importCsv": "將 CSV 匯入目前表格",
+    "toggleTableView": "切換表格視圖",
+    "importCsvAsTable": "匯入 CSV 並建立新表格",
+    "openKanbanView": "開啟 TileLineBase 看板視圖",
+    "openSlideView": "開啟 TileLineBase 投影片視圖"
+  },
   "csv": {
     "errorNoFile": "請先儲存目前筆記或選擇有效的 CSV 檔案後再試。",
     "exportFailure": "匯出 CSV 失敗，請查看主控台記錄。",
@@ -157,6 +243,11 @@
     "hideRightSidebarLabel": "表格視圖時隱藏右側邊欄",
     "hideRightSidebarDesc": "當 TileLineBase 表格視圖啟用時自動收合 Obsidian 的右側邊欄，其他視圖不受影響。",
     "tableViewHeading": "表格視圖",
+    "stripeColorLabel": "行條紋顏色",
+    "stripeColorDesc": "預設使用以主題為基準的條紋（亮度 ±4%）。",
+    "stripeColorOptionRecommended": "預設",
+    "stripeColorOptionPrimary": "無條紋",
+    "stripeColorOptionCustom": "自訂",
     "rowStripeStrengthLabel": "行條紋對比度",
     "rowStripeStrengthDesc": "0 關閉條紋，100 條紋最明顯。",
     "borderContrastLabel": "邊框對比度",
@@ -175,7 +266,9 @@
     "backupCapacityLabel": "備份容量上限（MB）",
     "backupCapacityDesc": "超過上限時會刪除最早的快照。預設值：200 MB。"
   },
-  "readingView": { "configBlockTitle": "TLB 設定區塊" },
+  "readingView": {
+    "configBlockTitle": "TLB 設定區塊"
+  },
   "formula": {
     "errors": {
       "unexpectedChar": "偵測到無法識別的字元",
@@ -480,7 +573,28 @@
     "fallbackName": "複製的筆記",
     "exportFallbackName": "匯出副本"
   },
-  "backup": { "menuLabel": "還原備份", "modalTitle": "{{file}} 的備份", "modalTitleConfirm": "還原備份", "errorNoFile": "目前檔案不可用。", "errorUnavailable": "備份服務尚未準備完成。", "errorLoadFailed": "載入備份失敗，請稍後再試。", "emptyState": "尚未記錄任何備份。", "restoreButton": "還原", "restoreButtonAria": "從 {{timestamp}} 的備份還原", "restoreInitialTooltip": "還原為首次進入表格視圖前的 Markdown（{{timestamp}}）", "initialEntryLabel": "首次進入表格視圖前的原始 Markdown", "confirmRestore": "是否將檔案還原到 {{timestamp}} 的版本？", "noticeRestoreSuccess": "已還原到 {{timestamp}} 的備份。", "noticeRestoreFailed": "還原備份失敗，詳見主控台。", "restoreCancelButton": "取消", "sizeLabel": "大小：{{size}}", "exportButton": "匯出", "exportButtonAria": "將 {{timestamp}} 的備份匯出為新檔案", "noticeExportSuccess": "已將備份匯出至 {{file}}。", "noticeExportFailed": "匯出備份失敗，詳見主控台。" },
+  "backup": {
+    "menuLabel": "還原備份",
+    "modalTitle": "{{file}} 的備份",
+    "modalTitleConfirm": "還原備份",
+    "errorNoFile": "目前檔案不可用。",
+    "errorUnavailable": "備份服務尚未準備完成。",
+    "errorLoadFailed": "載入備份失敗，請稍後再試。",
+    "emptyState": "尚未記錄任何備份。",
+    "restoreButton": "還原",
+    "restoreButtonAria": "從 {{timestamp}} 的備份還原",
+    "restoreInitialTooltip": "還原為首次進入表格視圖前的 Markdown（{{timestamp}}）",
+    "initialEntryLabel": "首次進入表格視圖前的原始 Markdown",
+    "confirmRestore": "是否將檔案還原到 {{timestamp}} 的版本？",
+    "noticeRestoreSuccess": "已還原到 {{timestamp}} 的備份。",
+    "noticeRestoreFailed": "還原備份失敗，詳見主控台。",
+    "restoreCancelButton": "取消",
+    "sizeLabel": "大小：{{size}}",
+    "exportButton": "匯出",
+    "exportButtonAria": "將 {{timestamp}} 的備份匯出為新檔案",
+    "noticeExportSuccess": "已將備份匯出至 {{file}}。",
+    "noticeExportFailed": "匯出備份失敗，詳見主控台。"
+  },
   "filterViewController": {
     "noColumns": "無法取得欄位資訊，請稍後再試",
     "createModalTitle": "建立篩選視圖",

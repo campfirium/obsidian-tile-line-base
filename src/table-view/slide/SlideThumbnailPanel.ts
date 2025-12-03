@@ -71,7 +71,7 @@ export class SlideThumbnailPanel {
     private isScrollable = false;
     private readonly safePaddingX = 32;
     private readonly safePaddingTopMax = 48;
-    private readonly safePaddingBottom = 0;
+    private readonly safePaddingBottom = 12;
     private readonly targetRows = 4;
     private readonly wheelHandler: (evt: WheelEvent) => void;
     private readonly gridScrollHandler: () => void;

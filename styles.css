@@ -4754,15 +4754,15 @@
 	width: 100%;
 	box-sizing: border-box;
 	margin: 0 auto;
-	padding: var(--tlb-thumb-pad-top, 48px) 32px var(--tlb-thumb-pad-bottom, 0px);
-	scroll-padding: var(--tlb-thumb-pad-top, 48px) 0 var(--tlb-thumb-pad-bottom, 0px);
+	padding: var(--tlb-thumb-pad-top, 48px) 32px var(--tlb-thumb-pad-bottom, 12px);
+	scroll-padding: var(--tlb-thumb-pad-top, 48px) 0 var(--tlb-thumb-pad-bottom, 12px);
 	overflow-y: auto;
 	overflow-x: hidden;
 	justify-content: center;
 	align-content: start;
 	justify-items: stretch;
 	align-items: start;
-	height: var(--tlb-thumb-grid-height, calc(var(--tlb-thumb-content-height, auto) + var(--tlb-thumb-pad-top, 0px) + var(--tlb-thumb-pad-bottom, 0px)));
+	height: var(--tlb-thumb-grid-height, calc(var(--tlb-thumb-content-height, auto) + var(--tlb-thumb-pad-top, 0px) + var(--tlb-thumb-pad-bottom, 12px)));
 	position: relative;
 }
 
@@ -4900,15 +4900,15 @@
 	width: 100%;
 	box-sizing: border-box;
 	margin: 0 auto;
-	padding: var(--tlb-thumb-pad-top, 48px) 32px var(--tlb-thumb-pad-bottom, 0px);
-	scroll-padding: var(--tlb-thumb-pad-top, 48px) 0 var(--tlb-thumb-pad-bottom, 0px);
+	padding: var(--tlb-thumb-pad-top, 48px) 32px var(--tlb-thumb-pad-bottom, 12px);
+	scroll-padding: var(--tlb-thumb-pad-top, 48px) 0 var(--tlb-thumb-pad-bottom, 12px);
 	overflow-y: auto;
 	overflow-x: hidden;
 	justify-content: center;
 	align-content: start;
 	justify-items: stretch;
 	align-items: start;
-	height: var(--tlb-thumb-grid-height, calc(var(--tlb-thumb-content-height, auto) + var(--tlb-thumb-pad-top, 0px) + var(--tlb-thumb-pad-bottom, 0px)));
+	height: var(--tlb-thumb-grid-height, calc(var(--tlb-thumb-content-height, auto) + var(--tlb-thumb-pad-top, 0px) + var(--tlb-thumb-pad-bottom, 12px)));
 	position: relative;
 }
 
@@ -5046,15 +5046,15 @@
 	width: 100%;
 	box-sizing: border-box;
 	margin: 0 auto;
-	padding: var(--tlb-thumb-pad-top, 48px) 32px var(--tlb-thumb-pad-bottom, 0px);
-	scroll-padding: var(--tlb-thumb-pad-top, 48px) 0 var(--tlb-thumb-pad-bottom, 0px);
+	padding: var(--tlb-thumb-pad-top, 48px) 32px var(--tlb-thumb-pad-bottom, 12px);
+	scroll-padding: var(--tlb-thumb-pad-top, 48px) 0 var(--tlb-thumb-pad-bottom, 12px);
 	overflow-y: auto;
 	overflow-x: hidden;
 	justify-content: center;
 	align-content: start;
 	justify-items: stretch;
 	align-items: start;
-	height: var(--tlb-thumb-grid-height, calc(var(--tlb-thumb-content-height, auto) + var(--tlb-thumb-pad-top, 0px) + var(--tlb-thumb-pad-bottom, 0px)));
+	height: var(--tlb-thumb-grid-height, calc(var(--tlb-thumb-content-height, auto) + var(--tlb-thumb-pad-top, 0px) + var(--tlb-thumb-pad-bottom, 12px)));
 	position: relative;
 }
 

@@ -1,6 +1,5 @@
 import type { Menu } from 'obsidian';
 import { t } from '../i18n';
-import { getPluginContext } from '../pluginContext';
 import type { TableView } from '../TableView';
 
 interface MenuEntry {
@@ -39,28 +38,10 @@ function buildViewModeEntries(view: TableView): MenuEntry[] {
 }
 
 export function populateMoreOptionsMenu(view: TableView, menu: Menu): void {
-	const plugin = getPluginContext();
-	if (!plugin) {
-		return;
-	}
-
 	const groups: MenuGroup[] = [
 		{
 			order: 1,
 			items: buildViewModeEntries(view)
-		},
-		{
-			order: 2,
-			items: [
-				{
-					label: t('commands.openHelpDocument'),
-					icon: 'info',
-					order: 1,
-					onClick: () => {
-						void plugin.openHelpDocument();
-					}
-				}
-			]
 		}
 	];
 

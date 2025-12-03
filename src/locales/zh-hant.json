@@ -760,8 +760,8 @@
     "openExternal": "開啟連結：{{target}}"
   },
   "onboarding": {
-    "helpFileName": "TileLineBase 入門教學",
-    "helpFileContent": "## TileLineBase 模板\\n功能：第 0 步——你將獲得什麼\\n說明：使用首行作為欄位模板，下面的範例列會顯示表格可呈現的內容。\\n\\n## TileLineBase 開啟\\n功能：第 1 步——開啟表格\\n說明：於筆記上按右鍵或透過指令面板，在 Markdown 與 TileLineBase 表格視圖之間切換。\\n\\n## TileLineBase 欄\\n功能：第 2 步——閱讀標題\\n說明：第一個二級標題定義欄名，之後的每個二級標題代表一行資料。\\n\\n## TileLineBase 填寫\\n功能：第 3 步——輸入內容\\n說明：點擊儲存格開始輸入，按 Enter 儲存；修改會自動寫回筆記。\\n\\n## TileLineBase 貼上\\n功能：第 4 步——從表格貼上\\n說明：從 Excel 或其他表格複製列貼上，數值會落入對應欄位。\\n\\n## TileLineBase 篩選\\n功能：第 5 步——篩選與排序\\n說明：使用表頭圖示新增篩選或排序，並將結果儲存為命名視圖以利重複使用。\\n\\n## TileLineBase 分組\\n功能：第 6 步——整理視圖\\n說明：將常用篩選視圖分組，團隊成員即可快速切換到所需角度。\\n\\n## TileLineBase 匯出\\n功能：第 7 步——把列轉成筆記\\n說明：選擇多列並匯出或提升，系統會自動建立新筆記並加入反向連結。\\n\\n## TileLineBase 快捷方式\\n功能：第 8 步——隨手可得\\n說明：綁定快捷鍵即可快速開啟表格，並在需要時把此說明筆記釘選到側欄。\\n",
+    "helpFileName": "歡迎使用 TileLineBase",
+    "helpFileContent": "# 歡迎使用 TileLineBase\n\n## task: 完成你的第一個 TLB 任務\n\nAction: 點擊 Status 欄的核取方塊將此任務標記為完成。\n\n## task: 調整看板\n\nAction: 點擊右上角的 Kanban 圖示，然後把此卡片拖到「Done」或其他泳道。\n\n## task: 播放投影片\n\nAction: 點擊右上角的 Slides 圖示，再按全螢幕按鈕。按 `Tab` 查看縮圖。\n\n## task: 探索資料來源\n\nAction: 點擊右上角的 Edit 圖示，回到原始的 Markdown 檢視。\n\n## task: 匯入 CSV 資料\n\nAction: 點擊右上角的齒輪圖示，然後選擇「Import CSV as New Table.」\n",
     "createHelpFailed": "TileLineBase 建立說明文件失敗，請查看主控台。",
     "openHelpFailed": "TileLineBase 無法開啟說明文件。"
   }

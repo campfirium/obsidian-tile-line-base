@@ -760,8 +760,8 @@
     "openExternal": "リンクを開く: {{target}}"
   },
   "onboarding": {
-    "helpFileName": "TileLineBase スタートガイド",
-    "helpFileContent": "## TileLineBase Template\nFeature: Step 0: できること\nDescription: 最初の行を列テンプレートとして使い、その下のサンプル行でテーブルに表示できる内容を確認します。\n\n## TileLineBase Open\nFeature: Step 1: テーブルを開く\nDescription: ノートを右クリックするかコマンドパレットを使って、Markdown から TileLineBase のテーブルビューに切り替えます。\n\n## TileLineBase Columns\nFeature: Step 2: 見出しを読み取る\nDescription: 最初の H2 見出しが列名を定義し、それ以降の H2 がデータ行になります。\n\n## TileLineBase Fill\nFeature: Step 3: 値を入力\nDescription: セルをクリックして入力し、Enter で確定します。編集内容はノートに自動的に保存されます。\n\n## TileLineBase Paste\nFeature: Step 4: 表計算から貼り付け\nDescription: Excel などのテーブルから行をコピーして貼り付けると、値が対応する列に流し込まれます。\n\n## TileLineBase Filter\nFeature: Step 5: フィルターと並べ替え\nDescription: ヘッダーのアイコンでフィルターや並べ替えを追加し、名前付きビューとして保存してすぐに再利用します。\n\n## TileLineBase Group\nFeature: Step 6: ビューを整理\nDescription: よく使うフィルタービューをグループ化して、チームメイトがすぐに目的の視点へ移動できるようにします。\n\n## TileLineBase Export\nFeature: Step 7: 行をノートに変換\nDescription: 行を選択してエクスポートまたは昇格すると、新しいノートがバックリンク付きで自動的に作成されます。\n\n## TileLineBase Shortcuts\nFeature: Step 8: すぐ呼び出す\nDescription: テーブルを再度開くホットキーを割り当て、必要なときはこのヘルプノートをサイドバーにピン留めしてください。\n",
+    "helpFileName": "TileLineBaseへようこそ",
+    "helpFileContent": "# TileLineBaseへようこそ\n\n## task: 最初の TLB タスクを完了する\n\nAction: ステータス列のチェックボックスをクリックして、このタスクを完了にします。\n\n## task: カンバンを並べ替える\n\nAction: 右上の Kanban アイコンをクリックし、このカードを「Done」または別のレーンへドラッグします。\n\n## task: スライドを表示する\n\nAction: 右上の Slides アイコンをクリックし、全画面ボタンを押します。`Tab` でサムネイルを確認してください。\n\n## task: データソースを確認する\n\nAction: 右上の Edit アイコンをクリックして元の Markdown ビューに戻ります。\n\n## task: CSV データをインポートする\n\nAction: 右上の歯車アイコンをクリックし、「Import CSV as New Table.」を選びます。\n",
     "createHelpFailed": "TileLineBase がヘルプドキュメントを作成できませんでした。詳細はコンソールを確認してください。",
     "openHelpFailed": "TileLineBase がヘルプドキュメントを開けませんでした。"
   }

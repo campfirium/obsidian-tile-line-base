@@ -20,7 +20,6 @@ export interface FilterViewBarCallbacks {
 	onImportCsv(button: HTMLElement): void;
 	onImportCsvAsTable(button: HTMLElement): void;
 	onAdjustColumnWidths(): void;
-	onOpenHelp(): void;
 	onDefaultViewMenu(button: HTMLElement, event?: MouseEvent): void;
 	onEditDefaultView(): void;
 	onOpenRowOrder(button: HTMLElement): void;
@@ -348,16 +347,6 @@ export class FilterViewBar {
 						.setIcon('history')
 						.onClick(() => {
 							this.options.callbacks.onOpenBackupRestore(this.settingsButtonEl);
-						});
-				});
-			},
-			() => {
-				menu.addItem((item) => {
-					item
-						.setTitle(t('filterViewBar.settingsMenuHelpLabel'))
-						.setIcon('info')
-						.onClick(() => {
-							this.options.callbacks.onOpenHelp();
 						});
 				});
 			}

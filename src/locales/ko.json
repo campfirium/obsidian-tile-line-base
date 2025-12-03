@@ -760,8 +760,8 @@
     "openExternal": "링크 열기: {{target}}"
   },
   "onboarding": {
-    "helpFileName": "TileLineBase 시작하기",
-    "helpFileContent": "## TileLineBase Template\nFeature: Step 0: 얻을 수 있는 것\nDescription: 첫 번째 행을 열 템플릿으로 사용하고, 아래 샘플 행에서 테이블이 어떻게 표시되는지 확인하세요.\n\n## TileLineBase Open\nFeature: Step 1: 테이블 열기\nDescription: 노트를 오른쪽 클릭하거나 명령 팔레트를 사용해 Markdown에서 TileLineBase 테이블 보기로 전환하세요.\n\n## TileLineBase Columns\nFeature: Step 2: 제목 읽기\nDescription: 첫 번째 H2 제목이 열 이름을 정의하고, 이후 H2마다 데이터 행이 됩니다.\n\n## TileLineBase Fill\nFeature: Step 3: 값 입력\nDescription: 셀을 클릭해 입력을 시작하고 Enter로 확정하세요. 수정 내용은 노트에 자동으로 저장됩니다.\n\n## TileLineBase Paste\nFeature: Step 4: 시트에서 붙여넣기\nDescription: Excel이나 다른 테이블에서 행을 복사해 붙여넣으면 값이 일치하는 열에 채워집니다.\n\n## TileLineBase Filter\nFeature: Step 5: 필터 및 정렬\nDescription: 헤더 아이콘으로 필터를 추가하거나 목록을 정렬하고, 자주 사용하는 구성을 이름 있는 보기로 저장하세요.\n\n## TileLineBase Group\nFeature: Step 6: 보기 정리\nDescription: 자주 쓰는 필터 보기를 그룹화해 팀원이 원하는 관점을 빠르게 찾을 수 있도록 하세요.\n\n## TileLineBase Export\nFeature: Step 7: 행을 노트로 변환\nDescription: 행을 선택해 내보내거나 승격하면 새 노트가 자동으로 생성되고 역링크도 추가됩니다.\n\n## TileLineBase Shortcuts\nFeature: Step 8: 항상 가까이에\nDescription: 단축키를 지정해 테이블을 다시 열고, 도움이 필요할 때 이 도움말 노트를 사이드바에 고정하세요.\n",
+    "helpFileName": "TileLineBase 환영합니다",
+    "helpFileContent": "# TileLineBase에 오신 것을 환영합니다\n\n## task: 첫 번째 TLB 작업 완료하기\n\nAction: Status 열의 체크박스를 클릭해 이 작업을 완료로 표시하세요.\n\n## task: 칸반 재배치\n\nAction: 오른쪽 상단 Kanban 아이콘을 클릭한 뒤, 이 카드를 “Done” 또는 다른 레인으로 끌어다 놓으세요.\n\n## task: 슬라이드 발표\n\nAction: 오른쪽 상단 Slides 아이콘을 클릭하고 전체 화면 버튼을 누르세요. `Tab` 키로 썸네일을 확인하세요.\n\n## task: 데이터 소스 탐색\n\nAction: 오른쪽 상단 Edit 아이콘을 클릭해 원래 Markdown 보기로 돌아가세요.\n\n## task: CSV 데이터 가져오기\n\nAction: 오른쪽 상단 톱니바퀴 아이콘을 클릭하고 “Import CSV as New Table.”를 선택하세요.\n",
     "createHelpFailed": "TileLineBase가 도움말 문서를 만들지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
     "openHelpFailed": "TileLineBase가 도움말 문서를 열지 못했습니다."
   }

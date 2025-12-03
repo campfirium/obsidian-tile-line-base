@@ -279,17 +279,6 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'table-open-help',
-			name: t('commands.openHelpDocument'),
-			callback: () => {
-				if (!this.onboardingManager) {
-					return;
-				}
-				void this.onboardingManager.openHelpDocument();
-			}
-		});
-
-		this.addCommand({
 			id: 'table-open-creation-modal',
 			name: t('commands.createTable'),
 			callback: () => {

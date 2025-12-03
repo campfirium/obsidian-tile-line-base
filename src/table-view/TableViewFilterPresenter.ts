@@ -4,7 +4,6 @@ import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
 import { openBackupRestoreModal } from './BackupRestoreModal';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './TableCsvController';
-import { getPluginContext } from '../pluginContext';
 
 export type FilterColumnKind = 'status' | 'date' | 'time' | 'text';
 
@@ -77,20 +76,6 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 
 			},
 
-			onOpenHelp: () => {
-
-				const plugin = getPluginContext();
-
-				if (!plugin) {
-
-					return;
-
-				}
-
-				void plugin.openHelpDocument();
-
-			},
-
 			onDefaultViewMenu: (button, event) => {
 
 				view.filterViewController.openDefaultViewMenu(button, event);
@@ -112,7 +97,6 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 	view.filterViewBar.render(view.filterViewState);
 
 }
-
 
 
 export function reapplyGlobalQuickFilter(view: TableView): void {

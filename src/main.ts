@@ -152,6 +152,22 @@ export default class TileLineBasePlugin extends Plugin {
 					});
 			})
 		);
+		this.registerEvent(
+			this.app.vault.on('delete', (abstractFile) => {
+				const targetPath = abstractFile?.path ?? '';
+				if (!targetPath) {
+					return;
+				}
+				if (abstractFile instanceof TFile && abstractFile.extension !== 'md') {
+					return;
+				}
+				void this.settingsService
+					.scheduleFileSettingsCleanup(targetPath)
+					.catch((error) => {
+						logger.error('Failed to schedule file-scoped settings cleanup after delete', error);
+					});
+			})
+		);
 
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
 			this.viewActionManager.ensureActionsForLeaf(leaf ?? null);

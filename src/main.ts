@@ -356,13 +356,6 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 	}
 
-	async openHelpDocument(): Promise<void> {
-		if (!this.onboardingManager) {
-			return;
-		}
-		await this.onboardingManager.openHelpDocument();
-	}
-
 	getSettingsService(): SettingsService {
 		return this.settingsService;
 	}

@@ -761,7 +761,7 @@
   },
   "onboarding": {
     "helpFileName": "Witaj w TileLineBase",
-    "helpFileContent": "# witaj w TileLineBase\n\n## task: Ukończ swoje pierwsze zadanie TLB\n\nAction: Kliknij pole w kolumnie Status, aby oznaczyć to zadanie jako ukończone.\n\n## task: Przenieś Kanban\n\nAction: Kliknij ikonę Kanban (prawy górny róg), a następnie przeciągnij tę kartę do „Done” lub innej kolumny.\n\n## task: Prezentuj slajdy\n\nAction: Kliknij ikonę Slides (prawy górny róg), potem przycisk pełnego ekranu. Naciśnij `Tab`, aby zobaczyć miniatury.\n\n## task: Poznaj źródło danych\n\nAction: Kliknij ikonę Edit (prawy górny róg), aby wrócić do pierwotnego widoku Markdown.\n\n## task: Importuj dane CSV\n\nAction: Kliknij ikonę koła zębatego (prawy górny róg), a następnie wybierz „Import CSV as New Table.”\n",
+    "helpFileContent": "# witaj w TileLineBase\n\n## task: Ukończ swoje pierwsze zadanie TLB\n\nAction: Kliknij pole w kolumnie Status, aby oznaczyć to zadanie jako ukończone.\n\n## task: Przenieś Kanban\n\nAction: Kliknij ikonę Kanban (prawy górny róg), a następnie przeciągnij tę kartę do „Done” lub innej kolumny.\n\n## task: Prezentuj slajdy\n\nAction: Kliknij ikonę Slides (prawy górny róg), potem przycisk pełnego ekranu. Naciśnij `Tab`, aby zobaczyć miniatury.\n\n## task: Poznaj źródło danych\n\nAction: Kliknij ikonę Edit (prawy górny róg), aby wrócić do pierwotnego widoku Markdown.\n\n## task: Importuj dane CSV\n\nAction: Kliknij ikonę koła zębatego (prawy górny róg), a następnie wybierz „Importuj CSV jako nową tabelę.”\n",
     "createHelpFailed": "TileLineBase nie zdołał utworzyć dokumentu pomocy. Sprawdź konsolę, aby uzyskać szczegóły.",
     "openHelpFailed": "TileLineBase nie mógł otworzyć dokumentu pomocy."
   }

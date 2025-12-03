@@ -38,7 +38,6 @@ export interface BackupSettings {
 
 export interface OnboardingState {
 	completed: boolean;
-	helpFilePath: string | null;
 }
 
 export interface TileLineBaseSettings {
@@ -91,8 +90,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 		maxSizeMB: 200
 	},
 	onboarding: {
-		completed: false,
-		helpFilePath: null
+		completed: false
 	},
 	locale: null,
 	localizedLocale: 'en'
@@ -662,8 +660,7 @@ export class SettingsService {
 
 	getOnboardingState(): OnboardingState {
 		return {
-			completed: this.settings.onboarding.completed,
-			helpFilePath: this.settings.onboarding.helpFilePath
+			completed: this.settings.onboarding.completed
 		};
 	}
 
@@ -693,12 +690,8 @@ export class SettingsService {
 	private sanitizeOnboardingState(raw: Partial<OnboardingState> | undefined): OnboardingState {
 		const base = DEFAULT_SETTINGS.onboarding;
 		const completed = typeof raw?.completed === 'boolean' ? raw.completed : base.completed;
-		const helpFilePath = typeof raw?.helpFilePath === 'string' && raw.helpFilePath.trim().length > 0
-			? raw.helpFilePath.trim()
-			: base.helpFilePath;
 		return {
-			completed,
-			helpFilePath
+			completed
 		};
 	}
 

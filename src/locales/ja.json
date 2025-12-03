@@ -761,7 +761,7 @@
   },
   "onboarding": {
     "helpFileName": "TileLineBaseへようこそ",
-    "helpFileContent": "# TileLineBaseへようこそ\n\n## task: 最初の TLB タスクを完了する\n\nAction: ステータス列のチェックボックスをクリックして、このタスクを完了にします。\n\n## task: カンバンを並べ替える\n\nAction: 右上の Kanban アイコンをクリックし、このカードを「Done」または別のレーンへドラッグします。\n\n## task: スライドを表示する\n\nAction: 右上の Slides アイコンをクリックし、全画面ボタンを押します。`Tab` でサムネイルを確認してください。\n\n## task: データソースを確認する\n\nAction: 右上の Edit アイコンをクリックして元の Markdown ビューに戻ります。\n\n## task: CSV データをインポートする\n\nAction: 右上の歯車アイコンをクリックし、「Import CSV as New Table.」を選びます。\n",
+    "helpFileContent": "# TileLineBaseへようこそ\n\n## task: 最初の TLB タスクを完了する\n\nAction: ステータス列のチェックボックスをクリックして、このタスクを完了にします。\n\n## task: カンバンを並べ替える\n\nAction: 右上の Kanban アイコンをクリックし、このカードを「Done」または別のレーンへドラッグします。\n\n## task: スライドを表示する\n\nAction: 右上の Slides アイコンをクリックし、全画面ボタンを押します。`Tab` でサムネイルを確認してください。\n\n## task: データソースを確認する\n\nAction: 右上の Edit アイコンをクリックして元の Markdown ビューに戻ります。\n\n## task: CSV データをインポートする\n\nAction: 右上の歯車アイコンをクリックし、「CSV を新しいテーブルとしてインポート」を選びます。\n",
     "createHelpFailed": "TileLineBase がヘルプドキュメントを作成できませんでした。詳細はコンソールを確認してください。",
     "openHelpFailed": "TileLineBase がヘルプドキュメントを開けませんでした。"
   }

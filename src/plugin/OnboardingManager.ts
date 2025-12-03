@@ -1,4 +1,4 @@
-import { App, Notice, TAbstractFile, TFile, TFolder, WorkspaceLeaf, normalizePath } from 'obsidian';
+import { App, TAbstractFile, TFile, TFolder, WorkspaceLeaf, normalizePath } from 'obsidian';
 import type { SettingsService } from '../services/SettingsService';
 import type { ViewSwitchCoordinator } from './ViewSwitchCoordinator';
 import { t } from '../i18n';
@@ -29,64 +29,23 @@ export class OnboardingManager {
 			return;
 		}
 		try {
-			const file = await this.ensureHelpFile();
-			if (!file) {
-				this.logger.warn('onboarding: help file unavailable after creation attempt');
-				return;
-			}
-			await this.settingsService.updateOnboardingState({
-				completed: true,
-				helpFilePath: file.path
-			});
-			await this.settingsService.setFileViewPreference(file.path, 'table');
-			this.scheduleOpen(file);
+			await this.settingsService.updateOnboardingState({ completed: true });
 		} catch (error) {
-			this.logger.error('onboarding: failed to run initial onboarding', error);
-			new Notice(t('onboarding.createHelpFailed'));
+			this.logger.warn('onboarding: failed to update onboarding state', error);
 		}
-	}
 
-	async openHelpDocument(): Promise<void> {
-		try {
-			const file = await this.getExistingHelpFile();
-			if (file) {
-				await this.ensurePreference(file);
-				await this.openInWorkspace(file);
-				return;
-			}
-			const created = await this.createHelpFile();
-			if (!created) {
-				new Notice(t('onboarding.openHelpFailed'));
-				return;
-			}
-			await this.settingsService.updateOnboardingState({ helpFilePath: created.path });
-			await this.ensurePreference(created);
-			await this.openInWorkspace(created);
-		} catch (error) {
-			this.logger.error('onboarding: failed to open help document', error);
-			new Notice(t('onboarding.openHelpFailed'));
+		const file = await this.createHelpFile();
+		if (!file) {
+			this.logger.warn('onboarding: help file unavailable after attempt');
+			return;
 		}
-	}
 
-	private async ensureHelpFile(): Promise<TFile | null> {
-		const existing = await this.getExistingHelpFile();
-		if (existing) {
-			return existing;
-		}
-		return this.createHelpFile();
-	}
-
-	private async getExistingHelpFile(): Promise<TFile | null> {
-		const state = this.settingsService.getOnboardingState();
-		if (!state.helpFilePath) {
-			return null;
-		}
-		const file = this.lookupFile(state.helpFilePath);
-		return file instanceof TFile ? file : null;
+		await this.ensurePreference(file);
+		this.scheduleOpen(file);
 	}
 
 	private async createHelpFile(): Promise<TFile | null> {
-		const baseName = t('onboarding.helpFileName').trim() || 'TileLineBase Getting Started';
+		const baseName = this.getHelpFileName();
 		const filename = `${baseName}.md`;
 		const folder = this.resolveDefaultFolder();
 		const targetPath = folder ? `${folder}/${filename}` : filename;
@@ -97,11 +56,9 @@ export class OnboardingManager {
 			await this.ensureContainingFolder(uniquePath);
 			const file = await this.app.vault.create(uniquePath, content);
 			this.logger.info('onboarding: help file created', { path: uniquePath });
-			await this.settingsService.updateOnboardingState({ helpFilePath: file.path });
 			return file;
 		} catch (error) {
 			this.logger.error('onboarding: failed to create help file', { path: uniquePath, error });
-			new Notice(t('onboarding.createHelpFailed'));
 			return null;
 		}
 	}
@@ -134,7 +91,6 @@ export class OnboardingManager {
 		if (!this.lookupFile(normalized)) {
 			return normalized;
 		}
-
 		const slashIndex = normalized.lastIndexOf('/');
 		const directory = slashIndex >= 0 ? normalized.substring(0, slashIndex) : '';
 		const baseName = slashIndex >= 0 ? normalized.substring(slashIndex + 1) : normalized;
@@ -210,6 +166,11 @@ export class OnboardingManager {
 		return content.endsWith('\n') ? content : `${content}\n`;
 	}
 
+	private getHelpFileName(): string {
+		const translated = t('onboarding.helpFileName').trim();
+		return translated.length > 0 ? translated : 'Welcome to TileLineBase';
+	}
+
 	private scheduleOpen(file: TFile): void {
 		const open = () => {
 			void this.openInWorkspace(file);
@@ -253,7 +214,6 @@ export class OnboardingManager {
 			});
 		} catch (error) {
 			this.logger.error('onboarding: failed to open help file in table view', { path: file.path, error });
-			new Notice(t('onboarding.openHelpFailed'));
 		}
 	}
 }

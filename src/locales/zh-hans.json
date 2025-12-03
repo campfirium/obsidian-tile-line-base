@@ -761,7 +761,7 @@
   },
   "onboarding": {
     "helpFileName": "欢迎使用 TileLineBase",
-    "helpFileContent": "# 欢迎使用 TileLineBase\n\n## task: 完成你的第一个 TLB 任务\n\nAction: 点击 Status 列的复选框将此任务标记为完成。\n\n## task: 调整看板\n\nAction: 点击右上角的 Kanban 图标，然后将此卡片拖到“Done”或其他泳道。\n\n## task: 播放幻灯片\n\nAction: 点击右上角的 Slides 图标，再点击全屏按钮。按 `Tab` 查看缩略图。\n\n## task: 查看数据源\n\nAction: 点击右上角的 Edit 图标，返回原始 Markdown 视图。\n\n## task: 导入 CSV 数据\n\nAction: 点击右上角的齿轮图标，然后选择“Import CSV as New Table.”\n",
+    "helpFileContent": "# 欢迎使用 TileLineBase\n\n## task: 完成你的第一个 TLB 任务\n\nAction: 点击 Status 列的复选框将此任务标记为完成。\n\n## task: 调整看板\n\nAction: 点击右上角的 Kanban 图标，然后将此卡片拖到“Done”或其他泳道。\n\n## task: 播放幻灯片\n\nAction: 点击右上角的 Slides 图标，再点击全屏按钮。按 `Tab` 查看缩略图。\n\n## task: 查看数据源\n\nAction: 点击右上角的 Edit 图标，返回原始 Markdown 视图。\n\n## task: 导入 CSV 数据\n\nAction: 点击右上角的齿轮图标，然后选择“导入 CSV 作为新表。”\n",
     "createHelpFailed": "TileLineBase 创建帮助文档失败，请查看控制台。",
     "openHelpFailed": "TileLineBase 无法打开帮助文档。"
   }

@@ -760,8 +760,8 @@
     "openExternal": "Open link: {{target}}"
   },
   "onboarding": {
-    "helpFileName": "welcome to TileLineBase",
-    "helpFileContent": "# welcome to TileLineBase\n\n## task: Complete your first TLB task\n\nAction: Click the checkbox in the Status column to mark this task complete.\n\n## task: Rearrange Kanban\n\nAction: Click the Kanban icon (top-right), then drag this card into \"Done\" or another lane.\n\n## task: Present Slides\n\nAction: Click the Slides icon (top-right), then click the fullscreen button. Press `Tab` to view thumbnails.\n\n## task: Explore Data Source\n\nAction: Click the Edit icon (top-right) to return to the original Markdown view.\n\n## task: Import CSV Data\n\nAction: Click the gear icon (top-right), then select \"Import CSV as New Table.\"\n",
+    "helpFileName": "Welcome to TileLineBase",
+    "helpFileContent": "# Welcome to TileLineBase\n\n## task: Complete your first TLB task\n\nAction: Click the checkbox in the Status column to mark this task complete.\n\n## task: Rearrange Kanban\n\nAction: Click the Kanban icon (top-right), then drag this card into \"Done\" or another lane.\n\n## task: Present Slides\n\nAction: Click the Slides icon (top-right), then click the fullscreen button. Press `Tab` to view thumbnails.\n\n## task: Explore Data Source\n\nAction: Click the Edit icon (top-right) to return to the original Markdown view.\n\n## task: Import CSV Data\n\nAction: Click the gear icon (top-right), then select \"Import CSV as New Table.\"\n",
     "createHelpFailed": "TileLineBase failed to create the help document. Check the console for details.",
     "openHelpFailed": "TileLineBase could not open the help document."
   }

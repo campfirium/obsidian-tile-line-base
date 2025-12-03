@@ -132,7 +132,8 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	const columnConfigs = mergeColumnConfigs(headerColumnConfigs, persistedColumnConfigs);
 
 	const parsedBlocks = view.markdownParser.parseH2Blocks(content);
-	if (parsedBlocks.length === 0) {
+	const hasStructuredBlocks = view.markdownParser.hasStructuredH2Blocks(parsedBlocks);
+	if (!hasStructuredBlocks) {
 		if (view.file) {
 			view.magicMigrationController?.handleNonStandardFile({ container, content, file: view.file });
 		} else {

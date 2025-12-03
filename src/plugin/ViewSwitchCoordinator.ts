@@ -407,7 +407,8 @@ export class ViewSwitchCoordinator {
 			return false;
 		}
 		const blocks = this.markdownParser.parseH2Blocks(content);
-		if (blocks.length > 0) {
+		const hasStructuredBlocks = this.markdownParser.hasStructuredH2Blocks(blocks);
+		if (hasStructuredBlocks) {
 			return false;
 		}
 		if (trigger !== 'manual') {

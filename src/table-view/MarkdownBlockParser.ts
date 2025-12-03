@@ -35,6 +35,10 @@ export interface H2Block {
 const FULL_WIDTH_COLON = '\uFF1A';
 const COLLAPSED_COMMENT_PREFIX = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}`, 'i');
 
+const LIST_OR_QUOTE_PREFIX = /^(?:[-*+]\s|\d+\.\s|>\s?)/;
+const HEADING_PREFIX = /^#{1,6}\s/;
+const TABLE_ROW_PREFIX = /^\|/;
+
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
 		const blockRegex = /```(?:tlb|tilelinebase)\s*\n([\s\S]*?)\n```/gi;
@@ -101,9 +105,10 @@ export class MarkdownBlockParser {
 				};
 				const colonIndex = resolveColonIndex(titleText);
 				if (colonIndex > 0) {
-					const key = titleText.substring(0, colonIndex).trim();
-					const value = titleText.substring(colonIndex + 1).trim();
-					currentBlock.data[key] = value;
+					const parsedHeadingField = this.extractField(titleText, colonIndex);
+					if (parsedHeadingField) {
+						currentBlock.data[parsedHeadingField.key] = parsedHeadingField.value;
+					}
 				}
 				continue;
 			}
@@ -133,15 +138,9 @@ export class MarkdownBlockParser {
 				}
 				continue;
 			}
-			const colonIndex = resolveColonIndex(trimmed);
-			if (colonIndex > 0) {
-				const commentIndex = trimmed.indexOf('<!--');
-				if (commentIndex >= 0 && colonIndex > commentIndex) {
-					continue;
-				}
-				const key = trimmed.substring(0, colonIndex).trim();
-				const value = trimmed.substring(colonIndex + 1).trim();
-				currentBlock.data[key] = value;
+			const parsedField = this.extractField(trimmed);
+			if (parsedField) {
+				currentBlock.data[parsedField.key] = parsedField.value;
 			}
 		}
 
@@ -152,8 +151,72 @@ export class MarkdownBlockParser {
 		return blocks;
 	}
 
+	hasStructuredH2Blocks(blocks: H2Block[]): boolean {
+		if (!blocks || blocks.length === 0) {
+			return false;
+		}
+
+		let headingKey: string | null = null;
+		for (const block of blocks) {
+			const colonIndex = resolveColonIndex(block.title);
+			if (colonIndex <= 0) {
+				return false;
+			}
+			const parsedHeading = this.extractField(block.title, colonIndex);
+			if (!parsedHeading) {
+				return false;
+			}
+			if (parsedHeading.key.length === 0 || parsedHeading.value.length === 0) {
+				return false;
+			}
+			if (headingKey === null) {
+				headingKey = parsedHeading.key;
+			} else if (parsedHeading.key !== headingKey) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	parseColumnDefinition(line: string): ColumnConfig | null {
 		return parseColumnDefinitionLine(line);
+	}
+
+	private extractField(line: string, existingColonIndex?: number): { key: string; value: string } | null {
+		if (!this.isFieldCandidateLine(line)) {
+			return null;
+		}
+		const colonIndex = existingColonIndex !== undefined ? existingColonIndex : resolveColonIndex(line);
+		if (colonIndex <= 0) {
+			return null;
+		}
+		const commentIndex = line.indexOf('<!--');
+		if (commentIndex >= 0 && colonIndex > commentIndex) {
+			return null;
+		}
+		const key = line.substring(0, colonIndex).trim();
+		if (!key) {
+			return null;
+		}
+		const value = line.substring(colonIndex + 1).trim();
+		return { key, value };
+	}
+
+	private isFieldCandidateLine(line: string): boolean {
+		if (!line || line.length === 0) {
+			return false;
+		}
+		if (LIST_OR_QUOTE_PREFIX.test(line)) {
+			return false;
+		}
+		if (HEADING_PREFIX.test(line)) {
+			return false;
+		}
+		if (TABLE_ROW_PREFIX.test(line)) {
+			return false;
+		}
+		return true;
 	}
 
 	private isRuntimeConfigBlock(content: string, blockStartIndex: number, blockContent: string): boolean {

@@ -30,6 +30,12 @@ import {
 import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelpers';
 
 const logger = getLogger('service:settings');
+const FILE_SETTINGS_CLEANUP_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface PendingDeletionRecord {
+	path: string;
+	markedAt: number;
+}
 
 export interface BackupSettings {
 	enabled: boolean;
@@ -62,6 +68,7 @@ export interface TileLineBaseSettings {
 	onboarding: OnboardingState;
 	locale: LocaleCode | null;
 	localizedLocale: LocaleCode;
+	pendingDeletions: PendingDeletionRecord[];
 }
 
 export const DEFAULT_SETTINGS: TileLineBaseSettings = {
@@ -93,7 +100,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 		completed: false
 	},
 	locale: null,
-	localizedLocale: 'en'
+	localizedLocale: 'en',
+	pendingDeletions: []
 };
 
 export class SettingsService {
@@ -153,6 +161,7 @@ export class SettingsService {
 			? (merged as TileLineBaseSettings).localizedLocale
 			: null;
 		merged.localizedLocale = normalizeLocaleCode(localizedCandidate) ?? DEFAULT_SETTINGS.localizedLocale;
+		merged.pendingDeletions = this.sanitizePendingDeletionRecords((merged as TileLineBaseSettings).pendingDeletions);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
@@ -165,6 +174,7 @@ export class SettingsService {
 		}
 
 		this.settings = merged;
+		await this.cleanupExpiredPendingDeletions();
 		return this.settings;
 	}
 
@@ -551,20 +561,141 @@ export class SettingsService {
 		if (!target) {
 			return;
 		}
+		const cleared = this.clearPendingDeletionForPath(target);
 		await this.waitForPendingMigration(target);
 		if (this.settings.columnConfigs[target]) {
 			this.recentRenames.delete(target);
+			if (cleared) {
+				await this.persist();
+			}
 			return;
 		}
 		const source = this.recentRenames.get(target);
 		if (!source) {
+			if (cleared) {
+				await this.persist();
+			}
 			return;
 		}
 		try {
 			await this.migrateFileScopedSettings(source, target);
 		} finally {
 			this.recentRenames.delete(target);
+			if (cleared) {
+				await this.persist();
+			}
 		}
+	}
+
+	async scheduleFileSettingsCleanup(filePath: string): Promise<void> {
+		const target = typeof filePath === 'string' ? filePath.trim() : '';
+		if (!target) {
+			return;
+		}
+		const records = this.settings.pendingDeletions ?? [];
+		const filtered = records.filter((record) => record.path !== target);
+		filtered.push({ path: target, markedAt: Date.now() });
+		this.settings.pendingDeletions = filtered;
+		await this.cleanupExpiredPendingDeletions();
+		await this.persist();
+	}
+
+	private clearPendingDeletionForPath(filePath: string): boolean {
+		if (!this.settings.pendingDeletions || this.settings.pendingDeletions.length === 0) {
+			return false;
+		}
+		const target = typeof filePath === 'string' ? filePath.trim() : '';
+		if (!target) {
+			return false;
+		}
+		const prefix = `${target}/`;
+		let changed = false;
+		const remaining = this.settings.pendingDeletions.filter((record) => {
+			if (!record.path) {
+				changed = true;
+				return false;
+			}
+			if (record.path === target) {
+				changed = true;
+				return false;
+			}
+			if (record.path.startsWith(prefix) || target.startsWith(`${record.path}/`)) {
+				changed = true;
+				return false;
+			}
+			return true;
+		});
+		if (changed) {
+			this.settings.pendingDeletions = remaining;
+		}
+		return changed;
+	}
+
+	async cleanupExpiredPendingDeletions(now: number = Date.now()): Promise<void> {
+		if (!this.settings.pendingDeletions || this.settings.pendingDeletions.length === 0) {
+			return;
+		}
+		const cutoff = now - FILE_SETTINGS_CLEANUP_GRACE_MS;
+		const remaining: PendingDeletionRecord[] = [];
+		let changed = false;
+
+		for (const record of this.settings.pendingDeletions) {
+			if (!record.path || !Number.isFinite(record.markedAt)) {
+				changed = true;
+				continue;
+			}
+			if (record.markedAt <= cutoff) {
+				changed = true;
+				try {
+					await this.pruneFileScopedSettingsForPath(record.path);
+				} catch (error) {
+					logger.error('Failed to prune file-scoped settings for expired deletion', error);
+				}
+				continue;
+			}
+			remaining.push(record);
+		}
+
+		if (changed) {
+			this.settings.pendingDeletions = remaining;
+			await this.persist();
+		}
+	}
+
+	async pruneFileScopedSettingsForPath(deletedPath: string): Promise<boolean> {
+		const target = typeof deletedPath === 'string' ? deletedPath.trim() : '';
+		if (!target) {
+			return false;
+		}
+		await this.waitForPendingMigration(target);
+		const prefix = `${target}/`;
+		const shouldPrune = (path: string): boolean => path === target || path.startsWith(prefix);
+		let changed = false;
+		const pruneStore = (store: Record<string, unknown>): void => {
+			for (const key of Object.keys(store)) {
+				if (shouldPrune(key)) {
+					delete store[key];
+					changed = true;
+				}
+			}
+		};
+
+		pruneStore(this.settings.fileViewPrefs);
+		pruneStore(this.settings.columnLayouts);
+		pruneStore(this.settings.filterViews);
+		pruneStore(this.settings.tagGroups);
+		pruneStore(this.settings.kanbanBoards);
+		pruneStore(this.settings.columnConfigs);
+		pruneStore(this.settings.copyTemplates);
+		pruneStore(this.settings.kanbanPreferences);
+		pruneStore(this.settings.slidePreferences);
+
+		if (!changed) {
+			return false;
+		}
+		await this.persist();
+		logger.debug('Pruned file-scoped settings after delete', { path: target });
+		return true;
 	}
 
 	private cloneFilterViewMetadata(metadata: FilterViewMetadata | null | undefined): FilterViewMetadata {
@@ -693,6 +824,24 @@ export class SettingsService {
 		return {
 			completed
 		};
+	}
+
+	private sanitizePendingDeletionRecords(raw: PendingDeletionRecord[] | unknown): PendingDeletionRecord[] {
+		if (!Array.isArray(raw)) {
+			return [];
+		}
+		const map = new Map<string, PendingDeletionRecord>();
+		for (const entry of raw) {
+			const path = typeof entry?.path === 'string' ? entry.path.trim() : '';
+			const markedAt = typeof entry?.markedAt === 'number' && Number.isFinite(entry.markedAt)
+				? entry.markedAt
+				: null;
+			if (!path || markedAt === null) {
+				continue;
+			}
+			map.set(path, { path, markedAt });
+		}
+		return Array.from(map.values());
 	}
 
 	private sanitizeDefaultSlideConfig(raw: unknown): SlideViewConfig | null {

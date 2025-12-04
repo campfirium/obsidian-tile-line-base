@@ -26,8 +26,6 @@ npm-debug.log*
 .env.local
 
 
-docs
-docs/
 trees/
 
 # Private Workspace

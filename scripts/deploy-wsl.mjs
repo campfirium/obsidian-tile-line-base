@@ -6,7 +6,6 @@ const FILES_TO_COPY = [
 	{ source: "manifest.json", target: "manifest.json" },
 	{ source: "styles.css", target: "styles.css" }
 ];
-const WINDOWS_PLUGIN_DIR = "D:\\C\\obsidian-tile-line-base\\docs\\.obsidian\\plugins\\tile-line-base";
 
 function isWSL() {
 	if (process.platform !== "linux") {
@@ -35,15 +34,17 @@ function windowsPathToWsl(pathString) {
 
 function resolvePluginDir() {
 	const override = process.env.PLUGIN_DIR || process.env.OBSIDIAN_PLUGIN_DIR;
-	if (override) {
-		return override;
+	if (!override || override.trim().length === 0) {
+		console.log("⚠️ 未检测到插件目录配置。");
+		console.log("💡 请通过环境变量 PLUGIN_DIR 或 OBSIDIAN_PLUGIN_DIR 指定 Obsidian 插件目录。");
+		process.exit(1);
 	}
 
 	if (isWSL()) {
-		return windowsPathToWsl(WINDOWS_PLUGIN_DIR);
+		return windowsPathToWsl(override);
 	}
 
-	return WINDOWS_PLUGIN_DIR;
+	return override;
 }
 
 const pluginDir = resolvePluginDir();

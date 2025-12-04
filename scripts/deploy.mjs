@@ -1,8 +1,6 @@
 import fs from "fs";
 import path from "path";
 
-// 目标插件目录（固定为 Dropbox Vault 内的真实文件夹）
-const PLUGIN_DIR = "D:\\X\\Dropbox\\obt\\.obsidian\\plugins\\tile-line-base";
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 const ROOT_FILES = [
 	{ source: "manifest.json", label: "manifest.json" },
@@ -23,9 +21,7 @@ function isWSL() {
 }
 
 function normalizeTargetPath(rawPath) {
-	const target = rawPath ?? PLUGIN_DIR;
-	const override = process.env.PLUGIN_DIR || process.env.OBSIDIAN_PLUGIN_DIR;
-	const effective = override && override.trim().length > 0 ? override : target;
+	const effective = rawPath.trim();
 	if (!isLinux) {
 		return effective;
 	}
@@ -36,6 +32,16 @@ function normalizeTargetPath(rawPath) {
 	const drive = match[1].toLowerCase();
 	const rest = match[2].replace(/\\/g, "/");
 	return `/mnt/${drive}/${rest}`;
+}
+
+function resolvePluginDir() {
+	const override = process.env.PLUGIN_DIR || process.env.OBSIDIAN_PLUGIN_DIR;
+	if (!override || override.trim().length === 0) {
+		console.log("⚠️ 未检测到插件目录配置。");
+		console.log("💡 请通过环境变量 PLUGIN_DIR 或 OBSIDIAN_PLUGIN_DIR 指定 Obsidian 插件目录。");
+		process.exit(1);
+	}
+	return normalizeTargetPath(override);
 }
 
 function ensureDistExists() {
@@ -116,11 +122,11 @@ function copyRootFiles(targetPath) {
 	}
 }
 
-const resolvedPluginDir = normalizeTargetPath(PLUGIN_DIR);
-const usingWSLBridge = isWSL() && resolvedPluginDir !== PLUGIN_DIR;
+const resolvedPluginDir = resolvePluginDir();
+const usingWSLBridge = isWSL();
 
 console.log("🚀 开始部署插件到 Obsidian...\n");
-console.log(`🎯 目标目录: ${resolvedPluginDir}${usingWSLBridge ? ` (WSL 映射自 ${PLUGIN_DIR})` : ""}`);
+console.log(`🎯 目标目录: ${resolvedPluginDir}${usingWSLBridge ? " (WSL 路径已转换)" : ""}`);
 
 ensureDistExists();
 assertNotSymlink(resolvedPluginDir);

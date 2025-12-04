@@ -15,7 +15,7 @@
 - `src/i18n/index.ts` 与 `src/locales/*.json`：统一的国际化出口，所有 UI 字符串必须通过此模块管理。
 - `src/utils/`、`src/services/`、`src/formula/`：通用工具、设置读取与公式引擎，避免彼此之间的循环依赖。
 - `styles.css`：覆盖表格展示样式；新增主题时写明使用场景和依赖前提。
-- `scripts/`：公共工具脚本（lint、release 检查、部署等）；联调或实验性脚本存放于 `.lab/scripts/`。
+- `scripts/`：公共工具脚本（lint、release 检查、部署等）；部署脚本需通过环境变量 `PLUGIN_DIR`/`OBSIDIAN_PLUGIN_DIR` 指定目标目录；联调或实验性脚本存放于 `.lab/scripts/`。
 - `.lab/specs/`：需求、设计、实验记录，命名遵循“日期 + 空格 + 主题”，如 `251007 列表视图设计.md`。
 - `.lab/tasks/`：任务追踪文档，仅追加新发现或子任务备注，不修改既有条目。
 - `main.js`：构建产物，任何改动都应来源于 `src/` 的 TypeScript 编译。

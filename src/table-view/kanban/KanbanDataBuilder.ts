@@ -1,0 +1,382 @@
+import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
+import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
+import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
+import { isStatusLaneField, normalizeStatusLaneValue } from './statusLaneHelpers';
+
+export interface KanbanCardField {
+	name: string;
+	value: string;
+}
+
+export interface KanbanCard {
+	id: string;
+	rowIndex: number;
+	title: string;
+	body: string;
+	tags: string[];
+	sortOrder: number;
+	sortValue: number | null;
+	sortText: string | null;
+	rawLane: string;
+	fields: KanbanCardField[];
+	row: RowData;
+}
+
+export interface KanbanLane {
+	id: string;
+	name: string;
+	cards: KanbanCard[];
+}
+
+export interface KanbanBoardState {
+	lanes: KanbanLane[];
+	totalCards: number;
+}
+
+interface BuildKanbanBoardStateParams {
+	rows: RowData[];
+	laneField: string;
+	sortField: string | null;
+	sortDirection: KanbanSortDirection;
+	fallbackLane: string;
+	primaryField: string | null;
+	content: KanbanRuntimeCardContent;
+	displayFields: string[];
+	quickFilter: string;
+	resolveRowIndex: (row: RowData) => number | null;
+	expectedLaneNames?: string[] | null;
+}
+
+export function buildKanbanBoardState(params: BuildKanbanBoardStateParams): KanbanBoardState {
+	const {
+		rows,
+		laneField,
+		sortField,
+		sortDirection,
+		fallbackLane,
+		primaryField,
+		content,
+		displayFields,
+		quickFilter,
+		resolveRowIndex
+	} = params;
+
+	const normalizedQuickFilter = quickFilter.trim().toLowerCase();
+	const hasQuickFilter = normalizedQuickFilter.length > 0;
+	const laneMap = new Map<string, KanbanLane>();
+	const laneNameLookup = new Map<string, KanbanLane>();
+	const directionMultiplier = sortDirection === 'desc' ? -1 : 1;
+	const laneNameToId = new Map<string, string>();
+	const usedLaneIds = new Set<string>();
+	const isStatusLane = isStatusLaneField(laneField);
+	let totalCards = 0;
+
+	for (const row of rows) {
+		const rowIndex = resolveRowIndex(row);
+		if (rowIndex == null || rowIndex < 0) {
+			continue;
+		}
+
+		const laneValue = normalizeString(row[laneField]) || fallbackLane;
+		const laneNormalization = isStatusLane ? normalizeStatusLaneValue(laneValue) : null;
+		const laneName = laneNormalization?.label || laneValue;
+		const laneKey = laneNormalization?.key || laneName;
+
+		const title = renderTitle(content.titleTemplate, row, primaryField);
+		const body = renderBody(content.bodyTemplate, row);
+		const tags = renderTags(content.tagsTemplate, row);
+
+		if (hasQuickFilter && !matchesQuickFilter(row, { title, body, tags }, {
+			laneField,
+			primaryField,
+			content,
+			needle: normalizedQuickFilter
+		})) {
+			continue;
+		}
+
+		const laneId = resolveLaneId(laneKey, laneNameToId, usedLaneIds, laneMap.size);
+
+		let lane = laneMap.get(laneId);
+		if (!lane) {
+			lane = {
+				id: laneId,
+				name: laneName,
+				cards: []
+			};
+			laneMap.set(laneId, lane);
+			laneNameLookup.set(normalizeLaneKey(laneName), lane);
+		}
+
+		const sortRaw = sortField ? normalizeString(row[sortField]) : '';
+		const sortMeta = parseSortMetadata(sortRaw);
+		const sortOrder = sortMeta.numeric ?? lane.cards.length + 1;
+		const cardFields = buildCardFields({
+			row,
+			displayFields,
+			laneField,
+			sortField,
+			primaryField,
+			content
+		});
+
+		lane.cards.push({
+			id: buildCardId(row, rowIndex),
+			rowIndex,
+			title,
+			body,
+			tags,
+			sortOrder,
+			sortValue: sortMeta.numeric,
+			sortText: sortMeta.text,
+			rawLane: laneName,
+			fields: cardFields,
+			row
+		});
+		totalCards += 1;
+	}
+
+	const expectedLaneNames = Array.isArray(params.expectedLaneNames)
+		? params.expectedLaneNames.filter((value) => typeof value === 'string')
+		: null;
+	if (expectedLaneNames && expectedLaneNames.length > 0) {
+		for (const candidate of expectedLaneNames) {
+			const normalized = normalizeLaneKey(candidate);
+			if (!normalized || laneNameLookup.has(normalized)) {
+				continue;
+			}
+			const laneId = resolveLaneId(candidate, laneNameToId, usedLaneIds, laneMap.size + 1);
+			const lane: KanbanLane = {
+				id: laneId,
+				name: candidate,
+				cards: []
+			};
+			laneMap.set(laneId, lane);
+			laneNameLookup.set(normalized, lane);
+		}
+	}
+
+	const lanes: KanbanLane[] = [];
+	const addedLaneIds = new Set<string>();
+	const pushLane = (lane: KanbanLane) => {
+		if (addedLaneIds.has(lane.id)) {
+			return;
+		}
+		sortLaneCards(lane, directionMultiplier);
+		lanes.push(lane);
+		addedLaneIds.add(lane.id);
+	};
+
+	if (expectedLaneNames && expectedLaneNames.length > 0) {
+		for (const candidate of expectedLaneNames) {
+			const normalized = normalizeLaneKey(candidate);
+			if (!normalized) {
+				continue;
+			}
+			const lane = laneNameLookup.get(normalized);
+			if (lane) {
+				pushLane(lane);
+			}
+		}
+	}
+
+	for (const lane of laneMap.values()) {
+		pushLane(lane);
+	}
+
+	return {
+		lanes,
+		totalCards
+	};
+}
+
+interface BuildCardFieldsOptions {
+	row: RowData;
+	displayFields: string[];
+	laneField: string;
+	sortField: string | null;
+	primaryField: string | null;
+	content: KanbanRuntimeCardContent;
+}
+
+function buildCardFields(options: BuildCardFieldsOptions): KanbanCardField[] {
+	const { row, displayFields, laneField, sortField, primaryField, content } = options;
+	const result: KanbanCardField[] = [];
+	const seen = new Set<string>();
+	const excluded = new Set<string>([laneField, ROW_ID_FIELD]);
+	if (sortField) {
+		excluded.add(sortField);
+	}
+	if (primaryField) {
+		excluded.add(primaryField);
+	}
+	for (const field of content.referencedFields) {
+		if (typeof field === 'string' && field.trim().length > 0) {
+			excluded.add(field.trim());
+		}
+	}
+	for (const field of displayFields) {
+		if (typeof field !== 'string') {
+			continue;
+		}
+		const trimmed = field.trim();
+		if (!trimmed || trimmed === '#' || seen.has(trimmed)) {
+			continue;
+		}
+		seen.add(trimmed);
+		if (excluded.has(trimmed)) {
+			continue;
+		}
+		const value = normalizeString(row[trimmed]);
+		if (!value) {
+			continue;
+		}
+		result.push({
+			name: trimmed,
+			value
+		});
+	}
+	return result;
+}
+
+interface CardTextSegments {
+	title: string;
+	body: string;
+	tags: string[];
+}
+
+function matchesQuickFilter(
+	row: RowData,
+	segments: CardTextSegments,
+	options: { laneField: string; primaryField: string | null; content: KanbanRuntimeCardContent; needle: string }
+): boolean {
+	const { laneField, primaryField, content, needle } = options;
+	if (!needle) {
+		return true;
+	}
+	if (segments.title.toLowerCase().includes(needle)) {
+		return true;
+	}
+	if (segments.body.toLowerCase().includes(needle)) {
+		return true;
+	}
+	for (const tag of segments.tags) {
+		if (tag.toLowerCase().includes(needle)) {
+			return true;
+		}
+	}
+	const searchFields = new Set<string>([...content.referencedFields, laneField]);
+	if (primaryField) {
+		searchFields.add(primaryField);
+	}
+	for (const field of searchFields) {
+		const value = normalizeString(row[field]);
+		if (value && value.toLowerCase().includes(needle)) {
+			return true;
+		}
+	}
+	const rowIdValue = normalizeString(row[ROW_ID_FIELD]);
+	return rowIdValue.toLowerCase().includes(needle);
+}
+
+function resolveLaneId(
+	name: string,
+	existing: Map<string, string>,
+	used: Set<string>,
+	index: number
+): string {
+	const normalized = slugify(name);
+	if (!existing.has(name)) {
+		let candidate = normalized || `lane-${index}`;
+		let counter = 1;
+		while (used.has(candidate)) {
+			candidate = `${candidate}-${counter++}`;
+		}
+		existing.set(name, candidate);
+		used.add(candidate);
+		return candidate;
+	}
+	const resolved = existing.get(name);
+	if (resolved) {
+		return resolved;
+	}
+	let fallback = normalized || `lane-${index}`;
+	let counter = 1;
+	while (used.has(fallback)) {
+		fallback = `${fallback}-${counter++}`;
+	}
+	existing.set(name, fallback);
+	used.add(fallback);
+	return fallback;
+}
+
+function slugify(value: string): string {
+	const normalized = normalizeString(value).replace(/[^a-z0-9]+/g, '-');
+	const trimmed = normalized.replace(/^-+|-+$/g, '');
+	return trimmed.toLowerCase();
+}
+
+function normalizeString(input: unknown): string {
+	if (typeof input === 'string') {
+		return input.trim();
+	}
+	if (input == null) {
+		return '';
+	}
+	return String(input).trim();
+}
+
+function parseSortMetadata(raw: string): { numeric: number | null; text: string | null } {
+	if (!raw) {
+		return { numeric: null, text: null };
+	}
+	const numeric = Number(raw);
+	if (Number.isFinite(numeric)) {
+		return { numeric, text: null };
+	}
+	const timestamp = Date.parse(raw);
+	if (Number.isFinite(timestamp)) {
+		return { numeric: timestamp, text: null };
+	}
+	return { numeric: null, text: raw.toLowerCase() };
+}
+
+function buildCardId(row: RowData, rowIndex: number): string {
+	const explicit = normalizeString(row[ROW_ID_FIELD]);
+	if (explicit.length > 0) {
+		return explicit;
+	}
+	return String(rowIndex);
+}
+
+function normalizeLaneKey(value: string): string {
+	return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function sortLaneCards(lane: KanbanLane, directionMultiplier: number): void {
+	lane.cards.sort((a, b) => {
+		if (a.sortValue != null && b.sortValue != null && a.sortValue !== b.sortValue) {
+			return a.sortValue < b.sortValue ? -1 * directionMultiplier : 1 * directionMultiplier;
+		}
+		if (a.sortValue != null && b.sortValue == null) {
+			return -1;
+		}
+		if (a.sortValue == null && b.sortValue != null) {
+			return 1;
+		}
+		if (a.sortText && b.sortText) {
+			const cmp = a.sortText.localeCompare(b.sortText);
+			if (cmp !== 0) {
+				return cmp * directionMultiplier;
+			}
+		} else if (a.sortText && !b.sortText) {
+			return -1;
+		} else if (!a.sortText && b.sortText) {
+			return 1;
+		}
+		if (a.sortOrder !== b.sortOrder) {
+			return (a.sortOrder - b.sortOrder) * directionMultiplier;
+		}
+		return a.rowIndex - b.rowIndex;
+	});
+}

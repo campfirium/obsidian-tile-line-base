@@ -24,3 +24,10 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+
+
+trees/
+
+# Private Workspace
+.lab/
+AGENTS.md

@@ -4,6 +4,7 @@ import { TableConfigManager } from './TableConfigManager';
 import { ColumnInteractionController } from './ColumnInteractionController';
 import { RowInteractionController } from './RowInteractionController';
 import { GlobalQuickFilterController } from './GlobalQuickFilterController';
+import { globalQuickFilterManager } from './filter/GlobalQuickFilterManager';
 import { FilterViewOrchestrator } from './FilterViewOrchestrator';
 import { GridInteractionController } from './GridInteractionController';
 import { RowMigrationController } from './RowMigrationController';
@@ -148,7 +149,8 @@ export function initializeTableView(view: TableView): void {
 		store: view.kanbanBoardStore
 	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
-		getGridAdapter: () => view.gridAdapter
+		getGridAdapter: () => view.gridAdapter,
+		quickFilterManager: globalQuickFilterManager
 	});
 	view.filterOrchestrator = new FilterViewOrchestrator({
 		dataStore: view.dataStore,

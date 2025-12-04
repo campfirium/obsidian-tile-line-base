@@ -1,10 +1,11 @@
 import { setIcon } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
-import { globalQuickFilterManager } from './filter/GlobalQuickFilterManager';
+import { GlobalQuickFilterManager } from './filter/GlobalQuickFilterManager';
 import { t } from '../i18n';
 
 interface GlobalQuickFilterDeps {
-        getGridAdapter: () => GridAdapter | null;
+	getGridAdapter: () => GridAdapter | null;
+	quickFilterManager: GlobalQuickFilterManager;
 }
 
 export class GlobalQuickFilterController {
@@ -56,7 +57,7 @@ export class GlobalQuickFilterController {
 		clearButton.setAttribute('hidden', 'true');
 		setIcon(clearButton, 'x');
 
-                const currentValue = globalQuickFilterManager.getValue();
+		const currentValue = this.deps.quickFilterManager.getValue();
                 input.value = currentValue;
 
                 this.inputEl = input;
@@ -97,17 +98,17 @@ export class GlobalQuickFilterController {
                         }
                 });
 
-                this.unsubscribe = globalQuickFilterManager.subscribe((value, source) => {
-                        if (source === this) {
-                                return;
-                        }
-                        this.updateInput(value);
-                        this.applyToGrid(value);
-                });
+		this.unsubscribe = this.deps.quickFilterManager.subscribe((value, source) => {
+			if (source === this) {
+				return;
+			}
+			this.updateInput(value);
+			this.applyToGrid(value);
+		});
 
                 if (!this.registered) {
                         this.registered = true;
-                        globalQuickFilterManager.incrementHost();
+			this.deps.quickFilterManager.incrementHost();
                 }
 
                 this.applyToGrid(currentValue);
@@ -115,7 +116,7 @@ export class GlobalQuickFilterController {
         }
 
         reapply(): void {
-                const value = globalQuickFilterManager.getValue();
+		const value = this.deps.quickFilterManager.getValue();
                 this.applyToGrid(value);
                 this.updateInput(value);
         }
@@ -128,36 +129,36 @@ export class GlobalQuickFilterController {
                 this.inputEl = null;
                 this.clearEl = null;
 
-                if (this.registered) {
-                        this.registered = false;
-                        globalQuickFilterManager.decrementHost();
+		if (this.registered) {
+			this.registered = false;
+			this.deps.quickFilterManager.decrementHost();
                 }
         }
 
         private handleInput(value: string): void {
                 const normalized = value ?? '';
                 this.applyToGrid(normalized);
-                if (normalized === globalQuickFilterManager.getValue()) {
-                        return;
-                }
-                globalQuickFilterManager.emit(normalized, this);
+		if (normalized === this.deps.quickFilterManager.getValue()) {
+			return;
+		}
+		this.deps.quickFilterManager.emit(normalized, this);
         }
 
         private handleClear(): void {
                 this.updateInput('');
                 this.applyToGrid('');
-                if (globalQuickFilterManager.getValue() !== '') {
-                        globalQuickFilterManager.emit('', this);
+		if (this.deps.quickFilterManager.getValue() !== '') {
+			this.deps.quickFilterManager.emit('', this);
                 }
                 this.inputEl?.focus();
         }
 
         private applyToGrid(value: string): void {
-                const adapter = this.deps.getGridAdapter();
-                if (adapter && typeof adapter.setQuickFilter === 'function') {
-                        adapter.setQuickFilter(value);
-                }
-                this.updateIndicators(value);
+		const adapter = this.deps.getGridAdapter();
+		if (adapter && typeof adapter.setQuickFilter === 'function') {
+			adapter.setQuickFilter(value);
+		}
+		this.updateIndicators(value);
         }
 
         private updateInput(value: string): void {

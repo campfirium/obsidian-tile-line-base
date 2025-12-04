@@ -96,6 +96,10 @@ export class SlideViewController {
 		this.renderActive();
 	}
 
+	private getTotalPageCount(): number {
+		return this.pages.length;
+	}
+
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
 		this.editState.template = null;
@@ -223,10 +227,11 @@ export class SlideViewController {
 	}
 
 	private next(): void {
-		if (this.pages.length === 0) return;
+		const maxIndex = this.getTotalPageCount() - 1;
+		if (maxIndex < 0) return;
 		this.editState.template = null;
 		this.editingPage = null;
-		const nextIndex = Math.min(this.pages.length - 1, this.activeIndex + 1);
+		const nextIndex = Math.min(maxIndex, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
 			this.renderActive();

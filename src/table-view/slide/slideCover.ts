@@ -6,8 +6,9 @@ export const COVER_LAYOUT: ComputedLayout = {
 	fontWeight: 700,
 	insetPct: 0,
 	lineHeight: 1.2,
-	topPct: 38,
-	widthPct: 62
+	topPct: 42,
+	widthPct: 62,
+	centerFromTop: true
 };
 
 export const COVER_HIDDEN_CLASS = 'tlb-slide-full__cover--hidden';

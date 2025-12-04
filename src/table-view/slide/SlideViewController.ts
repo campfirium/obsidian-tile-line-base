@@ -249,7 +249,7 @@ export class SlideViewController {
 		const hasCover = this.showCover;
 		if (hasCover !== this.lastCoverState) {
 			if (hasCover) {
-				this.activeIndex += 1;
+				this.activeIndex = 0;
 			} else {
 				this.activeIndex = Math.max(0, this.activeIndex - 1);
 			}
@@ -365,6 +365,7 @@ export class SlideViewController {
 			if (this.fullscreenTarget.requestFullscreen) {
 				await this.fullscreenTarget.requestFullscreen();
 				this.isFullscreen = true;
+				this.activeIndex = 0;
 				this.root.addClass('tlb-slide-full--fullscreen');
 				this.updateFullscreenButton();
 				this.renderActive();
@@ -467,14 +468,17 @@ export class SlideViewController {
 		const textColor = (this.config.template.textColor ?? '').trim();
 		const backgroundColor = (this.config.template.backgroundColor ?? '').trim();
 		this.applySlideColors(slide, textColor, backgroundColor);
-		const applyLayout = (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) =>
-			applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
-				applyLayoutStyles(target, layoutSpec, container));
 		const cover = slide.createDiv({ cls: 'tlb-slide-full__cover', text: title });
 		cover.style.lineHeight = `${COVER_LAYOUT.lineHeight}`;
 		cover.style.fontSize = `${COVER_LAYOUT.fontSize}rem`;
 		cover.style.fontWeight = String(COVER_LAYOUT.fontWeight);
-		applyLayout(cover, COVER_LAYOUT, slide);
+		applyLayoutWithWatcher(
+			this.renderCleanup,
+			cover,
+			COVER_LAYOUT,
+			slide,
+			(target, layoutSpec, container) => applyLayoutStyles(target, layoutSpec, container)
+		);
 		this.activeCoverEl = cover;
 		this.updateCoverVisibility();
 		this.scaleManager.setSlide(slide);

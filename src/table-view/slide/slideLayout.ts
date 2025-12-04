@@ -8,6 +8,7 @@ export interface ComputedLayout {
 	lineHeight: number;
 	fontSize: number;
 	fontWeight: number;
+	centerFromTop?: boolean;
 }
 
 export function computeLayout(layout: unknown, kind: 'title' | 'body'): ComputedLayout {
@@ -23,7 +24,8 @@ export function computeLayout(layout: unknown, kind: 'title' | 'body'): Computed
 	const lineHeight = Number.isFinite(source.lineHeight) ? Number(source.lineHeight) : defaults.lineHeight;
 	const fontSize = Number.isFinite(source.fontSize) ? Number(source.fontSize) : defaults.fontSize;
 	const fontWeight = Number.isFinite(source.fontWeight) ? Number(source.fontWeight) : defaults.fontWeight;
-	return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight };
+	const centerFromTop = Boolean(source.centerFromTop);
+	return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight, centerFromTop };
 }
 
 /* eslint-disable obsidianmd/no-static-styles-assignment */
@@ -32,19 +34,25 @@ export function applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slide
 	el.style.setProperty('--tlb-layout-width', `${layout.widthPct}%`);
 	el.style.setProperty('--tlb-layout-text-align', layout.align);
 
+	const centerFromTop = Boolean(layout.centerFromTop);
+	let transform = 'translateX(0)';
 	if (layout.align === 'center') {
 		el.style.setProperty('--tlb-layout-left', '50%');
 		el.style.setProperty('--tlb-layout-right', 'auto');
-		el.style.setProperty('--tlb-layout-transform', 'translateX(-50%)');
+		transform = 'translateX(-50%)';
 	} else if (layout.align === 'right') {
 		el.style.setProperty('--tlb-layout-left', 'auto');
 		el.style.setProperty('--tlb-layout-right', `${layout.insetPct}%`);
-		el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
+		transform = 'translateX(0)';
 	} else {
-	el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
-	el.style.setProperty('--tlb-layout-right', 'auto');
-	el.style.setProperty('--tlb-layout-transform', 'translateX(0)');
-}
+		el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
+		el.style.setProperty('--tlb-layout-right', 'auto');
+		transform = 'translateX(0)';
+	}
+	if (centerFromTop) {
+		transform = transform === 'translateX(-50%)' ? 'translate(-50%, -50%)' : `${transform} translateY(-50%)`;
+	}
+	el.style.setProperty('--tlb-layout-transform', transform);
 
 	const usableHeight = Math.max(0, slideEl.clientHeight);
 	const topPx = (usableHeight * layout.topPct) / 100;

@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 import type { GridAdapter } from '../grid/GridAdapter';
-import { GlobalQuickFilterManager } from './filter/GlobalQuickFilterManager';
+import type { GlobalQuickFilterManager } from './filter/GlobalQuickFilterManager';
 import { t } from '../i18n';
 
 interface GlobalQuickFilterDeps {

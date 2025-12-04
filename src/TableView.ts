@@ -7,6 +7,7 @@ import { GridController } from "./table-view/GridController";
 import { MarkdownBlockParser, H2Block } from "./table-view/MarkdownBlockParser";
 import { SchemaBuilder, Schema } from "./table-view/SchemaBuilder";
 import { FilterStateStore } from "./table-view/filter/FilterStateStore";
+import { GlobalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterManager";
 import type { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import type { FilterViewController } from "./table-view/filter/FilterViewController";
 import { TagGroupStore } from "./table-view/filter/tag-group/TagGroupStore";
@@ -94,6 +95,7 @@ export class TableView extends ItemView {
 	private readonly conversionSession = new ConversionSessionManager(this);
 	public filterViewController!: FilterViewController;
 	public filterStateStore = new FilterStateStore(null); public filterViewState: FileFilterViewState = this.filterStateStore.getState();
+	public globalQuickFilterManager = new GlobalQuickFilterManager();
 	public tagGroupStore = new TagGroupStore(null); public tagGroupController!: TagGroupController; public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
 	public initialColumnState: ColumnState[] | null = null; public markdownToggleButton: HTMLElement | null = null;
 	public activeViewMode: 'table' | 'kanban' | 'slide' = 'table';
@@ -139,10 +141,15 @@ export class TableView extends ItemView {
 		refreshTableViewDisplayText(this);
 	}
 
+	private syncQuickFilterContext(file: TFile | null): void {
+		this.globalQuickFilterManager.setContext(file?.path ?? null);
+	}
+
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
+			this.syncQuickFilterContext(file instanceof TFile ? file : null);
 			if (file instanceof TFile) {
 				this.file = file;
 				this.conversionSession.prepare(file);

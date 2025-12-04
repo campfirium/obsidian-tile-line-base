@@ -57,6 +57,7 @@ export function renderKanbanView(
 	view.kanbanController = new KanbanViewController({
 		view,
 		container: wrapper,
+		quickFilterManager: view.globalQuickFilterManager,
 		laneField,
 		laneWidth: options.laneWidth,
 		fontScale: options.fontScale,

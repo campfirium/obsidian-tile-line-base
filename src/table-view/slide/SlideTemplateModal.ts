@@ -10,7 +10,7 @@ import {
 	type SlideTemplateConfig
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
-import { buildBuiltInSlideTemplate, RESERVED_SLIDE_FIELDS } from './slideDefaults';
+import { buildBuiltInSlideTemplate, mergeSlideTemplateFields, RESERVED_SLIDE_FIELDS } from './slideDefaults';
 import { toHexColor } from './SlideColorUtils';
 
 interface SlideTemplateModalOptions {
@@ -293,7 +293,8 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;
 		}
-		this.applyPresetStyles(globalConfig.template);
+		const preset = mergeSlideTemplateFields(globalConfig.template, buildBuiltInSlideTemplate(this.fields));
+		this.applyPresetStyles(preset);
 	}
 
 	private applyBuiltInDefault(): void {

@@ -4548,6 +4548,18 @@
 	word-break: break-word;
 	color: var(--tlb-slide-text-color, var(--text-normal));
 }
+.tlb-slide-full__cover {
+	font-weight: 700;
+	text-align: center;
+	word-break: break-word;
+	color: var(--tlb-slide-text-color, var(--text-normal));
+	z-index: 4;
+	pointer-events: none;
+	margin: 0;
+}
+.tlb-slide-full__cover--hidden {
+	display: none;
+}
 
 .tlb-slide-full__content {
 	display: flex;

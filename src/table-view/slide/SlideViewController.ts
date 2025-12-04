@@ -6,18 +6,9 @@ import { SlideScaleManager } from './SlideScaleManager';
 import { SlideThumbnailPanel, type SlideThumbnail } from './SlideThumbnailPanel';
 import { buildSlidePages, type SlidePage } from './SlidePageBuilder';
 import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
-import {
-	renderSlideEditForm,
-	serializeTemplateSegments,
-	type EditState
-} from './slideTemplateEditing';
-import {
-	applyLayoutWithWatcher,
-	buildSlideMarkdown,
-	renderMarkdownBlock,
-	resetRenderArtifacts
-} from './SlideRenderUtils';
-
+import { COVER_HIDDEN_CLASS, COVER_LAYOUT, resolveSourceTitle } from './slideCover';
+import { renderSlideEditForm, serializeTemplateSegments, type EditState } from './slideTemplateEditing';
+import { applyLayoutWithWatcher, buildSlideMarkdown, renderMarkdownBlock, resetRenderArtifacts } from './SlideRenderUtils';
 interface SlideControllerOptions {
 	app: App;
 	sourcePath: string;
@@ -28,9 +19,7 @@ interface SlideControllerOptions {
 	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onEditTemplate: () => void;
 }
-
 const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
-
 export class SlideViewController {
 	private readonly app: App;
 	private readonly sourcePath: string;
@@ -51,12 +40,14 @@ export class SlideViewController {
 	private isFullscreen = false;
 	private fullscreenBtn: HTMLElement | null = null;
 	private fullscreenCleanup: (() => void) | null = null;
+	private readonly coverTitle: string | null;
+	private activeCoverEl: HTMLElement | null = null;
+	private lastCoverState = false;
 	private pages: SlidePage[] = [];
 	private editingPage: SlidePage | null = null;
 	private saving = false;
 	private readonly editState: EditState = { template: null, values: {}, fieldInputs: {} };
 	private readonly thumbnailPanel: SlideThumbnailPanel;
-
 	constructor(options: SlideControllerOptions) {
 		this.app = options.app;
 		this.sourcePath = options.sourcePath;
@@ -90,12 +81,12 @@ export class SlideViewController {
 			}
 		});
 		this.cleanup.push(() => this.thumbnailPanel.destroy());
+		this.coverTitle = resolveSourceTitle(this.sourcePath);
 		this.renderControls();
 		this.attachFullscreenWatcher();
 		this.attachKeyboard();
 		this.renderActive();
 	}
-
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
 		this.editState.template = null;
@@ -105,14 +96,12 @@ export class SlideViewController {
 		}
 		this.renderActive();
 	}
-
 	updateConfig(config: SlideViewConfig): void {
 		this.config = config;
 		this.editState.template = null;
 		this.editingPage = null;
 		this.renderActive();
 	}
-
 	destroy(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		for (const dispose of this.cleanup) {
@@ -125,7 +114,6 @@ export class SlideViewController {
 		this.exitFullscreen();
 		this.root.empty();
 	}
-
 	private renderControls(): void {
 		const templateBtn = this.controls.createEl('button', {
 			cls: 'tlb-slide-full__btn',
@@ -136,7 +124,6 @@ export class SlideViewController {
 			evt.preventDefault();
 			this.onEditTemplate();
 		});
-
 		const fullscreenBtn = this.controls.createEl('button', {
 			cls: 'tlb-slide-full__btn',
 			attr: { 'aria-label': t('slideView.actions.enterFullscreen') }
@@ -153,7 +140,6 @@ export class SlideViewController {
 			this.updateFullscreenButton();
 		});
 	}
-
 	private attachKeyboard(): void {
 		const handler = (evt: KeyboardEvent) => {
 			const target = evt.target as HTMLElement | null;
@@ -203,7 +189,6 @@ export class SlideViewController {
 		owner.addEventListener('keydown', handler);
 		this.cleanup.push(() => owner.removeEventListener('keydown', handler));
 	}
-
 	private attachFullscreenWatcher(): void {
 		const doc = this.root.ownerDocument ?? document;
 		const listener = () => {
@@ -212,8 +197,11 @@ export class SlideViewController {
 				this.root.removeClass('tlb-slide-full--fullscreen');
 				this.closeThumbnails();
 				this.updateFullscreenButton();
+				this.renderActive();
 				this.scaleManager.requestScale();
 			} else if (doc.fullscreenElement && this.isFullscreen) {
+				this.renderActive();
+				this.updateCoverVisibility();
 				this.scaleManager.requestScale();
 			}
 		};
@@ -221,20 +209,20 @@ export class SlideViewController {
 		this.fullscreenCleanup = () => doc.removeEventListener('fullscreenchange', listener);
 		this.cleanup.push(() => this.fullscreenCleanup?.());
 	}
-
 	private next(): void {
-		if (this.pages.length === 0) return;
+		const maxIndex = this.getTotalPageCount() - 1;
+		if (maxIndex < 0) return;
 		this.editState.template = null;
 		this.editingPage = null;
-		const nextIndex = Math.min(this.pages.length - 1, this.activeIndex + 1);
+		const nextIndex = Math.min(maxIndex, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
 			this.renderActive();
 		}
 	}
-
 	private prev(): void {
-		if (this.pages.length === 0) return;
+		const maxIndex = this.getTotalPageCount() - 1;
+		if (maxIndex < 0) return;
 		this.editState.template = null;
 		this.editingPage = null;
 		const nextIndex = Math.max(0, this.activeIndex - 1);
@@ -243,9 +231,9 @@ export class SlideViewController {
 			this.renderActive();
 		}
 	}
-
 	private jumpTo(index: number): void {
-		if (index < 0 || index >= this.pages.length || index === this.activeIndex) {
+		const maxIndex = this.getTotalPageCount() - 1;
+		if (index < 0 || index > maxIndex || index === this.activeIndex) {
 			return;
 		}
 		this.editState.template = null;
@@ -253,16 +241,22 @@ export class SlideViewController {
 		this.activeIndex = index;
 		this.renderActive();
 	}
-
 	private renderActive(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.stage.empty();
+		this.activeCoverEl = null;
 		this.pages = this.buildPages();
-		if (this.activeIndex >= this.pages.length) {
-			this.activeIndex = Math.max(0, this.pages.length - 1);
+		const hasCover = this.showCover;
+		if (hasCover !== this.lastCoverState) {
+			if (hasCover) {
+				this.activeIndex = 0;
+			} else {
+				this.activeIndex = Math.max(0, this.activeIndex - 1);
+			}
+			this.lastCoverState = hasCover;
 		}
-		this.refreshThumbnails();
-		if (this.pages.length === 0) {
+		const totalCount = this.pages.length + (hasCover ? 1 : 0);
+		if (totalCount === 0) {
 			this.stage.createDiv({
 				cls: 'tlb-slide-full__empty',
 				text: t('slideView.emptyState')
@@ -271,11 +265,21 @@ export class SlideViewController {
 			this.closeThumbnails();
 			return;
 		}
-		const page = this.pages[this.activeIndex];
+		if (this.activeIndex >= totalCount) {
+			this.activeIndex = Math.max(0, totalCount - 1);
+		}
+		this.refreshThumbnails();
+		const isCover = hasCover && this.activeIndex === 0;
+		const slideIndex = hasCover ? this.activeIndex - 1 : this.activeIndex;
+		if (isCover) {
+			this.renderCoverSlide();
+			return;
+		}
+		const page = this.pages[slideIndex];
 		const row = this.rows[page.rowIndex];
 		const slide = this.stage.createDiv({
 			cls: 'tlb-slide-full__slide',
-			attr: { 'data-tlb-slide-index': String(this.activeIndex) }
+			attr: { 'data-tlb-slide-index': String(slideIndex) }
 		});
 		if (page.editable) {
 			slide.addEventListener('click', () => {
@@ -284,18 +288,7 @@ export class SlideViewController {
 				}
 			});
 		}
-		if (page.backgroundColor) {
-			slide.style.setProperty('--tlb-slide-card-bg', page.backgroundColor);
-			this.root.style.setProperty('--tlb-slide-full-bg', page.backgroundColor);
-		} else {
-			slide.style.removeProperty('--tlb-slide-card-bg');
-			this.root.style.removeProperty('--tlb-slide-full-bg');
-		}
-		if (page.textColor) {
-			slide.style.setProperty('--tlb-slide-text-color', page.textColor);
-		} else {
-			slide.style.removeProperty('--tlb-slide-text-color');
-		}
+		this.applySlideColors(slide, page.textColor, page.backgroundColor);
 		const applyLayout = (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) =>
 			applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
 				applyLayoutStyles(target, layoutSpec, container));
@@ -304,7 +297,6 @@ export class SlideViewController {
 		titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
 		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
 		applyLayout(titleEl, page.titleLayout, slide);
-
 		if (this.editingPage === page && page.editable && this.editState.template) {
 			renderSlideEditForm({
 				container: slide,
@@ -357,9 +349,8 @@ export class SlideViewController {
 			}
 		}
 		this.scaleManager.setSlide(slide);
-		this.thumbnailPanel.setActive(this.activeIndex);
+		this.thumbnailPanel.setActive(this.getThumbnailActiveIndex());
 	}
-
 	private buildPages(): SlidePage[] {
 		return buildSlidePages({
 			rows: this.rows,
@@ -368,22 +359,22 @@ export class SlideViewController {
 			reservedFields: RESERVED_FIELDS
 		});
 	}
-
 	private async enterFullscreen(): Promise<void> {
 		if (!this.fullscreenTarget || this.isFullscreen) return;
 		try {
 			if (this.fullscreenTarget.requestFullscreen) {
 				await this.fullscreenTarget.requestFullscreen();
 				this.isFullscreen = true;
+				this.activeIndex = 0;
 				this.root.addClass('tlb-slide-full--fullscreen');
 				this.updateFullscreenButton();
+				this.renderActive();
 				this.scaleManager.requestScale();
 			}
 		} catch {
 			// ignore fullscreen errors
 		}
 	}
-
 	private exitFullscreen(): void {
 		if (!this.isFullscreen) return;
 		if (document.fullscreenElement) {
@@ -393,9 +384,9 @@ export class SlideViewController {
 		this.root.removeClass('tlb-slide-full--fullscreen');
 		this.closeThumbnails();
 		this.updateFullscreenButton();
+		this.renderActive();
 		this.scaleManager.requestScale();
 	}
-
 	private updateFullscreenButton(): void {
 		if (!this.fullscreenBtn) return;
 		if (this.isFullscreen) {
@@ -406,7 +397,6 @@ export class SlideViewController {
 			this.fullscreenBtn.setAttr('aria-label', t('slideView.actions.enterFullscreen'));
 		}
 	}
-
 	private beginEdit(page: SlidePage, row: RowData): void {
 		this.editingPage = page;
 		this.closeThumbnails();
@@ -421,7 +411,6 @@ export class SlideViewController {
 		this.editState.template = null;
 		this.renderActive();
 	}
-
 	private async persistEdit(page: SlidePage): Promise<void> {
 		if (this.saving || !this.editState.template) return;
 		this.saving = true;
@@ -444,7 +433,6 @@ export class SlideViewController {
 			this.saving = false;
 		}
 	}
-
 	private refreshThumbnails(): void {
 		const slides: SlideThumbnail[] = this.pages.map((page, index) => ({
 			index,
@@ -457,16 +445,73 @@ export class SlideViewController {
 			backgroundColor: page.backgroundColor,
 			textColor: page.textColor
 		}));
-		this.thumbnailPanel.setSlides(slides, this.activeIndex);
+		this.thumbnailPanel.setSlides(slides, this.getThumbnailActiveIndex());
 	}
-
 	private openThumbnails(): void {
 		this.refreshThumbnails();
-		this.thumbnailPanel.setActive(this.activeIndex);
-		this.thumbnailPanel.open(this.activeIndex);
+		const activeThumbIndex = this.getThumbnailActiveIndex();
+		this.thumbnailPanel.setActive(activeThumbIndex);
+		this.thumbnailPanel.open(activeThumbIndex);
 	}
-
 	private closeThumbnails(): void {
 		this.thumbnailPanel.close();
+	}
+	private renderCoverSlide(): void {
+		const title = this.coverTitle;
+		if (!title) {
+			return;
+		}
+		const slide = this.stage.createDiv({
+			cls: 'tlb-slide-full__slide',
+			attr: { 'data-tlb-slide-index': 'cover' }
+		});
+		const textColor = (this.config.template.textColor ?? '').trim();
+		const backgroundColor = (this.config.template.backgroundColor ?? '').trim();
+		this.applySlideColors(slide, textColor, backgroundColor);
+		const cover = slide.createDiv({ cls: 'tlb-slide-full__cover', text: title });
+		cover.style.lineHeight = `${COVER_LAYOUT.lineHeight}`;
+		cover.style.fontSize = `${COVER_LAYOUT.fontSize}rem`;
+		cover.style.fontWeight = String(COVER_LAYOUT.fontWeight);
+		applyLayoutWithWatcher(
+			this.renderCleanup,
+			cover,
+			COVER_LAYOUT,
+			slide,
+			(target, layoutSpec, container) => applyLayoutStyles(target, layoutSpec, container)
+		);
+		this.activeCoverEl = cover;
+		this.updateCoverVisibility();
+		this.scaleManager.setSlide(slide);
+		this.thumbnailPanel.setActive(this.getThumbnailActiveIndex());
+	}
+	private updateCoverVisibility(): void {
+		if (!this.activeCoverEl) return;
+		const visible = this.showCover && this.activeIndex === 0 && Boolean(this.coverTitle);
+		this.activeCoverEl.toggleClass(COVER_HIDDEN_CLASS, !visible);
+		this.activeCoverEl.setAttr('aria-hidden', visible ? 'false' : 'true');
+	}
+	private applySlideColors(slide: HTMLElement, textColor: string, backgroundColor: string): void {
+		if (backgroundColor) {
+			slide.style.setProperty('--tlb-slide-card-bg', backgroundColor);
+			this.root.style.setProperty('--tlb-slide-full-bg', backgroundColor);
+		} else {
+			slide.style.removeProperty('--tlb-slide-card-bg');
+			this.root.style.removeProperty('--tlb-slide-full-bg');
+		}
+		if (textColor) {
+			slide.style.setProperty('--tlb-slide-text-color', textColor);
+		} else {
+			slide.style.removeProperty('--tlb-slide-text-color');
+		}
+	}
+	private getThumbnailActiveIndex(): number {
+		const index = this.showCover ? this.activeIndex - 1 : this.activeIndex;
+		return Math.max(0, index);
+	}
+	private getTotalPageCount(): number {
+		return this.pages.length + (this.showCover ? 1 : 0);
+	}
+	private get showCover(): boolean {
+		return Boolean(this.coverTitle) && this.isFullscreen;
 	}
 }

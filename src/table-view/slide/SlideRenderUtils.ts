@@ -37,8 +37,8 @@ export function applyLayoutWithWatcher(
 }
 
 export function buildSlideMarkdown(textBlocks: string[]): string {
-	// Replace empty lines with explicit <br> so blank rows survive Markdown rendering.
-	return textBlocks.map((line) => (line.trim().length === 0 ? '<br />' : line)).join('\n');
+	// Replace empty lines with a non-breaking space so Markdown renderer keeps blank rows (including leading ones).
+	return textBlocks.map((line) => (line.trim().length === 0 ? '&nbsp;' : line)).join('\n');
 }
 
 export function renderMarkdownBlock(

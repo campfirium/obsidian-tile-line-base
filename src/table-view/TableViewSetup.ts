@@ -148,7 +148,8 @@ export function initializeTableView(view: TableView): void {
 		store: view.kanbanBoardStore
 	});
 	view.globalQuickFilterController = new GlobalQuickFilterController({
-		getGridAdapter: () => view.gridAdapter
+		getGridAdapter: () => view.gridAdapter,
+		quickFilterManager: view.globalQuickFilterManager
 	});
 	view.filterOrchestrator = new FilterViewOrchestrator({
 		dataStore: view.dataStore,

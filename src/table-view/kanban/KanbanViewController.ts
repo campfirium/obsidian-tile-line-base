@@ -14,7 +14,7 @@ import type { TableView } from '../../TableView';
 import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
 import { toRuntimeContent } from './KanbanCardContent';
 import { KanbanViewportManager } from './KanbanViewportManager';
-import { globalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
+import type { GlobalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { KanbanLaneReorderController } from './KanbanLaneReorderController';
@@ -31,6 +31,7 @@ type SortableInstance = ReturnType<SortableStatic['create']>;
 interface KanbanViewControllerOptions {
 	view: TableView;
 	container: HTMLElement;
+	quickFilterManager: GlobalQuickFilterManager;
 	laneField: string;
 	laneWidth: number;
 	fontScale: number;
@@ -50,6 +51,7 @@ interface KanbanViewControllerOptions {
 export class KanbanViewController {
 	private readonly view: TableView;
 	private readonly container: HTMLElement;
+	private readonly quickFilterManager: GlobalQuickFilterManager;
 	private readonly laneField: string;
 	private readonly sortField: string | null;
 	private readonly fallbackLaneName: string;
@@ -89,6 +91,7 @@ export class KanbanViewController {
 	constructor(options: KanbanViewControllerOptions) {
 		this.view = options.view;
 		this.container = options.container;
+		this.quickFilterManager = options.quickFilterManager;
 		this.laneField = options.laneField;
 		this.sortField = options.sortField;
 		this.fallbackLaneName = options.fallbackLaneName;
@@ -128,7 +131,7 @@ export class KanbanViewController {
 		});
 
 		this.recomputeVisibleRows();
-		this.quickFilterValue = globalQuickFilterManager.getValue();
+		this.quickFilterValue = this.quickFilterManager.getValue();
 
 		ensureFontScaleStyles(this.container.ownerDocument ?? document);
 		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
@@ -199,7 +202,7 @@ export class KanbanViewController {
 				this.renderBoard();
 			}
 		});
-		this.unsubscribeQuickFilter = globalQuickFilterManager.subscribe((value) => {
+		this.unsubscribeQuickFilter = this.quickFilterManager.subscribe((value) => {
 			this.quickFilterValue = value ?? '';
 			this.renderBoard();
 		});

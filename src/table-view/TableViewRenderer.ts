@@ -71,6 +71,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	const content = await view.app.vault.read(view.file);
 	view.captureConversionBaseline(content);
 	const configBlock = await view.persistenceService.loadConfig();
+	const plugin = getPluginContext();
 
 	view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
 
@@ -91,12 +92,14 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	if (!view.slidePreferencesLoaded) {
-		const preferredConfig = configBlock?.slide ?? view.slideConfig;
+		const globalSlideConfig = plugin?.getDefaultSlideConfig?.() ?? null;
+		const preferredConfig = configBlock?.slide ?? globalSlideConfig ?? view.slideConfig;
 		const normalized = normalizeSlideViewConfig(preferredConfig ?? null);
 		const templateEmpty = isSlideTemplateEmpty(normalized.template);
 		view.slideConfig = normalized;
-		view.shouldAutoFillSlideDefaults = !configBlock?.slide || templateEmpty;
-		view.slideTemplateTouched = Boolean(configBlock?.slide && !templateEmpty);
+		const hasFileScopedSlideConfig = Boolean(configBlock?.slide);
+		view.shouldAutoFillSlideDefaults = !hasFileScopedSlideConfig || templateEmpty;
+		view.slideTemplateTouched = Boolean(hasFileScopedSlideConfig && !templateEmpty);
 		view.slidePreferencesLoaded = true;
 	}
 
@@ -253,7 +256,6 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 
 	const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
 	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
-	const plugin = getPluginContext();
 	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
 	const stripeColorMode = plugin?.getStripeColorMode?.() ?? 'recommended';
 	const stripeCustomColor = plugin?.getStripeCustomColor?.() ?? null;

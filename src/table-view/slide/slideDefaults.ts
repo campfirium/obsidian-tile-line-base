@@ -195,3 +195,44 @@ export function buildBuiltInSlideTemplate(fields: string[]): SlideTemplateConfig
 
 	return sanitizeSlideTemplateConfig(merged);
 }
+
+export function mergeSlideTemplateFields(
+	template: SlideTemplateConfig,
+	fieldTemplate: SlideTemplateConfig
+): SlideTemplateConfig {
+	const base = sanitizeSlideTemplateConfig(template);
+	const fields = sanitizeSlideTemplateConfig(fieldTemplate);
+
+	return {
+		...base,
+		single: {
+			withImage: {
+				...base.single.withImage,
+				titleTemplate: fields.single.withImage.titleTemplate,
+				bodyTemplate: fields.single.withImage.bodyTemplate,
+				imageTemplate: fields.single.withImage.imageTemplate
+			},
+			withoutImage: {
+				...base.single.withoutImage,
+				titleTemplate: fields.single.withoutImage.titleTemplate,
+				bodyTemplate: fields.single.withoutImage.bodyTemplate
+			}
+		},
+		split: {
+			withImage: {
+				...base.split.withImage,
+				imageTemplate: fields.split.withImage.imageTemplate,
+				textPage: {
+					...base.split.withImage.textPage,
+					titleTemplate: fields.split.withImage.textPage.titleTemplate,
+					bodyTemplate: fields.split.withImage.textPage.bodyTemplate
+				}
+			},
+			withoutImage: {
+				...base.split.withoutImage,
+				titleTemplate: fields.split.withoutImage.titleTemplate,
+				bodyTemplate: fields.split.withoutImage.bodyTemplate
+			}
+		}
+	};
+}

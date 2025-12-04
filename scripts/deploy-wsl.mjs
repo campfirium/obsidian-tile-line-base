@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+const ENV_KEYS = ["PLUGIN_DIR", "OBSIDIAN_PLUGIN_DIR"];
 const FILES_TO_COPY = [
 	{ source: "dist/main.js", target: "main.js" },
 	{ source: "manifest.json", target: "manifest.json" },
@@ -32,19 +33,47 @@ function windowsPathToWsl(pathString) {
 	return `/mnt/${drive}/${rest}`;
 }
 
+function readEnvConfig() {
+	const envPath = path.resolve(process.cwd(), ".env");
+	if (!fs.existsSync(envPath)) {
+		return {};
+	}
+
+	const result = {};
+	const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) {
+			continue;
+		}
+		const eqIndex = trimmed.indexOf("=");
+		if (eqIndex === -1) {
+			continue;
+		}
+		const key = trimmed.slice(0, eqIndex).trim();
+		const value = trimmed.slice(eqIndex + 1).trim().replace(/^['"]|['"]$/g, "");
+		if (key) {
+			result[key] = value;
+		}
+	}
+	return result;
+}
+
 function resolvePluginDir() {
-	const override = process.env.PLUGIN_DIR || process.env.OBSIDIAN_PLUGIN_DIR;
-	if (!override || override.trim().length === 0) {
-		console.log("⚠️ 未检测到插件目录配置。");
-		console.log("💡 请通过环境变量 PLUGIN_DIR 或 OBSIDIAN_PLUGIN_DIR 指定 Obsidian 插件目录。");
-		process.exit(1);
+	const envConfig = readEnvConfig();
+	for (const key of ENV_KEYS) {
+		const candidate = process.env[key] || envConfig[key];
+		if (candidate && candidate.trim().length > 0) {
+			if (isWSL()) {
+				return windowsPathToWsl(candidate);
+			}
+			return candidate;
+		}
 	}
 
-	if (isWSL()) {
-		return windowsPathToWsl(override);
-	}
-
-	return override;
+	console.log("⚠️ 未检测到插件目录配置。");
+	console.log("💡 请在环境变量或 .env 中设置 PLUGIN_DIR 或 OBSIDIAN_PLUGIN_DIR，用于指向 Obsidian 插件目录。");
+	process.exit(1);
 }
 
 const pluginDir = resolvePluginDir();

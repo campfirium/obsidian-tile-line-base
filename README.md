@@ -10,7 +10,7 @@ Build advanced tables right inside your Markdown notes, all from plain text. **Z
 
 ## Quick Preview
 
-[![TileLineBase product overview](docs/assets/hero-banner.gif)](https://youtu.be/8uoVBkD2--A)
+[![TileLineBase product overview](docs/assets/hero-banner.gif)](https://youtu.be/id8zSO4Trvk)
 
 _Click the preview above to watch in higher quality on YouTube._
 

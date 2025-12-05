@@ -44,7 +44,7 @@ export class SlideViewController {
 	private activeCoverEl: HTMLElement | null = null;
 	private lastCoverState = false;
 	private pages: SlidePage[] = [];
-	private editingPageKey: { rowIndex: number; templateRef: SlidePage['templateRef'] } | null = null;
+	private editingPage: SlidePage | null = null;
 	private saving = false;
 	private readonly editState: EditState = { template: null, values: {}, fieldInputs: {} };
 	private readonly thumbnailPanel: SlideThumbnailPanel;
@@ -89,7 +89,8 @@ export class SlideViewController {
 	}
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
-		this.clearEditingState();
+		this.editState.template = null;
+		this.editingPage = null;
 		if (rows.length === 0) {
 			this.closeThumbnails();
 		}
@@ -97,7 +98,8 @@ export class SlideViewController {
 	}
 	updateConfig(config: SlideViewConfig): void {
 		this.config = config;
-		this.clearEditingState();
+		this.editState.template = null;
+		this.editingPage = null;
 		this.renderActive();
 	}
 	destroy(): void {
@@ -152,7 +154,7 @@ export class SlideViewController {
 				return;
 			}
 			if (evt.key === 'Tab') {
-				if (this.isFullscreen && !this.editingPageKey && !this.thumbnailPanel.isOpen()) {
+				if (this.isFullscreen && !this.editingPage && !this.thumbnailPanel.isOpen()) {
 					evt.preventDefault();
 					this.openThumbnails();
 				}
@@ -210,7 +212,8 @@ export class SlideViewController {
 	private next(): void {
 		const maxIndex = this.getTotalPageCount() - 1;
 		if (maxIndex < 0) return;
-		this.clearEditingState();
+		this.editState.template = null;
+		this.editingPage = null;
 		const nextIndex = Math.min(maxIndex, this.activeIndex + 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
@@ -220,7 +223,8 @@ export class SlideViewController {
 	private prev(): void {
 		const maxIndex = this.getTotalPageCount() - 1;
 		if (maxIndex < 0) return;
-		this.clearEditingState();
+		this.editState.template = null;
+		this.editingPage = null;
 		const nextIndex = Math.max(0, this.activeIndex - 1);
 		if (nextIndex !== this.activeIndex) {
 			this.activeIndex = nextIndex;
@@ -232,7 +236,8 @@ export class SlideViewController {
 		if (index < 0 || index > maxIndex || index === this.activeIndex) {
 			return;
 		}
-		this.clearEditingState();
+		this.editState.template = null;
+		this.editingPage = null;
 		this.activeIndex = index;
 		this.renderActive();
 	}
@@ -241,9 +246,6 @@ export class SlideViewController {
 		this.stage.empty();
 		this.activeCoverEl = null;
 		this.pages = this.buildPages();
-		if (this.editingPageKey && !this.pages.some((page) => this.isEditingPage(page))) {
-			this.clearEditingState();
-		}
 		const hasCover = this.showCover;
 		if (hasCover !== this.lastCoverState) {
 			if (hasCover) {
@@ -255,7 +257,6 @@ export class SlideViewController {
 		}
 		const totalCount = this.pages.length + (hasCover ? 1 : 0);
 		if (totalCount === 0) {
-			this.clearEditingState();
 			this.stage.createDiv({
 				cls: 'tlb-slide-full__empty',
 				text: t('slideView.emptyState')
@@ -282,7 +283,7 @@ export class SlideViewController {
 		});
 		if (page.editable) {
 			slide.addEventListener('click', () => {
-				if (!this.isEditingPage(page)) {
+				if (this.editingPage !== page) {
 					this.beginEdit(page, row);
 				}
 			});
@@ -296,7 +297,7 @@ export class SlideViewController {
 		titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
 		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
 		applyLayout(titleEl, page.titleLayout, slide);
-		if (this.isEditingPage(page) && page.editable) {
+		if (this.editingPage === page && page.editable && this.editState.template) {
 			renderSlideEditForm({
 				container: slide,
 				row,
@@ -306,7 +307,8 @@ export class SlideViewController {
 				state: this.editState,
 				position: applyLayout,
 				onCancel: () => {
-					this.clearEditingState();
+					this.editState.template = null;
+					this.editingPage = null;
 					this.renderActive();
 				},
 				onSave: () => {
@@ -396,7 +398,7 @@ export class SlideViewController {
 		}
 	}
 	private beginEdit(page: SlidePage, row: RowData): void {
-		this.editingPageKey = { rowIndex: page.rowIndex, templateRef: page.templateRef };
+		this.editingPage = page;
 		this.closeThumbnails();
 		const editableFields = this.fields.filter((field) => field && !RESERVED_FIELDS.has(field));
 		const values: Record<string, string> = {};
@@ -424,7 +426,8 @@ export class SlideViewController {
 			if (nextRows) {
 				this.updateRows(nextRows);
 			}
-			this.clearEditingState();
+			this.editState.template = null;
+			this.editingPage = null;
 			this.renderActive();
 		} finally {
 			this.saving = false;
@@ -510,9 +513,5 @@ export class SlideViewController {
 	}
 	private get showCover(): boolean {
 		return Boolean(this.coverTitle) && this.isFullscreen;
-	}
-	private clearEditingState(): void { this.editState.template = null; this.editingPageKey = null; }
-	private isEditingPage(page: SlidePage): boolean {
-		return Boolean(this.editingPageKey && this.editingPageKey.rowIndex === page.rowIndex && this.editingPageKey.templateRef === page.templateRef);
 	}
 }

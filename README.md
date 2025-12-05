@@ -2,7 +2,15 @@
 
 > **The Native Plain-Text Database for Obsidian**
 
+![TileLineBase hero banner](docs/assets/images/hero-banner.png)
+
 Build advanced tables right inside your Markdown notes, all from plain text. **Zero Frontmatter. Zero code.**
+
+## Quick Preview
+
+![TileLineBase product overview](docs/assets/gifs/product-overview.gif)
+
+See how TileLineBase turns Markdown into structured records, switches views, and keeps GTD statuses in sync—all in one flow.
 
 ## A Powerful & Intelligent Table
 

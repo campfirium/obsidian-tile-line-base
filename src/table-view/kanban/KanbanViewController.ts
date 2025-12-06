@@ -1,4 +1,3 @@
-import { setIcon } from 'obsidian';
 import type { SortableEvent } from 'sortablejs';
 import type { RowData } from '../../grid/GridAdapter';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
@@ -12,7 +11,8 @@ import { sanitizeKanbanFontScale } from '../../types/kanban';
 import { sanitizeKanbanHeightMode } from './kanbanHeight';
 import { sanitizeKanbanLaneWidth } from './kanbanWidth';
 import type { TableView } from '../../TableView';
-import type { KanbanLane } from './KanbanDataBuilder';
+import { buildKanbanBoardState, type KanbanBoardState, type KanbanLane } from './KanbanDataBuilder';
+import { toRuntimeContent } from './KanbanCardContent';
 import { KanbanViewportManager } from './KanbanViewportManager';
 import type { GlobalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
@@ -20,12 +20,10 @@ import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { KanbanLaneReorderController } from './KanbanLaneReorderController';
 import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
 import type { RowUpdate } from './KanbanLaneMutation';
+import { buildExpectedLaneNames } from './expectedLaneNames';
 import { renderKanbanCard } from './KanbanCardRenderer';
 import { handleCardDragEnd, applyLaneUpdates } from './KanbanCardDragHandler';
 import { KanbanLaneWrapController } from './KanbanLaneWrapController';
-import { KanbanCardCreationController } from './KanbanCardCreationController';
-import { buildKanbanViewState, resolveAvailableFields } from './KanbanViewStateBuilder';
-import { renderKanbanEmptyState } from './renderKanbanEmptyState';
 
 type SortableStatic = typeof import('sortablejs');
 type SortableInstance = ReturnType<SortableStatic['create']>;
@@ -59,7 +57,6 @@ export class KanbanViewController {
 	private readonly fallbackLaneName: string;
 	private readonly primaryField: string | null;
 	private readonly displayFields: string[];
-	private readonly availableFields: string[];
 	private readonly lanePresets: string[];
 	private laneOrder: string[];
 	private readonly enableDrag: boolean;
@@ -84,7 +81,6 @@ export class KanbanViewController {
 	private sortables = new Map<string, SortableInstance>();
 	private readonly laneReorderController: KanbanLaneReorderController;
 	private readonly laneWrapController: KanbanLaneWrapController | null;
-	private readonly cardCreator: KanbanCardCreationController;
 	private isApplyingMutation = false;
 	private dragAvailable: boolean;
 	private sortableClass: SortableStatic | null = null;
@@ -101,7 +97,6 @@ export class KanbanViewController {
 		this.fallbackLaneName = options.fallbackLaneName;
 		this.primaryField = options.primaryField;
 		this.displayFields = options.displayFields;
-		this.availableFields = resolveAvailableFields(this.displayFields, this.laneField);
 		this.lanePresets = Array.isArray(options.lanePresets) ? options.lanePresets : [];
 		this.laneOrder = Array.isArray(options.laneOrder) ? [...options.laneOrder] : [];
 		this.enableDrag = options.enableDrag;
@@ -113,6 +108,10 @@ export class KanbanViewController {
 		this.initialVisibleCount = Math.max(1, limit);
 		this.rawContentConfig = options.contentConfig ?? null;
 		this.viewportManager = new KanbanViewportManager({ container: this.container });
+		this.cardContent = toRuntimeContent(this.rawContentConfig, {
+			availableFields: this.getAvailableFields(),
+			laneField: this.laneField
+		});
 		this.dragAvailable = this.enableDrag;
 		this.laneReorderController = new KanbanLaneReorderController({
 			getSortableClass: () => this.sortableClass,
@@ -146,7 +145,6 @@ export class KanbanViewController {
 			board: this.boardEl,
 			enabled: this.multiRowEnabled
 		});
-		this.cardCreator = new KanbanCardCreationController(this.view, this.laneField);
 
 		this.viewportManager.apply(this.heightMode);
 		this.updateWrapperLayout();
@@ -235,25 +233,7 @@ export class KanbanViewController {
 		this.boardEl.empty();
 		this.boardEl?.setAttribute('aria-busy', 'true');
 
-		const sortDirection: KanbanSortDirection =
-			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
-		const { boardState, cardContent } = buildKanbanViewState({
-			rows: this.visibleRows,
-			laneField: this.laneField,
-			sortField: this.sortField,
-			sortDirection,
-			fallbackLane: this.fallbackLaneName,
-			primaryField: this.primaryField,
-			contentConfig: this.rawContentConfig,
-			displayFields: this.availableFields,
-			quickFilter: this.quickFilterValue,
-			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row),
-			lanePresets: this.lanePresets,
-			laneOrder: this.laneOrder,
-			filterRule: this.view.activeKanbanBoardFilter
-		});
-		this.cardContent = cardContent;
-		const state = boardState;
+		const state = this.buildState();
 		this.messageEl.empty();
 		this.messageEl.toggleAttribute('hidden', true);
 
@@ -270,7 +250,7 @@ export class KanbanViewController {
 		}
 
 		if (state.totalCards === 0) {
-			renderKanbanEmptyState(this.boardEl, this.quickFilterValue.trim().length > 0);
+			this.renderEmptyState();
 			this.laneWrapController?.updateLaneMetrics();
 			this.viewportManager.refresh(this.heightMode);
 			this.boardEl?.removeAttribute('aria-busy');
@@ -346,6 +326,75 @@ export class KanbanViewController {
 		}
 		return null;
 	}
+
+	private buildState(): KanbanBoardState {
+		const availableFields = this.getAvailableFields();
+		this.cardContent = toRuntimeContent(this.rawContentConfig, {
+			availableFields,
+			laneField: this.laneField
+		});
+		const sortDirection: KanbanSortDirection =
+			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
+		const expectedLaneNames = buildExpectedLaneNames({
+			laneField: this.laneField,
+			filterRule: this.view.activeKanbanBoardFilter,
+			lanePresets: this.lanePresets,
+			laneOrder: this.laneOrder
+		});
+		return buildKanbanBoardState({
+			rows: this.visibleRows,
+			laneField: this.laneField,
+			sortField: this.sortField,
+			sortDirection,
+			fallbackLane: this.fallbackLaneName,
+			primaryField: this.primaryField,
+			content: this.cardContent,
+			displayFields: availableFields,
+			quickFilter: this.quickFilterValue,
+			resolveRowIndex: (row) => this.view.dataStore.getBlockIndexFromRow(row),
+			expectedLaneNames
+		});
+	}
+
+
+	private getAvailableFields(): string[] {
+		const result: string[] = [];
+		const seen = new Set<string>();
+		for (const field of this.displayFields) {
+			if (typeof field !== 'string') {
+				continue;
+			}
+			const trimmed = field.trim();
+			if (!trimmed || trimmed === '#' || seen.has(trimmed)) {
+				continue;
+			}
+			seen.add(trimmed);
+			result.push(trimmed);
+		}
+		const laneField = typeof this.laneField === 'string' ? this.laneField.trim() : '';
+		if (laneField && !seen.has(laneField)) {
+			seen.add(laneField);
+			result.push(laneField);
+		}
+		return result;
+	}
+
+
+	private renderEmptyState(): void {
+		if (!this.boardEl) {
+			return;
+		}
+		const empty = this.boardEl.createDiv({ cls: 'tlb-kanban-empty' });
+		const icon = empty.createSpan({ cls: 'tlb-kanban-empty__icon' });
+		icon.setText('棣冩惖');
+		const label = empty.createSpan({ cls: 'tlb-kanban-empty__label' });
+		label.setText(
+			this.quickFilterValue.trim().length > 0
+				? t('kanbanView.emptyStateFiltered')
+				: t('kanbanView.emptyState')
+		);
+	}
+
 	private renderLane(lane: KanbanLane): void {
 		if (!this.boardEl) {
 			return;
@@ -360,35 +409,15 @@ export class KanbanViewController {
 			}
 		});
 
-		const totalCards = lane.cards.length;
 		const header = laneEl.createDiv({ cls: 'tlb-kanban-lane__header' });
-		const handle = header.createDiv({ cls: 'tlb-kanban-lane__handle' });
-		handle.setAttribute('title', t('kanbanView.laneReorderHint'));
-		const title = handle.createSpan({ cls: 'tlb-kanban-lane__title' });
+		header.setAttribute('title', t('kanbanView.laneReorderHint'));
+		const title = header.createSpan({ cls: 'tlb-kanban-lane__title' });
 		title.setText(lane.name);
 
-		const count = handle.createSpan({ cls: 'tlb-kanban-lane__count' });
+		const totalCards = lane.cards.length;
+		const count = header.createSpan({ cls: 'tlb-kanban-lane__count' });
 		count.setText(String(totalCards));
 		count.setAttribute('aria-label', t('kanbanView.laneCountLabel', { count: String(totalCards) }));
-
-		const actions = header.createDiv({ cls: 'tlb-kanban-lane__actions' });
-		const addButton = actions.createEl('button', {
-			cls: 'tlb-kanban-lane__add',
-			attr: {
-				type: 'button',
-				'aria-label': t('kanbanView.laneActions.addCard', { lane: lane.name })
-			}
-		});
-		addButton.setAttribute('title', t('kanbanView.laneActions.addCard', { lane: lane.name }));
-		setIcon(addButton, 'plus');
-		addButton.addEventListener('pointerdown', (event) => {
-			event.stopPropagation();
-		});
-		addButton.addEventListener('click', (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			this.cardCreator.open(lane.name);
-		});
 
 		const cardsContainer = laneEl.createDiv({
 			cls: 'tlb-kanban-lane__cards',
@@ -509,3 +538,4 @@ export class KanbanViewController {
 		this.sortables.clear();
 	}
 }
+

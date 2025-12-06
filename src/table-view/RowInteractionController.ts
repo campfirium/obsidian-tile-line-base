@@ -10,8 +10,6 @@ const logger = getLogger('table-view:row-interaction');
 
 interface RowActionOptions {
 	focusField?: string | null;
-	prefills?: Record<string, string>;
-	skipFocus?: boolean;
 }
 
 interface FillColumnOptions extends RowActionOptions {
@@ -59,18 +57,14 @@ export class RowInteractionController {
 
 		const focusField = this.resolveFocusField(options);
 		const filterPrefills = this.getActiveFilterPrefills();
-		const optionPrefills = options?.prefills ?? {};
-		const mergedPrefills = { ...filterPrefills, ...optionPrefills };
-		const insertIndex = this.dataStore.addRow(beforeRowIndex, mergedPrefills);
+		const insertIndex = this.dataStore.addRow(beforeRowIndex, filterPrefills);
 		if (insertIndex < 0) {
 			logger.error('Failed to add new row');
 			return;
 		}
 
 		this.refreshGridData();
-		if (!options?.skipFocus) {
-			this.focusRow(insertIndex, focusField);
-		}
+		this.focusRow(insertIndex, focusField);
 		this.scheduleSave();
 
 		const blocks = this.dataStore.getBlocks();

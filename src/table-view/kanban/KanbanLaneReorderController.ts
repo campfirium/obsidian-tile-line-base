@@ -38,7 +38,7 @@ export class KanbanLaneReorderController {
 			ghostClass: 'tlb-kanban-lane--ghost',
 			dragClass: 'tlb-kanban-lane--dragging',
 			draggable: '.tlb-kanban-lane',
-			handle: '.tlb-kanban-lane__header',
+			handle: '.tlb-kanban-lane__handle',
 			direction: 'horizontal',
 			fallbackOnBody: true,
 			forceFallback: true,

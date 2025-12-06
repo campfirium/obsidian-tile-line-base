@@ -45,7 +45,7 @@ Basic **inline formulas** (simple arithmetic), **intelligent date/time parsing**
 
 Comes with **built-in task status fields** (Todo, In Progress, Done, On Hold, Someday, Canceled), providing corresponding filtered view groups and Kanban views by default, enabling **immediate and easy task management**.
 
----
+
 
 ### A Database Native to Text
 
@@ -61,7 +61,6 @@ Aggregate all related structured records tightly within a **single `.md` note**.
 
 No Frontmatter, no code markup. The data structure is **implicitly contained** within plain text, providing a **human- and machine-friendly** data representation that lets you read and write naturally.
 
----
 
 ### Open Data Interaction
 
@@ -81,7 +80,7 @@ Supports **CSV import/export**, compatible with mainstream spreadsheet software,
 
 #### Efficient LLM Communication
 
-Uses a **clear, self-contained plain-text format** that can interact seamlessly with **Large Language Models (LLM)** without additional processing.
+Uses a **clear, self-contained plain-text format** that can interact seamlessly with **Large Language Models (LLM)** without additional processing
 
 ## Installation
 
@@ -106,11 +105,15 @@ TileLineBase is currently in **Early Beta** and is not yet available via Obsidia
 
 ## Feedback & Discussion
 
-We welcome feedback, suggestions, and bug reports! Feel free to:
+We welcome feedback, suggestions, questions, and bug reports — wherever you prefer to discuss.
 
-* [Open an Issue on GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues) for specific bugs or technical feedback.
-* Join general discussion about TileLineBase on the [Obsidian official forums](https://forum.obsidian.md).
-* For broader discussions, questions, or general productivity tips, visit my personal forum at [Campfirium](https://campfirium.info/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753).
+You can:
+
+* Join or start a conversation on the [Obsidian Forum thread](https://forum.obsidian.md/t/tilelinebase-the-native-plain-text-database-for-obsidian/108734).
+* Open an Issue on [GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues) if you want to track something more formally.
+* Or hang out on my personal forum, [Campfirium](https://campfirium.info/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753), where broader ideas and side discussions are also welcome.
+
+Feel free to use whichever space works best for you.
 
 
 ## Acknowledgements

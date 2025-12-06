@@ -42,7 +42,7 @@ import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
 import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, KanbanSortDirection } from "./types/kanban";
-import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION } from "./types/kanban";
+import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
 import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
 import { buildTableViewTabTitle } from "./utils/viewTitle";
@@ -101,7 +101,7 @@ export class TableView extends ItemView {
 	public activeViewMode: 'table' | 'kanban' | 'slide' = 'table';
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null; public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
-	public kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE; public kanbanSortField: string | null = null;
+	public kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE; public kanbanSortField: string | null = DEFAULT_KANBAN_SORT_FIELD;
 	public kanbanSortDirection: KanbanSortDirection = DEFAULT_KANBAN_SORT_DIRECTION;
 	public kanbanHeightMode: KanbanHeightMode = DEFAULT_KANBAN_HEIGHT_MODE; public kanbanMultiRowEnabled = true;
 	public kanbanInitialVisibleCount = DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT;

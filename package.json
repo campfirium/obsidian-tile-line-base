@@ -1,6 +1,6 @@
 {
   "name": "obsidian-tile-line-base",
-  "version": "0.8.1",
+	"version": "0.8.2",
   "description": "TileLineBase - A federated paragraph database for Obsidian.",
   "main": "dist/main.js",
   "scripts": {

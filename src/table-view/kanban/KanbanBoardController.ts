@@ -313,8 +313,11 @@ export class KanbanBoardController {
 		);
 		const sortField = typeof board.sortField === 'string' ? board.sortField.trim() : '';
 		this.view.kanbanSortField = sortField.length > 0 ? sortField : null;
+		const sortDirection = board.sortDirection;
 		this.view.kanbanSortDirection =
-			board.sortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
+			sortDirection === 'asc' || sortDirection === 'desc'
+				? sortDirection
+				: DEFAULT_KANBAN_SORT_DIRECTION;
 	} else {
 		this.view.activeKanbanBoardFilter = null;
 		this.view.activeKanbanBoardId = null;

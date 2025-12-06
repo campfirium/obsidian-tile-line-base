@@ -86,6 +86,11 @@ export class KanbanBoardDialogService {
 	}
 
 	public getModalDefaults(board: KanbanBoardDefinition | null) {
+		const initialSortField = board
+			? board.sortField ?? null
+			: this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD;
+		const initialSortDirection =
+			board?.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION;
 		return {
 			initialFilter: board?.filterRule ?? null,
 			initialLaneField: board?.laneField ?? this.view.kanbanLaneField ?? null,
@@ -93,8 +98,8 @@ export class KanbanBoardDialogService {
 			initialFontScale: board?.fontScale ?? this.view.kanbanFontScale ?? DEFAULT_KANBAN_FONT_SCALE,
 			initialVisibleCount: board?.initialVisibleCount ?? this.view.kanbanInitialVisibleCount,
 			initialContent: board?.content ? cloneKanbanContentConfig(board.content) : null,
-			initialSortField: board?.sortField ?? this.view.kanbanSortField ?? DEFAULT_KANBAN_SORT_FIELD,
-			initialSortDirection: board?.sortDirection ?? this.view.kanbanSortDirection ?? DEFAULT_KANBAN_SORT_DIRECTION,
+			initialSortField,
+			initialSortDirection,
 			sortFieldOptions: this.getSortFieldOptions()
 		};
 	}

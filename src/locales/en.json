@@ -74,7 +74,8 @@
     },
     "cardEditModal": {
       "title": "Edit entry",
-      "submitLabel": "Save changes"
+      "submitLabel": "Save",
+      "deleteLabel": "Delete entry"
     },
     "content": {
       "sectionTitle": "Card content",

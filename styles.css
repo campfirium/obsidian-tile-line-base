@@ -4337,6 +4337,10 @@
 	border-top: none;
 }
 
+.tlb-modal-footer--with-danger .tlb-modal-footer__danger {
+	margin-right: auto;
+}
+
 .modal-close-button {
 	position: absolute !important;
 	top: 10px;

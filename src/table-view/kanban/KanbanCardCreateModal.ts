@@ -10,6 +10,8 @@ interface KanbanCardCreateModalOptions {
 	onSubmit: (values: Record<string, string>) => void;
 	title?: string;
 	submitLabel?: string;
+	deleteLabel?: string;
+	onDelete?: () => boolean | void;
 }
 
 export class KanbanCardCreateModal extends Modal {
@@ -54,6 +56,21 @@ export class KanbanCardCreateModal extends Modal {
 		this.errorEl.toggleAttribute('hidden', true);
 
 		const actions = contentEl.createDiv({ cls: 'tlb-modal-footer' });
+		if (typeof this.options.onDelete === 'function') {
+			actions.addClass('tlb-modal-footer--with-danger');
+			const deleteButton = actions.createEl('button', {
+				text: this.options.deleteLabel ?? t('kanbanView.cardEditModal.deleteLabel'),
+				attr: { type: 'button' }
+			});
+			deleteButton.addClass('mod-warning');
+			deleteButton.addClass('tlb-modal-footer__danger');
+			deleteButton.addEventListener('click', () => {
+				const shouldClose = this.options.onDelete?.();
+				if (shouldClose !== false) {
+					this.close();
+				}
+			});
+		}
 		const cancelButton = actions.createEl('button', {
 			text: t('kanbanView.cardCreateModal.cancelLabel'),
 			attr: { type: 'button' }

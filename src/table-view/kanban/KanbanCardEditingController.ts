@@ -38,6 +38,8 @@ export class KanbanCardEditingController {
 			initialValues,
 			title: t('kanbanView.cardEditModal.title'),
 			submitLabel: t('kanbanView.cardEditModal.submitLabel'),
+			deleteLabel: t('kanbanView.cardEditModal.deleteLabel'),
+			onDelete: () => this.deleteRow(rowIndex),
 			onSubmit: (values) => {
 				this.applyEdits(rowIndex, values);
 			}
@@ -133,6 +135,18 @@ export class KanbanCardEditingController {
 		this.view.filterOrchestrator?.refresh();
 		this.view.markUserMutation('kanban-card-edit');
 		this.view.persistenceService?.scheduleSave();
+	}
+
+	private deleteRow(rowIndex: number): boolean {
+		const rowInteraction = this.view.rowInteractionController;
+		if (!rowInteraction) {
+			return false;
+		}
+		if (rowIndex < 0 || rowIndex >= this.view.blocks.length) {
+			return false;
+		}
+		rowInteraction.deleteRow(rowIndex);
+		return true;
 	}
 
 	private normalizeValue(value: unknown): string {

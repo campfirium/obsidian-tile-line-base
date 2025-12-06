@@ -2,6 +2,7 @@ import { t } from '../../i18n';
 import type { TableView } from '../../TableView';
 import {
 	DEFAULT_KANBAN_SORT_DIRECTION,
+	DEFAULT_KANBAN_SORT_FIELD,
 	type KanbanBoardDefinition,
 	type KanbanSortDirection
 } from '../../types/kanban';
@@ -30,7 +31,9 @@ export async function createDefaultStatusBoard(
 	}
 
 	const sortDirection: KanbanSortDirection =
-		view.kanbanSortDirection === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
+		view.kanbanSortDirection === 'asc' || view.kanbanSortDirection === 'desc'
+			? view.kanbanSortDirection
+			: DEFAULT_KANBAN_SORT_DIRECTION;
 	const board = store.createBoard({
 		name: t('kanbanView.defaultBoard.name'),
 		icon: 'layout-kanban',
@@ -42,7 +45,7 @@ export async function createDefaultStatusBoard(
 		filterRule: null,
 		initialVisibleCount: view.kanbanInitialVisibleCount,
 		content: view.kanbanCardContentConfig,
-		sortField: laneField,
+		sortField: DEFAULT_KANBAN_SORT_FIELD,
 		sortDirection,
 		setActive: true
 	});

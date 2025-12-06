@@ -8,7 +8,7 @@ import type {
 	KanbanRuntimeCardContent,
 	KanbanSortDirection
 } from '../../types/kanban';
-import { sanitizeKanbanFontScale } from '../../types/kanban';
+import { DEFAULT_KANBAN_SORT_DIRECTION, sanitizeKanbanFontScale } from '../../types/kanban';
 import { sanitizeKanbanHeightMode } from './kanbanHeight';
 import { sanitizeKanbanLaneWidth } from './kanbanWidth';
 import type { TableView } from '../../TableView';
@@ -236,7 +236,9 @@ export class KanbanViewController {
 		this.boardEl?.setAttribute('aria-busy', 'true');
 
 		const sortDirection: KanbanSortDirection =
-			this.view.kanbanSortDirection === 'desc' ? 'desc' : 'asc';
+			this.view.kanbanSortDirection === 'asc'
+				? 'asc'
+				: DEFAULT_KANBAN_SORT_DIRECTION;
 		const { boardState, cardContent } = buildKanbanViewState({
 			rows: this.visibleRows,
 			laneField: this.laneField,

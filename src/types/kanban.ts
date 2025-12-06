@@ -16,8 +16,8 @@ export interface KanbanRuntimeCardContent extends KanbanCardContentConfig {
 }
 
 export const DEFAULT_KANBAN_HEIGHT_MODE: KanbanHeightMode = 'auto';
-export const DEFAULT_KANBAN_SORT_DIRECTION: KanbanSortDirection = 'asc';
-export const DEFAULT_KANBAN_SORT_FIELD = '';
+export const DEFAULT_KANBAN_SORT_DIRECTION: KanbanSortDirection = 'desc';
+export const DEFAULT_KANBAN_SORT_FIELD = 'statusChanged';
 export const DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT = 10;
 export const MIN_KANBAN_INITIAL_VISIBLE_COUNT = 1;
 export const MAX_KANBAN_INITIAL_VISIBLE_COUNT = 500;

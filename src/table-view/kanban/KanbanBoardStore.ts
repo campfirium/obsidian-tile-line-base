@@ -314,7 +314,10 @@ export class KanbanBoardStore {
 	private sanitizeSortDirection(
 		direction: KanbanSortDirection | string | null | undefined
 	): KanbanSortDirection {
-		return direction === 'desc' ? 'desc' : DEFAULT_KANBAN_SORT_DIRECTION;
+		if (direction === 'asc' || direction === 'desc') {
+			return direction;
+		}
+		return DEFAULT_KANBAN_SORT_DIRECTION;
 	}
 
 	private sanitizeLaneWidth(value: unknown): number {

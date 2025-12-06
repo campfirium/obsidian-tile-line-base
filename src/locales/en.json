@@ -37,6 +37,9 @@
       "switchToKanban": "Switch to kanban view",
       "switchToTable": "Switch to table view"
     },
+    "laneActions": {
+      "addCard": "Add card to \"{{lane}}\""
+    },
     "fieldModal": {
       "title": "Select kanban column",
       "description": "Pick the column whose values should form the lanes in the kanban board.",
@@ -59,6 +62,15 @@
       "successNotice": "Created lane \"{{name}}\".",
       "statusFieldBlocked": "Status lanes already cover the Status column. Edit the Status options in the table instead.",
       "missingLaneField": "Pick a kanban column before creating a new lane."
+    },
+    "cardCreateModal": {
+      "title": "New entry",
+      "description": "Fill the fields below to create a row directly in this lane.",
+      "laneFieldLabel": "Lane value ({{field}})",
+      "laneFieldDesc": "Cards created here use \"{{lane}}\" as their lane value by default.",
+      "submitLabel": "Create entry",
+      "cancelLabel": "Cancel",
+      "laneRequiredError": "Enter a lane value before creating an entry."
     },
     "content": {
       "sectionTitle": "Card content",

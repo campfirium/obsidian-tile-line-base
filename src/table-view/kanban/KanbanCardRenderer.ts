@@ -10,7 +10,7 @@ interface RenderKanbanCardOptions {
 	tooltipManager: KanbanTooltipManager;
 }
 
-export function renderKanbanCard(options: RenderKanbanCardOptions): void {
+export function renderKanbanCard(options: RenderKanbanCardOptions): HTMLElement {
 	const { container, card, cardContent, tooltipManager } = options;
 	const cardEl = container.createDiv({
 		cls: 'tlb-kanban-card',
@@ -70,6 +70,8 @@ export function renderKanbanCard(options: RenderKanbanCardOptions): void {
 			more.setText(t('kanbanView.moreFieldsLabel', { count: String(card.fields.length - 6) }));
 		}
 	}
+
+	return cardEl;
 }
 
 const renderTags = (container: HTMLElement, tags: string[]): void => {

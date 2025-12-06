@@ -72,6 +72,10 @@
       "cancelLabel": "Cancel",
       "laneRequiredError": "Enter a lane value before creating an entry."
     },
+    "cardEditModal": {
+      "title": "Edit entry",
+      "submitLabel": "Save changes"
+    },
     "content": {
       "sectionTitle": "Card content",
       "insertFieldButton": "Insert field",

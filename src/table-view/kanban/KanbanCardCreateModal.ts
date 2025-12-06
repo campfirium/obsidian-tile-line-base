@@ -8,6 +8,8 @@ interface KanbanCardCreateModalOptions {
 	fields: string[];
 	initialValues: Record<string, string>;
 	onSubmit: (values: Record<string, string>) => void;
+	title?: string;
+	submitLabel?: string;
 }
 
 export class KanbanCardCreateModal extends Modal {
@@ -38,7 +40,7 @@ export class KanbanCardCreateModal extends Modal {
 
 		const header = body.createDiv({ cls: 'tlb-modal-header' });
 		header.createSpan({
-			text: t('kanbanView.cardCreateModal.title'),
+			text: this.options.title ?? t('kanbanView.cardCreateModal.title'),
 			cls: 'tlb-modal-title'
 		});
 
@@ -61,7 +63,7 @@ export class KanbanCardCreateModal extends Modal {
 		});
 
 		const submitButton = actions.createEl('button', {
-			text: t('kanbanView.cardCreateModal.submitLabel'),
+			text: this.options.submitLabel ?? t('kanbanView.cardCreateModal.submitLabel'),
 			attr: { type: 'button' }
 		});
 		submitButton.classList.add('mod-cta');

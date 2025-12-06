@@ -24,6 +24,7 @@ import { renderKanbanCard } from './KanbanCardRenderer';
 import { handleCardDragEnd, applyLaneUpdates } from './KanbanCardDragHandler';
 import { KanbanLaneWrapController } from './KanbanLaneWrapController';
 import { KanbanCardCreationController } from './KanbanCardCreationController';
+import { KanbanCardEditingController } from './KanbanCardEditingController';
 import { buildKanbanViewState, resolveAvailableFields } from './KanbanViewStateBuilder';
 import { renderKanbanEmptyState } from './renderKanbanEmptyState';
 
@@ -85,6 +86,7 @@ export class KanbanViewController {
 	private readonly laneReorderController: KanbanLaneReorderController;
 	private readonly laneWrapController: KanbanLaneWrapController | null;
 	private readonly cardCreator: KanbanCardCreationController;
+	private readonly cardEditor: KanbanCardEditingController;
 	private isApplyingMutation = false;
 	private dragAvailable: boolean;
 	private sortableClass: SortableStatic | null = null;
@@ -147,6 +149,7 @@ export class KanbanViewController {
 			enabled: this.multiRowEnabled
 		});
 		this.cardCreator = new KanbanCardCreationController(this.view, this.laneField);
+		this.cardEditor = new KanbanCardEditingController(this.view, this.laneField);
 
 		this.viewportManager.apply(this.heightMode);
 		this.updateWrapperLayout();
@@ -410,12 +413,13 @@ export class KanbanViewController {
 			const hiddenCount = expanded ? 0 : Math.max(0, totalCards - visibleCards.length);
 
 			for (const card of visibleCards) {
-				renderKanbanCard({
+				const cardEl = renderKanbanCard({
 					container: cardsContainer,
 					card,
 					cardContent: this.cardContent,
 					tooltipManager: this.tooltipManager
 				});
+				this.attachCardHandlers(cardEl, card);
 			}
 
 			if (hiddenCount > 0) {
@@ -452,6 +456,25 @@ export class KanbanViewController {
 			});
 			this.sortables.set(lane.id, sortable);
 		}
+	}
+
+	private attachCardHandlers(cardEl: HTMLElement, card: KanbanLane['cards'][number]): void {
+		const openEditor = () => {
+			this.cardEditor.open({ rowIndex: card.rowIndex, row: card.row });
+		};
+		cardEl.addEventListener('dblclick', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			openEditor();
+		});
+		cardEl.addEventListener('keydown', (event) => {
+			if (event.key !== 'Enter' && event.key !== ' ') {
+				return;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			openEditor();
+		});
 	}
 
 	private handleDragEnd(event: SortableEvent): void {

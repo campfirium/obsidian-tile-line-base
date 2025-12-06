@@ -3947,17 +3947,84 @@
 	align-items: center;
 	justify-content: space-between;
 	padding: var(--size-4-2) var(--size-4-3);
-	gap: var(--size-4-1);
-	font-weight: 600;
+	gap: var(--size-4-2);
 	color: var(--text-normal);
+	column-gap: var(--size-4-2);
+}
+
+.tlb-kanban-lane__handle {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	min-width: 0;
+	flex: 1;
+	cursor: grab;
+	font-weight: 600;
+	column-gap: var(--size-2-3);
+}
+
+.tlb-kanban-lane__title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
 }
 
 .tlb-kanban-lane__count {
 	font-size: var(--font-ui-smaller);
+	font-weight: 600;
 	color: var(--text-muted);
-	background-color: var(--background-primary);
-	border-radius: var(--radius-s);
-	padding: 0.1rem 0.45rem;
+	opacity: 0.72;
+	padding: 0.08rem 0.45rem;
+	min-width: 1.4rem;
+	text-align: center;
+	border-radius: 999px;
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, var(--background-secondary) 20%);
+	background-color: color-mix(in srgb, var(--background-primary) 55%, var(--background-secondary) 45%);
+	line-height: 1.2;
+}
+
+.tlb-kanban-lane__actions {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	min-width: 1.25rem;
+	justify-content: flex-end;
+}
+
+.tlb-kanban-lane__add {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.2rem;
+	height: 1.2rem;
+	border: 1px solid color-mix(in srgb, var(--text-faint) 55%, transparent);
+	border-radius: 999px;
+	background-color: transparent;
+	color: var(--text-faint);
+	opacity: 0.7;
+	cursor: pointer;
+	box-shadow: none;
+	appearance: none;
+	padding: 0;
+}
+
+.tlb-kanban-lane__add svg {
+	width: 0.9rem;
+	height: 0.9rem;
+	stroke-width: 1.35;
+}
+
+.tlb-kanban-lane__add:hover,
+.tlb-kanban-lane__add:focus {
+	opacity: 1;
+	color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.tlb-kanban-lane__add:focus {
+	outline: none;
+	box-shadow: none;
 }
 
 .tlb-kanban-lane__cards {
@@ -4153,6 +4220,138 @@
 }
 
 .tlb-kanban-board-modal__content {
+	margin-top: var(--size-4-2);
+}
+
+.tlb-new-card-modal {
+	padding: 0 !important;
+	overflow: hidden;
+	position: relative;
+}
+
+.tlb-new-card-modal-container {
+	width: 500px !important;
+	max-width: 90vw;
+	padding: 0 !important;
+	--tlb-new-card-hpad: var(--size-4-6, 24px);
+}
+
+.tlb-new-card-modal .tlb-modal-content {
+	padding: 0 var(--tlb-new-card-hpad) !important;
+}
+
+.tlb-new-card-modal .tlb-modal-footer {
+	padding: 14px var(--tlb-new-card-hpad) 16px;
+}
+
+.tlb-new-card-modal-container .modal-close-button {
+	right: var(--tlb-new-card-hpad) !important;
+	z-index: 2;
+	pointer-events: auto;
+}
+
+.tlb-modal-content {
+	padding: 0 !important;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.tlb-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px var(--tlb-new-card-hpad, 24px) 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	gap: 12px;
+}
+
+.tlb-new-card-modal .tlb-modal-header {
+	padding: 14px var(--tlb-new-card-hpad, 24px) 12px 0;
+}
+
+.tlb-modal-title {
+	font-weight: 700;
+	font-size: 18px;
+	color: var(--text-normal);
+}
+
+.tlb-kanban-add-card-modal__fields {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	max-height: 55vh;
+	overflow-y: auto;
+	padding: 0;
+}
+
+.tlb-kanban-add-card-modal__field {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+}
+
+.tlb-kanban-add-card-modal__input,
+.tlb-field-input,
+.tlb-field-textarea {
+	width: 100%;
+	background-color: var(--background-modifier-form-field) !important;
+	border: 1px solid var(--background-modifier-border) !important;
+	color: var(--text-normal) !important;
+	border-radius: 6px;
+	padding: 5px 10px !important;
+	font-size: 16px;
+	line-height: 1.4;
+	transition: all 0.2s ease;
+	min-height: 1.95rem;
+}
+
+.tlb-kanban-add-card-modal textarea.tlb-kanban-add-card-modal__input,
+.tlb-field-textarea {
+	min-height: 3.6rem;
+	resize: vertical;
+}
+
+.tlb-kanban-add-card-modal__input:focus,
+.tlb-field-input:focus,
+.tlb-field-textarea:focus {
+	border-color: var(--interactive-accent) !important;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+}
+
+.tlb-kanban-add-card-modal__input::placeholder,
+.tlb-field-input::placeholder,
+.tlb-field-textarea::placeholder {
+	color: var(--text-faint);
+}
+
+.tlb-kanban-add-card-modal__actions,
+.tlb-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 10px;
+	padding: 14px 24px 16px;
+	border-top: none;
+}
+
+.modal-close-button {
+	position: absolute !important;
+	top: 10px;
+	right: 10px;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--text-muted);
+	width: 1.4rem;
+	height: 1.4rem;
+	padding: 0;
+}
+
+.tlb-kanban-add-card-modal__error {
+	color: var(--text-error);
 	margin-top: var(--size-4-2);
 }
 

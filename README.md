@@ -108,7 +108,7 @@ TileLineBase is currently in **Early Beta** and is not yet available via Obsidia
 We welcome feedback, suggestions, and bug reports! Feel free to:
 
 * [Open an Issue on GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues) for specific bugs or technical feedback.
-* Join general discussion about TileLineBase on the [Obsidian official forums](https://forum.obsidian.md).
+* Join the conversation and share your thoughts about TileLineBase on the [Obsidian forum thread](https://forum.obsidian.md/t/tilelinebase-the-native-plain-text-database-for-obsidian/108734).
 * For broader discussions, questions, or general productivity tips, visit my personal forum at [Campfirium](https://campfirium.info/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753).
 
 

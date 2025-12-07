@@ -291,12 +291,15 @@ export class SlideViewController {
 		const applyLayout = (el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement) =>
 			applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
 				applyLayoutStyles(target, layoutSpec, container));
-		const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
-		titleEl.style.lineHeight = `${page.titleLayout.lineHeight}`;
-		titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
-		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
-		applyLayout(titleEl, page.titleLayout, slide);
-		if (this.isEditingPage(page) && page.editable) {
+		const isEditing = this.isEditingPage(page) && page.editable;
+		if (!isEditing) {
+			const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
+			titleEl.style.lineHeight = `${page.titleLayout.lineHeight}`;
+			titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
+			titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
+			applyLayout(titleEl, page.titleLayout, slide);
+		}
+		if (isEditing) {
 			renderSlideEditForm({
 				container: slide,
 				row,

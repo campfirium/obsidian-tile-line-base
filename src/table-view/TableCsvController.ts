@@ -265,7 +265,9 @@ async function applyParsedCsvToView(view: TableView, parsed: ParsedCsv): Promise
 	const columnConfigs = view.dataStore.getColumnConfigs() ?? null;
 	const schemaResult = view.schemaBuilder.buildSchema(blocks, columnConfigs);
 	view.blocks = schemaResult.blocks;
-	view.dataStore.initialise(schemaResult, columnConfigs);
+	const frontmatter = view.dataStore.getFrontmatter();
+	const frontmatterPadding = view.dataStore.getFrontmatterPadding();
+	view.dataStore.initialise(schemaResult, columnConfigs, { frontmatter, frontmatterPadding });
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();
 	const dirtyFlags = view.dataStore.consumeDirtyFlags();

@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 *.js.map
+release-notes.md
 
 # IDE
 .vscode/

@@ -56,9 +56,6 @@ const main = () => {
 	];
 
 	const lines = [];
-	lines.push(`## ${version}`);
-	lines.push("");
-
 	if (info.length > 0) {
 		lines.push(info);
 		lines.push("");

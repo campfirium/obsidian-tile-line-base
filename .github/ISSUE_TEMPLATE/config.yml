@@ -1,0 +1,22 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 💡 Feature requests & ideas
+    url: https://github.com/campfirium/obsidian-tile-line-base/discussions/categories/feature-requests-ideas
+    about: New feature ideas and bigger changes. Please post here and use 👍 to upvote instead of commenting “+1”.
+
+  - name: ❓ Q&A / Help
+    url: https://github.com/campfirium/obsidian-tile-line-base/discussions/categories/q-a
+    about: Questions about setup, workflows, or how to use TileLineBase.
+
+  - name: 💬 General chat
+    url: https://github.com/campfirium/obsidian-tile-line-base/discussions/categories/general-chat
+    about: General discussion about Obsidian, databases, or productivity.
+
+  - name: ✨ Show and tell
+    url: https://github.com/campfirium/obsidian-tile-line-base/discussions/categories/show-and-tell
+    about: Share dashboards, workflows, and examples of how you use TileLineBase.
+
+  - name: 🏕 Campfirium forum
+    url: https://campfirium.info/
+    about: Longer-form posts, case studies, and broader productivity discussions.

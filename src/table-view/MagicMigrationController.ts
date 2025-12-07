@@ -155,7 +155,8 @@ export class MagicMigrationController {
 		}
 
 		const columns = this.buildColumnNames(placeholderCount, columnNames);
-		const contentSlice = this.sliceFromSample(content.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), sample);
+		const normalizedContent = this.stripFrontmatter(content).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+		const contentSlice = this.sliceFromSample(normalizedContent, sample);
 		if (!contentSlice) {
 			return {
 				columns,
@@ -248,7 +249,9 @@ export class MagicMigrationController {
 				new Notice(t('magicMigration.errorNoMatch'));
 				return false;
 			}
-			const markdown = this.blocksToMarkdown(blocks);
+			const markdownBody = this.blocksToMarkdown(blocks);
+			const { frontmatter } = this.splitFrontmatter(content);
+			const markdown = this.mergeFrontmatter(frontmatter, markdownBody);
 			const targetPath = await this.resolveTargetPath(file, this.buildTargetFileName(file));
 			const newFile = await this.view.app.vault.create(targetPath, markdown);
 			TableRefreshCoordinator.requestRefreshForPath(newFile.path, {
@@ -361,14 +364,31 @@ export class MagicMigrationController {
 	}
 
 	private stripFrontmatter(content: string): string {
+		return this.splitFrontmatter(content).body;
+	}
+
+	private splitFrontmatter(content: string): { frontmatter: string | null; body: string } {
 		if (!content.startsWith('---')) {
-			return content;
+			return { frontmatter: null, body: content };
 		}
-		const endIndex = content.indexOf('\n---', 3);
-		if (endIndex === -1) {
-			return content;
+		const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/u.exec(content);
+		if (!match) {
+			return { frontmatter: null, body: content };
 		}
-		return content.slice(endIndex + 4);
+		return {
+			frontmatter: match[0],
+			body: content.slice(match[0].length)
+		};
+	}
+
+	private mergeFrontmatter(frontmatter: string | null, markdown: string): string {
+		if (!frontmatter) {
+			return markdown;
+		}
+		const normalized = frontmatter.endsWith('\n') ? frontmatter : `${frontmatter}\n`;
+		const needsBlankLine = /(\r?\n){2}$/.test(normalized);
+		const spacer = needsBlankLine ? '' : '\n';
+		return `${normalized}${spacer}${markdown}`;
 	}
 
 	private isTopHeadingOnly(text: string): boolean {

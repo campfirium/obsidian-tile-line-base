@@ -17,6 +17,7 @@ import { normalizeSlideViewConfig } from '../types/slide';
 import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 import { applyStripeStyles } from './stripeStyles';
+import { extractFrontmatter } from './MarkdownFrontmatter';
 
 const logger = getLogger('table-view:renderer');
 export async function renderTableView(view: TableView): Promise<void> {
@@ -52,10 +53,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 		containerClass: container.className
 	});
 
-	if (!view.file) {
-		container.createDiv({ text: t('tableViewRenderer.noFile') });
-		return;
-	}
+	if (!view.file) { container.createDiv({ text: t('tableViewRenderer.noFile') }); return; }
 
 	view.historyManager.reset();
 
@@ -70,6 +68,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 
 	const content = await view.app.vault.read(view.file);
 	view.captureConversionBaseline(content);
+	const parsedFrontmatter = extractFrontmatter(content);
 	const configBlock = await view.persistenceService.loadConfig();
 	const plugin = getPluginContext();
 
@@ -124,16 +123,16 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.kanbanPreferencesLoaded = true;
 	}
 
-view.filterViewState = view.filterStateStore.getState();
-syncTagGroupState(view);
+	view.filterViewState = view.filterStateStore.getState();
+	syncTagGroupState(view);
 
-const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
+	const headerColumnConfigs = view.markdownParser.parseHeaderConfig(parsedFrontmatter.body);
 	const persistedColumnConfigs = configBlock?.columnConfigs
 		? deserializeColumnConfigs(view, configBlock.columnConfigs)
 		: null;
 	const columnConfigs = mergeColumnConfigs(headerColumnConfigs, persistedColumnConfigs);
 
-	const parsedBlocks = view.markdownParser.parseH2Blocks(content);
+	const parsedBlocks = view.markdownParser.parseH2Blocks(parsedFrontmatter.body);
 	const hasStructuredBlocks = view.markdownParser.hasStructuredH2Blocks(parsedBlocks);
 	if (!hasStructuredBlocks) {
 		if (view.file) {
@@ -147,17 +146,17 @@ const headerColumnConfigs = view.markdownParser.parseHeaderConfig(content);
 	view.blocks = parsedBlocks;
 
 	const schemaResult = view.schemaBuilder.buildSchema(view.blocks, columnConfigs ?? null);
-	view.dataStore.initialise(schemaResult, columnConfigs ?? null);
+	view.dataStore.initialise(schemaResult, columnConfigs ?? null, {
+		frontmatter: parsedFrontmatter.frontmatter,
+		frontmatterPadding: parsedFrontmatter.padding
+	});
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();
 	const dirtyFlags = view.dataStore.consumeDirtyFlags();
 	view.schemaDirty = dirtyFlags.schemaDirty;
 	view.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;
 
-	if (!view.schema) {
-		container.createDiv({ text: t('tableViewRenderer.noSchema') });
-		return;
-	}
+	if (!view.schema) { container.createDiv({ text: t('tableViewRenderer.noSchema') }); return; }
 	view.kanbanBoardController?.processPendingLaneFieldRepairs();
 	if (view.schemaDirty || view.sparseCleanupRequired) {
 		view.persistenceService.scheduleSave();

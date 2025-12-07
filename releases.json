@@ -1,0 +1,49 @@
+{
+  "0.8.3": {
+    "date": "2025-12-07",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [
+      "YAML frontmatter is now preserved when TileLineBase updates the note.",
+      "YAML frontmatter is now preserved when running the conversion assistant.",
+      "Slide titles no longer overlap while editing."
+    ],
+    "changed": []
+  },
+  "0.8.2": {
+    "date": "2025-12-06",
+    "info": "",
+    "new": [
+      "Kanban view now supports adding, editing, and deleting cards; double-click a card to open the edit/delete modal."
+    ],
+    "improved": [],
+    "fixed": [
+      "Slide view editing now persists correctly and no longer gets stuck when navigating.",
+      "Kanban cards now default to sorting by statusChanged in descending order."
+    ],
+    "changed": []
+  },
+  "0.8.1": {
+    "date": "2025-12-05",
+    "info": "",
+    "new": [
+      "Slide cover mode for fullscreen/first-page layouts."
+    ],
+    "improved": [
+      "More reliable H2 detection for table view parsing."
+    ],
+    "fixed": [
+      "Default slide templates now load correctly."
+    ],
+    "changed": []
+  },
+  "0.8.0": {
+    "date": "2025-12-05",
+    "info": "Initial beta release.",
+    "new": [],
+    "improved": [],
+    "fixed": [],
+    "changed": []
+  }
+}

@@ -51,6 +51,8 @@ export class TableDataStore {
 	private schemaDirty = false;
 	private sparseCleanupRequired = false;
 	private readonly formulaState: FormulaState = createFormulaState();
+	private frontmatter: string | null = null;
+	private frontmatterPadding = '';
 
 	constructor(private readonly formulaOptions: FormulaOptions) {}
 
@@ -58,12 +60,17 @@ export class TableDataStore {
 		prepareFormulaColumns(this.formulaState, this.schema, this.schema?.columnConfigs ?? null);
 	}
 
-	initialise(result: SchemaBuildResult, columnConfigs: ColumnConfig[] | null): void {
+	initialise(
+		result: SchemaBuildResult,
+		columnConfigs: ColumnConfig[] | null,
+		options?: { frontmatter?: string | null; frontmatterPadding?: string | null }
+	): void {
 		this.blocks = result.blocks;
 		this.schema = result.schema;
 		this.hiddenSortableFields = new Set(result.hiddenSortableFields);
 		this.schemaDirty = result.schemaDirty;
 		this.sparseCleanupRequired = result.sparseCleanupRequired;
+		this.setFrontmatter(options?.frontmatter ?? null, options?.frontmatterPadding ?? null);
 		prepareFormulaColumns(this.formulaState, this.schema, columnConfigs ?? null);
 	}
 
@@ -175,7 +182,10 @@ export class TableDataStore {
 	}
 
 	blocksToMarkdown(): string {
-		return blocksToMarkdownInternal(this.schema, this.blocks, this.hiddenSortableFields);
+		const body = blocksToMarkdownInternal(this.schema, this.blocks, this.hiddenSortableFields);
+		if (!this.frontmatter) { return body; }
+		const padding = this.normaliseFrontmatterPadding(this.frontmatterPadding);
+		return `${this.frontmatter.trimEnd()}${padding}${body}`;
 	}
 
 	updateCell(rowIndex: number, field: string, newValue: string): boolean {
@@ -296,6 +306,31 @@ export class TableDataStore {
 			}
 		}
 		return null;
+	}
+
+	setFrontmatter(frontmatter: string | null, padding?: string | null): void {
+		this.frontmatter = this.normaliseFrontmatter(frontmatter);
+		this.frontmatterPadding = this.normaliseFrontmatterPadding(padding ?? '');
+	}
+
+	getFrontmatter(): string | null { return this.frontmatter; }
+
+	getFrontmatterPadding(): string { return this.frontmatterPadding; }
+
+	private normaliseFrontmatter(frontmatter: string | null): string | null {
+		if (frontmatter == null) {
+			return null;
+		}
+		const normalised = frontmatter.replace(/\r\n/g, '\n');
+		return normalised.trim().length === 0 ? null : normalised;
+	}
+
+	private normaliseFrontmatterPadding(padding: string): string {
+		const normalised = (padding ?? '').replace(/\r\n/g, '\n');
+		if (normalised.includes('\n')) {
+			return normalised;
+		}
+		return '\n';
 	}
 
 	normalizeColumnConfigs(configs: ColumnConfig[] | undefined): ColumnConfig[] | undefined {

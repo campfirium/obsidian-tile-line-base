@@ -43,6 +43,7 @@ interface TablePersistenceDeps {
 	getKanbanBoards?: () => KanbanBoardState | null;
 	getSlideConfig?: () => SlideViewConfig | null;
 	getGalleryConfig?: () => SlideViewConfig | null;
+	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null;
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
@@ -169,9 +170,22 @@ export class TablePersistenceService {
 				? JSON.stringify(normalizedSlideConfig) === JSON.stringify(normalizedGlobalSlideConfig)
 				: false;
 		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig) && !matchesGlobalSlideConfig;
-		const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
+				const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
 		const normalizedGalleryConfig = galleryConfig ? normalizeSlideViewConfig(galleryConfig) : null;
-		const hasGalleryConfig = normalizedGalleryConfig && !isDefaultSlideViewConfig(normalizedGalleryConfig);
+		const galleryViews = this.deps.getGalleryViews?.() ?? null;
+		const normalizedGalleryViews = galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0
+			? {
+				activeViewId: galleryViews.activeViewId ?? null,
+				views: galleryViews.views.map((entry) => ({
+					...entry,
+					template: normalizeSlideViewConfig(entry.template ?? null)
+				}))
+			}
+			: null;
+		const activeGalleryTemplate = normalizedGalleryViews
+			? normalizedGalleryViews.views.find((entry) => entry.id === normalizedGalleryViews.activeViewId)?.template || normalizedGalleryViews.views[0]?.template || null
+			: normalizedGalleryConfig;
+		const hasGalleryConfig = activeGalleryTemplate && !isDefaultSlideViewConfig(activeGalleryTemplate);
 
 		return {
 			filterViews: this.deps.getFilterViewState(),
@@ -199,7 +213,8 @@ export class TablePersistenceService {
 					: undefined,
 			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined,
 			slide: hasSlideConfig ? normalizedSlideConfig : undefined,
-			gallery: hasGalleryConfig ? normalizedGalleryConfig : undefined
+			gallery: hasGalleryConfig ? activeGalleryTemplate : undefined,
+			galleryViews: normalizedGalleryViews ?? undefined
 		};
 	}
 

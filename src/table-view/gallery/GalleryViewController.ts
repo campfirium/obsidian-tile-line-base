@@ -2,6 +2,7 @@ import { App, Component } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
+import type { GlobalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { buildSlidePages, type SlidePage } from '../slide/SlidePageBuilder';
 import { RESERVED_SLIDE_FIELDS } from '../slide/slideDefaults';
 import {
@@ -22,6 +23,8 @@ interface GalleryViewControllerOptions {
 	sourcePath: string;
 	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onTemplateChange?: () => void;
+	quickFilterManager?: GlobalQuickFilterManager | null;
+	subscribeToRows?: (listener: (rows: RowData[]) => void) => () => void;
 }
 
 type EditingKey = { rowIndex: number; templateRef: SlidePage['templateRef'] } | null;
@@ -30,6 +33,7 @@ export class GalleryViewController {
 	private readonly app: App;
 	private readonly container: HTMLElement;
 	private rows: RowData[] = [];
+	private visibleRows: RowData[] = [];
 	private fields: string[] = [];
 	private config: SlideViewConfig;
 	private pages: SlidePage[] = [];
@@ -40,6 +44,10 @@ export class GalleryViewController {
 	private readonly onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	private readonly sourcePath: string;
 	private readonly onTemplateChange: (() => void) | null;
+	private readonly quickFilterManager: GlobalQuickFilterManager | null;
+	private quickFilterValue = '';
+	private unsubscribeRows: (() => void) | null = null;
+	private unsubscribeQuickFilter: (() => void) | null = null;
 
 	constructor(options: GalleryViewControllerOptions) {
 		this.app = options.app;
@@ -50,6 +58,20 @@ export class GalleryViewController {
 		this.sourcePath = options.sourcePath;
 		this.onSaveRow = options.onSaveRow;
 		this.onTemplateChange = options.onTemplateChange ?? null;
+		this.quickFilterManager = options.quickFilterManager ?? null;
+		this.quickFilterValue = this.quickFilterManager?.getValue() ?? '';
+		if (options.subscribeToRows) {
+			this.unsubscribeRows = options.subscribeToRows((rows) => {
+				this.rows = rows;
+				this.render();
+			});
+		}
+		if (this.quickFilterManager) {
+			this.unsubscribeQuickFilter = this.quickFilterManager.subscribe((value) => {
+				this.quickFilterValue = value ?? '';
+				this.render();
+			});
+		}
 		this.render();
 	}
 
@@ -64,6 +86,10 @@ export class GalleryViewController {
 	}
 
 	destroy(): void {
+		this.unsubscribeRows?.();
+		this.unsubscribeRows = null;
+		this.unsubscribeQuickFilter?.();
+		this.unsubscribeQuickFilter = null;
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.container.empty();
 	}
@@ -71,8 +97,9 @@ export class GalleryViewController {
 	private render(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.container.empty();
+		this.visibleRows = this.filterRows(this.rows);
 		this.pages = buildSlidePages({
-			rows: this.rows,
+			rows: this.visibleRows,
 			fields: this.fields,
 			config: this.config,
 			reservedFields: RESERVED_SLIDE_FIELDS
@@ -93,7 +120,7 @@ export class GalleryViewController {
 			});
 			const slideEl = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide' });
 			this.applySlideColors(slideEl, page.textColor, page.backgroundColor);
-			const row = this.rows[page.rowIndex];
+			const row = this.visibleRows[page.rowIndex];
 			const applyLayout = (el: HTMLElement, layout: SlidePage['titleLayout']) =>
 				applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
 					applyLayoutStyles(target, layoutSpec, container));
@@ -102,7 +129,7 @@ export class GalleryViewController {
 			if (isEditing) {
 				renderSlideEditForm({
 					container: slideEl,
-				row,
+					row,
 					page,
 					fields: this.fields,
 					reservedFields: RESERVED_SLIDE_FIELDS,
@@ -200,7 +227,12 @@ export class GalleryViewController {
 			bodyTemplate
 		});
 		this.onTemplateChange?.();
-		const row = this.rows[page.rowIndex];
+		const row = this.visibleRows[page.rowIndex];
+		if (!row) {
+			this.clearEditingState();
+			this.render();
+			return;
+		}
 		const nextRows = await this.onSaveRow(row, this.editState.values);
 		if (nextRows) {
 			this.updateRows(nextRows);
@@ -234,5 +266,27 @@ export class GalleryViewController {
 				this.editingKey.rowIndex === page.rowIndex &&
 				this.editingKey.templateRef === page.templateRef
 		);
+	}
+
+	private filterRows(rows: RowData[]): RowData[] {
+		const needle = this.quickFilterValue.trim().toLowerCase();
+		if (!needle) {
+			return rows;
+		}
+		return rows.filter((row) => this.matchesQuickFilter(row, needle));
+	}
+
+	private matchesQuickFilter(row: RowData, needle: string): boolean {
+		for (const field of this.fields) {
+			if (!field) {
+				continue;
+			}
+			const value = row[field];
+			const text = typeof value === 'string' ? value : value != null ? String(value) : '';
+			if (text && text.toLowerCase().includes(needle)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

@@ -18,6 +18,18 @@
     "actions": {
       "openFromMarkdown": "Open TileLineBase gallery view",
       "switchToGallery": "Switch to gallery view"
+    },
+    "toolbar": {
+      "title": "Gallery",
+      "addCardButtonAriaLabel": "Add gallery card",
+      "settingsMenuAriaLabel": "Gallery settings",
+      "editTemplate": "Edit gallery template",
+      "addGalleryButtonAriaLabel": "Add gallery view",
+      "unnamedGalleryLabel": "Untitled gallery",
+      "editGalleryLabel": "Edit gallery",
+      "duplicateGalleryLabel": "Duplicate gallery",
+      "deleteGalleryLabel": "Delete gallery",
+      "cannotDeleteLastGallery": "Keep at least one gallery view."
     }
   },
   "kanbanView": {

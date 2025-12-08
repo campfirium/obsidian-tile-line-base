@@ -19,7 +19,11 @@ interface SlideTemplateModalOptions {
 	initial: SlideTemplateConfig;
 	onSave: (next: SlideTemplateConfig) => void;
 	onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
+	allowedModes?: Array<'single' | 'split'>;
+	allowedSingleBranches?: Array<'withoutImage' | 'withImage'>;
+	allowedSplitBranches?: Array<'withoutImage' | 'withImage'>;
 }
+
 
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 
@@ -29,6 +33,9 @@ export class SlideTemplateModal extends Modal {
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
+	private readonly allowedModes: Set<'single' | 'split'> | null;
+	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
+	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
 	private template: SlideTemplateConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
@@ -46,9 +53,13 @@ export class SlideTemplateModal extends Modal {
 		this.fields = opts.fields.filter((field) => field && !RESERVED_SLIDE_FIELDS.has(field));
 		this.onSave = opts.onSave;
 		this.onSaveDefault = opts.onSaveDefault;
+		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
+		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
+		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
-		this.singleBranch = this.resolveInitialBranch('single');
-		this.splitBranch = this.resolveInitialBranch('split');
+		this.template.mode = this.clampMode(this.template.mode);
+		this.singleBranch = this.clampBranch('single', this.resolveInitialBranch('single'));
+		this.splitBranch = this.clampBranch('split', this.resolveInitialBranch('split'));
 	}
 
 	onOpen(): void {
@@ -73,6 +84,52 @@ export class SlideTemplateModal extends Modal {
 	}
 
 
+	private getAllowedModes(): Array<'single' | 'split'> {
+		if (this.allowedModes && this.allowedModes.size > 0) {
+			return Array.from(this.allowedModes);
+		}
+		return ['single', 'split'];
+	}
+
+	private isModeAllowed(mode: 'single' | 'split'): boolean {
+		return !this.allowedModes || this.allowedModes.has(mode);
+	}
+
+	private getAllowedBranches(mode: 'single' | 'split'): Array<'withoutImage' | 'withImage'> {
+		if (mode === 'single' && this.allowedSingleBranches && this.allowedSingleBranches.size > 0) {
+			return Array.from(this.allowedSingleBranches);
+		}
+		if (mode === 'split' && this.allowedSplitBranches && this.allowedSplitBranches.size > 0) {
+			return Array.from(this.allowedSplitBranches);
+		}
+		return ['withoutImage', 'withImage'];
+	}
+
+	private clampMode(mode: 'single' | 'split'): 'single' | 'split' {
+		if (this.isModeAllowed(mode)) {
+			return mode;
+		}
+		const allowed = this.getAllowedModes();
+		return allowed[0] ?? 'single';
+	}
+
+	private clampBranch(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): 'withoutImage' | 'withImage' {
+		const allowed = this.getAllowedBranches(mode);
+		if (allowed.includes(branch)) {
+			return branch;
+		}
+		return allowed[0] ?? 'withImage';
+	}
+
+	private enforceConstraints(): void {
+		this.template.mode = this.clampMode(this.template.mode);
+		if (this.template.mode === 'single') {
+			this.singleBranch = this.clampBranch('single', this.singleBranch);
+		} else {
+			this.splitBranch = this.clampBranch('split', this.splitBranch);
+		}
+	}
+
 	private renderModalContent(): void {
 		this.contentEl.empty();
 		this.titleInputEl = null;
@@ -82,6 +139,7 @@ export class SlideTemplateModal extends Modal {
 		this.contentEl.addClass('tlb-slide-template');
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.titleEl.setText(t('slideView.templateModal.title'));
+		this.enforceConstraints();
 
 		const toolbar = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
 		const toolbarLeft = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-left' });
@@ -104,17 +162,25 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderSlideModeSwitch(container: HTMLElement): void {
+		const allowedModes = this.getAllowedModes();
+		if (allowedModes.length <= 1) {
+			return;
+		}
 		const switchRow = container.createDiv({ cls: 'tlb-slide-template__mode-switch' });
-		this.renderModeButton(
-			switchRow,
-			'single',
-			t('slideView.templateModal.modeSingleLabel')
-		);
-		this.renderModeButton(
-			switchRow,
-			'split',
-			t('slideView.templateModal.modeSplitLabel')
-		);
+		if (allowedModes.includes('single')) {
+			this.renderModeButton(
+				switchRow,
+				'single',
+				t('slideView.templateModal.modeSingleLabel')
+			);
+		}
+		if (allowedModes.includes('split')) {
+			this.renderModeButton(
+				switchRow,
+				'split',
+				t('slideView.templateModal.modeSplitLabel')
+			);
+		}
 	}
 
 	private renderModeButton(container: HTMLElement, mode: 'single' | 'split', label: string): void {
@@ -318,9 +384,10 @@ export class SlideTemplateModal extends Modal {
 				? Boolean(this.template.single.withImage.imageTemplate?.trim())
 				: Boolean(this.template.split.withImage.imageTemplate?.trim());
 		if (hasImageTemplate) {
-			return 'withImage';
+			return this.clampBranch(mode, 'withImage');
 		}
-		return mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
+		const fallback = mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
+		return this.clampBranch(mode, fallback);
 	}
 
 	private renderInsertButton(container: HTMLElement, getPreferredTarget?: () => HTMLTextAreaElement | null): void {
@@ -404,8 +471,13 @@ export class SlideTemplateModal extends Modal {
 		container: HTMLElement,
 		current: 'withoutImage' | 'withImage',
 		labels: { without: string; with: string },
-		onSelect: (next: 'withoutImage' | 'withImage') => void
+		onSelect: (next: 'withoutImage' | 'withImage') => void,
+		allowed?: Array<'withoutImage' | 'withImage'>
 	): void {
+		const allowedBranches = allowed && allowed.length > 0 ? allowed : ['withoutImage', 'withImage'];
+		if (allowedBranches.length <= 1) {
+			return;
+		}
 		const row = container.createDiv({ cls: 'tlb-slide-template__mode-switch tlb-slide-template__branch-switch' });
 		const buildBtn = (value: 'withoutImage' | 'withImage', text: string) => {
 			const btn = row.createEl('button', {
@@ -420,8 +492,12 @@ export class SlideTemplateModal extends Modal {
 				}
 			});
 		};
-		buildBtn('withoutImage', labels.without);
-		buildBtn('withImage', labels.with);
+		if (allowedBranches.includes('withoutImage')) {
+			buildBtn('withoutImage', labels.without);
+		}
+		if (allowedBranches.includes('withImage')) {
+			buildBtn('withImage', labels.with);
+		}
 	}
 
 	private renderImageContent(
@@ -711,23 +787,31 @@ export class SlideTemplateModal extends Modal {
 		if (!active) {
 			return;
 		}
+		if (!this.isModeAllowed('single')) {
+			return;
+		}
+		const branches = this.getAllowedBranches('single');
+		if (branches.length === 1) {
+			this.singleBranch = branches[0];
+		}
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',
 			text: t('slideView.templateModal.modeSingleDesc')
 		});
-			this.renderBranchTabs(
-				wrapper,
-				this.singleBranch,
-				{
-					without: t('slideView.templateModal.noImageTabLabel'),
-					with: t('slideView.templateModal.withImageTabLabel')
-				},
-				(next) => {
-					this.setBranchSelection('single', next);
-					this.renderModalContent();
-				}
-			);
+		this.renderBranchTabs(
+			wrapper,
+			this.singleBranch,
+			{
+				without: t('slideView.templateModal.noImageTabLabel'),
+				with: t('slideView.templateModal.withImageTabLabel')
+			},
+			(next) => {
+				this.setBranchSelection('single', next);
+				this.renderModalContent();
+			},
+			branches
+		);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.singleBranch === 'withoutImage') {
@@ -796,23 +880,31 @@ export class SlideTemplateModal extends Modal {
 		if (!active) {
 			return;
 		}
+		if (!this.isModeAllowed('split')) {
+			return;
+		}
+		const branches = this.getAllowedBranches('split');
+		if (branches.length === 1) {
+			this.splitBranch = branches[0];
+		}
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',
 			text: t('slideView.templateModal.modeSplitDesc')
 		});
-			this.renderBranchTabs(
-				wrapper,
-				this.splitBranch,
-				{
-					without: t('slideView.templateModal.splitTextTabLabel'),
-					with: t('slideView.templateModal.splitImageTabLabel')
-				},
-				(next) => {
-					this.setBranchSelection('split', next);
-					this.renderModalContent();
-				}
-			);
+		this.renderBranchTabs(
+			wrapper,
+			this.splitBranch,
+			{
+				without: t('slideView.templateModal.splitTextTabLabel'),
+				with: t('slideView.templateModal.splitImageTabLabel')
+			},
+			(next) => {
+				this.setBranchSelection('split', next);
+				this.renderModalContent();
+			},
+			branches
+		);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.splitBranch === 'withoutImage') {
@@ -876,4 +968,5 @@ export class SlideTemplateModal extends Modal {
 			);
 		}
 	}
+
 }

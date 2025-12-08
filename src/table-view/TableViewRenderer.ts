@@ -103,14 +103,38 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.slidePreferencesLoaded = true;
 	}
 	if (!view.galleryPreferencesLoaded) {
-		const preferredGalleryConfig = configBlock?.gallery ?? view.galleryConfig;
-		const normalizedGallery = normalizeSlideViewConfig(preferredGalleryConfig ?? null);
-		const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
-		const hasFileScopedGalleryConfig = Boolean(configBlock?.gallery);
-		view.galleryConfig = normalizedGallery;
-		view.shouldAutoFillGalleryDefaults = !hasFileScopedGalleryConfig || galleryTemplateEmpty;
-		view.galleryTemplateTouched = Boolean(hasFileScopedGalleryConfig && !galleryTemplateEmpty);
-		view.galleryPreferencesLoaded = true;
+		const galleryViewsState = configBlock?.galleryViews;
+		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
+		if (hasGalleryViews) {
+			view.galleryViewStore.load({
+				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown }) => ({
+					...entry,
+					template: normalizeSlideViewConfig(entry.template ?? null)
+				})),
+				activeViewId: galleryViewsState.activeViewId ?? null
+			});
+			const activeGallery = view.galleryViewStore.ensureActive();
+			const normalizedGallery = normalizeSlideViewConfig(activeGallery?.template ?? null);
+			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+			view.galleryConfig = normalizedGallery;
+			view.activeGalleryViewId = activeGallery?.id ?? null;
+			view.shouldAutoFillGalleryDefaults = false;
+			view.galleryTemplateTouched = !galleryTemplateEmpty;
+			view.galleryPreferencesLoaded = true;
+			view.galleryViewsLoaded = true;
+		} else {
+			const preferredGalleryConfig = configBlock?.gallery ?? view.galleryConfig;
+			const normalizedGallery = normalizeSlideViewConfig(preferredGalleryConfig ?? null);
+			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+			const hasFileScopedGalleryConfig = Boolean(configBlock?.gallery);
+			view.galleryConfig = normalizedGallery;
+			view.galleryViewStore.resetWithConfig(normalizedGallery);
+			view.activeGalleryViewId = view.galleryViewStore.getActive()?.id ?? null;
+			view.shouldAutoFillGalleryDefaults = !hasFileScopedGalleryConfig || galleryTemplateEmpty;
+			view.galleryTemplateTouched = Boolean(hasFileScopedGalleryConfig && !galleryTemplateEmpty);
+			view.galleryPreferencesLoaded = true;
+			view.galleryViewsLoaded = true;
+		}
 	}
 
 	if (!view.kanbanPreferencesLoaded) {
@@ -197,6 +221,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (view.kanbanToolbar) {
 		view.kanbanToolbar.destroy();
 		view.kanbanToolbar = null;
+	}
+	if (view.galleryToolbar) {
+		view.galleryToolbar.destroy();
+		view.galleryToolbar = null;
 	}
 	if (view.activeViewMode === 'slide') {
 		renderSlideMode(view, container);

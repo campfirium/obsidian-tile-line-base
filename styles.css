@@ -273,6 +273,23 @@
   margin-left: auto;
 }
 
+.tlb-gallery-toolbar-container {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--ag-grid-size, 8px) * 0.25);
+}
+
+.tlb-gallery-toolbar__title {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 12px;
+	border-radius: 10px;
+	background: var(--background-secondary, var(--background-primary-alt));
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	font-weight: 600;
+}
+
 
 .tlb-filter-view-icon-control {
   width: 100%;

@@ -20,6 +20,7 @@ export interface TableConfigData {
 	kanbanBoards?: KanbanBoardState | null;
 	slide?: SlideViewConfig | null;
 	gallery?: SlideViewConfig | null;
+	galleryViews?: { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null;
 }
 
 export class TableConfigManager {
@@ -82,6 +83,10 @@ export class TableConfigManager {
 		if (galleryPrefs) {
 			snapshot.gallery = galleryPrefs;
 		}
+		const galleryViews = settingsService.getGalleryViewsForFile(filePath);
+		if (galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0) {
+			snapshot.galleryViews = galleryViews;
+		}
 		const storedBoards = settings.kanbanBoards[filePath];
 		if (storedBoards && storedBoards.boards.length > 0) {
 			snapshot.kanbanBoards = plugin.getKanbanBoardsForFile(filePath);
@@ -133,6 +138,8 @@ export class TableConfigManager {
 		}
 		tasks.push(settingsService.saveSlidePreferencesForFile(filePath, data.slide));
 		tasks.push(settingsService.saveGalleryPreferencesForFile(filePath, data.gallery));
+		const galleryViews = data.galleryViews ?? null;
+		tasks.push(settingsService.saveGalleryViewsForFile(filePath, galleryViews));
 
 		await Promise.all(
 			tasks.map((task) =>
@@ -230,6 +237,10 @@ export class TableConfigManager {
 		}
 		if (isRecord(source.gallery)) {
 			result.gallery = source.gallery as SlideViewConfig;
+			hasData = true;
+		}
+		if (isRecord(source.galleryViews)) {
+			result.galleryViews = source.galleryViews as { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null };
 			hasData = true;
 		}
 

@@ -59,6 +59,7 @@ export interface TileLineBaseSettings {
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	slidePreferences: Record<string, SlideViewConfig>;
 	galleryPreferences: Record<string, SlideViewConfig>;
+	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null }>;
 	defaultSlideConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
 	borderContrast: number;
@@ -85,6 +86,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	kanbanPreferences: {},
 	slidePreferences: {},
 	galleryPreferences: {},
+	galleryViews: {},
 	defaultSlideConfig: null,
 	hideRightSidebar: false,
 	borderContrast: 0.4,
@@ -446,6 +448,25 @@ export class SettingsService {
 		return getGalleryPreferences(this.settings, filePath);
 	}
 
+	getGalleryViewsForFile(filePath: string) {
+		const stored = this.settings.galleryViews[filePath];
+		return stored ? this.deepClone(stored) : null;
+	}
+
+	async saveGalleryViewsForFile(
+		filePath: string,
+		state: { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null
+	): Promise<{ views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null> {
+		const sanitized = state ? this.deepClone(state) : null;
+		if (sanitized) {
+			this.settings.galleryViews[filePath] = sanitized;
+		} else {
+			delete this.settings.galleryViews[filePath];
+		}
+		await this.persist();
+		return sanitized;
+	}
+
 	async saveGalleryPreferencesForFile(
 		filePath: string,
 		preferences: SlideViewConfig | null | undefined
@@ -483,6 +504,7 @@ export class SettingsService {
 			migrate(this.settings.kanbanPreferences);
 			migrate(this.settings.slidePreferences);
 			migrate(this.settings.galleryPreferences);
+			migrate(this.settings.galleryViews);
 
 			if (!changed) {
 				return false;
@@ -707,6 +729,7 @@ export class SettingsService {
 		pruneStore(this.settings.kanbanPreferences);
 		pruneStore(this.settings.slidePreferences);
 		pruneStore(this.settings.galleryPreferences);
+		pruneStore(this.settings.galleryViews);
 
 		if (!changed) {
 			return false;

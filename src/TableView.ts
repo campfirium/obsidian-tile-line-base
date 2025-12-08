@@ -37,9 +37,11 @@ import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
 import { TableFileDuplicationController } from "./table-view/TableFileDuplicationController";
 import type { GalleryViewController } from "./table-view/gallery/GalleryViewController";
+import { GalleryViewStore } from "./table-view/gallery/GalleryViewStore";
 import type { KanbanViewController } from "./table-view/kanban/KanbanViewController";
 import { ViewModeManager } from "./table-view/ViewModeManager";
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
+import type { GalleryToolbar } from "./table-view/gallery/GalleryToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
 import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, KanbanSortDirection } from "./types/kanban";
@@ -55,14 +57,11 @@ import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
 import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
 import { RowOrderController } from "./table-view/row-sort/RowOrderController";
 import type { MagicMigrationController } from "./table-view/MagicMigrationController";
-
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
-
 export interface TableViewState extends Record<string, unknown> {
 	filePath: string;
 }
-
 export class TableView extends ItemView {
 	public file: TFile | null = null; public blocks: H2Block[] = [];
 	public schema: Schema | null = null; public schemaDirty = false;
@@ -110,24 +109,16 @@ export class TableView extends ItemView {
 	public kanbanLanePresets: string[] = []; public kanbanLaneOrder: string[] = [];
 	public kanbanPreferencesLoaded = false; public kanbanToolbar: KanbanToolbar | null = null;
 	public activeKanbanBoardId: string | null = null; public activeKanbanBoardFilter: FilterRule | null = null;
-	public kanbanBoardStore = new KanbanBoardStore(null);
-	public kanbanBoardController!: KanbanBoardController;
-	public kanbanBoardsLoaded = false;
-	public pendingKanbanBoardState: KanbanBoardState | null = null;
-	public slideConfig: SlideViewConfig = normalizeSlideViewConfig(null);
-	public slideController: SlideViewInstance | null = null;
-	public slidePreferencesLoaded = false;
-	public shouldAutoFillSlideDefaults = false;
-	public slideTemplateTouched = false;
-	public galleryConfig: SlideViewConfig = normalizeSlideViewConfig(null);
-	public galleryPreferencesLoaded = false;
-	public shouldAutoFillGalleryDefaults = false;
-	public galleryTemplateTouched = false;
-	public galleryController: GalleryViewController | null = null;
-	private viewModeManager!: ViewModeManager;
-	public previousNonSlideMode: 'table' | 'kanban' | 'gallery' = 'table';
+	public kanbanBoardStore = new KanbanBoardStore(null); public kanbanBoardController!: KanbanBoardController;
+	public kanbanBoardsLoaded = false; public pendingKanbanBoardState: KanbanBoardState | null = null;
+	public slideConfig: SlideViewConfig = normalizeSlideViewConfig(null); public slideController: SlideViewInstance | null = null;
+	public slidePreferencesLoaded = false; public shouldAutoFillSlideDefaults = false; public slideTemplateTouched = false;
+	public galleryConfig: SlideViewConfig = normalizeSlideViewConfig(null); public galleryPreferencesLoaded = false;
+	public shouldAutoFillGalleryDefaults = false; public galleryTemplateTouched = false;
+	public galleryController: GalleryViewController | null = null; public galleryToolbar: GalleryToolbar | null = null;
+	public galleryViewStore = new GalleryViewStore(null); public activeGalleryViewId: string | null = null; public galleryViewsLoaded = false;
+	private viewModeManager!: ViewModeManager; public previousNonSlideMode: 'table' | 'kanban' | 'gallery' = 'table';
 	private readonly renderScheduler = new RenderScheduler(() => this.renderInternal());
-
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		this.navigation = true;
@@ -146,11 +137,9 @@ export class TableView extends ItemView {
 	public refreshDisplayText(): void {
 		refreshTableViewDisplayText(this);
 	}
-
 	private syncQuickFilterContext(file: TFile | null): void {
 		this.globalQuickFilterManager.setContext(file?.path ?? null);
 	}
-
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
@@ -171,6 +160,9 @@ export class TableView extends ItemView {
 				this.galleryTemplateTouched = false;
 				this.slideConfig = normalizeSlideViewConfig(null);
 				this.galleryConfig = normalizeSlideViewConfig(null);
+				this.galleryViewStore.reset();
+				this.activeGalleryViewId = null;
+				this.galleryViewsLoaded = false;
 				await this.render();
 			} else {
 				this.file = null;
@@ -185,15 +177,12 @@ export class TableView extends ItemView {
 			this.refreshDisplayText();
 		}
 	}
-
 	getState(): TableViewState {
 		return { filePath: this.file?.path ?? "" };
 	}
-
 	async render(): Promise<void> {
 		await this.renderScheduler.run();
 	}
-
 	private async renderInternal(): Promise<void> {
 		if (this.kanbanBoardController) {
 			this.kanbanBoardController.ensureInitialized();
@@ -201,7 +190,6 @@ export class TableView extends ItemView {
 		}
 		const snapshot = this.refreshCoordinator ? this.refreshCoordinator.captureViewSnapshot() : null;
 		await renderTableView(this);
-
 		const rerenderMode = await this.viewModeManager.handleAfterRender();
 		if (rerenderMode) {
 			await renderTableView(this);
@@ -209,7 +197,6 @@ export class TableView extends ItemView {
 				await this.viewModeManager.handleAfterRender();
 			}
 		}
-
 		if (this.refreshCoordinator) {
 			await this.refreshCoordinator.finalizeRender(snapshot);
 		}
@@ -221,7 +208,6 @@ export class TableView extends ItemView {
 		this.viewModeManager.ensureActions();
 		this.viewModeManager.updateButtons();
 	}
-
 	async onClose(): Promise<void> {
 		await this.restoreSessionBaselineIfEligible();
 		this.conversionSession.prepare(null);
@@ -242,6 +228,10 @@ export class TableView extends ItemView {
 			this.galleryController.destroy();
 			this.galleryController = null;
 		}
+		if (this.galleryToolbar) {
+			this.galleryToolbar.destroy();
+			this.galleryToolbar = null;
+		}
 		if (this.kanbanToolbar) {
 			this.kanbanToolbar.destroy();
 			this.kanbanToolbar = null;
@@ -252,16 +242,17 @@ export class TableView extends ItemView {
 			this.kanbanBoardController.reset();
 		}
 		this.kanbanBoardsLoaded = false;
+		this.galleryViewStore.reset();
+		this.activeGalleryViewId = null;
+		this.galleryViewsLoaded = false;
 		await handleOnClose(this);
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();
 		}
 	}
-
 	onMoreOptions(menu: Menu): void {
 		populateMoreOptionsMenu(this, menu);
 	}
-
 	public setKanbanHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);
 		if (this.kanbanHeightMode === normalized) {
@@ -274,7 +265,6 @@ export class TableView extends ItemView {
 		this.markUserMutation('kanban-height-mode');
 		this.persistenceService?.scheduleSave();
 	}
-
 	public setKanbanMultiRowEnabled(enabled: boolean): void {
 		if (this.kanbanMultiRowEnabled === enabled) {
 			return;
@@ -286,23 +276,18 @@ export class TableView extends ItemView {
 		this.markUserMutation('kanban-multi-row');
 		this.persistenceService?.scheduleSave();
 	}
-
 	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> {
 		await this.viewModeManager.setActiveViewMode(mode);
 	}
-
 	public captureConversionBaseline(content: string): void {
 		this.conversionSession.captureBaseline(content);
 	}
-
 	public markUserMutation(reason?: string): void {
 		this.conversionSession.markUserMutation(reason);
 	}
-
 	public hasUserMutations(): boolean {
 		return this.conversionSession.hasUserMutations();
 	}
-
 	public async restoreSessionBaselineIfEligible(): Promise<boolean> {
 		return this.conversionSession.restoreBaselineIfEligible();
 	}

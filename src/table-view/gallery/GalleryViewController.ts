@@ -156,7 +156,7 @@ export class GalleryViewController {
 			});
 			card.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			card.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
-			const slideEl = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide' });
+			const slideEl = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide tlb-gallery-edit' });
 			slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			slideEl.style.setProperty('--tlb-gallery-base-font', `${TEMPLATE_FONT_BASE_PX}px`);

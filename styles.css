@@ -4819,13 +4819,6 @@
 	--tlb-slide-usable-height: var(--tlb-gallery-card-height, 240px);
 }
 
-.tlb-gallery-card__slide .tlb-slide-full__editable-title {
-	font-size: var(--tlb-gallery-title-font-size, 18px);
-	line-height: var(--tlb-gallery-title-line-height, 1.25);
-	font-weight: var(--tlb-gallery-title-font-weight, 700);
-	text-align: left;
-}
-
 .tlb-gallery-card__slide .tlb-slide-full__editable-body {
 	font-size: var(--tlb-gallery-body-font-size, 12px);
 	line-height: var(--tlb-gallery-body-line-height, 1.4);
@@ -4833,10 +4826,6 @@
 	text-align: left;
 }
 
-.tlb-gallery-card__slide .tlb-slide-full__editable-input {
-	font-size: inherit;
-	line-height: inherit;
-}
 
 
 .tlb-slide-full__slide.is-editing {
@@ -6025,3 +6014,27 @@
 	border: none;
 	border-radius: 50%;
 }
+
+.tlb-gallery-edit .tlb-slide-full__editable-title,
+.tlb-gallery-edit .tlb-slide-full__editable-block.tlb-gallery-edit__block {
+	font-size: var(--tlb-gallery-title-font-size, 18px) !important;
+	line-height: var(--tlb-gallery-title-line-height, 1.25) !important;
+	font-weight: var(--tlb-gallery-title-font-weight, 700) !important;
+	text-align: left !important;
+}
+
+.tlb-gallery-edit .tlb-slide-full__editable-body,
+.tlb-gallery-edit .tlb-slide-full__editable-block {
+	font-size: var(--tlb-gallery-body-font-size, 12px) !important;
+	line-height: var(--tlb-gallery-body-line-height, 1.4) !important;
+	font-weight: var(--tlb-gallery-body-font-weight, 400) !important;
+	text-align: left !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+.tlb-gallery-edit .tlb-slide-full__editable-input {
+	font-size: inherit !important;
+	line-height: inherit !important;
+}
+

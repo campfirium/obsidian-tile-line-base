@@ -45,6 +45,7 @@ interface TablePersistenceDeps {
 	getGalleryConfig?: () => SlideViewConfig | null;
 	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null;
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
+	getGlobalGalleryConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
 	onSaveSettled?: () => void;
@@ -187,7 +188,14 @@ export class TablePersistenceService {
 		const activeGalleryTemplate = normalizedGalleryViews
 			? normalizedGalleryViews.views.find((entry) => entry.id === normalizedGalleryViews.activeViewId)?.template || normalizedGalleryViews.views[0]?.template || null
 			: normalizedGalleryConfig;
-		const hasGalleryConfig = activeGalleryTemplate && !isDefaultSlideViewConfig(activeGalleryTemplate);
+		const globalGalleryConfig = this.deps.getGlobalGalleryConfig?.() ?? null;
+		const normalizedGlobalGalleryConfig = globalGalleryConfig ? normalizeSlideViewConfig(globalGalleryConfig) : null;
+		const matchesGlobalGalleryConfig =
+			activeGalleryTemplate && normalizedGlobalGalleryConfig
+				? JSON.stringify(activeGalleryTemplate) === JSON.stringify(normalizedGlobalGalleryConfig)
+				: false;
+		const hasGalleryConfig =
+			activeGalleryTemplate && !isDefaultSlideViewConfig(activeGalleryTemplate) && !matchesGlobalGalleryConfig;
 
 		return {
 			filterViews: this.deps.getFilterViewState(),

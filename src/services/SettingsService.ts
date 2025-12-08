@@ -79,6 +79,7 @@ export interface TileLineBaseSettings {
 	galleryPreferences: Record<string, SlideViewConfig>;
 	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null }>;
 	defaultSlideConfig: SlideViewConfig | null;
+	defaultGalleryConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
 	borderContrast: number;
 	stripeColorMode: StripeColorMode;
@@ -106,6 +107,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	galleryPreferences: {},
 	galleryViews: {},
 	defaultSlideConfig: null,
+	defaultGalleryConfig: null,
 	hideRightSidebar: false,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
@@ -152,6 +154,7 @@ export class SettingsService {
 		merged.slidePreferences = { ...DEFAULT_SETTINGS.slidePreferences, ...(merged.slidePreferences ?? {}) };
 		merged.galleryPreferences = { ...DEFAULT_SETTINGS.galleryPreferences, ...(merged.galleryPreferences ?? {}) };
 		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
+		merged.defaultGalleryConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultGalleryConfig);
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -587,6 +590,11 @@ export class SettingsService {
 		return stored ? normalizeSlideViewConfig(stored) : null;
 	}
 
+	getDefaultGalleryConfig(): SlideViewConfig | null {
+		const stored = this.settings.defaultGalleryConfig;
+		return stored ? normalizeSlideViewConfig(stored) : null;
+	}
+
 	async setDefaultSlideConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
 		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
 		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
@@ -598,6 +606,21 @@ export class SettingsService {
 			return previous;
 		}
 		this.settings.defaultSlideConfig = next;
+		await this.persist();
+		return next;
+	}
+
+	async setDefaultGalleryConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
+		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
+		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
+		const previous = this.getDefaultGalleryConfig();
+		const unchanged =
+			(next === null && previous === null) ||
+			(next !== null && previous !== null && JSON.stringify(next) === JSON.stringify(previous));
+		if (unchanged) {
+			return previous;
+		}
+		this.settings.defaultGalleryConfig = next;
 		await this.persist();
 		return next;
 	}

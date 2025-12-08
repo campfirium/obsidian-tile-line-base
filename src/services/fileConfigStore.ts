@@ -183,7 +183,9 @@ export async function saveGalleryPreferences(
 	persist: PersistFn
 ): Promise<SlideViewConfig | null> {
 	const normalized = normalizeSlideViewConfig(preferences ?? DEFAULT_SLIDE_VIEW_CONFIG);
-	if (isDefaultSlideViewConfig(normalized)) {
+	const globalDefault = settings.defaultGalleryConfig ? normalizeSlideViewConfig(settings.defaultGalleryConfig) : null;
+	const matchesGlobalDefault = globalDefault ? JSON.stringify(normalized) === JSON.stringify(globalDefault) : false;
+	if (isDefaultSlideViewConfig(normalized) || matchesGlobalDefault) {
 		if (settings.galleryPreferences[filePath]) {
 			delete settings.galleryPreferences[filePath];
 			await persist();

@@ -64,6 +64,7 @@ export function initializeTableView(view: TableView): void {
 		getGalleryConfig: () => view.galleryConfig ?? null,
 		getGalleryViews: () => view.galleryViewStore.getState(),
 		getGlobalSlideConfig: () => getPluginContext()?.getDefaultSlideConfig() ?? null,
+		getGlobalGalleryConfig: () => getPluginContext()?.getDefaultGalleryConfig() ?? null,
 		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
 		shouldAllowSave: () => view.hasUserMutations(),
 		onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),
@@ -254,4 +255,3 @@ function collectUniqueFieldValues(view: TableView, field: string, limit: number)
 	}
 	return result;
 }
-

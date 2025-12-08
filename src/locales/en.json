@@ -32,7 +32,7 @@
       "cannotDeleteLastGallery": "Keep at least one gallery view."
     },
     "templateModal": {
-      "title": "Card template",
+      "title": "Gallery template",
       "cardSizeLabel": "Card size",
       "widthLabel": "Width (px)",
       "heightLabel": "Height (px)"

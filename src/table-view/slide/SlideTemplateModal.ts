@@ -7,7 +7,8 @@ import {
 	getDefaultTitleLayout,
 	sanitizeSlideTemplateConfig,
 	type SlideLayoutConfig,
-	type SlideTemplateConfig
+	type SlideTemplateConfig,
+	type SlideViewConfig
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { buildBuiltInSlideTemplate, mergeSlideTemplateFields, RESERVED_SLIDE_FIELDS } from './slideDefaults';
@@ -25,6 +26,7 @@ interface SlideTemplateModalOptions {
 	titleKey?: TranslationKey;
 	cardSize?: { width: number; height: number };
 	onCardSizeChange?: (size: { width: number; height: number }) => void;
+	getGlobalDefault?: () => SlideViewConfig | null;
 }
 
 
@@ -38,6 +40,7 @@ export class SlideTemplateModal extends Modal {
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
+	private readonly getGlobalDefault?: () => SlideViewConfig | null;
 	private readonly allowedModes: Set<'single' | 'split'> | null;
 	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
 	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
@@ -62,6 +65,7 @@ export class SlideTemplateModal extends Modal {
 		this.fields = opts.fields.filter((field) => field && !RESERVED_SLIDE_FIELDS.has(field));
 		this.onSave = opts.onSave;
 		this.onSaveDefault = opts.onSaveDefault;
+		this.getGlobalDefault = opts.getGlobalDefault ?? (() => getPluginContext()?.getDefaultSlideConfig() ?? null);
 		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
 		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
 		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
@@ -372,8 +376,7 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private applyGlobalDefault(): void {
-		const plugin = getPluginContext();
-		const globalConfig = plugin?.getDefaultSlideConfig();
+		const globalConfig = this.getGlobalDefault?.() ?? null;
 		if (!globalConfig || !globalConfig.template) {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;

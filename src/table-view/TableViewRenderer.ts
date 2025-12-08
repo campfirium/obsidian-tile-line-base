@@ -103,6 +103,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.slidePreferencesLoaded = true;
 	}
 	if (!view.galleryPreferencesLoaded) {
+		const globalGalleryConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
 		const galleryViewsState = configBlock?.galleryViews;
 		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
 		if (hasGalleryViews) {
@@ -125,7 +126,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			view.galleryPreferencesLoaded = true;
 			view.galleryViewsLoaded = true;
 		} else {
-			const preferredGalleryConfig = configBlock?.gallery ?? view.galleryConfig;
+			const preferredGalleryConfig = configBlock?.gallery ?? globalGalleryConfig ?? view.galleryConfig;
 			const normalizedGallery = normalizeSlideViewConfig(preferredGalleryConfig ?? null);
 			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
 			const hasFileScopedGalleryConfig = Boolean(configBlock?.gallery);

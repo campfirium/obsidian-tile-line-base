@@ -7,9 +7,12 @@ import { SlideTemplateModal } from '../slide/SlideTemplateModal';
 import { ensureLayoutDefaults } from '../slide/slideConfigHelpers';
 import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from '../slide/slideDefaults';
 import { normalizeSlideViewConfig } from '../../types/slide';
+import { getPluginContext } from '../../pluginContext';
+import { getLogger } from '../../utils/logger';
 
 const DEFAULT_CARD_WIDTH = 320;
 const DEFAULT_CARD_HEIGHT = 240;
+const logger = getLogger('gallery:render-mode');
 const normalizeSize = (value: unknown, fallback: number): number => {
 	const numeric = typeof value === 'number' ? value : Number(value);
 	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
@@ -28,6 +31,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const sourcePath = view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '';
 	let shouldApplyBuiltIn = view.shouldAutoFillGalleryDefaults;
 	const builtInTemplate = buildBuiltInSlideTemplate(fields);
+	const plugin = getPluginContext();
 	const enforceSingleWithImageConfig = (config: ReturnType<typeof normalizeSlideViewConfig>): ReturnType<typeof normalizeSlideViewConfig> => {
 		const base = ensureLayoutDefaults(config);
 		const unifiedWithImage = base.template.single.withImage;
@@ -108,6 +112,24 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				view.galleryController?.updateConfig(nextConfig);
 				view.markUserMutation('gallery-template');
 				view.persistenceService.scheduleSave();
+			},
+			onSaveDefault: plugin
+				? async (nextTemplate) => {
+					try {
+						const enforced = enforceSingleWithImageConfig(
+							normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
+						);
+						await plugin.setDefaultGalleryConfig(enforced);
+						new Notice(t('slideView.templateModal.setDefaultSuccess'));
+					} catch (error) {
+						logger.error('Failed to set gallery template as default', error);
+						new Notice(t('slideView.templateModal.setDefaultError'));
+					}
+				}
+				: undefined,
+			getGlobalDefault: () => {
+				const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
+				return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
 			}
 		});
 		modal.open();

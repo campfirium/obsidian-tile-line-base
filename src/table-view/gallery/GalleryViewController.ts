@@ -64,6 +64,8 @@ export class GalleryViewController {
 	private quickFilterValue = '';
 	private unsubscribeRows: (() => void) | null = null;
 	private unsubscribeQuickFilter: (() => void) | null = null;
+	private gridEl: HTMLElement | null = null;
+	private cardEls: HTMLElement[] = [];
 
 	constructor(options: GalleryViewControllerOptions) {
 		this.app = options.app;
@@ -125,12 +127,14 @@ export class GalleryViewController {
 		this.unsubscribeQuickFilter?.();
 		this.unsubscribeQuickFilter = null;
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
+		this.cardEls = [];
+		this.gridEl = null;
 		this.container.empty();
 	}
 
 	private render(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
-		this.container.empty();
+		this.container.querySelector('.tlb-gallery-empty')?.remove();
 		this.visibleRows = this.filterRows(this.rows);
 		this.pages = buildSlidePages({
 			rows: this.visibleRows,
@@ -142,21 +146,26 @@ export class GalleryViewController {
 			this.clearEditingState();
 		}
 		if (this.pages.length === 0) {
+			this.cardEls = [];
+			if (this.gridEl) {
+				this.gridEl.remove();
+			}
+			this.gridEl = null;
+			this.container.empty();
 			this.container.createDiv({ cls: 'tlb-gallery-empty', text: t('galleryView.emptyState') });
 			return;
 		}
 
-		const grid = this.container.createDiv({ cls: 'tlb-gallery-grid' });
+		const grid = this.ensureGrid();
 		grid.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 		grid.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 		this.pages.forEach((page, index) => {
-			const card = grid.createDiv({
-				cls: 'tlb-gallery-card',
-				attr: { 'data-tlb-gallery-index': String(index) }
-			});
+			const card = this.ensureCard(grid, index);
+			card.setAttr('data-tlb-gallery-index', String(index));
 			card.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			card.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
-			const slideEl = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide tlb-gallery-edit' });
+			const slideEl = this.ensureSlide(card);
+			slideEl.empty();
 			slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			slideEl.style.setProperty('--tlb-gallery-base-font', `${TEMPLATE_FONT_BASE_PX}px`);
@@ -203,12 +212,18 @@ export class GalleryViewController {
 					page,
 					applyLayout
 				});
-				card.addEventListener('click', (evt) => {
+				card.onclick = (evt) => {
 					if (evt.defaultPrevented) return;
 					this.beginEdit(page, row);
-				});
+				};
 			}
 		});
+		if (this.cardEls.length > this.pages.length) {
+			for (let i = this.pages.length; i < this.cardEls.length; i += 1) {
+				this.cardEls[i].remove();
+			}
+			this.cardEls.length = this.pages.length;
+		}
 	}
 
 	private renderDisplayCard(options: {
@@ -254,6 +269,7 @@ export class GalleryViewController {
 				const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
 				imageBlock.style.textAlign = page.imageLayout.align;
 				renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
+				this.constrainMediaSize(imageBlock);
 			}
 			applyLayout(imageWrapper, page.imageLayout);
 		}
@@ -333,5 +349,41 @@ export class GalleryViewController {
 
 	private isEditingPage(page: SlidePage): boolean {
 		return Boolean(this.editingKey && this.editingKey.rowIndex === page.rowIndex && this.editingKey.templateRef === page.templateRef);
+	}
+
+	private ensureGrid(): HTMLElement {
+		if (!this.gridEl || !this.gridEl.isConnected) {
+			this.container.empty();
+			this.gridEl = this.container.createDiv({ cls: 'tlb-gallery-grid' });
+			this.cardEls = [];
+		}
+		return this.gridEl;
+	}
+
+	private ensureCard(grid: HTMLElement, index: number): HTMLElement {
+		if (!this.cardEls[index]) {
+			const card = grid.createDiv({ cls: 'tlb-gallery-card' });
+			this.cardEls[index] = card;
+		}
+		const card = this.cardEls[index];
+		if (!card.isConnected) {
+			grid.appendChild(card);
+		}
+		return card;
+	}
+
+	private ensureSlide(card: HTMLElement): HTMLElement {
+		let slide = card.querySelector('.tlb-gallery-card__slide') as HTMLElement | null;
+		if (!slide) {
+			slide = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide tlb-gallery-edit' });
+		}
+		return slide;
+	}
+
+	private constrainMediaSize(container: HTMLElement): void {
+		const nodes = container.querySelectorAll<HTMLImageElement | HTMLVideoElement>('img, video');
+		nodes.forEach((el) => {
+			el.classList.add('tlb-gallery-media');
+		});
 	}
 }

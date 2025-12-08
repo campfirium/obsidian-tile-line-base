@@ -30,6 +30,12 @@ type LocaleMap = typeof locales;
 export type LocaleCode = keyof LocaleMap;
 type LocaleTree = LocaleMap[LocaleCode];
 type LocaleAliasMap = Partial<Record<string, LocaleCode>>;
+type ExtraTranslationKeys =
+	| 'tableView.mode.gallery'
+	| 'galleryView.emptyState'
+	| 'galleryView.actions.openFromMarkdown'
+	| 'galleryView.actions.switchToGallery'
+	| 'commands.openGalleryView';
 
 type LeafPaths<T, Prefix extends string = ''> =
 	T extends string
@@ -43,7 +49,7 @@ type LeafPaths<T, Prefix extends string = ''> =
 				}[Extract<keyof T, string>]
 			: never;
 
-export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''>;
+export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''> | ExtraTranslationKeys;
 
 const FALLBACK_LOCALE: LocaleCode = 'en';
 const LOCALE_ALIASES: LocaleAliasMap = {

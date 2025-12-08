@@ -14,11 +14,12 @@ export interface TableConfigData {
 	tagGroups?: FileTagGroupState | null;
 	columnWidths?: Record<string, number>;
 	columnConfigs?: string[] | null;
-	viewPreference?: 'table' | 'kanban' | 'slide';
+	viewPreference?: 'table' | 'kanban' | 'slide' | 'gallery';
 	copyTemplate?: string | null;
 	kanban?: KanbanViewPreferenceConfig | null;
 	kanbanBoards?: KanbanBoardState | null;
 	slide?: SlideViewConfig | null;
+	gallery?: SlideViewConfig | null;
 }
 
 export class TableConfigManager {
@@ -66,7 +67,7 @@ export class TableConfigManager {
 			snapshot.copyTemplate = copyTemplate;
 		}
 		const viewPreference = settingsService.getFileViewPreference(filePath);
-		if (viewPreference === 'table' || viewPreference === 'kanban' || viewPreference === 'slide') {
+		if (viewPreference === 'table' || viewPreference === 'kanban' || viewPreference === 'slide' || viewPreference === 'gallery') {
 			snapshot.viewPreference = viewPreference;
 		}
 		const kanbanPrefs = settingsService.getKanbanPreferencesForFile(filePath);
@@ -76,6 +77,10 @@ export class TableConfigManager {
 		const slidePrefs = settingsService.getSlidePreferencesForFile(filePath);
 		if (slidePrefs) {
 			snapshot.slide = slidePrefs;
+		}
+		const galleryPrefs = settingsService.getGalleryPreferencesForFile(filePath);
+		if (galleryPrefs) {
+			snapshot.gallery = galleryPrefs;
 		}
 		const storedBoards = settings.kanbanBoards[filePath];
 		if (storedBoards && storedBoards.boards.length > 0) {
@@ -127,6 +132,7 @@ export class TableConfigManager {
 			tasks.push(plugin.saveKanbanBoardsForFile(filePath, data.kanbanBoards));
 		}
 		tasks.push(settingsService.saveSlidePreferencesForFile(filePath, data.slide));
+		tasks.push(settingsService.saveGalleryPreferencesForFile(filePath, data.gallery));
 
 		await Promise.all(
 			tasks.map((task) =>
@@ -206,7 +212,7 @@ export class TableConfigManager {
 			result.copyTemplate = source.copyTemplate;
 			hasData = true;
 		}
-		if (source.viewPreference === 'table' || source.viewPreference === 'kanban' || source.viewPreference === 'slide') {
+		if (source.viewPreference === 'table' || source.viewPreference === 'kanban' || source.viewPreference === 'slide' || source.viewPreference === 'gallery') {
 			result.viewPreference = source.viewPreference;
 			hasData = true;
 		}
@@ -220,6 +226,10 @@ export class TableConfigManager {
 		}
 		if (isRecord(source.slide)) {
 			result.slide = source.slide as SlideViewConfig;
+			hasData = true;
+		}
+		if (isRecord(source.gallery)) {
+			result.gallery = source.gallery as SlideViewConfig;
 			hasData = true;
 		}
 

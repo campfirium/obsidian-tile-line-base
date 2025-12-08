@@ -31,7 +31,7 @@ interface TablePersistenceDeps {
 	getTagGroupState: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
-	getViewPreference: () => 'table' | 'kanban' | 'slide';
+	getViewPreference: () => 'table' | 'kanban' | 'slide' | 'gallery';
 	getKanbanConfig: () => {
 		laneField: string | null;
 		sortField: string | null;
@@ -42,6 +42,7 @@ interface TablePersistenceDeps {
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	getSlideConfig?: () => SlideViewConfig | null;
+	getGalleryConfig?: () => SlideViewConfig | null;
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
@@ -168,6 +169,9 @@ export class TablePersistenceService {
 				? JSON.stringify(normalizedSlideConfig) === JSON.stringify(normalizedGlobalSlideConfig)
 				: false;
 		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig) && !matchesGlobalSlideConfig;
+		const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
+		const normalizedGalleryConfig = galleryConfig ? normalizeSlideViewConfig(galleryConfig) : null;
+		const hasGalleryConfig = normalizedGalleryConfig && !isDefaultSlideViewConfig(normalizedGalleryConfig);
 
 		return {
 			filterViews: this.deps.getFilterViewState(),
@@ -190,11 +194,12 @@ export class TablePersistenceService {
 							typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
 								? fontScale
 								: undefined,
-						multiRow: multiRow === false ? false : undefined
+							multiRow: multiRow === false ? false : undefined
 						}
 					: undefined,
 			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined,
-			slide: hasSlideConfig ? normalizedSlideConfig : undefined
+			slide: hasSlideConfig ? normalizedSlideConfig : undefined,
+			gallery: hasGalleryConfig ? normalizedGalleryConfig : undefined
 		};
 	}
 

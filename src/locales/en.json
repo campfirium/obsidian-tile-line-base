@@ -4,13 +4,21 @@
     "mode": {
       "table": "Table",
       "kanban": "Kanban",
-      "slide": "Slide"
+      "slide": "Slide",
+      "gallery": "Gallery"
     }
   },
   "viewControls": {
     "openTableView": "Switch to TileLineBase table view",
     "openMarkdownView": "Switch back to Markdown editor",
     "switchViewMenu": "Switch view (current: {{mode}})"
+  },
+  "galleryView": {
+    "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
+    "actions": {
+      "openFromMarkdown": "Open TileLineBase gallery view",
+      "switchToGallery": "Switch to gallery view"
+    }
   },
   "kanbanView": {
     "schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
@@ -226,7 +234,8 @@
     "importCsvAsTable": "Import CSV as new table",
     "toggleTableView": "Toggle table view",
     "openKanbanView": "Open TileLineBase kanban view",
-    "openSlideView": "Open TileLineBase slide view"
+    "openSlideView": "Open TileLineBase slide view",
+    "openGalleryView": "Open TileLineBase gallery view"
   },
   "csv": {
     "errorNoFile": "Save the note before exporting; the current file could not be found.",

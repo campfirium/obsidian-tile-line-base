@@ -36,6 +36,7 @@ import type { ParagraphPromotionController } from "./table-view/paragraph/Paragr
 import { TableRefreshCoordinator } from "./table-view/TableRefreshCoordinator";
 import { TableCreationController } from "./table-view/TableCreationController";
 import { TableFileDuplicationController } from "./table-view/TableFileDuplicationController";
+import type { GalleryViewController } from "./table-view/gallery/GalleryViewController";
 import type { KanbanViewController } from "./table-view/kanban/KanbanViewController";
 import { ViewModeManager } from "./table-view/ViewModeManager";
 import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
@@ -98,7 +99,7 @@ export class TableView extends ItemView {
 	public globalQuickFilterManager = new GlobalQuickFilterManager();
 	public tagGroupStore = new TagGroupStore(null); public tagGroupController!: TagGroupController; public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
 	public initialColumnState: ColumnState[] | null = null; public markdownToggleButton: HTMLElement | null = null;
-	public activeViewMode: 'table' | 'kanban' | 'slide' = 'table';
+	public activeViewMode: 'table' | 'kanban' | 'slide' | 'gallery' = 'table';
 	public kanbanController: KanbanViewController | null = null;
 	public kanbanLaneField: string | null = null; public kanbanLaneWidth = DEFAULT_KANBAN_LANE_WIDTH;
 	public kanbanFontScale = DEFAULT_KANBAN_FONT_SCALE; public kanbanSortField: string | null = DEFAULT_KANBAN_SORT_FIELD;
@@ -118,8 +119,13 @@ export class TableView extends ItemView {
 	public slidePreferencesLoaded = false;
 	public shouldAutoFillSlideDefaults = false;
 	public slideTemplateTouched = false;
+	public galleryConfig: SlideViewConfig = normalizeSlideViewConfig(null);
+	public galleryPreferencesLoaded = false;
+	public shouldAutoFillGalleryDefaults = false;
+	public galleryTemplateTouched = false;
+	public galleryController: GalleryViewController | null = null;
 	private viewModeManager!: ViewModeManager;
-	public previousNonSlideMode: 'table' | 'kanban' = 'table';
+	public previousNonSlideMode: 'table' | 'kanban' | 'gallery' = 'table';
 	private readonly renderScheduler = new RenderScheduler(() => this.renderInternal());
 
 	constructor(leaf: WorkspaceLeaf) {
@@ -158,9 +164,13 @@ export class TableView extends ItemView {
 				this.kanbanBoardsLoaded = false;
 				this.kanbanPreferencesLoaded = false;
 				this.slidePreferencesLoaded = false;
+				this.galleryPreferencesLoaded = false;
 				this.shouldAutoFillSlideDefaults = false;
+				this.shouldAutoFillGalleryDefaults = false;
 				this.slideTemplateTouched = false;
+				this.galleryTemplateTouched = false;
 				this.slideConfig = normalizeSlideViewConfig(null);
+				this.galleryConfig = normalizeSlideViewConfig(null);
 				await this.render();
 			} else {
 				this.file = null;
@@ -228,6 +238,10 @@ export class TableView extends ItemView {
 			this.slideController.destroy();
 			this.slideController = null;
 		}
+		if (this.galleryController) {
+			this.galleryController.destroy();
+			this.galleryController = null;
+		}
 		if (this.kanbanToolbar) {
 			this.kanbanToolbar.destroy();
 			this.kanbanToolbar = null;
@@ -273,7 +287,7 @@ export class TableView extends ItemView {
 		this.persistenceService?.scheduleSave();
 	}
 
-	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide'): Promise<void> {
+	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> {
 		await this.viewModeManager.setActiveViewMode(mode);
 	}
 

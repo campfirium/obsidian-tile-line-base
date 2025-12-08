@@ -1,11 +1,6 @@
 import type { TableView } from '../TableView';
-import { clampColumnWidth } from '../grid/columnSizing';
 import { getLogger } from '../utils/logger';
-import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
-import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
-import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } from './TableViewInteractions';
-import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
-import { handleCellLinkOpen } from './LinkNavigation';
+import { syncTagGroupState } from './TableViewFilterPresenter';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
 import { renderKanbanView } from './kanban/renderKanbanView';
@@ -13,10 +8,11 @@ import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
+import { renderGalleryMode } from './gallery/renderGalleryMode';
+import { renderGridMode } from './renderGridMode';
 import { normalizeSlideViewConfig } from '../types/slide';
 import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
-import { applyStripeStyles } from './stripeStyles';
 import { extractFrontmatter } from './MarkdownFrontmatter';
 
 const logger = getLogger('table-view:renderer');
@@ -31,6 +27,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	container.classList.remove('tlb-has-grid');
 	container.classList.remove('tlb-kanban-mode');
 	container.classList.remove('tlb-slide-mode');
+	container.classList.remove('tlb-gallery-mode');
 
 	if (view.gridAdapter) {
 		view.gridController.destroy();
@@ -44,6 +41,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	if (view.slideController) {
 		view.slideController.destroy();
 		view.slideController = null;
+	}
+	if (view.galleryController) {
+		view.galleryController.destroy();
+		view.galleryController = null;
 	}
 
 	const ownerDoc = container.ownerDocument;
@@ -101,10 +102,20 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.slideTemplateTouched = Boolean(hasFileScopedSlideConfig && !templateEmpty);
 		view.slidePreferencesLoaded = true;
 	}
+	if (!view.galleryPreferencesLoaded) {
+		const preferredGalleryConfig = configBlock?.gallery ?? view.galleryConfig;
+		const normalizedGallery = normalizeSlideViewConfig(preferredGalleryConfig ?? null);
+		const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+		const hasFileScopedGalleryConfig = Boolean(configBlock?.gallery);
+		view.galleryConfig = normalizedGallery;
+		view.shouldAutoFillGalleryDefaults = !hasFileScopedGalleryConfig || galleryTemplateEmpty;
+		view.galleryTemplateTouched = Boolean(hasFileScopedGalleryConfig && !galleryTemplateEmpty);
+		view.galleryPreferencesLoaded = true;
+	}
 
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table' || preference === 'slide') view.activeViewMode = preference;
+		if (preference === 'kanban' || preference === 'table' || preference === 'slide' || preference === 'gallery') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
 		view.kanbanMultiRowEnabled = kanbanConfig?.multiRow !== false;
@@ -191,6 +202,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 		renderSlideMode(view, container);
 		return;
 	}
+	if (view.activeViewMode === 'gallery') {
+		renderGalleryMode(view, container);
+		return;
+	}
 	if (view.activeViewMode === 'kanban') {
 		renderKanbanToolbar(view, container);
 		container.classList.add('tlb-kanban-mode');
@@ -232,93 +247,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.filterOrchestrator.applyActiveView();
 		return;
 	}
-	renderFilterViewControls(view, container);
-
 	container.classList.add('tlb-has-grid');
-
-	const columns = [
-		{
-			field: '#',
-			headerName: '',
-			headerTooltip: 'Index',
-			editable: false
-		},
-		...buildColumnDefinitions({
-			schema: view.schema,
-			columnConfigs: view.schema.columnConfigs ?? null,
-			primaryField,
-			dataStore: view.dataStore,
-			columnLayoutStore: view.columnLayoutStore,
-			clampWidth: (value) => clampColumnWidth(value, { clampMax: false })
-		})
-	];
-
-	const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
-	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
-	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
-	const stripeColorMode = plugin?.getStripeColorMode?.() ?? 'recommended';
-	const stripeCustomColor = plugin?.getStripeCustomColor?.() ?? null;
-	const borderColorMode = plugin?.getBorderColorMode?.() ?? 'recommended';
-	const borderCustomColor = plugin?.getBorderCustomColor?.() ?? null;
-	const borderContrast = plugin?.getBorderContrast?.() ?? 0.16;
-	applyStripeStyles({
-		container: tableContainer,
-		ownerDocument: ownerDoc,
-		stripeColorMode,
-		stripeCustomColor,
-		borderColorMode,
-		borderCustomColor,
-		borderContrast,
-		isDarkMode
-	});
-	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
-	const sideBarVisible = !hideRightSidebar;
-
-	const containerWindow = ownerDoc?.defaultView ?? window;
-	const executeMount = () => {
-		const { gridAdapter, container: gridContainer } = mountGrid({
-			gridController: view.gridController,
-			container: tableContainer,
-			columns,
-			rowData: view.filterOrchestrator.getVisibleRows(),
-			sideBarVisible,
-			handlers: {
-				onStatusChange: (rowId, newStatus) => handleStatusChange(view, rowId, newStatus),
-				onColumnResize: (field, width) => handleColumnResize(view, field, width),
-				onCopySelectionAsTemplate: (rowIndex) => {
-					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
-				},
-				onCopyH2Section: (rowIndex) => {
-					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
-				},
-				onColumnOrderChange: (fields) => handleColumnOrderChange(view, fields),
-				onModelUpdated: () => view.focusManager.handleGridModelUpdated(),
-				onCellEdit: (event) => handleCellEdit(view, event),
-				onHeaderEdit: (event) => handleHeaderEditEvent(view, event),
-				onColumnHeaderContextMenu: (field, event) => view.columnInteractionController.handleColumnHeaderContextMenu(field, event),
-				onOpenCellLink: (context) => handleCellLinkOpen(view, context),
-				onEnterAtLastRow: (field) => {
-					const oldRowCount = view.blocks.length;
-					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });
-				},
-				onRowDragEnd: (payload) => {
-					view.rowInteractionController.reorderRowsByDrag(payload);
-				}
-			}
-		});
-
-	view.gridAdapter = gridAdapter;
-		view.tableContainer = gridContainer;
-		view.gridLayoutController.attach(gridContainer);
-		view.filterOrchestrator.applyActiveView();
-		view.gridInteractionController.attach(gridContainer);
-	};
-
-	if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
-		containerWindow.requestAnimationFrame(() => {
-			executeMount();
-		});
-	} else {
-		executeMount();
-	}
+	renderGridMode({ view, container, ownerDoc, primaryField, plugin });
 }

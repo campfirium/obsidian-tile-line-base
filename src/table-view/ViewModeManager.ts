@@ -4,19 +4,21 @@ import { KanbanFieldModal } from './kanban/KanbanFieldModal';
 import { DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
 import type { TableView } from '../TableView';
 
-export type ViewMode = 'table' | 'kanban' | 'slide';
+export type ViewMode = 'table' | 'kanban' | 'slide' | 'gallery';
 
 const MODE_ICONS: Record<ViewMode, string[]> = {
 	table: ['tilelinebase-table', 'table', 'layout-grid'],
 	kanban: ['layout-kanban', 'layout-grid'],
-	slide: ['presentation', 'slideshow', 'play', 'monitor']
+	slide: ['presentation', 'slideshow', 'play', 'monitor'],
+	gallery: ['images', 'gallery', 'layout-grid']
 };
 
 export class ViewModeManager {
 	private readonly actionIds: Record<ViewMode, string> = {
 		table: 'switch-table-view',
 		kanban: 'switch-kanban-view',
-		slide: 'switch-slide-view'
+		slide: 'switch-slide-view',
+		gallery: 'switch-gallery-view'
 	};
 	private buttons: Partial<Record<ViewMode, HTMLElement>> = {};
 	private isSwitching = false;
@@ -24,7 +26,7 @@ export class ViewModeManager {
 	constructor(private readonly view: TableView) {}
 
 	ensureActions(): void {
-		(['table', 'kanban', 'slide'] as ViewMode[]).forEach((mode) => {
+		(['table', 'kanban', 'slide', 'gallery'] as ViewMode[]).forEach((mode) => {
 			if (this.buttons[mode]) {
 				return;
 			}
@@ -53,7 +55,7 @@ export class ViewModeManager {
 	}
 
 	updateButtons(): void {
-		(['table', 'kanban', 'slide'] as ViewMode[]).forEach((mode) => {
+		(['table', 'kanban', 'slide', 'gallery'] as ViewMode[]).forEach((mode) => {
 			const button = this.buttons[mode];
 			if (!button) return;
 			const isActive = this.view.activeViewMode === mode;
@@ -200,6 +202,8 @@ export class ViewModeManager {
 				return t('tableView.mode.kanban');
 			case 'slide':
 				return t('tableView.mode.slide');
+			case 'gallery':
+				return t('tableView.mode.gallery');
 			default:
 				return t('tableView.mode.table');
 		}

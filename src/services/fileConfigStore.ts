@@ -168,6 +168,33 @@ export async function saveSlidePreferences(
 	return normalized;
 }
 
+export function getGalleryPreferences(settings: TileLineBaseSettings, filePath: string): SlideViewConfig | null {
+	const stored = settings.galleryPreferences[filePath];
+	if (!stored) {
+		return null;
+	}
+	return normalizeSlideViewConfig(stored);
+}
+
+export async function saveGalleryPreferences(
+	settings: TileLineBaseSettings,
+	filePath: string,
+	preferences: SlideViewConfig | null | undefined,
+	persist: PersistFn
+): Promise<SlideViewConfig | null> {
+	const normalized = normalizeSlideViewConfig(preferences ?? DEFAULT_SLIDE_VIEW_CONFIG);
+	if (isDefaultSlideViewConfig(normalized)) {
+		if (settings.galleryPreferences[filePath]) {
+			delete settings.galleryPreferences[filePath];
+			await persist();
+		}
+		return null;
+	}
+	settings.galleryPreferences[filePath] = normalized;
+	await persist();
+	return normalized;
+}
+
 function sanitizeKanbanPreferences(
 	source: KanbanViewPreferenceConfig | null | undefined
 ): KanbanViewPreferenceConfig | null {

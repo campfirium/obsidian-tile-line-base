@@ -22,10 +22,12 @@ import {
 	getCopyTemplate,
 	getKanbanPreferences,
 	getSlidePreferences,
+	getGalleryPreferences,
 	saveColumnConfigs,
 	saveCopyTemplate,
 	saveKanbanPreferences,
-	saveSlidePreferences
+	saveSlidePreferences,
+	saveGalleryPreferences
 } from './fileConfigStore';
 import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelpers';
 
@@ -47,7 +49,7 @@ export interface OnboardingState {
 }
 
 export interface TileLineBaseSettings {
-	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban' | 'slide'>;
+	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
@@ -56,6 +58,7 @@ export interface TileLineBaseSettings {
 	copyTemplates: Record<string, string>;
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	slidePreferences: Record<string, SlideViewConfig>;
+	galleryPreferences: Record<string, SlideViewConfig>;
 	defaultSlideConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
 	borderContrast: number;
@@ -81,6 +84,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	copyTemplates: {},
 	kanbanPreferences: {},
 	slidePreferences: {},
+	galleryPreferences: {},
 	defaultSlideConfig: null,
 	hideRightSidebar: false,
 	borderContrast: 0.4,
@@ -126,6 +130,7 @@ export class SettingsService {
 		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
 		merged.kanbanPreferences = { ...DEFAULT_SETTINGS.kanbanPreferences, ...(merged.kanbanPreferences ?? {}) };
 		merged.slidePreferences = { ...DEFAULT_SETTINGS.slidePreferences, ...(merged.slidePreferences ?? {}) };
+		merged.galleryPreferences = { ...DEFAULT_SETTINGS.galleryPreferences, ...(merged.galleryPreferences ?? {}) };
 		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
@@ -298,17 +303,17 @@ export class SettingsService {
 
 	shouldAutoOpen(filePath: string): boolean {
 		const pref = this.settings.fileViewPrefs[filePath];
-		return pref === 'table' || pref === 'kanban' || pref === 'slide';
+		return pref === 'table' || pref === 'kanban' || pref === 'slide' || pref === 'gallery';
 	}
 
-	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | 'slide' | null {
+	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery' | null {
 		const pref = this.settings.fileViewPrefs[filePath];
 		return typeof pref === 'string' ? pref : null;
 	}
 
 	async setFileViewPreference(
 		filePath: string,
-		view: 'markdown' | 'table' | 'kanban' | 'slide'
+		view: 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery'
 	): Promise<boolean> {
 		const current = this.settings.fileViewPrefs[filePath];
 		if (current === view) {
@@ -437,6 +442,17 @@ export class SettingsService {
 		return saveSlidePreferences(this.settings, filePath, preferences, () => this.persist());
 	}
 
+	getGalleryPreferencesForFile(filePath: string): SlideViewConfig | null {
+		return getGalleryPreferences(this.settings, filePath);
+	}
+
+	async saveGalleryPreferencesForFile(
+		filePath: string,
+		preferences: SlideViewConfig | null | undefined
+	): Promise<SlideViewConfig | null> {
+		return saveGalleryPreferences(this.settings, filePath, preferences, () => this.persist());
+	}
+
 	async migrateFileScopedSettings(oldPath: string, newPath: string): Promise<boolean> {
 		const source = typeof oldPath === 'string' ? oldPath.trim() : '';
 		const target = typeof newPath === 'string' ? newPath.trim() : '';
@@ -466,6 +482,7 @@ export class SettingsService {
 			migrate(this.settings.copyTemplates);
 			migrate(this.settings.kanbanPreferences);
 			migrate(this.settings.slidePreferences);
+			migrate(this.settings.galleryPreferences);
 
 			if (!changed) {
 				return false;
@@ -689,6 +706,7 @@ export class SettingsService {
 		pruneStore(this.settings.copyTemplates);
 		pruneStore(this.settings.kanbanPreferences);
 		pruneStore(this.settings.slidePreferences);
+		pruneStore(this.settings.galleryPreferences);
 
 		if (!changed) {
 			return false;

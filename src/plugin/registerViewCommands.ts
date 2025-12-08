@@ -1,12 +1,13 @@
 import type { Command, TFile, WorkspaceLeaf } from 'obsidian';
 import { registerKanbanViewCommand } from './commands/registerKanbanViewCommand';
 import { registerSlideViewCommand } from './commands/registerSlideViewCommand';
+import { registerGalleryViewCommand } from './commands/registerGalleryViewCommand';
 
 interface ViewCommandDeps {
 	addCommand: (config: Command) => void;
 	getActiveTableView(): any;
 	getActiveContext(): { leaf: WorkspaceLeaf | null; activeFile: TFile | null };
-	openWithMode: (mode: 'kanban' | 'slide', file: TFile, leaf: WorkspaceLeaf | null) => Promise<void>;
+	openWithMode: (mode: 'kanban' | 'slide' | 'gallery', file: TFile, leaf: WorkspaceLeaf | null) => Promise<void>;
 }
 
 export function registerViewCommands(deps: ViewCommandDeps): void {
@@ -22,5 +23,12 @@ export function registerViewCommands(deps: ViewCommandDeps): void {
 		getActiveTableView: () => deps.getActiveTableView(),
 		getActiveContext: () => deps.getActiveContext(),
 		openSlideView: (file, leaf) => deps.openWithMode('slide', file, leaf)
+	});
+
+	registerGalleryViewCommand({
+		addCommand: (config) => deps.addCommand(config),
+		getActiveTableView: () => deps.getActiveTableView(),
+		getActiveContext: () => deps.getActiveContext(),
+		openGalleryView: (file, leaf) => deps.openWithMode('gallery', file, leaf)
 	});
 }

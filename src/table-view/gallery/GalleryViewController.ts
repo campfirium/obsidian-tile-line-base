@@ -159,6 +159,20 @@ export class GalleryViewController {
 			const slideEl = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide' });
 			slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
+			slideEl.style.setProperty('--tlb-gallery-base-font', `${TEMPLATE_FONT_BASE_PX}px`);
+			const titleFontSize = this.getTitleFontSize(page.titleLayout.fontSize);
+			const bodyFontSize = this.getBodyFontSize(page.textLayout.fontSize);
+			slideEl.style.setProperty('--tlb-gallery-title-font-size', titleFontSize);
+			slideEl.style.setProperty('--tlb-gallery-title-line-height', `${page.titleLayout.lineHeight}`);
+			slideEl.style.setProperty('--tlb-gallery-title-font-weight', String(page.titleLayout.fontWeight));
+			slideEl.style.setProperty('--tlb-gallery-body-font-size', bodyFontSize);
+			slideEl.style.setProperty('--tlb-gallery-body-line-height', `${page.textLayout.lineHeight}`);
+			slideEl.style.setProperty('--tlb-gallery-body-font-weight', String(page.textLayout.fontWeight));
+			const bodyGapPx = Math.max(4, Math.round(TEMPLATE_FONT_BASE_PX * 1.2));
+			slideEl.style.setProperty('--tlb-gallery-body-gap', `${bodyGapPx}px`);
+			const imageMaxHeight = Math.max(40, this.cardHeight - 24);
+			slideEl.toggleClass('tlb-gallery-square-image', true);
+			slideEl.style.setProperty('--tlb-gallery-image-max-height', `${imageMaxHeight}px`);
 			this.applySlideColors(slideEl, page.textColor, page.backgroundColor);
 			const row = this.visibleRows[page.rowIndex];
 			const applyLayout = (el: HTMLElement, layout: SlidePage['titleLayout']) =>
@@ -205,12 +219,6 @@ export class GalleryViewController {
 		const { slideEl, page, applyLayout } = options;
 		const titleEl = slideEl.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
 		const titleFontSize = this.getTitleFontSize(page.titleLayout.fontSize);
-		slideEl.style.setProperty('--tlb-gallery-title-font-size', titleFontSize);
-		slideEl.style.setProperty('--tlb-gallery-title-line-height', `${page.titleLayout.lineHeight}`);
-		slideEl.style.setProperty('--tlb-gallery-title-font-weight', String(page.titleLayout.fontWeight));
-		slideEl.style.setProperty('--tlb-gallery-body-font-size', this.getBodyFontSize(page.textLayout.fontSize));
-		slideEl.style.setProperty('--tlb-gallery-body-line-height', `${page.textLayout.lineHeight}`);
-		slideEl.style.setProperty('--tlb-gallery-body-font-weight', String(page.textLayout.fontWeight));
 		titleEl.style.lineHeight = `${page.titleLayout.lineHeight}`;
 		titleEl.style.fontSize = titleFontSize;
 		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);

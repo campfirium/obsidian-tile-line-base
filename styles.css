@@ -290,7 +290,6 @@
 	font-weight: 600;
 }
 
-
 .tlb-gallery-container {
 	display: block;
 	width: 100%;
@@ -323,6 +322,21 @@
 	padding: 18px 20px;
 	transform: none;
 	box-shadow: 0 4px 14px color-mix(in srgb, var(--background-primary) 65%, #000000 20%);
+	border-radius: 0;
+	font-size: var(--tlb-gallery-base-font, 10px);
+}
+
+.tlb-gallery-card__slide .tlb-slide-full__block {
+	padding: 0;
+	margin: 0;
+}
+
+.tlb-gallery-card__slide .tlb-slide-full__block--text p {
+	margin: 0 0 0.35em;
+}
+
+.tlb-gallery-card__slide.tlb-gallery-square-image .tlb-slide-full__block--image {
+	padding: 0;
 }
 
 .tlb-filter-view-icon-control {
@@ -918,7 +932,6 @@
   font-size: 11px;
 }
 
-
 .tlb-filter-view-search__field {
 	position: relative;
 	display: inline-flex;
@@ -1091,7 +1104,6 @@
 	height: 13px !important;
 	stroke-width: 1.8;
 }
-
 
 .tlb-filter-view-button--status .tlb-filter-view-button__icon {
 	color: var(--ag-foreground-color, var(--text-muted));
@@ -3256,7 +3268,6 @@
   opacity: 0.8;
 }
 
-
 /* Quartz theme accents follow Obsidian interactive accent */
 .tlb-table-container.ag-theme-quartz,
 .tlb-table-container.ag-theme-quartz-dark,
@@ -3692,7 +3703,6 @@
   color-scheme: var(--tlb-color-scheme, dark);
 }
 
-
 /* Tooltip restyle: align popup styling with product tour tips */
 .tlb-grid-popup-root .ag-tooltip {
 	max-width: none;
@@ -3957,7 +3967,6 @@
 	width: 100%;
 	max-width: var(--tlb-kanban-board-max-width, 100%);
 }
-
 
 .tlb-kanban-message {
 	display: flex;
@@ -4889,12 +4898,13 @@
 	text-overflow: ellipsis;
 }
 .tlb-slide-full__block--image {
-	padding: 8px;
+	padding: 0;
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	align-items: stretch;
 	justify-content: center;
-	gap: 8px;
+	gap: 0;
+	overflow: hidden;
 }
 .tlb-slide-full__block--image p {
 	margin: 0;
@@ -4905,12 +4915,13 @@
 .tlb-slide-full__block--image video,
 .tlb-slide-full__block--image .image-embed,
 .tlb-slide-full__block--image .internal-embed {
-	max-width: 100%;
-	max-height: calc(var(--tlb-slide-usable-height, 100%) * 0.8);
-	object-fit: contain;
-	border-radius: 12px;
+	width: 100%;
+	height: auto;
+	max-height: var(--tlb-gallery-image-max-height, 100%);
+	object-fit: cover;
+	border-radius: 0;
 	display: block;
-	margin: 0 auto;
+	margin: 0;
 	box-shadow: none;
 }
 .tlb-slide-full__block--image .markdown-preview-view {

@@ -30,14 +30,15 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const builtInTemplate = buildBuiltInSlideTemplate(fields);
 	const enforceSingleWithImageConfig = (config: ReturnType<typeof normalizeSlideViewConfig>): ReturnType<typeof normalizeSlideViewConfig> => {
 		const base = ensureLayoutDefaults(config);
+		const unifiedWithImage = base.template.single.withImage;
 		return {
 			...base,
 			template: {
 				...base.template,
 				mode: 'single' as const,
 				single: {
-					withImage: base.template.single.withImage,
-					withoutImage: base.template.single.withoutImage
+					withImage: unifiedWithImage,
+					withoutImage: unifiedWithImage as unknown as typeof base.template.single.withoutImage
 				},
 				split: base.template.split
 			}

@@ -4,6 +4,8 @@ export interface GalleryViewDefinition {
 	id: string;
 	name: string;
 	template: SlideViewConfig;
+	cardWidth?: number | null;
+	cardHeight?: number | null;
 }
 
 export interface GalleryViewState {
@@ -12,6 +14,25 @@ export interface GalleryViewState {
 }
 
 const createId = (): string => `gal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const DEFAULT_CARD_WIDTH = 320;
+const DEFAULT_CARD_HEIGHT = 240;
+const normalizeSize = (value: unknown, fallback: number): number => {
+	const numeric = typeof value === 'number' ? value : Number(value);
+	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
+		return numeric;
+	}
+	return fallback;
+};
+
+const deriveSizeFromAspect = (aspect: unknown): { width: number; height: number } | null => {
+	const ratio = typeof aspect === 'number' ? aspect : Number(aspect);
+	if (!Number.isFinite(ratio) || ratio <= 0.1 || ratio >= 10) {
+		return null;
+	}
+	const width = DEFAULT_CARD_WIDTH;
+	const height = Math.max(40, Math.min(2000, Math.round(width / ratio)));
+	return { width, height };
+};
 
 export class GalleryViewStore {
 	private state: GalleryViewState;
@@ -30,11 +51,16 @@ export class GalleryViewStore {
 	load(next: GalleryViewState): void {
 		const views = Array.isArray(next.views) ? next.views : [];
 		this.state = {
-			views: views.map((entry) => ({
-				id: entry.id || createId(),
-				name: typeof entry.name === 'string' && entry.name.trim().length > 0 ? entry.name : 'Gallery',
-				template: normalizeSlideViewConfig(entry.template ?? null)
-			})),
+			views: views.map((entry) => {
+				const aspectSize = deriveSizeFromAspect((entry as { cardAspectRatio?: unknown }).cardAspectRatio);
+				return {
+					id: entry.id || createId(),
+					name: typeof entry.name === 'string' && entry.name.trim().length > 0 ? entry.name : 'Gallery',
+					template: normalizeSlideViewConfig(entry.template ?? null),
+					cardWidth: normalizeSize((entry as { cardWidth?: unknown }).cardWidth, aspectSize?.width ?? DEFAULT_CARD_WIDTH),
+					cardHeight: normalizeSize((entry as { cardHeight?: unknown }).cardHeight, aspectSize?.height ?? DEFAULT_CARD_HEIGHT)
+				};
+			}),
 			activeViewId: next.activeViewId ?? null
 		};
 		this.ensureActive();
@@ -47,7 +73,9 @@ export class GalleryViewStore {
 				{
 					id: createId(),
 					name,
-					template: normalized
+					template: normalized,
+					cardWidth: DEFAULT_CARD_WIDTH,
+					cardHeight: DEFAULT_CARD_HEIGHT
 				}
 			],
 			activeViewId: null
@@ -60,7 +88,9 @@ export class GalleryViewStore {
 			views: this.state.views.map((entry) => ({
 				id: entry.id,
 				name: entry.name,
-				template: entry.template
+				template: entry.template,
+				cardWidth: normalizeSize(entry.cardWidth, DEFAULT_CARD_WIDTH),
+				cardHeight: normalizeSize(entry.cardHeight, DEFAULT_CARD_HEIGHT)
 			})),
 			activeViewId: this.state.activeViewId
 		};
@@ -95,7 +125,9 @@ export class GalleryViewStore {
 		const def: GalleryViewDefinition = {
 			id: createId(),
 			name,
-			template: normalizeSlideViewConfig(options.template)
+			template: normalizeSlideViewConfig(options.template),
+			cardWidth: DEFAULT_CARD_WIDTH,
+			cardHeight: DEFAULT_CARD_HEIGHT
 		};
 		this.state.views.push(def);
 		if (options.setActive !== false) {
@@ -115,16 +147,31 @@ export class GalleryViewStore {
 		return target;
 	}
 
+	updateCardSize(id: string, size: { width: number; height: number }): GalleryViewDefinition | null {
+		const target = this.state.views.find((entry) => entry.id === id);
+		if (!target) {
+			return null;
+		}
+		target.cardWidth = normalizeSize(size.width, DEFAULT_CARD_WIDTH);
+		target.cardHeight = normalizeSize(size.height, DEFAULT_CARD_HEIGHT);
+		return target;
+	}
+
 	duplicateView(id: string): GalleryViewDefinition | null {
 		const target = this.state.views.find((entry) => entry.id === id);
 		if (!target) {
 			return null;
 		}
-		return this.createView({
+		const duplicated = this.createView({
 			name: this.composeUniqueName(target.name),
 			template: target.template,
 			setActive: true
 		});
+		this.updateCardSize(duplicated.id, {
+			width: target.cardWidth ?? DEFAULT_CARD_WIDTH,
+			height: target.cardHeight ?? DEFAULT_CARD_HEIGHT
+		});
+		return duplicated;
 	}
 
 	deleteView(id: string): GalleryViewDefinition | null {

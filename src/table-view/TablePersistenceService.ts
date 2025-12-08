@@ -43,7 +43,7 @@ interface TablePersistenceDeps {
 	getKanbanBoards?: () => KanbanBoardState | null;
 	getSlideConfig?: () => SlideViewConfig | null;
 	getGalleryConfig?: () => SlideViewConfig | null;
-	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null;
+	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null;
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
@@ -170,7 +170,7 @@ export class TablePersistenceService {
 				? JSON.stringify(normalizedSlideConfig) === JSON.stringify(normalizedGlobalSlideConfig)
 				: false;
 		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig) && !matchesGlobalSlideConfig;
-				const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
+		const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
 		const normalizedGalleryConfig = galleryConfig ? normalizeSlideViewConfig(galleryConfig) : null;
 		const galleryViews = this.deps.getGalleryViews?.() ?? null;
 		const normalizedGalleryViews = galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0
@@ -178,7 +178,9 @@ export class TablePersistenceService {
 				activeViewId: galleryViews.activeViewId ?? null,
 				views: galleryViews.views.map((entry) => ({
 					...entry,
-					template: normalizeSlideViewConfig(entry.template ?? null)
+					template: normalizeSlideViewConfig(entry.template ?? null),
+					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined
 				}))
 			}
 			: null;
@@ -204,8 +206,8 @@ export class TablePersistenceService {
 									? sortDirection
 									: undefined,
 							heightMode: heightMode && heightMode !== DEFAULT_KANBAN_HEIGHT_MODE ? heightMode : undefined,
-						fontScale:
-							typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
+							fontScale:
+								typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
 								? fontScale
 								: undefined,
 							multiRow: multiRow === false ? false : undefined

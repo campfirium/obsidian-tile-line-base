@@ -30,6 +30,12 @@
       "duplicateGalleryLabel": "Duplicate gallery",
       "deleteGalleryLabel": "Delete gallery",
       "cannotDeleteLastGallery": "Keep at least one gallery view."
+    },
+    "templateModal": {
+      "title": "Card template",
+      "cardSizeLabel": "Card size",
+      "widthLabel": "Width (px)",
+      "heightLabel": "Height (px)"
     }
   },
   "kanbanView": {

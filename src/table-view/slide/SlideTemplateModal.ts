@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import type { App } from 'obsidian';
 import { Menu, Modal, Notice, parseYaml, setIcon } from 'obsidian';
-import { t } from '../../i18n';
+import { t, type TranslationKey } from '../../i18n';
 import {
 	getDefaultBodyLayout,
 	getDefaultTitleLayout,
@@ -22,10 +22,15 @@ interface SlideTemplateModalOptions {
 	allowedModes?: Array<'single' | 'split'>;
 	allowedSingleBranches?: Array<'withoutImage' | 'withImage'>;
 	allowedSplitBranches?: Array<'withoutImage' | 'withImage'>;
+	titleKey?: TranslationKey;
+	cardSize?: { width: number; height: number };
+	onCardSizeChange?: (size: { width: number; height: number }) => void;
 }
 
 
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
+const DEFAULT_CARD_WIDTH = 320;
+const DEFAULT_CARD_HEIGHT = 240;
 
 export class SlideTemplateModal extends Modal {
 	private static lastSelectedSingleBranch: 'withoutImage' | 'withImage' = 'withoutImage';
@@ -36,6 +41,8 @@ export class SlideTemplateModal extends Modal {
 	private readonly allowedModes: Set<'single' | 'split'> | null;
 	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
 	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
+	private readonly titleKey?: TranslationKey;
+	private readonly onCardSizeChange?: (size: { width: number; height: number }) => void;
 	private template: SlideTemplateConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
@@ -45,6 +52,8 @@ export class SlideTemplateModal extends Modal {
 	private lastFocusedInput: HTMLTextAreaElement | null = null;
 	private singleBranch: 'withoutImage' | 'withImage';
 	private splitBranch: 'withoutImage' | 'withImage';
+	private cardWidth = DEFAULT_CARD_WIDTH;
+	private cardHeight = DEFAULT_CARD_HEIGHT;
 	private containerNode: HTMLElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
@@ -56,6 +65,14 @@ export class SlideTemplateModal extends Modal {
 		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
 		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
 		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
+		this.titleKey = opts.titleKey;
+		this.onCardSizeChange = opts.onCardSizeChange;
+		if (opts.cardSize) {
+			const width = Number(opts.cardSize.width);
+			const height = Number(opts.cardSize.height);
+			this.cardWidth = Number.isFinite(width) && width > 40 ? width : DEFAULT_CARD_WIDTH;
+			this.cardHeight = Number.isFinite(height) && height > 40 ? height : DEFAULT_CARD_HEIGHT;
+		}
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
 		this.template.mode = this.clampMode(this.template.mode);
 		this.singleBranch = this.clampBranch('single', this.resolveInitialBranch('single'));
@@ -138,7 +155,8 @@ export class SlideTemplateModal extends Modal {
 		this.lastFocusedInput = null;
 		this.contentEl.addClass('tlb-slide-template');
 		this.modalEl.addClass('tlb-slide-template-modal');
-		this.titleEl.setText(t('slideView.templateModal.title'));
+		const titleKey = this.titleKey ?? 'slideView.templateModal.title';
+		this.titleEl.setText(t(titleKey as TranslationKey));
 		this.enforceConstraints();
 
 		const toolbar = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
@@ -151,6 +169,7 @@ export class SlideTemplateModal extends Modal {
 		this.renderSingleSection(this.template.mode === 'single');
 		this.renderSplitSection(this.template.mode === 'split');
 		this.renderColorSection(this.contentEl);
+		this.renderCardSizeSection(this.contentEl);
 		this.renderActions();
 	}
 
@@ -631,6 +650,41 @@ export class SlideTemplateModal extends Modal {
 		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
 	}
 
+	private renderCardSizeSection(container: HTMLElement): void {
+		if (!this.onCardSizeChange) {
+			return;
+		}
+		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
+		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
+		headRow.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('galleryView.templateModal.cardSizeLabel') });
+		const grid = section.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--colors' });
+		const row = grid.createDiv({ cls: 'tlb-slide-template__layout-line tlb-slide-template__layout-line--sizes' });
+		const buildNumberInput = (label: string, value: number, onChange: (val: number) => void) => {
+			const field = row.createDiv({ cls: 'tlb-slide-template__layout-field' });
+			field.createDiv({ cls: 'tlb-slide-template__mini-label', text: label });
+			const input = field.createEl('input', {
+				attr: { type: 'number', min: '40', max: '2000', step: '10' },
+				cls: 'tlb-slide-template__layout-number'
+			}) as HTMLInputElement;
+			input.value = String(value);
+			input.addEventListener('input', () => {
+				const next = Number(input.value);
+				if (Number.isFinite(next) && next > 40 && next < 2000) {
+					onChange(next);
+				}
+			});
+		};
+		buildNumberInput(t('galleryView.templateModal.widthLabel'), this.cardWidth, (next) => {
+			this.cardWidth = next;
+			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
+		});
+		buildNumberInput(t('galleryView.templateModal.heightLabel'), this.cardHeight, (next) => {
+			this.cardHeight = next;
+			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
+		});
+	}
+
+
 	private renderColorSection(container: HTMLElement): void {
 		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
 		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
@@ -795,10 +849,6 @@ export class SlideTemplateModal extends Modal {
 			this.singleBranch = branches[0];
 		}
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		wrapper.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: t('slideView.templateModal.modeSingleDesc')
-		});
 		this.renderBranchTabs(
 			wrapper,
 			this.singleBranch,

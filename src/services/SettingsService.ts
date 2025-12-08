@@ -33,6 +33,24 @@ import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelper
 
 const logger = getLogger('service:settings');
 const FILE_SETTINGS_CLEANUP_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+const DEFAULT_GALLERY_CARD_WIDTH = 320;
+const normalizeCardSize = (value: unknown): number | null => {
+	const numeric = typeof value === 'number' ? value : Number(value);
+	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
+		return numeric;
+	}
+	return null;
+};
+
+const deriveCardSizeFromAspect = (aspect: unknown): { width: number; height: number } | null => {
+	const ratio = typeof aspect === 'number' ? aspect : Number(aspect);
+	if (!Number.isFinite(ratio) || ratio <= 0.1 || ratio >= 10) {
+		return null;
+	}
+	const width = DEFAULT_GALLERY_CARD_WIDTH;
+	const height = Math.max(40, Math.min(2000, Math.round(width / ratio)));
+	return { width, height };
+};
 
 interface PendingDeletionRecord {
 	path: string;
@@ -59,7 +77,7 @@ export interface TileLineBaseSettings {
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	slidePreferences: Record<string, SlideViewConfig>;
 	galleryPreferences: Record<string, SlideViewConfig>;
-	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null }>;
+	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null }>;
 	defaultSlideConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
 	borderContrast: number;
@@ -450,14 +468,54 @@ export class SettingsService {
 
 	getGalleryViewsForFile(filePath: string) {
 		const stored = this.settings.galleryViews[filePath];
-		return stored ? this.deepClone(stored) : null;
+		if (!stored) {
+			return null;
+		}
+		const views = Array.isArray(stored.views)
+			? stored.views.map((entry) => {
+				const cloned = this.deepClone(entry);
+				const width = normalizeCardSize((cloned as { cardWidth?: unknown }).cardWidth);
+				const height = normalizeCardSize((cloned as { cardHeight?: unknown }).cardHeight);
+				const fallback = (!width || !height)
+					? deriveCardSizeFromAspect((cloned as { cardAspectRatio?: unknown }).cardAspectRatio)
+					: null;
+				return {
+					...cloned,
+					cardWidth: width ?? fallback?.width ?? undefined,
+					cardHeight: height ?? fallback?.height ?? undefined
+				};
+			})
+			: [];
+		return {
+			activeViewId: stored.activeViewId ?? null,
+			views
+		};
 	}
 
 	async saveGalleryViewsForFile(
 		filePath: string,
-		state: { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null
-	): Promise<{ views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null> {
-		const sanitized = state ? this.deepClone(state) : null;
+		state: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null
+	): Promise<{ views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null> {
+		const sanitized = state
+			? {
+				activeViewId: state.activeViewId ?? null,
+				views: Array.isArray(state.views)
+					? state.views.map((entry) => {
+						const cloned = this.deepClone(entry);
+						const width = normalizeCardSize((cloned as { cardWidth?: unknown }).cardWidth);
+						const height = normalizeCardSize((cloned as { cardHeight?: unknown }).cardHeight);
+						const fallback = (!width || !height)
+							? deriveCardSizeFromAspect((cloned as { cardAspectRatio?: unknown }).cardAspectRatio)
+							: null;
+						return {
+							...cloned,
+							cardWidth: width ?? fallback?.width ?? undefined,
+							cardHeight: height ?? fallback?.height ?? undefined
+						};
+					})
+					: []
+			}
+			: null;
 		if (sanitized) {
 			this.settings.galleryViews[filePath] = sanitized;
 		} else {

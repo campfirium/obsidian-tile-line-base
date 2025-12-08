@@ -9,6 +9,26 @@ import { readConfigCallout, stripExistingConfigBlock } from './config/ConfigBloc
 
 const logger = getLogger('table-view:config');
 
+const DEFAULT_GALLERY_CARD_WIDTH = 320;
+const DEFAULT_GALLERY_CARD_HEIGHT = 240;
+const normalizeCardSize = (value: unknown, fallback: number): number => {
+	const numeric = typeof value === 'number' ? value : Number(value);
+	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
+		return numeric;
+	}
+	return fallback;
+};
+
+const deriveCardSizeFromAspect = (aspect: unknown): { width: number; height: number } | null => {
+	const ratio = typeof aspect === 'number' ? aspect : Number(aspect);
+	if (!Number.isFinite(ratio) || ratio <= 0.1 || ratio >= 10) {
+		return null;
+	}
+	const width = DEFAULT_GALLERY_CARD_WIDTH;
+	const height = Math.max(40, Math.min(2000, Math.round(width / ratio)));
+	return { width, height };
+};
+
 export interface TableConfigData {
 	filterViews?: FileFilterViewState | null;
 	tagGroups?: FileTagGroupState | null;
@@ -20,7 +40,7 @@ export interface TableConfigData {
 	kanbanBoards?: KanbanBoardState | null;
 	slide?: SlideViewConfig | null;
 	gallery?: SlideViewConfig | null;
-	galleryViews?: { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null } | null;
+	galleryViews?: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null;
 }
 
 export class TableConfigManager {
@@ -240,7 +260,25 @@ export class TableConfigManager {
 			hasData = true;
 		}
 		if (isRecord(source.galleryViews)) {
-			result.galleryViews = source.galleryViews as { views: Array<{ id: string; name: string; template: SlideViewConfig }>; activeViewId: string | null };
+			const rawViews = (source.galleryViews as { views?: unknown }).views;
+			const views = Array.isArray(rawViews)
+				? rawViews.map((entry: any) => {
+					const width = normalizeCardSize(entry?.cardWidth, DEFAULT_GALLERY_CARD_WIDTH);
+					const height = normalizeCardSize(entry?.cardHeight, DEFAULT_GALLERY_CARD_HEIGHT);
+					const fallback = (!width || !height) ? deriveCardSizeFromAspect(entry?.cardAspectRatio) : null;
+					return {
+						id: entry?.id,
+						name: entry?.name,
+						template: entry?.template,
+						cardWidth: width ?? fallback?.width ?? undefined,
+						cardHeight: height ?? fallback?.height ?? undefined
+					};
+				})
+				: [];
+			result.galleryViews = {
+				views: views as Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>,
+				activeViewId: (source.galleryViews as { activeViewId?: string | null }).activeViewId ?? null
+			};
 			hasData = true;
 		}
 

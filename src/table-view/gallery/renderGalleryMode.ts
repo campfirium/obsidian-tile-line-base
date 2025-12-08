@@ -1,5 +1,5 @@
 import { Menu, Notice } from 'obsidian';
-import { t } from '../../i18n';
+import { t, type TranslationKey } from '../../i18n';
 import type { TableView } from '../../TableView';
 import { GalleryToolbar } from './GalleryToolbar';
 import { GalleryViewController } from './GalleryViewController';
@@ -7,6 +7,16 @@ import { SlideTemplateModal } from '../slide/SlideTemplateModal';
 import { ensureLayoutDefaults } from '../slide/slideConfigHelpers';
 import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from '../slide/slideDefaults';
 import { normalizeSlideViewConfig } from '../../types/slide';
+
+const DEFAULT_CARD_WIDTH = 320;
+const DEFAULT_CARD_HEIGHT = 240;
+const normalizeSize = (value: unknown, fallback: number): number => {
+	const numeric = typeof value === 'number' ? value : Number(value);
+	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
+		return numeric;
+	}
+	return fallback;
+};
 
 export function renderGalleryMode(view: TableView, container: HTMLElement): void {
 	view.globalQuickFilterController.cleanup();
@@ -20,19 +30,16 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const builtInTemplate = buildBuiltInSlideTemplate(fields);
 	const enforceSingleWithImageConfig = (config: ReturnType<typeof normalizeSlideViewConfig>): ReturnType<typeof normalizeSlideViewConfig> => {
 		const base = ensureLayoutDefaults(config);
-		const mergedTemplate = mergeSlideTemplateFields(base.template, builtInTemplate);
 		return {
 			...base,
 			template: {
 				...base.template,
 				mode: 'single' as const,
-				textColor: mergedTemplate.textColor,
-				backgroundColor: mergedTemplate.backgroundColor,
 				single: {
-					withImage: mergedTemplate.single.withImage,
-					withoutImage: builtInTemplate.single.withoutImage
+					withImage: base.template.single.withImage,
+					withoutImage: base.template.single.withoutImage
 				},
-				split: builtInTemplate.split
+				split: base.template.split
 			}
 		};
 	};
@@ -43,20 +50,23 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			? mergeSlideTemplateFields(base.template, builtInTemplate)
 			: base.template;
 		const merged = normalizeSlideViewConfig({ ...base, template });
-		return enforceSingleWithImageConfig(merged);
+		return enforceSingleWithImageConfig(ensureLayoutDefaults(merged));
 	};
 
 	const ensureActiveGalleryConfig = (targetId?: string) => {
 		const activeDef = targetId ? view.galleryViewStore.setActive(targetId) : view.galleryViewStore.ensureActive();
 		const resolved = activeDef ?? view.galleryViewStore.createView({ template: view.galleryConfig, setActive: true });
 		const enforced = hydrateConfig(resolved.template);
+		const cardWidth = normalizeSize(resolved.cardWidth, DEFAULT_CARD_WIDTH);
+		const cardHeight = normalizeSize(resolved.cardHeight, DEFAULT_CARD_HEIGHT);
 		view.galleryConfig = enforced;
 		view.activeGalleryViewId = resolved.id;
 		view.galleryViewStore.updateTemplate(resolved.id, enforced);
+		view.galleryViewStore.updateCardSize(resolved.id, { width: cardWidth, height: cardHeight });
 		view.galleryTemplateTouched = view.galleryTemplateTouched || shouldApplyBuiltIn;
 		view.shouldAutoFillGalleryDefaults = false;
 		shouldApplyBuiltIn = false;
-		return { def: resolved, config: enforced };
+		return { def: resolved, config: enforced, cardWidth, cardHeight };
 	};
 
 	const refreshToolbarState = () => {
@@ -74,8 +84,18 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			app: view.app,
 			fields,
 			initial: active.config.template,
+			titleKey: 'galleryView.templateModal.title' as TranslationKey,
 			allowedModes: ['single'],
 			allowedSingleBranches: ['withImage'],
+			cardSize: { width: active.cardWidth, height: active.cardHeight },
+			onCardSizeChange: (size) => {
+				const width = normalizeSize(size.width, DEFAULT_CARD_WIDTH);
+				const height = normalizeSize(size.height, DEFAULT_CARD_HEIGHT);
+				view.galleryViewStore.updateCardSize(active.def.id, { width, height });
+				view.galleryController?.setCardSize({ width, height });
+				view.markUserMutation('gallery-template');
+				view.persistenceService.scheduleSave();
+			},
 			onSave: (nextTemplate) => {
 				const nextConfig = enforceSingleWithImageConfig(
 					normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
@@ -95,6 +115,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const selectGalleryView = (viewId: string) => {
 		const next = ensureActiveGalleryConfig(viewId);
 		view.galleryController?.updateConfig(next.config);
+		view.galleryController?.setCardSize({ width: next.cardWidth, height: next.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
 		refreshToolbarState();
@@ -103,8 +124,9 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const createGalleryView = () => {
 		const baseTemplate = view.galleryConfig ?? normalizeSlideViewConfig(null);
 		const next = view.galleryViewStore.createView({ template: baseTemplate, setActive: true });
-		const enforced = ensureActiveGalleryConfig(next.id).config;
-		view.galleryController?.updateConfig(enforced);
+		const enforced = ensureActiveGalleryConfig(next.id);
+		view.galleryController?.updateConfig(enforced.config);
+		view.galleryController?.setCardSize({ width: enforced.cardWidth, height: enforced.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
 		refreshToolbarState();
@@ -113,8 +135,9 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const duplicateGalleryView = (viewId: string) => {
 		const duplicated = view.galleryViewStore.duplicateView(viewId);
 		if (!duplicated) return;
-		const enforced = ensureActiveGalleryConfig(duplicated.id).config;
-		view.galleryController?.updateConfig(enforced);
+		const enforced = ensureActiveGalleryConfig(duplicated.id);
+		view.galleryController?.updateConfig(enforced.config);
+		view.galleryController?.setCardSize({ width: enforced.cardWidth, height: enforced.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
 		refreshToolbarState();
@@ -128,12 +151,13 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryViewStore.deleteView(viewId);
 		const active = ensureActiveGalleryConfig();
 		view.galleryController?.updateConfig(active.config);
+		view.galleryController?.setCardSize({ width: active.cardWidth, height: active.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
 		refreshToolbarState();
 	};
 
-	const { config: activeConfig } = ensureActiveGalleryConfig();
+	const { config: activeConfig, cardWidth: activeCardWidth, cardHeight: activeCardHeight } = ensureActiveGalleryConfig();
 
 	const controller = new GalleryViewController({
 		app: view.app,
@@ -141,6 +165,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		rows,
 		fields,
 		config: activeConfig,
+		cardWidth: activeCardWidth,
+		cardHeight: activeCardHeight,
 		sourcePath,
 		quickFilterManager: view.globalQuickFilterManager,
 		subscribeToRows: (listener) => view.filterOrchestrator.addVisibleRowsListener(listener),

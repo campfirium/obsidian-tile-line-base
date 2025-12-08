@@ -107,9 +107,11 @@ export async function renderTableView(view: TableView): Promise<void> {
 		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
 		if (hasGalleryViews) {
 			view.galleryViewStore.load({
-				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown }) => ({
+				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
 					...entry,
-					template: normalizeSlideViewConfig(entry.template ?? null)
+					template: normalizeSlideViewConfig(entry.template ?? null),
+					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined
 				})),
 				activeViewId: galleryViewsState.activeViewId ?? null
 			});

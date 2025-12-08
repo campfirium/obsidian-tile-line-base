@@ -20,6 +20,8 @@ interface GalleryViewControllerOptions {
 	rows: RowData[];
 	fields: string[];
 	config: SlideViewConfig;
+	cardWidth?: number;
+	cardHeight?: number;
 	sourcePath: string;
 	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onTemplateChange?: () => void;
@@ -29,6 +31,18 @@ interface GalleryViewControllerOptions {
 
 type EditingKey = { rowIndex: number; templateRef: SlidePage['templateRef'] } | null;
 
+const DEFAULT_CARD_WIDTH = 320;
+const DEFAULT_CARD_HEIGHT = 240;
+const TEMPLATE_FONT_BASE_PX = 10;
+
+const toFontPx = (value: number): string => {
+	const numeric = Number(value);
+	if (!Number.isFinite(numeric)) {
+		return `${TEMPLATE_FONT_BASE_PX}px`;
+	}
+	return `${numeric * TEMPLATE_FONT_BASE_PX}px`;
+};
+
 export class GalleryViewController {
 	private readonly app: App;
 	private readonly container: HTMLElement;
@@ -36,6 +50,8 @@ export class GalleryViewController {
 	private visibleRows: RowData[] = [];
 	private fields: string[] = [];
 	private config: SlideViewConfig;
+	private cardWidth = DEFAULT_CARD_WIDTH;
+	private cardHeight = DEFAULT_CARD_HEIGHT;
 	private pages: SlidePage[] = [];
 	private readonly renderCleanup: Array<() => void> = [];
 	private readonly markdownComponents: Component[] = [];
@@ -55,6 +71,8 @@ export class GalleryViewController {
 		this.rows = options.rows;
 		this.fields = options.fields;
 		this.config = options.config;
+		this.cardWidth = typeof options.cardWidth === 'number' ? options.cardWidth : DEFAULT_CARD_WIDTH;
+		this.cardHeight = typeof options.cardHeight === 'number' ? options.cardHeight : DEFAULT_CARD_HEIGHT;
 		this.sourcePath = options.sourcePath;
 		this.onSaveRow = options.onSaveRow;
 		this.onTemplateChange = options.onTemplateChange ?? null;
@@ -73,6 +91,22 @@ export class GalleryViewController {
 			});
 		}
 		this.render();
+	}
+
+	setCardSize(size: { width: number; height: number }): void {
+		const width = Number(size.width);
+		const height = Number(size.height);
+		this.cardWidth = Number.isFinite(width) && width > 40 ? width : DEFAULT_CARD_WIDTH;
+		this.cardHeight = Number.isFinite(height) && height > 40 ? height : DEFAULT_CARD_HEIGHT;
+		this.render();
+	}
+
+	private getTitleFontSize(value: number): string {
+		return toFontPx(value);
+	}
+
+	private getBodyFontSize(value: number): string {
+		return toFontPx(value);
 	}
 
 	updateRows(rows: RowData[]): void {
@@ -113,12 +147,18 @@ export class GalleryViewController {
 		}
 
 		const grid = this.container.createDiv({ cls: 'tlb-gallery-grid' });
+		grid.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
+		grid.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 		this.pages.forEach((page, index) => {
 			const card = grid.createDiv({
 				cls: 'tlb-gallery-card',
 				attr: { 'data-tlb-gallery-index': String(index) }
 			});
+			card.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
+			card.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			const slideEl = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide' });
+			slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
+			slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			this.applySlideColors(slideEl, page.textColor, page.backgroundColor);
 			const row = this.visibleRows[page.rowIndex];
 			const applyLayout = (el: HTMLElement, layout: SlidePage['titleLayout']) =>
@@ -164,8 +204,15 @@ export class GalleryViewController {
 	}): void {
 		const { slideEl, page, applyLayout } = options;
 		const titleEl = slideEl.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
+		const titleFontSize = this.getTitleFontSize(page.titleLayout.fontSize);
+		slideEl.style.setProperty('--tlb-gallery-title-font-size', titleFontSize);
+		slideEl.style.setProperty('--tlb-gallery-title-line-height', `${page.titleLayout.lineHeight}`);
+		slideEl.style.setProperty('--tlb-gallery-title-font-weight', String(page.titleLayout.fontWeight));
+		slideEl.style.setProperty('--tlb-gallery-body-font-size', this.getBodyFontSize(page.textLayout.fontSize));
+		slideEl.style.setProperty('--tlb-gallery-body-line-height', `${page.textLayout.lineHeight}`);
+		slideEl.style.setProperty('--tlb-gallery-body-font-weight', String(page.textLayout.fontWeight));
 		titleEl.style.lineHeight = `${page.titleLayout.lineHeight}`;
-		titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
+		titleEl.style.fontSize = titleFontSize;
 		titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
 		applyLayout(titleEl, page.titleLayout);
 
@@ -180,7 +227,7 @@ export class GalleryViewController {
 			const content = slideEl.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--text' });
 			const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
 			bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
-			bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
+			bodyBlock.style.fontSize = this.getBodyFontSize(page.textLayout.fontSize);
 			bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
 			bodyBlock.style.textAlign = page.textLayout.align;
 			renderMarkdownBlock(
@@ -260,33 +307,23 @@ export class GalleryViewController {
 		this.editingKey = null;
 	}
 
-	private isEditingPage(page: SlidePage): boolean {
-		return Boolean(
-			this.editingKey &&
-				this.editingKey.rowIndex === page.rowIndex &&
-				this.editingKey.templateRef === page.templateRef
+	private filterRows(rows: RowData[]): RowData[] {
+		if (!this.quickFilterManager) {
+			return rows;
+		}
+		const value = this.quickFilterValue?.toLowerCase() ?? '';
+		if (!value) {
+			return rows;
+		}
+		return rows.filter((row) =>
+			Object.values(row).some((entry) => {
+				if (typeof entry !== 'string') return false;
+				return entry.toLowerCase().includes(value);
+			})
 		);
 	}
 
-	private filterRows(rows: RowData[]): RowData[] {
-		const needle = this.quickFilterValue.trim().toLowerCase();
-		if (!needle) {
-			return rows;
-		}
-		return rows.filter((row) => this.matchesQuickFilter(row, needle));
-	}
-
-	private matchesQuickFilter(row: RowData, needle: string): boolean {
-		for (const field of this.fields) {
-			if (!field) {
-				continue;
-			}
-			const value = row[field];
-			const text = typeof value === 'string' ? value : value != null ? String(value) : '';
-			if (text && text.toLowerCase().includes(needle)) {
-				return true;
-			}
-		}
-		return false;
+	private isEditingPage(page: SlidePage): boolean {
+		return Boolean(this.editingKey && this.editingKey.rowIndex === page.rowIndex && this.editingKey.templateRef === page.templateRef);
 	}
 }

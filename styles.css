@@ -4807,6 +4807,32 @@
 	transform: scale(var(--tlb-slide-scale, 1));
 }
 
+.tlb-gallery-card__slide.tlb-slide-full__slide {
+	width: 100%;
+	max-width: 100%;
+	max-height: none;
+	padding: 18px 20px;
+	border-radius: 0;
+	transform: none;
+	box-shadow: 0 4px 14px color-mix(in srgb, var(--background-primary) 65%, #000000 20%);
+	font-size: var(--tlb-gallery-base-font, 10px);
+	--tlb-slide-usable-height: var(--tlb-gallery-card-height, 240px);
+}
+
+.tlb-slide-full__slide.is-editing {
+	font-size: 10px;
+	--tlb-gallery-base-font: 10px;
+	--tlb-gallery-title-font-size: 20px;
+	--tlb-gallery-title-line-height: 1.25;
+	--tlb-gallery-title-font-weight: 700;
+	--tlb-gallery-body-font-size: 12px;
+	--tlb-gallery-body-line-height: 1.4;
+	--tlb-gallery-body-font-weight: 400;
+	--tlb-gallery-body-gap: 6px;
+	--tlb-gallery-image-max-height: var(--tlb-gallery-card-height, 240px);
+	transform: none;
+}
+
 .tlb-slide-full__title {
 	font-size: var(--tlb-gallery-title-font-size, 32px);
 	line-height: var(--tlb-gallery-title-line-height, 1.25);

@@ -76,11 +76,37 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		if (!field || !view.schema?.columnNames.includes(field)) {
 			return;
 		}
+		const existingIds = new Set((view.galleryFilterViewState?.views ?? []).map((entry) => entry.id));
 		const values = collectUniqueFieldValues(field, 50);
 		if (values.length === 0) {
 			return;
 		}
 		view.galleryFilterViewController.ensureFilterViewsForFieldValues(field, values);
+		const newViews = (view.galleryFilterViewState?.views ?? []).filter(
+			(entry) => entry.id && !existingIds.has(entry.id)
+		);
+		if (newViews.length > 0) {
+			const defaultGroupId = view.galleryTagGroupStore.getDefaultGroupId();
+			view.galleryTagGroupStore.updateState((state) => {
+				const targetId = state.groups.some((group) => group.id === state.activeGroupId)
+					? state.activeGroupId ?? defaultGroupId
+					: defaultGroupId;
+				const target =
+					state.groups.find((group) => group.id === targetId) ??
+					state.groups.find((group) => group.id === defaultGroupId);
+				if (!target) {
+					return;
+				}
+				const seen = new Set(target.viewIds);
+				for (const viewDef of newViews) {
+					if (!viewDef.id || seen.has(viewDef.id)) {
+						continue;
+					}
+					target.viewIds.push(viewDef.id);
+					seen.add(viewDef.id);
+				}
+			});
+		}
 		view.galleryTagGroupController?.syncWithAvailableViews();
 		updateGalleryFilterViewBarTagGroupState(view);
 		view.galleryFilterBar?.render(view.galleryFilterViewState);

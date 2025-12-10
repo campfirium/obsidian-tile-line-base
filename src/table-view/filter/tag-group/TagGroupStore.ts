@@ -180,6 +180,10 @@ export class TagGroupStore {
 			if (!metadata.defaultSeeded) {
 				defaultIds = this.seedDefaultGroupViewIds(defaultIds, filterState, idSet, metadata);
 			}
+			if (!metadata.defaultSeeded && defaultIds.length === 0 && idSet.size > 0) {
+				defaultIds = this.collectViewIds(views);
+				metadata.defaultSeeded = defaultIds.length > 0;
+			}
 
 			defaultGroup.viewIds = defaultIds;
 

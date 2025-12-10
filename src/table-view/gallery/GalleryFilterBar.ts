@@ -3,6 +3,7 @@ import type { FileFilterViewState, FilterViewDefinition } from '../../types/filt
 import { t } from '../../i18n';
 import type { FilterViewBarTagGroupState } from '../filter/FilterViewBar';
 
+const DEFAULT_FILTER_VIEW_ICON = 'layout-grid';
 interface GalleryFilterBarCallbacks {
 	onCreate(): void;
 	onActivate(viewId: string | null): void;
@@ -94,7 +95,7 @@ export class GalleryFilterBar {
 			cls: 'tlb-filter-view-button'
 		});
 		defaultButton.setAttribute('data-default-view', 'true');
-		this.applyButtonContent(defaultButton, this.getDefaultViewName(state));
+		this.applyButtonContent(defaultButton, this.getDefaultViewName(state), this.getDefaultViewIcon(state));
 		if (!state.activeViewId) {
 			defaultButton.classList.add('is-active');
 		}
@@ -182,15 +183,13 @@ export class GalleryFilterBar {
 	private setFilterButtonContent(button: HTMLButtonElement, view: FilterViewDefinition): void {
 		const name = typeof view.name === 'string' ? view.name : '';
 		const iconId = typeof view.icon === 'string' && view.icon.trim().length > 0 ? view.icon.trim() : null;
-		this.applyButtonContent(button, name, iconId);
+		this.applyButtonContent(button, name, iconId ?? DEFAULT_FILTER_VIEW_ICON);
 	}
 
 	private applyButtonContent(button: HTMLButtonElement, name: string, iconId?: string | null): void {
 		this.clearElement(button);
-		if (iconId) {
-			const iconEl = button.createSpan({ cls: 'tlb-filter-view-button__icon' });
-			setIcon(iconEl, iconId);
-		}
+		const iconEl = button.createSpan({ cls: 'tlb-filter-view-button__icon' });
+		setIcon(iconEl, iconId ?? DEFAULT_FILTER_VIEW_ICON);
 		const label = button.createSpan({ cls: 'tlb-filter-view-button__label' });
 		label.textContent = name || t('filterViewBar.unnamedViewLabel');
 	}
@@ -201,11 +200,16 @@ export class GalleryFilterBar {
 				? this.tagGroupState.activeGroupName
 				: t('filterViewBar.tagGroupButtonLabel');
 		this.tagGroupLabelEl.textContent = label;
-		this.tagGroupButtonEl.classList.toggle('is-active', !!this.tagGroupState.hasGroups);
+		this.tagGroupButtonEl.classList.remove('is-active');
 	}
 
 	private getDefaultViewName(state: FileFilterViewState): string {
 		const name = state?.metadata?.defaultView?.name ?? '';
-		return name && name.trim().length > 0 ? name : t('filterViewBar.unnamedViewLabel');
+		return name && name.trim().length > 0 ? name : t('filterViewBar.allTabLabel');
+	}
+
+	private getDefaultViewIcon(state: FileFilterViewState): string {
+		const iconId = typeof state?.metadata?.defaultView?.icon === 'string' ? state.metadata.defaultView.icon.trim() : '';
+		return iconId.length > 0 ? iconId : DEFAULT_FILTER_VIEW_ICON;
 	}
 }

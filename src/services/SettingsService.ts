@@ -71,6 +71,8 @@ export interface TileLineBaseSettings {
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
+	galleryFilterViews: Record<string, FileFilterViewState>;
+	galleryTagGroups: Record<string, FileTagGroupState>;
 	kanbanBoards: Record<string, KanbanBoardState>;
 	columnConfigs: Record<string, string[]>;
 	copyTemplates: Record<string, string>;
@@ -99,6 +101,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	columnLayouts: {},
 	filterViews: {},
 	tagGroups: {},
+	galleryFilterViews: {},
+	galleryTagGroups: {},
 	kanbanBoards: {},
 	columnConfigs: {},
 	copyTemplates: {},
@@ -147,6 +151,8 @@ export class SettingsService {
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.tagGroups = { ...DEFAULT_SETTINGS.tagGroups, ...(merged.tagGroups ?? {}) };
+		merged.galleryFilterViews = { ...DEFAULT_SETTINGS.galleryFilterViews, ...(merged as TileLineBaseSettings).galleryFilterViews ?? {} };
+		merged.galleryTagGroups = { ...DEFAULT_SETTINGS.galleryTagGroups, ...(merged as TileLineBaseSettings).galleryTagGroups ?? {} };
 		merged.kanbanBoards = { ...DEFAULT_SETTINGS.kanbanBoards, ...(merged.kanbanBoards ?? {}) };
 		merged.columnConfigs = { ...DEFAULT_SETTINGS.columnConfigs, ...(merged.columnConfigs ?? {}) };
 		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
@@ -399,6 +405,29 @@ export class SettingsService {
 		return sanitized;
 	}
 
+	getGalleryFilterViewsForFile(filePath: string): FileFilterViewState {
+		const stored = (this.settings as TileLineBaseSettings).galleryFilterViews[filePath];
+		if (!stored) {
+			return { views: [], activeViewId: null, metadata: {} };
+		}
+		return {
+			activeViewId: stored.activeViewId ?? null,
+			views: stored.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneFilterViewMetadata(stored.metadata)
+		};
+	}
+
+	async saveGalleryFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<FileFilterViewState> {
+		const sanitized: FileFilterViewState = {
+			activeViewId: state.activeViewId ?? null,
+			views: state.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneFilterViewMetadata(state.metadata)
+		};
+		(this.settings as TileLineBaseSettings).galleryFilterViews[filePath] = sanitized;
+		await this.persist();
+		return sanitized;
+	}
+
 	getTagGroupsForFile(filePath: string): FileTagGroupState {
 		const stored = this.settings.tagGroups[filePath];
 		return cloneTagGroupState(stored ?? null);
@@ -407,6 +436,18 @@ export class SettingsService {
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
 		const sanitized = cloneTagGroupState(state);
 		this.settings.tagGroups[filePath] = sanitized;
+		await this.persist();
+		return sanitized;
+	}
+
+	getGalleryTagGroupsForFile(filePath: string): FileTagGroupState {
+		const stored = (this.settings as TileLineBaseSettings).galleryTagGroups[filePath];
+		return cloneTagGroupState(stored ?? null);
+	}
+
+	async saveGalleryTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
+		const sanitized = cloneTagGroupState(state);
+		(this.settings as TileLineBaseSettings).galleryTagGroups[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
 	}
@@ -559,6 +600,8 @@ export class SettingsService {
 			migrate(this.settings.columnLayouts);
 			migrate(this.settings.filterViews);
 			migrate(this.settings.tagGroups);
+			migrate((this.settings as TileLineBaseSettings).galleryFilterViews);
+			migrate((this.settings as TileLineBaseSettings).galleryTagGroups);
 			migrate(this.settings.kanbanBoards);
 			migrate(this.settings.columnConfigs);
 			migrate(this.settings.copyTemplates);
@@ -804,6 +847,10 @@ export class SettingsService {
 		pruneStore(this.settings.columnLayouts);
 		pruneStore(this.settings.filterViews);
 		pruneStore(this.settings.tagGroups);
+		pruneStore((this.settings as TileLineBaseSettings).galleryFilterViews);
+		pruneStore((this.settings as TileLineBaseSettings).galleryTagGroups);
+		pruneStore((this.settings as TileLineBaseSettings).galleryFilterViews);
+		pruneStore((this.settings as TileLineBaseSettings).galleryTagGroups);
 		pruneStore(this.settings.kanbanBoards);
 		pruneStore(this.settings.columnConfigs);
 		pruneStore(this.settings.copyTemplates);

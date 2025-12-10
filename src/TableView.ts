@@ -10,6 +10,7 @@ import { FilterStateStore } from "./table-view/filter/FilterStateStore";
 import { GlobalQuickFilterManager } from "./table-view/filter/GlobalQuickFilterManager";
 import type { FilterViewBar } from "./table-view/filter/FilterViewBar";
 import type { FilterViewController } from "./table-view/filter/FilterViewController";
+import { GalleryFilterBar } from "./table-view/gallery/GalleryFilterBar";
 import { TagGroupStore } from "./table-view/filter/tag-group/TagGroupStore";
 import { TagGroupController } from "./table-view/filter/tag-group/TagGroupController";
 import type { FileFilterViewState, FilterRule } from "./types/filterView";
@@ -24,6 +25,7 @@ import type { GridInteractionController } from "./table-view/GridInteractionCont
 import type { FocusManager } from "./table-view/FocusManager";
 import type { GridLayoutController } from "./table-view/GridLayoutController";
 import type { FilterViewOrchestrator } from "./table-view/FilterViewOrchestrator";
+import type { GalleryFilterOrchestrator } from "./table-view/gallery/GalleryFilterOrchestrator";
 import type { GlobalQuickFilterController } from "./table-view/GlobalQuickFilterController";
 import type { TablePersistenceService } from "./table-view/TablePersistenceService";
 import { initializeTableView } from "./table-view/TableViewSetup";
@@ -79,11 +81,8 @@ export class TableView extends ItemView {
 	public rowInteractionController!: RowInteractionController;
 	public rowMigrationController!: RowMigrationController;
 	public rowOrderController!: RowOrderController;
-	public gridInteractionController!: GridInteractionController;
-	public filterOrchestrator!: FilterViewOrchestrator;
-	public gridLayoutController!: GridLayoutController;
-	public focusManager!: FocusManager;
-	public globalQuickFilterController!: GlobalQuickFilterController;
+	public gridInteractionController!: GridInteractionController; public filterOrchestrator!: FilterViewOrchestrator; public galleryFilterOrchestrator!: GalleryFilterOrchestrator;
+	public gridLayoutController!: GridLayoutController; public focusManager!: FocusManager; public globalQuickFilterController!: GlobalQuickFilterController; public galleryQuickFilterController!: GlobalQuickFilterController;
 	public copyTemplateController!: CopyTemplateController;
 	public paragraphPromotionController!: ParagraphPromotionController;
 	public tableCreationController!: TableCreationController;
@@ -91,12 +90,14 @@ export class TableView extends ItemView {
 	public magicMigrationController!: MagicMigrationController;
 	public historyManager = new TableHistoryManager(this);
 	public refreshCoordinator!: TableRefreshCoordinator;
-	public tableContainer: HTMLElement | null = null; public filterViewBar: FilterViewBar | null = null;
+	public tableContainer: HTMLElement | null = null; public filterViewBar: FilterViewBar | null = null; public galleryFilterBar: GalleryFilterBar | null = null;
 	private readonly conversionSession = new ConversionSessionManager(this);
-	public filterViewController!: FilterViewController;
+	public filterViewController!: FilterViewController; public galleryFilterViewController!: FilterViewController;
 	public filterStateStore = new FilterStateStore(null); public filterViewState: FileFilterViewState = this.filterStateStore.getState();
-	public globalQuickFilterManager = new GlobalQuickFilterManager();
+	public galleryFilterStateStore = new FilterStateStore(null, 'gallery'); public galleryFilterViewState: FileFilterViewState = this.galleryFilterStateStore.getState();
+	public globalQuickFilterManager = new GlobalQuickFilterManager(); public galleryQuickFilterManager = new GlobalQuickFilterManager();
 	public tagGroupStore = new TagGroupStore(null); public tagGroupController!: TagGroupController; public tagGroupState: FileTagGroupState = this.tagGroupStore.getState();
+	public galleryTagGroupStore = new TagGroupStore(null, 'gallery'); public galleryTagGroupController!: TagGroupController; public galleryTagGroupState: FileTagGroupState = this.galleryTagGroupStore.getState();
 	public initialColumnState: ColumnState[] | null = null; public markdownToggleButton: HTMLElement | null = null;
 	public activeViewMode: 'table' | 'kanban' | 'slide' | 'gallery' = 'table';
 	public kanbanController: KanbanViewController | null = null;
@@ -139,6 +140,7 @@ export class TableView extends ItemView {
 	}
 	private syncQuickFilterContext(file: TFile | null): void {
 		this.globalQuickFilterManager.setContext(file?.path ?? null);
+		this.galleryQuickFilterManager.setContext(file?.path ?? null);
 	}
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
@@ -180,9 +182,7 @@ export class TableView extends ItemView {
 	getState(): TableViewState {
 		return { filePath: this.file?.path ?? "" };
 	}
-	async render(): Promise<void> {
-		await this.renderScheduler.run();
-	}
+	async render(): Promise<void> { await this.renderScheduler.run(); }
 	private async renderInternal(): Promise<void> {
 		if (this.kanbanBoardController) {
 			this.kanbanBoardController.ensureInitialized();
@@ -215,27 +215,34 @@ export class TableView extends ItemView {
 			this.markdownToggleButton.remove();
 			this.markdownToggleButton = null;
 		}
-		this.viewModeManager.detachActions();
-		if (this.kanbanController) {
-			this.kanbanController.destroy();
-			this.kanbanController = null;
-		}
-		if (this.slideController) {
-			this.slideController.destroy();
-			this.slideController = null;
-		}
-		if (this.galleryController) {
-			this.galleryController.destroy();
-			this.galleryController = null;
-		}
-		if (this.galleryToolbar) {
-			this.galleryToolbar.destroy();
-			this.galleryToolbar = null;
-		}
-		if (this.kanbanToolbar) {
-			this.kanbanToolbar.destroy();
-			this.kanbanToolbar = null;
-		}
+			this.viewModeManager.detachActions();
+			if (this.galleryFilterBar) {
+				this.galleryFilterBar.destroy();
+				this.galleryFilterBar = null;
+			}
+			if (this.galleryQuickFilterController) {
+				this.galleryQuickFilterController.cleanup();
+			}
+			if (this.kanbanController) {
+				this.kanbanController.destroy();
+				this.kanbanController = null;
+			}
+			if (this.slideController) {
+				this.slideController.destroy();
+				this.slideController = null;
+			}
+			if (this.galleryController) {
+				this.galleryController.destroy();
+				this.galleryController = null;
+			}
+			if (this.galleryToolbar) {
+				this.galleryToolbar.destroy();
+				this.galleryToolbar = null;
+			}
+			if (this.kanbanToolbar) {
+				this.kanbanToolbar.destroy();
+				this.kanbanToolbar = null;
+			}
 		this.activeKanbanBoardId = null;
 		this.kanbanBoardStore.reset();
 		if (this.kanbanBoardController) {
@@ -250,9 +257,7 @@ export class TableView extends ItemView {
 			this.refreshCoordinator.dispose();
 		}
 	}
-	onMoreOptions(menu: Menu): void {
-		populateMoreOptionsMenu(this, menu);
-	}
+	onMoreOptions(menu: Menu): void { populateMoreOptionsMenu(this, menu); }
 	public setKanbanHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);
 		if (this.kanbanHeightMode === normalized) {

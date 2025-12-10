@@ -32,6 +32,8 @@ const deriveCardSizeFromAspect = (aspect: unknown): { width: number; height: num
 export interface TableConfigData {
 	filterViews?: FileFilterViewState | null;
 	tagGroups?: FileTagGroupState | null;
+	galleryFilterViews?: FileFilterViewState | null;
+	galleryTagGroups?: FileTagGroupState | null;
 	columnWidths?: Record<string, number>;
 	columnConfigs?: string[] | null;
 	viewPreference?: 'table' | 'kanban' | 'slide' | 'gallery';
@@ -74,6 +76,16 @@ export class TableConfigManager {
 		}
 		if (settings.tagGroups[filePath]) {
 			snapshot.tagGroups = plugin.getTagGroupsForFile(filePath);
+		}
+		if ((settings as any).galleryFilterViews?.[filePath]) {
+			snapshot.galleryFilterViews = (plugin as any).getGalleryFilterViewsForFile
+				? (plugin as any).getGalleryFilterViewsForFile(filePath)
+				: undefined;
+		}
+		if ((settings as any).galleryTagGroups?.[filePath]) {
+			snapshot.galleryTagGroups = (plugin as any).getGalleryTagGroupsForFile
+				? (plugin as any).getGalleryTagGroupsForFile(filePath)
+				: undefined;
 		}
 		const layout = settings.columnLayouts[filePath];
 		if (layout && Object.keys(layout).length > 0) {
@@ -131,8 +143,15 @@ export class TableConfigManager {
 		const tasks: Array<Promise<unknown>> = [];
 		const filterViews = data.filterViews ?? { views: [], activeViewId: null, metadata: {} };
 		tasks.push(plugin.saveFilterViewsForFile(filePath, filterViews));
+		const galleryFilterViews = data.galleryFilterViews ?? { views: [], activeViewId: null, metadata: {} };
+		if ((plugin as any).saveGalleryFilterViewsForFile) {
+			tasks.push((plugin as any).saveGalleryFilterViewsForFile(filePath, galleryFilterViews));
+		}
 		if (data.tagGroups) {
 			tasks.push(plugin.saveTagGroupsForFile(filePath, data.tagGroups));
+		}
+		if (data.galleryTagGroups && (plugin as any).saveGalleryTagGroupsForFile) {
+			tasks.push((plugin as any).saveGalleryTagGroupsForFile(filePath, data.galleryTagGroups));
 		}
 		tasks.push(settingsService.setColumnLayout(filePath, data.columnWidths ?? null));
 
@@ -214,6 +233,14 @@ export class TableConfigManager {
 		}
 		if (isRecord(source.tagGroups)) {
 			result.tagGroups = source.tagGroups as FileTagGroupState;
+			hasData = true;
+		}
+		if (isRecord(source.galleryFilterViews)) {
+			result.galleryFilterViews = source.galleryFilterViews as FileFilterViewState;
+			hasData = true;
+		}
+		if (isRecord(source.galleryTagGroups)) {
+			result.galleryTagGroups = source.galleryTagGroups as FileTagGroupState;
 			hasData = true;
 		}
 		if (isRecord(source.columnWidths)) {

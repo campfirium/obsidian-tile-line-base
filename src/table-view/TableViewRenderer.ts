@@ -1,8 +1,10 @@
 import type { TableView } from '../TableView';
 import { getLogger } from '../utils/logger';
 import { syncTagGroupState } from './TableViewFilterPresenter';
+import { syncGalleryTagGroupState } from './gallery/galleryFilterPresenter';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
+import type { GalleryFilterBar } from './gallery/GalleryFilterBar';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
@@ -46,6 +48,13 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.galleryController.destroy();
 		view.galleryController = null;
 	}
+	if (view.galleryFilterBar) {
+		view.galleryFilterBar.destroy();
+		view.galleryFilterBar = null;
+	}
+	if (view.galleryQuickFilterController) {
+		view.galleryQuickFilterController.cleanup();
+	}
 
 	const ownerDoc = container.ownerDocument;
 	logger.debug('render start', {
@@ -65,6 +74,10 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.tagGroupStore.setFilePath(view.file.path);
 	view.tagGroupStore.resetState();
 	syncTagGroupState(view);
+	view.galleryFilterStateStore.setFilePath(view.file.path);
+	view.galleryFilterStateStore.resetState();
+	view.galleryTagGroupStore.setFilePath(view.file.path);
+	view.galleryTagGroupStore.resetState();
 	view.copyTemplate = null;
 
 	const content = await view.app.vault.read(view.file);
@@ -81,6 +94,12 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 		if (configBlock.tagGroups) {
 			view.tagGroupStore.setState(configBlock.tagGroups);
+		}
+		if ((configBlock as any).galleryFilterViews) {
+			view.galleryFilterStateStore.setState((configBlock as any).galleryFilterViews);
+		}
+		if ((configBlock as any).galleryTagGroups) {
+			view.galleryTagGroupStore.setState((configBlock as any).galleryTagGroups);
 		}
 		if (configBlock.columnWidths) {
 			view.columnLayoutStore.applyConfig(configBlock.columnWidths);
@@ -162,6 +181,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 	}
 
 	view.filterViewState = view.filterStateStore.getState();
+	view.galleryFilterViewState = view.galleryFilterStateStore.getState();
 	syncTagGroupState(view);
 
 	const headerColumnConfigs = view.markdownParser.parseHeaderConfig(parsedFrontmatter.body);
@@ -213,13 +233,31 @@ export async function renderTableView(view: TableView): Promise<void> {
 	view.tagGroupController.syncWithAvailableViews();
 	syncTagGroupState(view);
 
+	if (!view.galleryFilterViewState || view.galleryFilterViewState.views.length === 0) {
+		view.galleryFilterStateStore.loadFromSettings();
+		view.galleryFilterViewState = view.galleryFilterStateStore.getState();
+	}
+	if (!configBlock || (configBlock as any).galleryTagGroups == null) {
+		view.galleryTagGroupStore.loadFromSettings();
+	}
+	syncGalleryTagGroupState(view);
+	view.galleryTagGroupController.syncWithAvailableViews();
+	syncGalleryTagGroupState(view);
+
 	view.filterOrchestrator.refresh();
+	view.galleryFilterOrchestrator.refresh();
 	view.initialColumnState = null;
 	const primaryField = view.schema.columnNames[0] ?? null;
 
-	if (view.filterViewBar) {
-		view.filterViewBar.destroy();
+	const filterViewBar = view.filterViewBar;
+	if (filterViewBar) {
+		filterViewBar.destroy();
 		view.filterViewBar = null;
+	}
+	const galleryFilterBar = view.galleryFilterBar as GalleryFilterBar | null;
+	if (galleryFilterBar) {
+		(galleryFilterBar as { destroy: () => void }).destroy();
+		view.galleryFilterBar = null;
 	}
 	if (view.kanbanToolbar) {
 		view.kanbanToolbar.destroy();

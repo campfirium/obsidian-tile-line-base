@@ -16,6 +16,7 @@ interface GalleryToolbarOptions {
 	onOpenViewMenu: (viewId: string, event: MouseEvent) => void | Promise<void>;
 	onOpenSettings: (button: HTMLButtonElement, event: MouseEvent) => void;
 	onEditView?: (viewId: string) => void | Promise<void>;
+	onOpenTagGroupMenu?: (button: HTMLButtonElement) => void | Promise<void>;
 }
 
 interface ListenerEntry {
@@ -32,9 +33,11 @@ export class GalleryToolbar {
 	private readonly viewListEl: HTMLElement;
 	private readonly searchEl: HTMLElement;
 	private readonly actionsEl: HTMLElement;
+	private readonly tagGroupButtonEl: HTMLButtonElement;
 	private readonly addButtonEl: HTMLButtonElement;
 	private readonly settingsButtonEl: HTMLButtonElement;
 	private readonly addClickHandler: (event: MouseEvent) => void;
+	private readonly tagGroupClickHandler: (event: MouseEvent) => void;
 	private readonly settingsClickHandler: (event: MouseEvent) => void;
 	private readonly viewListeners: ListenerEntry[] = [];
 	private views: GalleryToolbarView[] = [];
@@ -45,6 +48,23 @@ export class GalleryToolbar {
 		this.rootEl = options.container.createDiv({ cls: 'tlb-filter-view-bar tlb-gallery-toolbar' });
 		this.tabsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-tabs' });
 		this.viewListEl = this.tabsEl.createDiv({ cls: 'tlb-gallery-toolbar__views' });
+
+		this.tagGroupButtonEl = this.tabsEl.createEl('button', {
+			cls: 'tlb-filter-view-button tlb-filter-view-button--tag-groups'
+		});
+		const tagGroupLabel = t('filterViewBar.tagGroupButtonLabel');
+		this.tagGroupButtonEl.setAttribute('type', 'button');
+		this.tagGroupButtonEl.setAttribute('aria-label', tagGroupLabel);
+		this.tagGroupButtonEl.setAttribute('title', tagGroupLabel);
+		setIcon(this.tagGroupButtonEl, 'layers-2');
+		this.tagGroupClickHandler = (event: MouseEvent) => {
+			event.preventDefault();
+			event.stopPropagation();
+			if (this.options.onOpenTagGroupMenu) {
+				void this.options.onOpenTagGroupMenu(this.tagGroupButtonEl);
+			}
+		};
+		this.tagGroupButtonEl.addEventListener('click', this.tagGroupClickHandler);
 
 		const addLabel = t('galleryView.toolbar.addGalleryButtonAriaLabel');
 		this.addButtonEl = this.tabsEl.createEl('button', {
@@ -63,6 +83,9 @@ export class GalleryToolbar {
 
 		this.searchEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-search' });
 		this.options.renderQuickFilter(this.searchEl);
+		if (!this.searchEl.hasChildNodes()) {
+			this.searchEl.addClass('tlb-filter-view-search--hidden');
+		}
 
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
 		this.settingsButtonEl = this.actionsEl.createEl('button', {
@@ -95,6 +118,7 @@ export class GalleryToolbar {
 			entry.button.removeEventListener('contextmenu', entry.contextHandler);
 			entry.button.removeEventListener('dblclick', entry.doubleClickHandler);
 		}
+		this.tagGroupButtonEl.removeEventListener('click', this.tagGroupClickHandler);
 		this.viewListeners.length = 0;
 		this.addButtonEl.removeEventListener('click', this.addClickHandler);
 		this.settingsButtonEl.removeEventListener('click', this.settingsClickHandler);

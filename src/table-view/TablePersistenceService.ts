@@ -29,6 +29,8 @@ interface TablePersistenceDeps {
 	getFile: () => TFile | null;
 	getFilterViewState: () => FileFilterViewState;
 	getTagGroupState: () => FileTagGroupState;
+	getGalleryFilterViewState?: () => FileFilterViewState;
+	getGalleryTagGroupState?: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
 	getBackupManager: () => BackupManager | null;
 	getViewPreference: () => 'table' | 'kanban' | 'slide' | 'gallery';
@@ -200,6 +202,8 @@ export class TablePersistenceService {
 		return {
 			filterViews: this.deps.getFilterViewState(),
 			tagGroups: this.deps.getTagGroupState(),
+			galleryFilterViews: this.deps.getGalleryFilterViewState ? this.deps.getGalleryFilterViewState() : undefined,
+			galleryTagGroups: this.deps.getGalleryTagGroupState ? this.deps.getGalleryTagGroupState() : undefined,
 			columnWidths: this.deps.columnLayoutStore.exportPreferences(),
 			columnConfigs,
 			viewPreference,

@@ -551,6 +551,7 @@ export class TableHistoryManager {
 		mutator();
 
 		this.view.filterOrchestrator?.refresh();
+		this.view.galleryFilterOrchestrator?.refresh();
 		if (focus && typeof focus.rowIndex === 'number' && focus.rowIndex >= 0) {
 			this.view.focusManager?.focusRow(focus.rowIndex, focus.field ?? null);
 		}

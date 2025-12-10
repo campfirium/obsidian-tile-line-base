@@ -35,7 +35,15 @@
       "title": "Gallery template",
       "cardSizeLabel": "Card size",
       "widthLabel": "Width (px)",
-      "heightLabel": "Height (px)"
+      "heightLabel": "Height (px)",
+      "filterSectionTitle": "Filters & sorting",
+      "filterSectionActive": "Active filter: {{name}}",
+      "filterSectionEmpty": "No filter view yet. Create one to scope this gallery.",
+      "filterPickerLabel": "Filter view",
+      "filterAllLabel": "All entries",
+      "newFilterButton": "New filter view",
+      "editFilterButton": "Edit filter/sort",
+      "manageGroupsButton": "Manage filter groups"
     }
   },
   "kanbanView": {

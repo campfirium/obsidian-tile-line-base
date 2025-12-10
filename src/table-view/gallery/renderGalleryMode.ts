@@ -132,6 +132,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 
 	const openTemplateModal = (viewId?: string) => {
 		const active = ensureActiveGalleryConfig(viewId ?? view.activeGalleryViewId ?? undefined);
+		let pendingName = active.def.name ?? '';
 		const modal = new SlideTemplateModal({
 			app: view.app,
 			fields,
@@ -152,6 +153,12 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				const nextConfig = enforceSingleWithImageConfig(
 					normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 				);
+			const trimmedName = pendingName.trim();
+			if (trimmedName.length > 0 && trimmedName !== active.def.name) {
+				view.galleryViewStore.updateName(active.def.id, trimmedName);
+				view.markUserMutation('gallery-template');
+				view.persistenceService.scheduleSave();
+			}
 			view.galleryTemplateTouched = true;
 			view.shouldAutoFillGalleryDefaults = false;
 			view.galleryViewStore.updateTemplate(active.def.id, nextConfig);

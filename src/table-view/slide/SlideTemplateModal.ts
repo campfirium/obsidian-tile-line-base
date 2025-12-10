@@ -19,6 +19,7 @@ interface SlideTemplateModalOptions {
 	fields: string[];
 	initial: SlideTemplateConfig;
 	onSave: (next: SlideTemplateConfig) => void;
+	renderIntroSection?: (container: HTMLElement) => void;
 	onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
 	allowedModes?: Array<'single' | 'split'>;
 	allowedSingleBranches?: Array<'withoutImage' | 'withImage'>;
@@ -40,6 +41,7 @@ export class SlideTemplateModal extends Modal {
 	private static lastSelectedSplitBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private readonly fields: string[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
+	private readonly renderIntroSection?: (container: HTMLElement) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
 	private readonly getGlobalDefault?: () => SlideViewConfig | null;
 	private readonly allowedModes: Set<'single' | 'split'> | null;
@@ -165,6 +167,9 @@ export class SlideTemplateModal extends Modal {
 		const titleKey = this.titleKey ?? 'slideView.templateModal.title';
 		this.titleEl.setText(t(titleKey as TranslationKey));
 		this.enforceConstraints();
+		if (this.renderIntroSection) {
+			this.renderIntroSection(this.contentEl);
+		}
 
 		const toolbar = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
 		const toolbarLeft = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-left' });

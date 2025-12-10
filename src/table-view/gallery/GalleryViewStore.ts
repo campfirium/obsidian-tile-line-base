@@ -154,6 +154,17 @@ export class GalleryViewStore {
 		return target;
 	}
 
+	updateName(id: string, name: string): GalleryViewDefinition | null {
+		const target = this.state.views.find((entry) => entry.id === id);
+		if (!target) {
+			return null;
+		}
+		const trimmed = name.trim();
+		target.name = trimmed.length > 0 ? trimmed : target.name;
+		return target;
+	}
+
+
 	updateCardSize(id: string, size: { width: number; height: number }): GalleryViewDefinition | null {
 		const target = this.state.views.find((entry) => entry.id === id);
 		if (!target) {

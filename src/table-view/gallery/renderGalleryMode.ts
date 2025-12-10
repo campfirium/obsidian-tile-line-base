@@ -1,7 +1,6 @@
 import { Menu, Notice } from 'obsidian';
 import { t, type TranslationKey } from '../../i18n';
 import type { TableView } from '../../TableView';
-import { GalleryToolbar } from './GalleryToolbar';
 import { GalleryViewController } from './GalleryViewController';
 import { SlideTemplateModal } from '../slide/SlideTemplateModal';
 import { ensureLayoutDefaults } from '../slide/slideConfigHelpers';
@@ -9,24 +8,38 @@ import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from '../slide/sl
 import { normalizeSlideViewConfig } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { getLogger } from '../../utils/logger';
+import { renderGalleryFilterControls, updateGalleryFilterViewBarTagGroupState } from './galleryFilterPresenter';
 
 const DEFAULT_CARD_WIDTH = 320;
 const DEFAULT_CARD_HEIGHT = 240;
 const logger = getLogger('gallery:render-mode');
-const normalizeSize = (value: unknown, fallback: number): number => {
-	const numeric = typeof value === 'number' ? value : Number(value);
-	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
-		return numeric;
-	}
-	return fallback;
-};
 
 export function renderGalleryMode(view: TableView, container: HTMLElement): void {
-	view.globalQuickFilterController.cleanup();
+	const normalizeSize = (value: unknown, fallback: number): number => {
+		const numeric = typeof value === 'number' ? value : Number(value);
+		return Number.isFinite(numeric) && numeric > 40 && numeric < 2000 ? numeric : fallback;
+	};
+	const collectUniqueFieldValues = (field: string, limit: number): string[] => {
+		const rows = view.dataStore.extractRowData();
+		const seen = new Set<string>();
+		const result: string[] = [];
+		for (const row of rows) {
+			const raw = row[field];
+			if (raw == null) continue;
+			const value = typeof raw === 'string' ? raw : String(raw);
+			const trimmed = value.trim();
+			if (!trimmed || seen.has(trimmed)) continue;
+			seen.add(trimmed);
+			result.push(trimmed);
+			if (Number.isFinite(limit) && limit > 0 && result.length >= limit) break;
+		}
+		return result;
+	};
+	view.galleryQuickFilterController.cleanup();
 	container.classList.add('tlb-gallery-mode');
-	const toolbarContainer = container.createDiv({ cls: 'tlb-gallery-toolbar-container' });
+	const filterContainer = container.createDiv({ cls: 'tlb-gallery-filter-container' });
 	const galleryContainer = container.createDiv({ cls: 'tlb-gallery-container' });
-	const rows = view.filterOrchestrator.getVisibleRows();
+	const rows = view.galleryFilterOrchestrator.getVisibleRows();
 	const fields = view.schema?.columnNames ?? [];
 	const sourcePath = view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '';
 	let shouldApplyBuiltIn = view.shouldAutoFillGalleryDefaults;
@@ -58,6 +71,22 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		return enforceSingleWithImageConfig(ensureLayoutDefaults(merged));
 	};
 
+	const seedGroupFilters = (groupField: string | null | undefined) => {
+		const field = (groupField ?? '').trim();
+		if (!field || !view.schema?.columnNames.includes(field)) {
+			return;
+		}
+		const values = collectUniqueFieldValues(field, 50);
+		if (values.length === 0) {
+			return;
+		}
+		view.galleryFilterViewController.ensureFilterViewsForFieldValues(field, values);
+		view.galleryTagGroupController?.syncWithAvailableViews();
+		updateGalleryFilterViewBarTagGroupState(view);
+		view.galleryFilterBar?.render(view.galleryFilterViewState);
+		view.galleryFilterOrchestrator.refresh();
+	};
+
 	const ensureActiveGalleryConfig = (targetId?: string) => {
 		const activeDef = targetId ? view.galleryViewStore.setActive(targetId) : view.galleryViewStore.ensureActive();
 		const resolved = activeDef ?? view.galleryViewStore.createView({ template: view.galleryConfig, setActive: true });
@@ -71,16 +100,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryTemplateTouched = view.galleryTemplateTouched || shouldApplyBuiltIn;
 		view.shouldAutoFillGalleryDefaults = false;
 		shouldApplyBuiltIn = false;
+		seedGroupFilters(resolved.groupField);
 		return { def: resolved, config: enforced, cardWidth, cardHeight };
-	};
-
-	const refreshToolbarState = () => {
-		const state = view.galleryViewStore.getState();
-		view.galleryToolbar?.updateState(
-			state.views.map((entry) => ({ id: entry.id, name: entry.name })),
-			state.activeViewId
-		);
-		view.galleryToolbar?.setActiveView(view.activeGalleryViewId ?? state.activeViewId ?? null);
 	};
 
 	const openTemplateModal = (viewId?: string) => {
@@ -105,14 +126,14 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				const nextConfig = enforceSingleWithImageConfig(
 					normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 				);
-				view.galleryTemplateTouched = true;
-				view.shouldAutoFillGalleryDefaults = false;
-				view.galleryViewStore.updateTemplate(active.def.id, nextConfig);
-				view.galleryConfig = nextConfig;
-				view.galleryController?.updateConfig(nextConfig);
-				view.markUserMutation('gallery-template');
-				view.persistenceService.scheduleSave();
-			},
+			view.galleryTemplateTouched = true;
+			view.shouldAutoFillGalleryDefaults = false;
+			view.galleryViewStore.updateTemplate(active.def.id, nextConfig);
+			view.galleryConfig = nextConfig;
+			view.galleryController?.updateConfig(nextConfig);
+			view.markUserMutation('gallery-template');
+			view.persistenceService.scheduleSave();
+		},
 			onSaveDefault: plugin
 				? async (nextTemplate) => {
 					try {
@@ -127,13 +148,133 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 					}
 				}
 				: undefined,
-			getGlobalDefault: () => {
-				const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
-				return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
-			}
-		});
-		modal.open();
-	};
+				getGlobalDefault: () => {
+					const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
+					return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
+				},
+				renderExtraSections: (container) => {
+					const grouping = container.createDiv({ cls: 'tlb-gallery-template__filters' });
+					grouping.createEl('h3', { text: t('galleryView.templateModal.groupFieldTitle' as TranslationKey) });
+					const groupRow = grouping.createDiv({ cls: 'tlb-gallery-template__filters-row' });
+					const groupLabel = groupRow.createEl('label', { text: t('galleryView.templateModal.groupFieldLabel' as TranslationKey) });
+					groupLabel.setAttribute('for', 'tlb-gallery-group-field');
+					const groupSelect = groupRow.createEl('select', { attr: { id: 'tlb-gallery-group-field' } });
+					const noneOption = groupSelect.createEl('option', {
+						text: t('galleryView.templateModal.groupFieldNone' as TranslationKey),
+						value: ''
+					});
+					const uniqueFields = Array.from(new Set(fields));
+					for (const field of uniqueFields) {
+						groupSelect.createEl('option', { text: field, value: field });
+					}
+					const currentGroup = active.def.groupField ?? '';
+					groupSelect.value = currentGroup || '';
+					const applyGroupField = (value: string) => {
+						view.galleryViewStore.setGroupField(active.def.id, value || null);
+						view.markUserMutation('gallery-template');
+						view.persistenceService.scheduleSave();
+						seedGroupFilters(value);
+					};
+					groupSelect.addEventListener('change', (evt) => {
+						const value = (evt.target as HTMLSelectElement).value;
+						applyGroupField(value);
+					});
+					if (!currentGroup) {
+						noneOption.selected = true;
+					}
+
+					const section = container.createDiv({ cls: 'tlb-gallery-template__filters' });
+					section.createEl('h3', { text: t('galleryView.templateModal.filterSectionTitle' as TranslationKey) });
+					const descEl = section.createDiv({ cls: 'tlb-gallery-template__filters-desc' });
+						const pickerRow = section.createDiv({ cls: 'tlb-gallery-template__filters-row' });
+						const label = pickerRow.createEl('label', { text: t('galleryView.templateModal.filterPickerLabel' as TranslationKey) });
+						label.setAttribute('for', 'tlb-gallery-filter-picker');
+						const selectEl = pickerRow.createEl('select', { attr: { id: 'tlb-gallery-filter-picker' } });
+						const actions = section.createDiv({ cls: 'tlb-gallery-template__filters-actions' });
+						const newBtn = actions.createEl('button', {
+							text: t('galleryView.templateModal.newFilterButton' as TranslationKey)
+						});
+						const editBtn = actions.createEl('button', {
+							text: t('galleryView.templateModal.editFilterButton' as TranslationKey),
+							cls: 'mod-cta'
+						});
+						const manageGroupsBtn = actions.createEl('button', {
+							text: t('galleryView.templateModal.manageGroupsButton' as TranslationKey)
+						});
+
+						const rebuild = () => {
+							while (selectEl.firstChild) {
+								selectEl.removeChild(selectEl.firstChild);
+							}
+							const state = view.galleryFilterStateStore.getState();
+							const views = Array.isArray(state.views) ? state.views : [];
+							const activeViewId = state.activeViewId ?? null;
+							const allLabel = t('galleryView.templateModal.filterAllLabel' as TranslationKey);
+							const allOption = selectEl.createEl('option', { text: allLabel, value: '' });
+							if (!activeViewId) {
+								allOption.selected = true;
+							}
+							for (const entry of views) {
+								const option = selectEl.createEl('option', {
+									text: (entry.name ?? '').trim() || t('filterViewBar.unnamedViewLabel'),
+									value: entry.id
+								});
+								if (entry.id === activeViewId) {
+									option.selected = true;
+								}
+							}
+							const activeFilter = view.galleryFilterStateStore.findActiveView();
+							const filterLabel = activeFilter?.name?.trim() || t('filterViewBar.unnamedViewLabel');
+							descEl.setText(
+								activeFilter
+									? t('galleryView.templateModal.filterSectionActive' as TranslationKey, { name: filterLabel })
+									: t('galleryView.templateModal.filterSectionEmpty' as TranslationKey)
+							);
+						};
+
+						selectEl.addEventListener('change', (event) => {
+							const value = (event.target as HTMLSelectElement).value;
+							view.galleryFilterViewController.activateFilterView(value || null);
+							view.galleryFilterOrchestrator.refresh();
+							view.markUserMutation('gallery-filter-change');
+							view.persistenceService.scheduleSave();
+							rebuild();
+						});
+
+						newBtn.addEventListener('click', (evt) => {
+							evt.preventDefault();
+							void view.galleryFilterViewController.promptCreateFilterView().then(() => {
+								view.galleryFilterOrchestrator.refresh();
+								rebuild();
+							});
+						});
+
+						editBtn.addEventListener('click', (evt) => {
+							evt.preventDefault();
+							const current = view.galleryFilterStateStore.findActiveView();
+							if (!current) {
+								void view.galleryFilterViewController.promptCreateFilterView().then(() => {
+									view.galleryFilterOrchestrator.refresh();
+									rebuild();
+								});
+								return;
+							}
+							void view.galleryFilterViewController.updateFilterView(current.id).then(() => {
+								view.galleryFilterOrchestrator.refresh();
+								rebuild();
+							});
+						});
+
+						manageGroupsBtn.addEventListener('click', (evt) => {
+							evt.preventDefault();
+							view.galleryTagGroupController?.openTagGroupMenu(manageGroupsBtn);
+						});
+
+					rebuild();
+				}
+			});
+			modal.open();
+		};
 
 	const selectGalleryView = (viewId: string) => {
 		const next = ensureActiveGalleryConfig(viewId);
@@ -141,7 +282,6 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryController?.setCardSize({ width: next.cardWidth, height: next.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
-		refreshToolbarState();
 	};
 
 	const createGalleryView = () => {
@@ -152,7 +292,6 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryController?.setCardSize({ width: enforced.cardWidth, height: enforced.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
-		refreshToolbarState();
 	};
 
 	const duplicateGalleryView = (viewId: string) => {
@@ -163,7 +302,6 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryController?.setCardSize({ width: enforced.cardWidth, height: enforced.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
-		refreshToolbarState();
 	};
 
 	const deleteGalleryView = (viewId: string) => {
@@ -177,7 +315,6 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryController?.setCardSize({ width: active.cardWidth, height: active.cardHeight });
 		view.markUserMutation('gallery-template');
 		view.persistenceService.scheduleSave();
-		refreshToolbarState();
 	};
 
 	const { config: activeConfig, cardWidth: activeCardWidth, cardHeight: activeCardHeight } = ensureActiveGalleryConfig();
@@ -191,8 +328,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		cardWidth: activeCardWidth,
 		cardHeight: activeCardHeight,
 		sourcePath,
-		quickFilterManager: view.globalQuickFilterManager,
-		subscribeToRows: (listener) => view.filterOrchestrator.addVisibleRowsListener(listener),
+		quickFilterManager: view.galleryQuickFilterManager,
+		subscribeToRows: (listener) => view.galleryFilterOrchestrator.addVisibleRowsListener(listener),
 		onSaveRow: async (row, values) => {
 			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
 			if (rowIndex == null) return;
@@ -202,7 +339,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			view.markUserMutation('gallery-inline-edit');
 			view.persistenceService.scheduleSave();
 			view.filterOrchestrator.refresh();
-			return view.filterOrchestrator.getVisibleRows();
+			view.galleryFilterOrchestrator.refresh();
+			return view.galleryFilterOrchestrator.getVisibleRows();
 		},
 		onTemplateChange: () => {
 			view.galleryTemplateTouched = true;
@@ -213,55 +351,41 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	});
 
 	view.galleryController = controller;
-	view.galleryToolbar = new GalleryToolbar({
-		container: toolbarContainer,
-		views: view.galleryViewStore.getState().views,
-		activeViewId: view.activeGalleryViewId,
-		renderQuickFilter: (searchContainer) => view.globalQuickFilterController.render(searchContainer),
-		onSelectView: (viewId) => {
-			selectGalleryView(viewId);
-		},
-		onCreateView: () => {
-			createGalleryView();
-		},
-		onOpenViewMenu: (viewId, event) => {
+	renderGalleryFilterControls(view, filterContainer, {
+		onOpenSettings: (_button, event) => {
 			event.preventDefault();
 			const menu = new Menu();
-			menu.addItem((item) => {
-				item.setTitle(t('galleryView.toolbar.editGalleryLabel')).onClick(() => {
-					openTemplateModal(viewId);
+			const state = view.galleryViewStore.getState();
+			const activeId = view.activeGalleryViewId ?? state.activeViewId ?? null;
+			for (const entry of state.views) {
+				menu.addItem((item) => {
+					const label = entry.name || t('galleryView.toolbar.unnamedGalleryLabel');
+					item.setTitle(entry.id === activeId ? `✓ ${label}` : label).onClick(() => {
+						selectGalleryView(entry.id);
+					});
 				});
-			});
-			menu.addItem((item) => {
-				item.setTitle(t('galleryView.toolbar.duplicateGalleryLabel')).onClick(() => {
-					duplicateGalleryView(viewId);
-				});
-			});
+			}
 			menu.addSeparator();
 			menu.addItem((item) => {
-				item.setTitle(t('galleryView.toolbar.deleteGalleryLabel')).onClick(() => {
-					deleteGalleryView(viewId);
+				item.setTitle(t('galleryView.toolbar.addGalleryButtonAriaLabel')).onClick(() => {
+					createGalleryView();
 				});
 			});
+			if (activeId) {
+				menu.addItem((item) => {
+					item.setTitle(t('galleryView.toolbar.editGalleryLabel')).onClick(() => openTemplateModal(activeId));
+				});
+				menu.addItem((item) => {
+					item.setTitle(t('galleryView.toolbar.duplicateGalleryLabel')).onClick(() => duplicateGalleryView(activeId));
+				});
+				menu.addItem((item) => {
+					item.setTitle(t('galleryView.toolbar.deleteGalleryLabel')).onClick(() => deleteGalleryView(activeId));
+				});
+			}
 			menu.showAtMouseEvent(event);
-		},
-		onOpenSettings: (button, event) => {
-			event.preventDefault();
-			const menu = new Menu();
-			const rect = button.getBoundingClientRect();
-			const ownerDoc = button.ownerDocument;
-			const win = ownerDoc?.defaultView ?? window;
-			menu.showAtPosition({
-				x: rect.left + win.scrollX,
-				y: rect.bottom + win.scrollY
-			});
-		},
-		onEditView: (viewId) => {
-			openTemplateModal(viewId);
 		}
 	});
 
-	refreshToolbarState();
-
+	view.galleryFilterOrchestrator.applyActiveView();
 	view.filterOrchestrator.applyActiveView();
 }

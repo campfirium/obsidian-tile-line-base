@@ -6,6 +6,7 @@ export interface GalleryViewDefinition {
 	template: SlideViewConfig;
 	cardWidth?: number | null;
 	cardHeight?: number | null;
+	groupField?: string | null;
 }
 
 export interface GalleryViewState {
@@ -58,7 +59,10 @@ export class GalleryViewStore {
 					name: typeof entry.name === 'string' && entry.name.trim().length > 0 ? entry.name : 'Gallery',
 					template: normalizeSlideViewConfig(entry.template ?? null),
 					cardWidth: normalizeSize((entry as { cardWidth?: unknown }).cardWidth, aspectSize?.width ?? DEFAULT_CARD_WIDTH),
-					cardHeight: normalizeSize((entry as { cardHeight?: unknown }).cardHeight, aspectSize?.height ?? DEFAULT_CARD_HEIGHT)
+					cardHeight: normalizeSize((entry as { cardHeight?: unknown }).cardHeight, aspectSize?.height ?? DEFAULT_CARD_HEIGHT),
+					groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
+						? ((entry as { groupField: string }).groupField.trim() || null)
+						: null
 				};
 			}),
 			activeViewId: next.activeViewId ?? null
@@ -69,18 +73,19 @@ export class GalleryViewStore {
 	resetWithConfig(config: SlideViewConfig, name = 'Gallery'): void {
 		const normalized = normalizeSlideViewConfig(config);
 		this.state = {
-			views: [
-				{
-					id: createId(),
-					name,
-					template: normalized,
-					cardWidth: DEFAULT_CARD_WIDTH,
-					cardHeight: DEFAULT_CARD_HEIGHT
-				}
-			],
-			activeViewId: null
-		};
-		this.ensureActive();
+				views: [
+					{
+						id: createId(),
+						name,
+						template: normalized,
+						cardWidth: DEFAULT_CARD_WIDTH,
+						cardHeight: DEFAULT_CARD_HEIGHT,
+						groupField: null
+					}
+				],
+				activeViewId: null
+			};
+			this.ensureActive();
 	}
 
 	getState(): GalleryViewState {
@@ -90,7 +95,8 @@ export class GalleryViewStore {
 				name: entry.name,
 				template: entry.template,
 				cardWidth: normalizeSize(entry.cardWidth, DEFAULT_CARD_WIDTH),
-				cardHeight: normalizeSize(entry.cardHeight, DEFAULT_CARD_HEIGHT)
+				cardHeight: normalizeSize(entry.cardHeight, DEFAULT_CARD_HEIGHT),
+				groupField: entry.groupField ?? null
 			})),
 			activeViewId: this.state.activeViewId
 		};
@@ -127,7 +133,8 @@ export class GalleryViewStore {
 			name,
 			template: normalizeSlideViewConfig(options.template),
 			cardWidth: DEFAULT_CARD_WIDTH,
-			cardHeight: DEFAULT_CARD_HEIGHT
+			cardHeight: DEFAULT_CARD_HEIGHT,
+			groupField: null
 		};
 		this.state.views.push(def);
 		if (options.setActive !== false) {
@@ -171,6 +178,7 @@ export class GalleryViewStore {
 			width: target.cardWidth ?? DEFAULT_CARD_WIDTH,
 			height: target.cardHeight ?? DEFAULT_CARD_HEIGHT
 		});
+		duplicated.groupField = target.groupField ?? null;
 		return duplicated;
 	}
 
@@ -183,6 +191,15 @@ export class GalleryViewStore {
 			this.state.activeViewId = this.state.views[0]?.id ?? null;
 		}
 		return this.ensureActive();
+	}
+
+	setGroupField(id: string, field: string | null): GalleryViewDefinition | null {
+		const target = this.state.views.find((entry) => entry.id === id);
+		if (!target) {
+			return null;
+		}
+		target.groupField = field && field.trim().length > 0 ? field.trim() : null;
+		return target;
 	}
 
 	private composeUniqueName(baseName: string): string {

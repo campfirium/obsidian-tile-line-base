@@ -400,6 +400,19 @@ export default class TileLineBasePlugin extends Plugin {
 		logger.debug('saveFilterViewsForFile', { filePath, viewCount: sanitized.views.length, activeView: sanitized.activeViewId });
 	}
 
+	getGalleryFilterViewsForFile(filePath: string): FileFilterViewState {
+		return this.settingsService.getGalleryFilterViewsForFile(filePath);
+	}
+
+	async saveGalleryFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<void> {
+		const sanitized = await this.settingsService.saveGalleryFilterViewsForFile(filePath, state);
+		logger.debug('saveGalleryFilterViewsForFile', {
+			filePath,
+			viewCount: sanitized.views.length,
+			activeView: sanitized.activeViewId
+		});
+	}
+
 	getTagGroupsForFile(filePath: string): FileTagGroupState {
 		return this.settingsService.getTagGroupsForFile(filePath);
 	}
@@ -407,6 +420,19 @@ export default class TileLineBasePlugin extends Plugin {
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<void> {
 		const sanitized = await this.settingsService.saveTagGroupsForFile(filePath, state);
 		logger.debug('saveTagGroupsForFile', { filePath, groupCount: sanitized.groups.length, activeGroup: sanitized.activeGroupId });
+	}
+
+	getGalleryTagGroupsForFile(filePath: string): FileTagGroupState {
+		return this.settingsService.getGalleryTagGroupsForFile(filePath);
+	}
+
+	async saveGalleryTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<void> {
+		const sanitized = await this.settingsService.saveGalleryTagGroupsForFile(filePath, state);
+		logger.debug('saveGalleryTagGroupsForFile', {
+			filePath,
+			groupCount: sanitized.groups.length,
+			activeGroup: sanitized.activeGroupId
+		});
 	}
 
 	getKanbanBoardsForFile(filePath: string): KanbanBoardState {

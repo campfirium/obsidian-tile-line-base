@@ -27,6 +27,7 @@ interface SlideTemplateModalOptions {
 	cardSize?: { width: number; height: number };
 	onCardSizeChange?: (size: { width: number; height: number }) => void;
 	getGlobalDefault?: () => SlideViewConfig | null;
+	renderExtraSections?: (container: HTMLElement) => void;
 }
 
 
@@ -46,6 +47,7 @@ export class SlideTemplateModal extends Modal {
 	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
 	private readonly titleKey?: TranslationKey;
 	private readonly onCardSizeChange?: (size: { width: number; height: number }) => void;
+	private readonly renderExtraSections?: (container: HTMLElement) => void;
 	private template: SlideTemplateConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
@@ -71,6 +73,7 @@ export class SlideTemplateModal extends Modal {
 		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
 		this.titleKey = opts.titleKey;
 		this.onCardSizeChange = opts.onCardSizeChange;
+		this.renderExtraSections = opts.renderExtraSections;
 		if (opts.cardSize) {
 			const width = Number(opts.cardSize.width);
 			const height = Number(opts.cardSize.height);
@@ -174,6 +177,9 @@ export class SlideTemplateModal extends Modal {
 		this.renderSplitSection(this.template.mode === 'split');
 		this.renderColorSection(this.contentEl);
 		this.renderCardSizeSection(this.contentEl);
+		if (this.renderExtraSections) {
+			this.renderExtraSections(this.contentEl);
+		}
 		this.renderActions();
 	}
 

@@ -5,6 +5,8 @@ import type { TableView } from '../TableView';
 import { t } from '../i18n';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 
+type FilterViewStateLike = import('../types/filterView').FileFilterViewState;
+
 const logger = getLogger('table-view:interactions');
 
 export function getActiveFilterPrefills(view: TableView): Record<string, string> {
@@ -65,6 +67,7 @@ export function handleHeaderEdit(view: TableView, colIndex: number, newValue: st
 	view.columnLayoutStore.rename(oldName, trimmed);
 	renameColumnInFilterViews(view, oldName, trimmed);
 	view.filterOrchestrator.refresh();
+	view.galleryFilterOrchestrator.refresh();
 	view.markUserMutation('column-rename');
 	view.persistenceService.scheduleSave();
 }
@@ -76,6 +79,7 @@ export function persistColumnStructureChange(view: TableView, options?: { notice
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();
 	view.filterOrchestrator.refresh();
+	view.galleryFilterOrchestrator.refresh();
 	if (options?.notice) {
 		new Notice(options.notice);
 	}
@@ -92,61 +96,71 @@ export function persistColumnStructureChange(view: TableView, options?: { notice
 }
 
 export function renameColumnInFilterViews(view: TableView, oldName: string, newName: string): void {
-	if (!view.filterViewState || !Array.isArray(view.filterViewState.views)) {
-		return;
-	}
-	for (const filterView of view.filterViewState.views) {
-		let modified = false;
-		if (filterView.filterRule) {
-			for (const condition of filterView.filterRule.conditions) {
-				if (condition.column === oldName) {
-					condition.column = newName;
-					modified = true;
+	const updateState = (state: FilterViewStateLike | null | undefined): void => {
+		if (!state || !Array.isArray(state.views)) {
+			return;
+		}
+		for (const filterView of state.views) {
+			let modified = false;
+			if (filterView.filterRule) {
+				for (const condition of filterView.filterRule.conditions) {
+					if (condition.column === oldName) {
+						condition.column = newName;
+						modified = true;
+					}
 				}
 			}
-		}
-		if (Array.isArray(filterView.sortRules)) {
-			for (const rule of filterView.sortRules) {
-				if (rule.column === oldName) {
-					rule.column = newName;
-					modified = true;
+			if (Array.isArray(filterView.sortRules)) {
+				for (const rule of filterView.sortRules) {
+					if (rule.column === oldName) {
+						rule.column = newName;
+						modified = true;
+					}
 				}
 			}
+			if (modified) {
+				filterView.columnState = null;
+			}
 		}
-		if (modified) {
-			filterView.columnState = null;
-		}
-	}
+	};
+
+	updateState(view.filterViewState);
+	updateState(view.galleryFilterViewState as any);
 }
 
 export function removeColumnFromFilterViews(view: TableView, column: string): void {
-	if (!view.filterViewState || !Array.isArray(view.filterViewState.views)) {
-		return;
-	}
-	for (const filterView of view.filterViewState.views) {
-		let modified = false;
-		if (filterView.filterRule) {
-			const conditions = filterView.filterRule.conditions.filter((condition) => condition.column !== column);
-			if (conditions.length !== filterView.filterRule.conditions.length) {
-				filterView.filterRule.conditions = conditions;
-				modified = true;
+	const updateState = (state: FilterViewStateLike | null | undefined): void => {
+		if (!state || !Array.isArray(state.views)) {
+			return;
+		}
+		for (const filterView of state.views) {
+			let modified = false;
+			if (filterView.filterRule) {
+				const conditions = filterView.filterRule.conditions.filter((condition) => condition.column !== column);
+				if (conditions.length !== filterView.filterRule.conditions.length) {
+					filterView.filterRule.conditions = conditions;
+					modified = true;
+				}
+				if (filterView.filterRule.conditions.length === 0) {
+					filterView.filterRule = null;
+					modified = true;
+				}
 			}
-			if (filterView.filterRule.conditions.length === 0) {
-				filterView.filterRule = null;
-				modified = true;
+			if (Array.isArray(filterView.sortRules)) {
+				const nextSort = filterView.sortRules.filter((rule) => rule.column !== column);
+				if (nextSort.length !== filterView.sortRules.length) {
+					filterView.sortRules = nextSort;
+					modified = true;
+				}
+			}
+			if (modified) {
+				filterView.columnState = null;
 			}
 		}
-		if (Array.isArray(filterView.sortRules)) {
-			const nextSort = filterView.sortRules.filter((rule) => rule.column !== column);
-			if (nextSort.length !== filterView.sortRules.length) {
-				filterView.sortRules = nextSort;
-				modified = true;
-			}
-		}
-		if (modified) {
-			filterView.columnState = null;
-		}
-	}
+	};
+
+	updateState(view.filterViewState);
+	updateState(view.galleryFilterViewState as any);
 }
 
 export function cleanupEventListeners(view: TableView): void {
@@ -157,6 +171,7 @@ export function cleanupEventListeners(view: TableView): void {
 
 export async function handleOnClose(view: TableView): Promise<void> {
 	view.globalQuickFilterController.cleanup();
+	view.galleryQuickFilterController.cleanup();
 	if (view.filterViewBar) {
 		view.filterViewBar.destroy();
 		view.filterViewBar = null;

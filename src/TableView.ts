@@ -44,6 +44,7 @@ import type { KanbanToolbar } from "./table-view/kanban/KanbanToolbar";
 import type { GalleryToolbar } from "./table-view/gallery/GalleryToolbar";
 import { KanbanBoardStore } from "./table-view/kanban/KanbanBoardStore";
 import type { KanbanBoardController } from "./table-view/kanban/KanbanBoardController";
+import { attachNavigatorCompatibility } from "./table-view/NavigatorDebugProbe";
 import type { KanbanBoardState, KanbanCardContentConfig, KanbanHeightMode, KanbanSortDirection } from "./types/kanban";
 import { DEFAULT_KANBAN_FONT_SCALE, DEFAULT_KANBAN_HEIGHT_MODE, DEFAULT_KANBAN_INITIAL_VISIBLE_COUNT, DEFAULT_KANBAN_SORT_DIRECTION, DEFAULT_KANBAN_SORT_FIELD } from "./types/kanban";
 import { sanitizeKanbanHeightMode } from "./table-view/kanban/kanbanHeight";
@@ -57,6 +58,7 @@ import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
 import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
 import { RowOrderController } from "./table-view/row-sort/RowOrderController";
 import type { MagicMigrationController } from "./table-view/MagicMigrationController";
+import { getPluginContext } from "./pluginContext";
 export const TABLE_VIEW_TYPE = "tile-line-base-table";
 const logger = getLogger("view:table");
 export interface TableViewState extends Record<string, unknown> {
@@ -119,27 +121,17 @@ export class TableView extends ItemView {
 	public galleryViewStore = new GalleryViewStore(null); public activeGalleryViewId: string | null = null; public galleryViewsLoaded = false;
 	private viewModeManager!: ViewModeManager; public previousNonSlideMode: 'table' | 'kanban' | 'gallery' = 'table';
 	private readonly renderScheduler = new RenderScheduler(() => this.renderInternal());
+	private disposeNavigatorProbe: (() => void) | null = null;
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		this.navigation = true;
 		initializeTableView(this);
 		this.viewModeManager = new ViewModeManager(this);
 	}
-	getViewType(): string {
-		return TABLE_VIEW_TYPE;
-	}
-	getDisplayText(): string {
-		return buildTableViewTabTitle({
-			file: this.file,
-			filePath: this.file?.path ?? null
-		});
-	}
-	public refreshDisplayText(): void {
-		refreshTableViewDisplayText(this);
-	}
-	private syncQuickFilterContext(file: TFile | null): void {
-		this.globalQuickFilterManager.setContext(file?.path ?? null);
-	}
+	getViewType(): string { return TABLE_VIEW_TYPE; }
+	getDisplayText(): string { return buildTableViewTabTitle({ file: this.file, filePath: this.file?.path ?? null }); }
+	public refreshDisplayText(): void { refreshTableViewDisplayText(this); }
+	private syncQuickFilterContext(file: TFile | null): void { this.globalQuickFilterManager.setContext(file?.path ?? null); }
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
@@ -177,12 +169,8 @@ export class TableView extends ItemView {
 			this.refreshDisplayText();
 		}
 	}
-	getState(): TableViewState {
-		return { filePath: this.file?.path ?? "" };
-	}
-	async render(): Promise<void> {
-		await this.renderScheduler.run();
-	}
+	getState(): TableViewState { return { filePath: this.file?.path ?? "" }; }
+	async render(): Promise<void> { await this.renderScheduler.run(); }
 	private async renderInternal(): Promise<void> {
 		if (this.kanbanBoardController) {
 			this.kanbanBoardController.ensureInitialized();
@@ -207,6 +195,20 @@ export class TableView extends ItemView {
 		ensureMarkdownToggle(this);
 		this.viewModeManager.ensureActions();
 		this.viewModeManager.updateButtons();
+		if (!this.disposeNavigatorProbe) {
+			const plugin = getPluginContext();
+			const compatEnabled = plugin?.getNavigatorCompatibilityEnabled?.() ?? false;
+			if (compatEnabled) {
+				const pluginManager = (this.app as any)?.plugins;
+				const navigatorActive = !!pluginManager?.enabledPlugins?.has?.('notebook-navigator');
+				if (navigatorActive) {
+					this.disposeNavigatorProbe = attachNavigatorCompatibility(this.leaf, {
+						getCurrentFile: () => this.file,
+						getViewType: () => this.getViewType()
+					});
+				}
+			}
+		}
 	}
 	async onClose(): Promise<void> {
 		await this.restoreSessionBaselineIfEligible();
@@ -249,6 +251,10 @@ export class TableView extends ItemView {
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();
 		}
+		if (this.disposeNavigatorProbe) {
+			this.disposeNavigatorProbe();
+			this.disposeNavigatorProbe = null;
+		}
 	}
 	onMoreOptions(menu: Menu): void {
 		populateMoreOptionsMenu(this, menu);
@@ -276,19 +282,9 @@ export class TableView extends ItemView {
 		this.markUserMutation('kanban-multi-row');
 		this.persistenceService?.scheduleSave();
 	}
-	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> {
-		await this.viewModeManager.setActiveViewMode(mode);
+		public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> { await this.viewModeManager.setActiveViewMode(mode); }
+		public captureConversionBaseline(content: string): void { this.conversionSession.captureBaseline(content); }
+		public markUserMutation(reason?: string): void { this.conversionSession.markUserMutation(reason); }
+		public hasUserMutations(): boolean { return this.conversionSession.hasUserMutations(); }
+		public async restoreSessionBaselineIfEligible(): Promise<boolean> { return this.conversionSession.restoreBaselineIfEligible(); }
 	}
-	public captureConversionBaseline(content: string): void {
-		this.conversionSession.captureBaseline(content);
-	}
-	public markUserMutation(reason?: string): void {
-		this.conversionSession.markUserMutation(reason);
-	}
-	public hasUserMutations(): boolean {
-		return this.conversionSession.hasUserMutations();
-	}
-	public async restoreSessionBaselineIfEligible(): Promise<boolean> {
-		return this.conversionSession.restoreBaselineIfEligible();
-	}
-}

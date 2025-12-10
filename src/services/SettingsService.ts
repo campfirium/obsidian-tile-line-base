@@ -91,6 +91,8 @@ export interface TileLineBaseSettings {
 	onboarding: OnboardingState;
 	locale: LocaleCode | null;
 	localizedLocale: LocaleCode;
+	navigatorCompatibilityEnabled: boolean;
+	navigatorCompatNoticeShown: boolean;
 	pendingDeletions: PendingDeletionRecord[];
 }
 
@@ -127,6 +129,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	},
 	locale: null,
 	localizedLocale: 'en',
+	navigatorCompatibilityEnabled: true,
+	navigatorCompatNoticeShown: false,
 	pendingDeletions: []
 };
 
@@ -179,6 +183,10 @@ export class SettingsService {
 				: DEFAULT_SETTINGS.borderColorMode;
 		merged.borderCustomColor = this.sanitizeColorValue(borderCustomColor);
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
+		merged.navigatorCompatibilityEnabled =
+			typeof (merged as TileLineBaseSettings).navigatorCompatibilityEnabled === 'boolean'
+				? (merged as TileLineBaseSettings).navigatorCompatibilityEnabled
+				: DEFAULT_SETTINGS.navigatorCompatibilityEnabled;
 		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
 		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
 		const localeCandidate = typeof (merged as TileLineBaseSettings).locale === 'string'
@@ -189,6 +197,10 @@ export class SettingsService {
 			? (merged as TileLineBaseSettings).localizedLocale
 			: null;
 		merged.localizedLocale = normalizeLocaleCode(localizedCandidate) ?? DEFAULT_SETTINGS.localizedLocale;
+		merged.navigatorCompatNoticeShown =
+			typeof (merged as TileLineBaseSettings).navigatorCompatNoticeShown === 'boolean'
+				? (merged as TileLineBaseSettings).navigatorCompatNoticeShown
+				: DEFAULT_SETTINGS.navigatorCompatNoticeShown;
 		merged.pendingDeletions = this.sanitizePendingDeletionRecords((merged as TileLineBaseSettings).pendingDeletions);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
@@ -842,6 +854,32 @@ export class SettingsService {
 	async saveLoggingConfig(config: LoggingConfig): Promise<void> {
 		this.settings.logging = this.sanitizeLoggingConfig(config);
 		await this.persist();
+	}
+
+	getNavigatorCompatibilityEnabled(): boolean {
+		return this.settings.navigatorCompatibilityEnabled === true;
+	}
+
+	getNavigatorCompatNoticeShown(): boolean {
+		return this.settings.navigatorCompatNoticeShown === true;
+	}
+
+	async setNavigatorCompatNoticeShown(shown: boolean): Promise<boolean> {
+		if (this.settings.navigatorCompatNoticeShown === shown) {
+			return false;
+		}
+		this.settings.navigatorCompatNoticeShown = shown;
+		await this.persist();
+		return true;
+	}
+
+	async setNavigatorCompatibilityEnabled(enabled: boolean): Promise<boolean> {
+		if (this.settings.navigatorCompatibilityEnabled === enabled) {
+			return false;
+		}
+		this.settings.navigatorCompatibilityEnabled = enabled;
+		await this.persist();
+		return true;
 	}
 
 	private sanitizeLoggingConfig(raw: Partial<LoggingConfig> | undefined): LoggingConfig {

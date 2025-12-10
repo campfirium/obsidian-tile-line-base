@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView, Modal } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
@@ -33,7 +33,6 @@ import { snapshotLeaf } from './plugin/utils/snapshotLeaf';
 import { syncLocale } from './plugin/LocaleSync';
 import { RightSidebarController } from './plugin/RightSidebarController';
 import { resolveEnvironmentLocale } from './i18n/localeEnvironment';
-import { NavigatorCompatibilityPatcher } from './plugin/NavigatorCompatibilityPatcher';
 
 const logger = getLogger('plugin:main');
 
@@ -52,7 +51,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private activeLocale: LocaleCode = 'en';
 	private onboardingManager: OnboardingManager | null = null;
 	private commandTableCreationController: TableCreationController | null = null;
-	private navigatorCompatibilityPatcher: NavigatorCompatibilityPatcher | null = null;
+	private navigatorCompatModalShown = false;
 
 	async onload() {
 		setPluginContext(this);
@@ -62,9 +61,9 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
 		this.rightSidebarController = new RightSidebarController(this.app);
-		this.navigatorCompatibilityPatcher = new NavigatorCompatibilityPatcher(this.app, this.windowContextManager);
 		await this.loadSettings();
 		await this.updateLocalizedLocalePreferenceFromEnvironment();
+		this.maybeNotifyNavigatorCompatibility();
 
 		this.backupManager = new BackupManager({
 			plugin: this,
@@ -110,20 +109,18 @@ export default class TileLineBasePlugin extends Plugin {
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 		this.viewActionManager.refreshAll();
-		this.navigatorCompatibilityPatcher?.enable();
-		this.registerNavigatorPluginListener();
 
 		this.app.workspace.onLayoutReady(() => {
 			this.tableTitleRefresher.refreshAll();
 			void this.applyLocaleSettings();
 			void this.updateLocalizedLocalePreferenceFromEnvironment();
-			this.navigatorCompatibilityPatcher?.enable();
 		});
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.tableTitleRefresher.refreshAll();
 			})
 		);
+		this.registerNavigatorPluginListener();
 
 		this.onboardingManager = new OnboardingManager({
 			app: this.app,
@@ -361,7 +358,6 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager.clearInjectedActions();
 		logger.info('Plugin unload: cleaning up resources');
 		this.rightSidebarController.restoreIfNeeded();
-		this.navigatorCompatibilityPatcher?.dispose();
 
 		this.onboardingManager = null;
 		this.commandTableCreationController = null;
@@ -589,6 +585,35 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settings.logging = config;
 	}
 
+	getNavigatorCompatibilityEnabled(): boolean {
+		return this.settingsService.getNavigatorCompatibilityEnabled();
+	}
+
+	async setNavigatorCompatibilityEnabled(enabled: boolean): Promise<void> {
+		const changed = await this.settingsService.setNavigatorCompatibilityEnabled(enabled);
+		if (changed) {
+			this.settings = this.settingsService.getSettings();
+		}
+	}
+
+	private maybeNotifyNavigatorCompatibility(): void {
+		if (this.navigatorCompatModalShown || this.settingsService.getNavigatorCompatNoticeShown()) {
+			return;
+		}
+		const pluginManager = (this.app as any)?.plugins;
+		if (!pluginManager?.enabledPlugins?.has?.('notebook-navigator')) {
+			return;
+		}
+		if (!this.getNavigatorCompatibilityEnabled()) {
+			return;
+		}
+		this.navigatorCompatModalShown = true;
+		const modal = new NavigatorCompatModal(this.app, async () => {
+			await this.settingsService.setNavigatorCompatNoticeShown(true);
+		});
+		modal.open();
+	}
+
 	getLocaleOverride(): LocaleCode | null {
 		return this.settingsService.getLocalePreference();
 	}
@@ -648,7 +673,7 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 		const handler = (pluginId: string) => {
 			if (pluginId === 'notebook-navigator') {
-				this.navigatorCompatibilityPatcher?.enable();
+				this.maybeNotifyNavigatorCompatibility();
 			}
 		};
 		try {
@@ -657,7 +682,7 @@ export default class TileLineBasePlugin extends Plugin {
 				try {
 					pluginManager.off?.('load', handler);
 				} catch (error) {
-					logger.debug('navigator-compat: failed to remove plugin-load listener', error);
+					logger.debug('navigator-compat: failed to remove plugin-load listener', { error });
 				}
 			});
 		} catch (error) {
@@ -727,5 +752,39 @@ export default class TileLineBasePlugin extends Plugin {
 			candidates: result.candidates
 		});
 		return result.locale;
+	}
+}
+
+class NavigatorCompatModal extends Modal {
+	private readonly onResult: () => Promise<void> | void;
+
+	constructor(app: Plugin['app'], onResult: () => Promise<void> | void) {
+		super(app);
+		this.onResult = onResult;
+	}
+
+	onOpen(): void {
+		const { contentEl, titleEl } = this;
+		contentEl.empty();
+		titleEl.setText('TileLineBase Compatibility Notice');
+
+		const header = contentEl.createEl('h2', { text: 'Notebook Navigator Compatibility Enabled' });
+		header.addClass('tlb-compat-title');
+
+		const body = contentEl.createDiv({ cls: 'tlb-compat-body' });
+		body.createEl('p', {
+			text: 'Notebook Navigator is detected. Its reload mechanism causes severe flickering and view switching in TileLineBase views. To ensure normal usage, TileLineBase has automatically enabled instance-level isolation.'
+		});
+		body.createEl('p', {
+			text: 'This protection is locally scoped to TileLineBase views and does not affect other scenarios.'
+		});
+		body.createEl('p', {
+			text: 'You can turn this off anytime in TileLineBase settings under Compatibility.'
+		}).addClass('mod-muted');
+	}
+
+	onClose(): void {
+		void this.onResult();
+		this.contentEl.empty();
 	}
 }

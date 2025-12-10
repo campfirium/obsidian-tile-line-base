@@ -21,6 +21,8 @@ type SidebarSettingHost = Plugin & {
 	setBorderContrast(value: number): Promise<void>;
 	getLoggingLevel(): LogLevelName;
 	setLoggingLevel(level: LogLevelName): Promise<void>;
+	getNavigatorCompatibilityEnabled(): boolean;
+	setNavigatorCompatibilityEnabled(enabled: boolean): Promise<void>;
 	isBackupEnabled(): boolean;
 	setBackupEnabled(value: boolean): Promise<void>;
 	getBackupCapacityLimit(): number;
@@ -217,11 +219,11 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 			.setName(t('settings.loggingHeading'))
 			.setHeading();
 
-		new Setting(containerEl)
-			.setName(t('settings.loggingLevelLabel'))
-			.setDesc(t('settings.loggingLevelDesc'))
-			.addDropdown((dropdown) => {
-				for (const option of LOG_LEVEL_OPTIONS) {
+			new Setting(containerEl)
+				.setName(t('settings.loggingLevelLabel'))
+				.setDesc(t('settings.loggingLevelDesc'))
+				.addDropdown((dropdown) => {
+					for (const option of LOG_LEVEL_OPTIONS) {
 					dropdown.addOption(option, t(LOG_LEVEL_LABEL_KEYS[option]));
 				}
 
@@ -237,11 +239,25 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					}
 					await this.plugin.setLoggingLevel(value);
 					const latest = this.plugin.getLoggingLevel();
-					if (isLogLevel(latest) && dropdown.getValue() !== latest) {
-						dropdown.setValue(latest);
-					}
+						if (isLogLevel(latest) && dropdown.getValue() !== latest) {
+							dropdown.setValue(latest);
+						}
+					});
 				});
-			});
+
+			new Setting(containerEl)
+				.setName(t('settings.compatibilityHeading'))
+				.setHeading();
+
+			new Setting(containerEl)
+				.setName(t('settings.navigatorCompatLabel'))
+				.setDesc(t('settings.navigatorCompatDesc'))
+				.addToggle((toggle) => {
+					toggle.setValue(this.plugin.getNavigatorCompatibilityEnabled());
+					toggle.onChange(async (value) => {
+						await this.plugin.setNavigatorCompatibilityEnabled(value);
+					});
+				});
 	}
 
 	private renderBackupSection(containerEl: HTMLElement): void {
@@ -289,6 +305,7 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				}
 				});
 			});
+
 	}
 
 	private normalizeStripeMode(value: string | null | undefined): StripeColorMode {

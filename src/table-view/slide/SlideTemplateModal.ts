@@ -68,6 +68,7 @@ export class SlideTemplateModal extends Modal {
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.fields = opts.fields.filter((field) => field && !RESERVED_SLIDE_FIELDS.has(field));
 		this.onSave = opts.onSave;
+		this.renderIntroSection = opts.renderIntroSection;
 		this.onSaveDefault = opts.onSaveDefault;
 		this.getGlobalDefault = opts.getGlobalDefault ?? (() => getPluginContext()?.getDefaultSlideConfig() ?? null);
 		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;

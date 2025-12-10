@@ -1,11 +1,15 @@
 import { Menu, Notice } from 'obsidian';
 import { t, type TranslationKey } from '../../i18n';
 import type { TableView } from '../../TableView';
+import type { DefaultFilterViewPreferences } from '../../types/filterView';
 import { GalleryViewController } from './GalleryViewController';
 import { SlideTemplateModal } from '../slide/SlideTemplateModal';
 import { ensureLayoutDefaults } from '../slide/slideConfigHelpers';
 import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from '../slide/slideDefaults';
 import { normalizeSlideViewConfig } from '../../types/slide';
+import { sanitizeDefaultViewName } from '../filter/DefaultViewPreferences';
+import { createIconPicker } from '../icon/IconPicker';
+import { sanitizeIconId } from '../icon/IconUtils';
 import { getPluginContext } from '../../pluginContext';
 import { getLogger } from '../../utils/logger';
 import { renderGalleryFilterControls, updateGalleryFilterViewBarTagGroupState } from './galleryFilterPresenter';
@@ -132,7 +136,34 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 
 	const openTemplateModal = (viewId?: string) => {
 		const active = ensureActiveGalleryConfig(viewId ?? view.activeGalleryViewId ?? undefined);
-		let pendingName = active.def.name ?? '';
+		const defaultPrefs = view.galleryFilterStateStore.getState().metadata?.defaultView ?? null;
+		const fallbackLabel = t('filterViewBar.allTabLabel');
+		const initialName =
+			(typeof defaultPrefs?.name === 'string' ? defaultPrefs.name.trim() : '') || active.def.name?.trim() || '';
+		let pendingName = initialName || fallbackLabel;
+		let pendingIcon = sanitizeIconId(defaultPrefs?.icon);
+		const persistDefaultViewPreferences = () => {
+			const sanitizedName = sanitizeDefaultViewName(pendingName);
+			const sanitizedIcon = sanitizeIconId(pendingIcon);
+			view.galleryFilterStateStore.updateState((state) => {
+				if (!state.metadata) {
+					state.metadata = {};
+				}
+				const nextPrefs: DefaultFilterViewPreferences | null =
+					sanitizedName || sanitizedIcon
+						? {
+							...(sanitizedName ? { name: sanitizedName } : {}),
+							...(sanitizedIcon ? { icon: sanitizedIcon } : {})
+						}
+						: null;
+				state.metadata.defaultView = nextPrefs;
+			});
+			view.galleryFilterViewState = view.galleryFilterStateStore.getState();
+			view.galleryFilterBar?.render(view.galleryFilterViewState);
+			view.markUserMutation('gallery-filter-view-change');
+			view.persistenceService.scheduleSave();
+		};
+
 		const modal = new SlideTemplateModal({
 			app: view.app,
 			fields,
@@ -141,6 +172,43 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			allowedModes: ['single'],
 			allowedSingleBranches: ['withImage'],
 			cardSize: { width: active.cardWidth, height: active.cardHeight },
+			renderIntroSection: (container) => {
+				const intro = container.createDiv({ cls: 'tlb-gallery-template__intro' });
+				const row = intro.createDiv({ cls: 'tlb-gallery-template__intro-row' });
+
+				const iconColumn = row.createDiv({ cls: 'tlb-gallery-template__intro-icon' });
+				const iconLabel = iconColumn.createEl('label', { text: t('filterViewModals.iconLabel') });
+				iconLabel.setAttr('for', 'tlb-gallery-default-icon');
+				const iconPickerHost = iconColumn.createDiv({ cls: 'tlb-icon-picker-host' });
+				const iconSlot = iconPickerHost.createDiv({ cls: 'tlb-icon-picker-slot' });
+				const iconHint = iconPickerHost.createSpan({ cls: 'tlb-icon-picker-hint' });
+				const updateIconHint = (value: string | null) => {
+					iconHint.setText(
+						value ? t('filterViewModals.iconPickerTooltip') : t('filterViewModals.iconPickerAdd')
+					);
+				};
+				const iconPicker = createIconPicker({
+					app: view.app,
+					container: iconSlot,
+					initialIcon: pendingIcon ?? null,
+					onChange: (value) => {
+						pendingIcon = sanitizeIconId(value);
+						updateIconHint(pendingIcon);
+					}
+				});
+				pendingIcon = iconPicker.getValue();
+				updateIconHint(pendingIcon);
+
+				const nameColumn = row.createDiv({ cls: 'tlb-gallery-template__intro-name' });
+				const nameLabel = nameColumn.createEl('label', { text: t('filterViewModals.viewNameLabel') });
+				nameLabel.setAttr('for', 'tlb-gallery-view-name');
+				const nameInput = nameColumn.createEl('input', {
+					attr: { id: 'tlb-gallery-view-name', type: 'text', value: pendingName || '' }
+				});
+				nameInput.addEventListener('input', (evt) => {
+					pendingName = (evt.target as HTMLInputElement).value ?? '';
+				});
+			},
 			onCardSizeChange: (size) => {
 				const width = normalizeSize(size.width, DEFAULT_CARD_WIDTH);
 				const height = normalizeSize(size.height, DEFAULT_CARD_HEIGHT);
@@ -153,20 +221,21 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				const nextConfig = enforceSingleWithImageConfig(
 					normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 				);
-			const trimmedName = pendingName.trim();
-			if (trimmedName.length > 0 && trimmedName !== active.def.name) {
-				view.galleryViewStore.updateName(active.def.id, trimmedName);
+				const trimmedName = pendingName.trim();
+				if (trimmedName.length > 0 && trimmedName !== active.def.name) {
+					view.galleryViewStore.updateName(active.def.id, trimmedName);
+					view.markUserMutation('gallery-template');
+					view.persistenceService.scheduleSave();
+				}
+				persistDefaultViewPreferences();
+				view.galleryTemplateTouched = true;
+				view.shouldAutoFillGalleryDefaults = false;
+				view.galleryViewStore.updateTemplate(active.def.id, nextConfig);
+				view.galleryConfig = nextConfig;
+				view.galleryController?.updateConfig(nextConfig);
 				view.markUserMutation('gallery-template');
 				view.persistenceService.scheduleSave();
-			}
-			view.galleryTemplateTouched = true;
-			view.shouldAutoFillGalleryDefaults = false;
-			view.galleryViewStore.updateTemplate(active.def.id, nextConfig);
-			view.galleryConfig = nextConfig;
-			view.galleryController?.updateConfig(nextConfig);
-			view.markUserMutation('gallery-template');
-			view.persistenceService.scheduleSave();
-		},
+			},
 			onSaveDefault: plugin
 				? async (nextTemplate) => {
 					try {
@@ -174,6 +243,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 							normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 						);
 						await plugin.setDefaultGalleryConfig(enforced);
+						persistDefaultViewPreferences();
 						new Notice(t('slideView.templateModal.setDefaultSuccess'));
 					} catch (error) {
 						logger.error('Failed to set gallery template as default', error);
@@ -181,133 +251,137 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 					}
 				}
 				: undefined,
-				getGlobalDefault: () => {
-					const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
-					return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
-				},
-				renderExtraSections: (container) => {
-					const grouping = container.createDiv({ cls: 'tlb-gallery-template__filters' });
-					grouping.createEl('h3', { text: t('galleryView.templateModal.groupFieldTitle' as TranslationKey) });
-					const groupRow = grouping.createDiv({ cls: 'tlb-gallery-template__filters-row' });
-					const groupLabel = groupRow.createEl('label', { text: t('galleryView.templateModal.groupFieldLabel' as TranslationKey) });
-					groupLabel.setAttribute('for', 'tlb-gallery-group-field');
-					const groupSelect = groupRow.createEl('select', { attr: { id: 'tlb-gallery-group-field' } });
-					const noneOption = groupSelect.createEl('option', {
-						text: t('galleryView.templateModal.groupFieldNone' as TranslationKey),
-						value: ''
-					});
-					const uniqueFields = Array.from(new Set(fields));
-					for (const field of uniqueFields) {
-						groupSelect.createEl('option', { text: field, value: field });
+			getGlobalDefault: () => {
+				const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
+				return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
+			},
+			renderExtraSections: (container) => {
+				const grouping = container.createDiv({ cls: 'tlb-gallery-template__filters' });
+				grouping.createEl('h3', { text: t('galleryView.templateModal.groupFieldTitle' as TranslationKey) });
+				const groupRow = grouping.createDiv({ cls: 'tlb-gallery-template__filters-row' });
+				const groupLabel = groupRow.createEl('label', {
+					text: t('galleryView.templateModal.groupFieldLabel' as TranslationKey)
+				});
+				groupLabel.setAttribute('for', 'tlb-gallery-group-field');
+				const groupSelect = groupRow.createEl('select', { attr: { id: 'tlb-gallery-group-field' } });
+				const noneOption = groupSelect.createEl('option', {
+					text: t('galleryView.templateModal.groupFieldNone' as TranslationKey),
+					value: ''
+				});
+				const uniqueFields = Array.from(new Set(fields));
+				for (const field of uniqueFields) {
+					groupSelect.createEl('option', { text: field, value: field });
+				}
+				const currentGroup = active.def.groupField ?? '';
+				groupSelect.value = currentGroup || '';
+				const applyGroupField = (value: string) => {
+					view.galleryViewStore.setGroupField(active.def.id, value || null);
+					view.markUserMutation('gallery-template');
+					view.persistenceService.scheduleSave();
+					seedGroupFilters(value);
+				};
+				groupSelect.addEventListener('change', (evt) => {
+					const value = (evt.target as HTMLSelectElement).value;
+					applyGroupField(value);
+				});
+				if (!currentGroup) {
+					noneOption.selected = true;
+				}
+
+				const section = container.createDiv({ cls: 'tlb-gallery-template__filters' });
+				section.createEl('h3', { text: t('galleryView.templateModal.filterSectionTitle' as TranslationKey) });
+				const descEl = section.createDiv({ cls: 'tlb-gallery-template__filters-desc' });
+				const pickerRow = section.createDiv({ cls: 'tlb-gallery-template__filters-row' });
+				const label = pickerRow.createEl('label', {
+					text: t('galleryView.templateModal.filterPickerLabel' as TranslationKey)
+				});
+				label.setAttribute('for', 'tlb-gallery-filter-picker');
+				const selectEl = pickerRow.createEl('select', { attr: { id: 'tlb-gallery-filter-picker' } });
+				const actions = section.createDiv({ cls: 'tlb-gallery-template__filters-actions' });
+				const newBtn = actions.createEl('button', {
+					text: t('galleryView.templateModal.newFilterButton' as TranslationKey)
+				});
+				const editBtn = actions.createEl('button', {
+					text: t('galleryView.templateModal.editFilterButton' as TranslationKey),
+					cls: 'mod-cta'
+				});
+				const manageGroupsBtn = actions.createEl('button', {
+					text: t('galleryView.templateModal.manageGroupsButton' as TranslationKey)
+				});
+
+				const rebuild = () => {
+					while (selectEl.firstChild) {
+						selectEl.removeChild(selectEl.firstChild);
 					}
-					const currentGroup = active.def.groupField ?? '';
-					groupSelect.value = currentGroup || '';
-					const applyGroupField = (value: string) => {
-						view.galleryViewStore.setGroupField(active.def.id, value || null);
-						view.markUserMutation('gallery-template');
-						view.persistenceService.scheduleSave();
-						seedGroupFilters(value);
-					};
-					groupSelect.addEventListener('change', (evt) => {
-						const value = (evt.target as HTMLSelectElement).value;
-						applyGroupField(value);
-					});
-					if (!currentGroup) {
-						noneOption.selected = true;
+					const filterState = view.galleryFilterStateStore.getState();
+					const views = Array.isArray(filterState.views) ? filterState.views : [];
+					const activeViewId = filterState.activeViewId ?? null;
+					const allLabel = t('galleryView.templateModal.filterAllLabel' as TranslationKey);
+					const allOption = selectEl.createEl('option', { text: allLabel, value: '' });
+					if (!activeViewId) {
+						allOption.selected = true;
 					}
-
-					const section = container.createDiv({ cls: 'tlb-gallery-template__filters' });
-					section.createEl('h3', { text: t('galleryView.templateModal.filterSectionTitle' as TranslationKey) });
-					const descEl = section.createDiv({ cls: 'tlb-gallery-template__filters-desc' });
-						const pickerRow = section.createDiv({ cls: 'tlb-gallery-template__filters-row' });
-						const label = pickerRow.createEl('label', { text: t('galleryView.templateModal.filterPickerLabel' as TranslationKey) });
-						label.setAttribute('for', 'tlb-gallery-filter-picker');
-						const selectEl = pickerRow.createEl('select', { attr: { id: 'tlb-gallery-filter-picker' } });
-						const actions = section.createDiv({ cls: 'tlb-gallery-template__filters-actions' });
-						const newBtn = actions.createEl('button', {
-							text: t('galleryView.templateModal.newFilterButton' as TranslationKey)
+					for (const entry of views) {
+						const option = selectEl.createEl('option', {
+							text: (entry.name ?? '').trim() || t('filterViewBar.unnamedViewLabel'),
+							value: entry.id
 						});
-						const editBtn = actions.createEl('button', {
-							text: t('galleryView.templateModal.editFilterButton' as TranslationKey),
-							cls: 'mod-cta'
-						});
-						const manageGroupsBtn = actions.createEl('button', {
-							text: t('galleryView.templateModal.manageGroupsButton' as TranslationKey)
-						});
+						if (entry.id === activeViewId) {
+							option.selected = true;
+						}
+					}
+					const activeFilter = view.galleryFilterStateStore.findActiveView();
+					const filterLabel = activeFilter?.name?.trim() || t('filterViewBar.unnamedViewLabel');
+					descEl.setText(
+						activeFilter
+							? t('galleryView.templateModal.filterSectionActive' as TranslationKey, { name: filterLabel })
+							: t('galleryView.templateModal.filterSectionEmpty' as TranslationKey)
+					);
+				};
 
-						const rebuild = () => {
-							while (selectEl.firstChild) {
-								selectEl.removeChild(selectEl.firstChild);
-							}
-							const state = view.galleryFilterStateStore.getState();
-							const views = Array.isArray(state.views) ? state.views : [];
-							const activeViewId = state.activeViewId ?? null;
-							const allLabel = t('galleryView.templateModal.filterAllLabel' as TranslationKey);
-							const allOption = selectEl.createEl('option', { text: allLabel, value: '' });
-							if (!activeViewId) {
-								allOption.selected = true;
-							}
-							for (const entry of views) {
-								const option = selectEl.createEl('option', {
-									text: (entry.name ?? '').trim() || t('filterViewBar.unnamedViewLabel'),
-									value: entry.id
-								});
-								if (entry.id === activeViewId) {
-									option.selected = true;
-								}
-							}
-							const activeFilter = view.galleryFilterStateStore.findActiveView();
-							const filterLabel = activeFilter?.name?.trim() || t('filterViewBar.unnamedViewLabel');
-							descEl.setText(
-								activeFilter
-									? t('galleryView.templateModal.filterSectionActive' as TranslationKey, { name: filterLabel })
-									: t('galleryView.templateModal.filterSectionEmpty' as TranslationKey)
-							);
-						};
+				selectEl.addEventListener('change', (event) => {
+					const value = (event.target as HTMLSelectElement).value;
+					view.galleryFilterViewController.activateFilterView(value || null);
+					view.galleryFilterOrchestrator.refresh();
+					view.markUserMutation('gallery-filter-change');
+					view.persistenceService.scheduleSave();
+					rebuild();
+				});
 
-						selectEl.addEventListener('change', (event) => {
-							const value = (event.target as HTMLSelectElement).value;
-							view.galleryFilterViewController.activateFilterView(value || null);
+				newBtn.addEventListener('click', (evt) => {
+					evt.preventDefault();
+					void view.galleryFilterViewController.promptCreateFilterView().then(() => {
+						view.galleryFilterOrchestrator.refresh();
+						rebuild();
+					});
+				});
+
+				editBtn.addEventListener('click', (evt) => {
+					evt.preventDefault();
+					const current = view.galleryFilterStateStore.findActiveView();
+					if (!current) {
+						void view.galleryFilterViewController.promptCreateFilterView().then(() => {
 							view.galleryFilterOrchestrator.refresh();
-							view.markUserMutation('gallery-filter-change');
-							view.persistenceService.scheduleSave();
 							rebuild();
 						});
+						return;
+					}
+					void view.galleryFilterViewController.updateFilterView(current.id).then(() => {
+						view.galleryFilterOrchestrator.refresh();
+						rebuild();
+					});
+				});
 
-						newBtn.addEventListener('click', (evt) => {
-							evt.preventDefault();
-							void view.galleryFilterViewController.promptCreateFilterView().then(() => {
-								view.galleryFilterOrchestrator.refresh();
-								rebuild();
-							});
-						});
+				manageGroupsBtn.addEventListener('click', (evt) => {
+					evt.preventDefault();
+					view.galleryTagGroupController?.openTagGroupMenu(manageGroupsBtn);
+				});
 
-						editBtn.addEventListener('click', (evt) => {
-							evt.preventDefault();
-							const current = view.galleryFilterStateStore.findActiveView();
-							if (!current) {
-								void view.galleryFilterViewController.promptCreateFilterView().then(() => {
-									view.galleryFilterOrchestrator.refresh();
-									rebuild();
-								});
-								return;
-							}
-							void view.galleryFilterViewController.updateFilterView(current.id).then(() => {
-								view.galleryFilterOrchestrator.refresh();
-								rebuild();
-							});
-						});
-
-						manageGroupsBtn.addEventListener('click', (evt) => {
-							evt.preventDefault();
-							view.galleryTagGroupController?.openTagGroupMenu(manageGroupsBtn);
-						});
-
-					rebuild();
-				}
-			});
-			modal.open();
-		};
+				rebuild();
+			}
+		});
+		modal.open();
+	};
 
 	const selectGalleryView = (viewId: string) => {
 		const next = ensureActiveGalleryConfig(viewId);
@@ -385,6 +459,14 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 
 	view.galleryController = controller;
 	renderGalleryFilterControls(view, filterContainer, {
+		onDefaultViewMenu: () => {
+			const activeId = view.activeGalleryViewId ?? view.galleryViewStore.getState().activeViewId ?? undefined;
+			openTemplateModal(activeId);
+		},
+		onEditDefaultView: () => {
+			const activeId = view.activeGalleryViewId ?? view.galleryViewStore.getState().activeViewId ?? undefined;
+			openTemplateModal(activeId);
+		},
 		onOpenSettings: (_button, event) => {
 			event.preventDefault();
 			const menu = new Menu();

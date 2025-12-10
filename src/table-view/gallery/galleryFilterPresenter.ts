@@ -6,7 +6,11 @@ import { getAvailableColumns, getFilterColumnOptions } from '../TableViewFilterP
 export function renderGalleryFilterControls(
 	view: TableView,
 	container: Element,
-	options?: { onOpenSettings?: (button: HTMLElement, event: MouseEvent) => void }
+	options?: {
+		onOpenSettings?: (button: HTMLElement, event: MouseEvent) => void;
+		onDefaultViewMenu?: (button: HTMLElement, event?: MouseEvent) => void;
+		onEditDefaultView?: () => void;
+	}
 ): void {
 	if (!view.galleryQuickFilterController) {
 		return;
@@ -25,21 +29,29 @@ export function renderGalleryFilterControls(
 			onContextMenu: (filterView, event) => {
 				view.galleryFilterViewController.openFilterViewMenu(filterView, event);
 			},
-				onReorder: (draggedId, targetId) => {
-					view.galleryFilterViewController.reorderFilterViews(draggedId, targetId);
-				},
-				onOpenTagGroupMenu: (button) => {
-					view.galleryTagGroupController?.openTagGroupMenu(button);
-				},
-				onOpenSettings: options?.onOpenSettings,
-				onDefaultViewMenu: (button, event) => {
-					view.galleryFilterViewController.openDefaultViewMenu(button, event);
-				},
-				onEditDefaultView: () => {
-					void view.galleryFilterViewController.editDefaultView();
-				}
+			onReorder: (draggedId, targetId) => {
+				view.galleryFilterViewController.reorderFilterViews(draggedId, targetId);
+			},
+			onOpenTagGroupMenu: (button) => {
+				view.galleryTagGroupController?.openTagGroupMenu(button);
+			},
+			onOpenSettings: options?.onOpenSettings,
+			onDefaultViewMenu: (button, event) => {
+				const handler =
+					options?.onDefaultViewMenu ??
+					((target, evt) => view.galleryFilterViewController.openDefaultViewMenu(target, evt));
+				handler(button, event);
+			},
+			onEditDefaultView: () => {
+				const handler =
+					options?.onEditDefaultView ??
+					(() => {
+						void view.galleryFilterViewController.editDefaultView();
+					});
+				handler();
 			}
-		});
+		}
+	});
 
 	updateGalleryFilterViewBarTagGroupState(view);
 	view.galleryFilterBar.render(view.galleryFilterViewState);

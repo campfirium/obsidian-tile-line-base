@@ -4,6 +4,7 @@ import { t } from '../../i18n';
 import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../renderers/StatusCellRenderer';
 
 const DEFAULT_ALL_VIEW_ICON = 'layout-grid';
+const DEFAULT_FILTER_VIEW_ICON = 'layout-grid';
 
 export interface FilterViewBarCallbacks {
 	onCreate(): void;
@@ -389,6 +390,7 @@ export class FilterViewBar {
 		this.tagGroupLabelEl.textContent = buttonLabel;
 		this.tagGroupButtonEl.setAttribute('title', tooltip);
 		this.tagGroupButtonEl.setAttribute('aria-label', t('tagGroups.buttonAriaLabel', { name: buttonLabel }));
+		this.tagGroupButtonEl.classList.remove('is-active');
 	}
 
 	private applyButtonContent(
@@ -404,13 +406,10 @@ export class FilterViewBar {
 		this.clearElement(button);
 		const isStatus = options?.status === true;
 		button.classList.toggle('tlb-filter-view-button--status', isStatus);
-		if (!iconId) {
-			button.textContent = fallbackLabel;
-			return;
-		}
+		const iconToUse = iconId ?? DEFAULT_FILTER_VIEW_ICON;
 
 		const iconEl = button.createSpan({ cls: 'tlb-filter-view-button__icon' });
-		setIcon(iconEl, iconId);
+		setIcon(iconEl, iconToUse);
 		if (!iconEl.querySelector('svg')) {
 			iconEl.remove();
 			button.classList.remove('tlb-filter-view-button--status');
@@ -430,7 +429,7 @@ export class FilterViewBar {
 		if (status) {
 			return { icon: getStatusIcon(status), isStatusIcon: true };
 		}
-		return { icon: null, isStatusIcon: false };
+		return { icon: DEFAULT_FILTER_VIEW_ICON, isStatusIcon: false };
 	}
 
 	private getDefaultViewName(state: FileFilterViewState): string {

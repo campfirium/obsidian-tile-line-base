@@ -617,7 +617,7 @@
     "settingsMenuImportCsvLabel": "Import CSV into table",
     "settingsMenuImportCsvAsTableLabel": "Import CSV as new table",
     "settingsMenuHelpLabel": "Open help note",
-    "unnamedViewLabel": "Unnamed view"
+    "unnamedViewLabel": "Over"
   },
   "rowOrder": {
     "menuLabel": "Reorder rows (physical)",

@@ -17,7 +17,7 @@ export function attachNavigatorCompatibility(
 	options: NavigatorCompatOptions
 ): () => void {
 	const dispose = around(leaf, {
-		openFile(next) {
+		openFile(next: WorkspaceLeaf["openFile"]) {
 			return function patchedOpenFile(
 				file: TFile | null,
 				...rest: unknown[]

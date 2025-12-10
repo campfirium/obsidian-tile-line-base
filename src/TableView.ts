@@ -129,22 +129,10 @@ export class TableView extends ItemView {
 		initializeTableView(this);
 		this.viewModeManager = new ViewModeManager(this);
 	}
-	getViewType(): string {
-		return TABLE_VIEW_TYPE;
-	}
-	getDisplayText(): string {
-		return buildTableViewTabTitle({
-			file: this.file,
-			filePath: this.file?.path ?? null
-		});
-	}
-	public refreshDisplayText(): void {
-		refreshTableViewDisplayText(this);
-	}
-	private syncQuickFilterContext(file: TFile | null): void {
-		this.globalQuickFilterManager.setContext(file?.path ?? null);
-		this.galleryQuickFilterManager.setContext(file?.path ?? null);
-	}
+	getViewType(): string { return TABLE_VIEW_TYPE; }
+	getDisplayText(): string { return buildTableViewTabTitle({ file: this.file, filePath: this.file?.path ?? null }); }
+	public refreshDisplayText(): void { refreshTableViewDisplayText(this); }
+	private syncQuickFilterContext(file: TFile | null): void { this.globalQuickFilterManager.setContext(file?.path ?? null); this.galleryQuickFilterManager.setContext(file?.path ?? null); }
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
@@ -182,9 +170,7 @@ export class TableView extends ItemView {
 			this.refreshDisplayText();
 		}
 	}
-	getState(): TableViewState {
-		return { filePath: this.file?.path ?? "" };
-	}
+	getState(): TableViewState { return { filePath: this.file?.path ?? "" }; }
 	async render(): Promise<void> { await this.renderScheduler.run(); }
 	private async renderInternal(): Promise<void> {
 		if (this.kanbanBoardController) {

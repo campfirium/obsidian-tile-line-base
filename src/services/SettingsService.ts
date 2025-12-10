@@ -79,7 +79,7 @@ export interface TileLineBaseSettings {
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	slidePreferences: Record<string, SlideViewConfig>;
 	galleryPreferences: Record<string, SlideViewConfig>;
-	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null }>;
+	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null }>;
 	defaultSlideConfig: SlideViewConfig | null;
 	defaultGalleryConfig: SlideViewConfig | null;
 	hideRightSidebar: boolean;
@@ -526,7 +526,10 @@ export class SettingsService {
 				return {
 					...cloned,
 					cardWidth: width ?? fallback?.width ?? undefined,
-					cardHeight: height ?? fallback?.height ?? undefined
+					cardHeight: height ?? fallback?.height ?? undefined,
+					groupField: typeof (cloned as { groupField?: unknown }).groupField === 'string'
+						? ((cloned as { groupField: string }).groupField.trim() || undefined)
+						: undefined
 				};
 			})
 			: [];
@@ -538,8 +541,8 @@ export class SettingsService {
 
 	async saveGalleryViewsForFile(
 		filePath: string,
-		state: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null
-	): Promise<{ views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null> {
+		state: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null
+	): Promise<{ views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null> {
 		const sanitized = state
 			? {
 				activeViewId: state.activeViewId ?? null,
@@ -554,7 +557,10 @@ export class SettingsService {
 						return {
 							...cloned,
 							cardWidth: width ?? fallback?.width ?? undefined,
-							cardHeight: height ?? fallback?.height ?? undefined
+							cardHeight: height ?? fallback?.height ?? undefined,
+							groupField: typeof (cloned as { groupField?: unknown }).groupField === 'string'
+								? ((cloned as { groupField: string }).groupField.trim() || undefined)
+								: undefined
 						};
 					})
 					: []

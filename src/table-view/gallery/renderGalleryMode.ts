@@ -8,20 +8,33 @@ import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from '../slide/sl
 import { normalizeSlideViewConfig } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { getLogger } from '../../utils/logger';
-import { renderGalleryFilterControls } from './galleryFilterPresenter';
+import { renderGalleryFilterControls, updateGalleryFilterViewBarTagGroupState } from './galleryFilterPresenter';
 
 const DEFAULT_CARD_WIDTH = 320;
 const DEFAULT_CARD_HEIGHT = 240;
 const logger = getLogger('gallery:render-mode');
-const normalizeSize = (value: unknown, fallback: number): number => {
-	const numeric = typeof value === 'number' ? value : Number(value);
-	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
-		return numeric;
-	}
-	return fallback;
-};
 
 export function renderGalleryMode(view: TableView, container: HTMLElement): void {
+	const normalizeSize = (value: unknown, fallback: number): number => {
+		const numeric = typeof value === 'number' ? value : Number(value);
+		return Number.isFinite(numeric) && numeric > 40 && numeric < 2000 ? numeric : fallback;
+	};
+	const collectUniqueFieldValues = (field: string, limit: number): string[] => {
+		const rows = view.dataStore.extractRowData();
+		const seen = new Set<string>();
+		const result: string[] = [];
+		for (const row of rows) {
+			const raw = row[field];
+			if (raw == null) continue;
+			const value = typeof raw === 'string' ? raw : String(raw);
+			const trimmed = value.trim();
+			if (!trimmed || seen.has(trimmed)) continue;
+			seen.add(trimmed);
+			result.push(trimmed);
+			if (Number.isFinite(limit) && limit > 0 && result.length >= limit) break;
+		}
+		return result;
+	};
 	view.galleryQuickFilterController.cleanup();
 	container.classList.add('tlb-gallery-mode');
 	const filterContainer = container.createDiv({ cls: 'tlb-gallery-filter-container' });
@@ -58,6 +71,22 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		return enforceSingleWithImageConfig(ensureLayoutDefaults(merged));
 	};
 
+	const seedGroupFilters = (groupField: string | null | undefined) => {
+		const field = (groupField ?? '').trim();
+		if (!field || !view.schema?.columnNames.includes(field)) {
+			return;
+		}
+		const values = collectUniqueFieldValues(field, 50);
+		if (values.length === 0) {
+			return;
+		}
+		view.galleryFilterViewController.ensureFilterViewsForFieldValues(field, values);
+		view.galleryTagGroupController?.syncWithAvailableViews();
+		updateGalleryFilterViewBarTagGroupState(view);
+		view.galleryFilterBar?.render(view.galleryFilterViewState);
+		view.galleryFilterOrchestrator.refresh();
+	};
+
 	const ensureActiveGalleryConfig = (targetId?: string) => {
 		const activeDef = targetId ? view.galleryViewStore.setActive(targetId) : view.galleryViewStore.ensureActive();
 		const resolved = activeDef ?? view.galleryViewStore.createView({ template: view.galleryConfig, setActive: true });
@@ -71,6 +100,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		view.galleryTemplateTouched = view.galleryTemplateTouched || shouldApplyBuiltIn;
 		view.shouldAutoFillGalleryDefaults = false;
 		shouldApplyBuiltIn = false;
+		seedGroupFilters(resolved.groupField);
 		return { def: resolved, config: enforced, cardWidth, cardHeight };
 	};
 
@@ -121,11 +151,41 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				getGlobalDefault: () => {
 					const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
 					return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
-			},
-			renderExtraSections: (container) => {
-						const section = container.createDiv({ cls: 'tlb-gallery-template__filters' });
-						section.createEl('h3', { text: t('galleryView.templateModal.filterSectionTitle' as TranslationKey) });
-						const descEl = section.createDiv({ cls: 'tlb-gallery-template__filters-desc' });
+				},
+				renderExtraSections: (container) => {
+					const grouping = container.createDiv({ cls: 'tlb-gallery-template__filters' });
+					grouping.createEl('h3', { text: t('galleryView.templateModal.groupFieldTitle' as TranslationKey) });
+					const groupRow = grouping.createDiv({ cls: 'tlb-gallery-template__filters-row' });
+					const groupLabel = groupRow.createEl('label', { text: t('galleryView.templateModal.groupFieldLabel' as TranslationKey) });
+					groupLabel.setAttribute('for', 'tlb-gallery-group-field');
+					const groupSelect = groupRow.createEl('select', { attr: { id: 'tlb-gallery-group-field' } });
+					const noneOption = groupSelect.createEl('option', {
+						text: t('galleryView.templateModal.groupFieldNone' as TranslationKey),
+						value: ''
+					});
+					const uniqueFields = Array.from(new Set(fields));
+					for (const field of uniqueFields) {
+						groupSelect.createEl('option', { text: field, value: field });
+					}
+					const currentGroup = active.def.groupField ?? '';
+					groupSelect.value = currentGroup || '';
+					const applyGroupField = (value: string) => {
+						view.galleryViewStore.setGroupField(active.def.id, value || null);
+						view.markUserMutation('gallery-template');
+						view.persistenceService.scheduleSave();
+						seedGroupFilters(value);
+					};
+					groupSelect.addEventListener('change', (evt) => {
+						const value = (evt.target as HTMLSelectElement).value;
+						applyGroupField(value);
+					});
+					if (!currentGroup) {
+						noneOption.selected = true;
+					}
+
+					const section = container.createDiv({ cls: 'tlb-gallery-template__filters' });
+					section.createEl('h3', { text: t('galleryView.templateModal.filterSectionTitle' as TranslationKey) });
+					const descEl = section.createDiv({ cls: 'tlb-gallery-template__filters-desc' });
 						const pickerRow = section.createDiv({ cls: 'tlb-gallery-template__filters-row' });
 						const label = pickerRow.createEl('label', { text: t('galleryView.templateModal.filterPickerLabel' as TranslationKey) });
 						label.setAttribute('for', 'tlb-gallery-filter-picker');

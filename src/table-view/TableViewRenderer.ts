@@ -17,81 +17,51 @@ import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 import { extractFrontmatter } from './MarkdownFrontmatter';
 
-const logger = getLogger('table-view:renderer');
-export async function renderTableView(view: TableView): Promise<void> {
-	const rootEl = view.containerEl;
-	rootEl.classList.add('tile-line-base-view');
-
-	const container = rootEl.children[1] as HTMLElement | undefined;
-	if (!container) { return; }
-	container.empty();
-	container.classList.add('tlb-table-view-content');
-	container.classList.remove('tlb-has-grid');
+	const logger = getLogger('table-view:renderer');
+	export async function renderTableView(view: TableView): Promise<void> {
+		const rootEl = view.containerEl;
+		rootEl.classList.add('tile-line-base-view');
+		const container = rootEl.children[1] as HTMLElement | undefined;
+		if (!container) { return; }
+		container.empty();
+		container.classList.add('tlb-table-view-content');
+		container.classList.remove('tlb-has-grid');
 	container.classList.remove('tlb-kanban-mode');
 	container.classList.remove('tlb-slide-mode');
 	container.classList.remove('tlb-gallery-mode');
 
-	if (view.gridAdapter) {
-		view.gridController.destroy();
-		view.gridAdapter = null;
-		view.tableContainer = null;
-	}
-	if (view.kanbanController) {
-		view.kanbanController.destroy();
-		view.kanbanController = null;
-	}
-	if (view.slideController) {
-		view.slideController.destroy();
-		view.slideController = null;
-	}
-	if (view.galleryController) {
-		view.galleryController.destroy();
-		view.galleryController = null;
-	}
-	if (view.galleryFilterBar) {
-		view.galleryFilterBar.destroy();
-		view.galleryFilterBar = null;
-	}
-	if (view.galleryQuickFilterController) {
-		view.galleryQuickFilterController.cleanup();
-	}
-
-	const ownerDoc = container.ownerDocument;
-	logger.debug('render start', {
-		file: view.file?.path,
-		containerTag: container.tagName,
-		containerClass: container.className
-	});
-
-	if (!view.file) { container.createDiv({ text: t('tableViewRenderer.noFile') }); return; }
-
-	view.historyManager.reset();
-
-	view.columnLayoutStore.reset(view.file.path);
-	view.configManager.reset();
-	view.filterStateStore.setFilePath(view.file.path);
-	view.filterStateStore.resetState();
-	view.tagGroupStore.setFilePath(view.file.path);
-	view.tagGroupStore.resetState();
-	syncTagGroupState(view);
-	view.galleryFilterStateStore.setFilePath(view.file.path);
-	view.galleryFilterStateStore.resetState();
-	view.galleryTagGroupStore.setFilePath(view.file.path);
-	view.galleryTagGroupStore.resetState();
-	view.copyTemplate = null;
-
-	const content = await view.app.vault.read(view.file);
-	view.captureConversionBaseline(content);
-	const parsedFrontmatter = extractFrontmatter(content);
-	const configBlock = await view.persistenceService.loadConfig();
-	const plugin = getPluginContext();
-
-	view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
-
-	if (configBlock) {
-		if (configBlock.filterViews) {
-			view.filterStateStore.setState(configBlock.filterViews);
-		}
+		if (view.gridAdapter) { view.gridController.destroy(); view.gridAdapter = null; view.tableContainer = null; }
+		if (view.kanbanController) { view.kanbanController.destroy(); view.kanbanController = null; }
+		if (view.slideController) { view.slideController.destroy(); view.slideController = null; }
+		if (view.galleryController) { view.galleryController.destroy(); view.galleryController = null; }
+		if (view.galleryFilterBar) { view.galleryFilterBar.destroy(); view.galleryFilterBar = null; }
+		if (view.galleryQuickFilterController) view.galleryQuickFilterController.cleanup();
+		const ownerDoc = container.ownerDocument;
+		logger.debug('render start', { file: view.file?.path, containerTag: container.tagName, containerClass: container.className });
+		if (!view.file) { container.createDiv({ text: t('tableViewRenderer.noFile') }); return; }
+		view.historyManager.reset();
+		view.columnLayoutStore.reset(view.file.path);
+		view.configManager.reset();
+		view.filterStateStore.setFilePath(view.file.path);
+		view.filterStateStore.resetState();
+		view.tagGroupStore.setFilePath(view.file.path);
+		view.tagGroupStore.resetState();
+		syncTagGroupState(view);
+		view.galleryFilterStateStore.setFilePath(view.file.path);
+		view.galleryFilterStateStore.resetState();
+		view.galleryTagGroupStore.setFilePath(view.file.path);
+		view.galleryTagGroupStore.resetState();
+		view.copyTemplate = null;
+		const content = await view.app.vault.read(view.file);
+		view.captureConversionBaseline(content);
+		const parsedFrontmatter = extractFrontmatter(content);
+		const configBlock = await view.persistenceService.loadConfig();
+		const plugin = getPluginContext();
+		view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
+		if (configBlock) {
+			if (configBlock.filterViews) {
+				view.filterStateStore.setState(configBlock.filterViews);
+			}
 		if (configBlock.tagGroups) {
 			view.tagGroupStore.setState(configBlock.tagGroups);
 		}
@@ -119,27 +89,30 @@ export async function renderTableView(view: TableView): Promise<void> {
 		const hasFileScopedSlideConfig = Boolean(configBlock?.slide);
 		view.shouldAutoFillSlideDefaults = !hasFileScopedSlideConfig || templateEmpty;
 		view.slideTemplateTouched = Boolean(hasFileScopedSlideConfig && !templateEmpty);
-		view.slidePreferencesLoaded = true;
-	}
-	if (!view.galleryPreferencesLoaded) {
-		const globalGalleryConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
-		const galleryViewsState = configBlock?.galleryViews;
-		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
-		if (hasGalleryViews) {
-			view.galleryViewStore.load({
-				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
-					...entry,
-					template: normalizeSlideViewConfig(entry.template ?? null),
-					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
-					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined
-				})),
-				activeViewId: galleryViewsState.activeViewId ?? null
-			});
-			const activeGallery = view.galleryViewStore.ensureActive();
-			const normalizedGallery = normalizeSlideViewConfig(activeGallery?.template ?? null);
-			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
-			view.galleryConfig = normalizedGallery;
-			view.activeGalleryViewId = activeGallery?.id ?? null;
+			view.slidePreferencesLoaded = true;
+		}
+		if (!view.galleryPreferencesLoaded) {
+			const globalGalleryConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
+			const galleryViewsState = configBlock?.galleryViews;
+			const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
+			if (hasGalleryViews) {
+				view.galleryViewStore.load({
+					views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
+						...entry,
+						template: normalizeSlideViewConfig(entry.template ?? null),
+						cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+						cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
+						groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
+							? ((entry as { groupField: string }).groupField.trim() || undefined)
+							: undefined
+					})),
+					activeViewId: galleryViewsState.activeViewId ?? null
+				});
+				const activeGallery = view.galleryViewStore.ensureActive();
+				const normalizedGallery = normalizeSlideViewConfig(activeGallery?.template ?? null);
+				const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+				view.galleryConfig = normalizedGallery;
+				view.activeGalleryViewId = activeGallery?.id ?? null;
 			view.shouldAutoFillGalleryDefaults = false;
 			view.galleryTemplateTouched = !galleryTemplateEmpty;
 			view.galleryPreferencesLoaded = true;

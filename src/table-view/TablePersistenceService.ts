@@ -45,7 +45,7 @@ interface TablePersistenceDeps {
 	getKanbanBoards?: () => KanbanBoardState | null;
 	getSlideConfig?: () => SlideViewConfig | null;
 	getGalleryConfig?: () => SlideViewConfig | null;
-	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null;
+	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null;
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
 	getGlobalGalleryConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
@@ -176,14 +176,17 @@ export class TablePersistenceService {
 		const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
 		const normalizedGalleryConfig = galleryConfig ? normalizeSlideViewConfig(galleryConfig) : null;
 		const galleryViews = this.deps.getGalleryViews?.() ?? null;
-		const normalizedGalleryViews = galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0
+			const normalizedGalleryViews = galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0
 			? {
 				activeViewId: galleryViews.activeViewId ?? null,
 				views: galleryViews.views.map((entry) => ({
 					...entry,
 					template: normalizeSlideViewConfig(entry.template ?? null),
 					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
-					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined
+					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
+					groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
+						? ((entry as { groupField: string }).groupField.trim() || undefined)
+						: undefined
 				}))
 			}
 			: null;

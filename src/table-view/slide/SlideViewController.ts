@@ -331,7 +331,7 @@ export class SlideViewController {
 						bodyBlock,
 						this.sourcePath,
 						this.markdownComponents
-					);
+					).catch(() => undefined);
 					bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
 					bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
 					bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
@@ -343,7 +343,7 @@ export class SlideViewController {
 					for (const img of page.imageBlocks) {
 						const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
 						imageBlock.style.textAlign = page.imageLayout.align;
-						renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
+						void renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
 					}
 					applyLayout(imageWrapper, page.imageLayout, slide);
 				}

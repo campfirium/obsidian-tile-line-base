@@ -253,7 +253,7 @@ export class GalleryViewController {
 			bodyBlock.style.fontSize = this.getBodyFontSize(page.textLayout.fontSize);
 			bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
 			bodyBlock.style.textAlign = page.textLayout.align;
-			renderMarkdownBlock(
+			void renderMarkdownBlock(
 				this.app,
 				buildSlideMarkdown(page.textBlocks),
 				bodyBlock,
@@ -266,10 +266,12 @@ export class GalleryViewController {
 		if (page.imageBlocks.length > 0) {
 			const imageWrapper = slideEl.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--image' });
 			for (const img of page.imageBlocks) {
-				const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
+				const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image tlb-gallery-media-container' });
 				imageBlock.style.textAlign = page.imageLayout.align;
-				renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
-				this.constrainMediaSize(imageBlock);
+				const targetHeight = Math.max(40, Math.round(this.cardWidth / (16 / 9)));
+				imageBlock.style.height = `${targetHeight}px`;
+				imageBlock.style.minHeight = `${targetHeight}px`;
+				void renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents).catch(() => undefined);
 			}
 			applyLayout(imageWrapper, page.imageLayout);
 		}
@@ -380,10 +382,5 @@ export class GalleryViewController {
 		return slide;
 	}
 
-	private constrainMediaSize(container: HTMLElement): void {
-		const nodes = container.querySelectorAll<HTMLImageElement | HTMLVideoElement>('img, video');
-		nodes.forEach((el) => {
-			el.classList.add('tlb-gallery-media');
-		});
-	}
+
 }

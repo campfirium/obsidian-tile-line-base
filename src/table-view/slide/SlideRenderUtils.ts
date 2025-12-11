@@ -47,10 +47,10 @@ export function renderMarkdownBlock(
 	container: HTMLElement,
 	sourcePath: string,
 	markdownComponents: Component[]
-): void {
+): Promise<void> {
 	const component = new Component();
 	markdownComponents.push(component);
-	void MarkdownRenderer.render(app, markdown, container, sourcePath, component).catch(() => {
+	return MarkdownRenderer.render(app, markdown, container, sourcePath, component).catch(() => {
 		container.setText(markdown);
 	});
 }

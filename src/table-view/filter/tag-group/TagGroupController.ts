@@ -506,13 +506,17 @@ export class TagGroupController {
 	}
 
 	private ensureVisibleFilterSelection(): void {
+		const state = this.getFilterViewState();
+		const activeId = state.activeViewId;
+		if (!activeId) {
+			this.activateFilterView(null);
+			return;
+		}
 		const visible = this.store.getVisibleViewIds();
 		if (!visible) {
 			return;
 		}
-		const state = this.getFilterViewState();
-		const activeId = state.activeViewId;
-		if (activeId && visible.has(activeId)) {
+		if (visible.has(activeId)) {
 			return;
 		}
 		const fallback = state.views.find((view) => visible.has(view.id));

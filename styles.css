@@ -384,6 +384,23 @@
 	padding: 0;
 }
 
+.tlb-gallery-card__slide .tlb-slide-full__block--image {
+	aspect-ratio: 16 / 9;
+}
+
+.tlb-gallery-card__slide .tlb-slide-full__block--image p {
+	height: 100%;
+}
+
+.tlb-gallery-card__slide .tlb-gallery-media {
+	display: block;
+	width: 100%;
+	height: 100%;
+	max-height: none;
+	aspect-ratio: 16 / 9;
+	object-fit: cover;
+}
+
 .tlb-filter-view-icon-control {
   width: 100%;
   display: flex;

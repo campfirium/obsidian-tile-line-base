@@ -13,6 +13,7 @@ import {
 } from '../slide/SlideRenderUtils';
 import { applyLayoutStyles } from '../slide/slideLayout';
 import { renderSlideEditForm, serializeTemplateSegments, type EditState } from '../slide/slideTemplateEditing';
+import { optimizeGalleryMediaElements } from './galleryMediaOptimizer';
 
 interface GalleryViewControllerOptions {
 	app: App;
@@ -66,6 +67,10 @@ export class GalleryViewController {
 	private unsubscribeQuickFilter: (() => void) | null = null;
 	private gridEl: HTMLElement | null = null;
 	private cardEls: HTMLElement[] = [];
+	private renderRaf: number | null = null;
+	private renderScheduled = false;
+	private destroyed = false;
+	private renderCount = 0;
 
 	constructor(options: GalleryViewControllerOptions) {
 		this.app = options.app;
@@ -83,24 +88,33 @@ export class GalleryViewController {
 		if (options.subscribeToRows) {
 			this.unsubscribeRows = options.subscribeToRows((rows) => {
 				this.rows = rows;
-				this.render();
+				this.requestRender();
 			});
 		}
 		if (this.quickFilterManager) {
 			this.unsubscribeQuickFilter = this.quickFilterManager.subscribe((value) => {
-				this.quickFilterValue = value ?? '';
-				this.render();
+				const nextValue = value ?? '';
+				if (this.quickFilterValue === nextValue) {
+					return;
+				}
+				this.quickFilterValue = nextValue;
+				this.requestRender();
 			});
 		}
-		this.render();
+		this.requestRender(true);
 	}
 
 	setCardSize(size: { width: number; height: number }): void {
 		const width = Number(size.width);
 		const height = Number(size.height);
-		this.cardWidth = Number.isFinite(width) && width > 40 ? width : DEFAULT_CARD_WIDTH;
-		this.cardHeight = Number.isFinite(height) && height > 40 ? height : DEFAULT_CARD_HEIGHT;
-		this.render();
+		const nextWidth = Number.isFinite(width) && width > 40 ? width : DEFAULT_CARD_WIDTH;
+		const nextHeight = Number.isFinite(height) && height > 40 ? height : DEFAULT_CARD_HEIGHT;
+		if (nextWidth === this.cardWidth && nextHeight === this.cardHeight) {
+			return;
+		}
+		this.cardWidth = nextWidth;
+		this.cardHeight = nextHeight;
+		this.requestRender();
 	}
 
 	private getTitleFontSize(value: number): string {
@@ -113,15 +127,17 @@ export class GalleryViewController {
 
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
-		this.render();
+		this.requestRender();
 	}
 
 	updateConfig(config: SlideViewConfig): void {
 		this.config = config;
-		this.render();
+		this.requestRender();
 	}
 
 	destroy(): void {
+		this.destroyed = true;
+		this.cancelScheduledRender();
 		this.unsubscribeRows?.();
 		this.unsubscribeRows = null;
 		this.unsubscribeQuickFilter?.();
@@ -132,7 +148,46 @@ export class GalleryViewController {
 		this.container.empty();
 	}
 
-	private render(): void {
+	// Coalesce heavy gallery renders to avoid blocking rapid UI updates.
+	private requestRender(immediate = false): void {
+		if (this.destroyed) {
+			return;
+		}
+		if (immediate) {
+			this.cancelScheduledRender();
+			this.renderInternal();
+			return;
+		}
+		if (this.renderScheduled) {
+			return;
+		}
+		this.renderScheduled = true;
+		const raf = typeof requestAnimationFrame === 'function'
+			? requestAnimationFrame
+			: (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
+		this.renderRaf = raf(() => {
+			this.renderScheduled = false;
+			this.renderRaf = null;
+			if (this.destroyed) {
+				return;
+			}
+			this.renderInternal();
+		});
+	}
+
+	private cancelScheduledRender(): void {
+		if (this.renderRaf != null) {
+			if (typeof cancelAnimationFrame === 'function') {
+				cancelAnimationFrame(this.renderRaf);
+			} else {
+				window.clearTimeout(this.renderRaf);
+			}
+		}
+		this.renderRaf = null;
+		this.renderScheduled = false;
+	}
+
+	private renderInternal(): void {
 		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
 		this.container.querySelector('.tlb-gallery-empty')?.remove();
 		this.visibleRows = this.filterRows(this.rows);
@@ -145,7 +200,9 @@ export class GalleryViewController {
 		if (this.editingKey && !this.pages.some((page) => this.isEditingPage(page))) {
 			this.clearEditingState();
 		}
-		if (this.pages.length === 0) {
+		const hasPages = this.pages.length > 0;
+		const isFirstBatch = this.renderCount === 0 && hasPages;
+		if (!hasPages) {
 			this.cardEls = [];
 			if (this.gridEl) {
 				this.gridEl.remove();
@@ -155,6 +212,7 @@ export class GalleryViewController {
 			this.container.createDiv({ cls: 'tlb-gallery-empty', text: t('galleryView.emptyState') });
 			return;
 		}
+		this.renderCount += 1;
 
 		const grid = this.ensureGrid();
 		grid.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
@@ -200,7 +258,7 @@ export class GalleryViewController {
 					position: applyLayout,
 					onCancel: () => {
 						this.clearEditingState();
-						this.render();
+						this.requestRender();
 					},
 					onSave: () => {
 						void this.persistEdit(page);
@@ -223,6 +281,13 @@ export class GalleryViewController {
 				this.cardEls[i].remove();
 			}
 			this.cardEls.length = this.pages.length;
+		}
+		if (hasPages && this.gridEl) {
+			void optimizeGalleryMediaElements(
+				this.gridEl,
+				{ width: this.cardWidth, height: this.cardHeight },
+				{ isFirstBatch }
+			).catch(() => undefined);
 		}
 	}
 
@@ -288,7 +353,7 @@ export class GalleryViewController {
 		this.editState.values = values;
 		this.editState.fieldInputs = {};
 		this.editState.template = null;
-		this.render();
+		this.requestRender();
 	}
 
 	private async persistEdit(page: SlidePage): Promise<void> {
@@ -303,16 +368,17 @@ export class GalleryViewController {
 		const row = this.visibleRows[page.rowIndex];
 		if (!row) {
 			this.clearEditingState();
-			this.render();
+			this.requestRender();
 			return;
 		}
 		const nextRows = await this.onSaveRow(row, this.editState.values);
 		if (nextRows) {
 			this.updateRows(nextRows);
 		} else {
-			this.render();
+			this.requestRender();
 		}
 		this.clearEditingState();
+		this.requestRender();
 	}
 
 	private applySlideColors(slide: HTMLElement, textColor: string, backgroundColor: string): void {

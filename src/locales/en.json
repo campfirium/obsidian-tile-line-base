@@ -33,7 +33,7 @@
     },
     "templateModal": {
       "title": "Gallery template",
-      "cardSizeLabel": "Card size",
+      "cardSizeLabel": "Card settings",
       "widthLabel": "Width (px)",
       "heightLabel": "Height (px)",
       "groupFieldTitle": "Group field",

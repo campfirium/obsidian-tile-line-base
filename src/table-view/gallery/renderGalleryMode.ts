@@ -26,9 +26,10 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const galleryContainer = container.createDiv({ cls: 'tlb-gallery-container' });
 	const rows = view.galleryFilterOrchestrator.getVisibleRows();
 	const fields = view.schema?.columnNames ?? [];
+	const columnConfigs = view.schema?.columnConfigs ?? null;
 	const sourcePath = view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '';
 	let shouldApplyBuiltIn = view.shouldAutoFillGalleryDefaults;
-	const builtInTemplate = buildBuiltInSlideTemplate(fields);
+	const builtInTemplate = buildBuiltInSlideTemplate(fields, columnConfigs, rows);
 	const plugin = getPluginContext();
 	const enforceSingleWithImageConfig = (config: ReturnType<typeof normalizeSlideViewConfig>): ReturnType<typeof normalizeSlideViewConfig> => {
 		const base = ensureLayoutDefaults(config);
@@ -77,6 +78,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		const modal = new SlideTemplateModal({
 			app: view.app,
 			fields,
+			fieldConfigs: columnConfigs,
+			sampleRows: rows,
 			initial: active.config.template,
 			titleKey: 'galleryView.templateModal.title' as TranslationKey,
 			allowedModes: ['single'],

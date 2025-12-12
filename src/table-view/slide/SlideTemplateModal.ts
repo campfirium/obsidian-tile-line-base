@@ -11,12 +11,16 @@ import {
 	type SlideViewConfig
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
+import type { ColumnConfig } from '../MarkdownBlockParser';
+import type { RowData } from '../../grid/GridAdapter';
 import { buildBuiltInSlideTemplate, mergeSlideTemplateFields, RESERVED_SLIDE_FIELDS } from './slideDefaults';
 import { toHexColor } from './SlideColorUtils';
 
 interface SlideTemplateModalOptions {
 	app: App;
 	fields: string[];
+	fieldConfigs?: ColumnConfig[] | null;
+	sampleRows?: RowData[];
 	initial: SlideTemplateConfig;
 	onSave: (next: SlideTemplateConfig) => void;
 	renderIntroSection?: (container: HTMLElement) => void;
@@ -40,6 +44,8 @@ export class SlideTemplateModal extends Modal {
 	private static lastSelectedSingleBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private static lastSelectedSplitBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private readonly fields: string[];
+	private readonly fieldConfigs: ColumnConfig[] | null;
+	private readonly sampleRows: RowData[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private readonly renderIntroSection?: (container: HTMLElement) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
@@ -67,6 +73,8 @@ export class SlideTemplateModal extends Modal {
 		super(opts.app);
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.fields = opts.fields.filter((field) => field && !RESERVED_SLIDE_FIELDS.has(field));
+		this.fieldConfigs = opts.fieldConfigs?.length ? opts.fieldConfigs : null;
+		this.sampleRows = Array.isArray(opts.sampleRows) ? opts.sampleRows : [];
 		this.onSave = opts.onSave;
 		this.renderIntroSection = opts.renderIntroSection;
 		this.onSaveDefault = opts.onSaveDefault;
@@ -393,12 +401,15 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;
 		}
-		const preset = mergeSlideTemplateFields(globalConfig.template, buildBuiltInSlideTemplate(this.fields));
+		const preset = mergeSlideTemplateFields(
+			globalConfig.template,
+			buildBuiltInSlideTemplate(this.fields, this.fieldConfigs, this.sampleRows)
+		);
 		this.applyPresetStyles(preset);
 	}
 
 	private applyBuiltInDefault(): void {
-		const preset = buildBuiltInSlideTemplate(this.fields);
+		const preset = buildBuiltInSlideTemplate(this.fields, this.fieldConfigs, this.sampleRows);
 		this.applyPresetStyles(preset);
 	}
 

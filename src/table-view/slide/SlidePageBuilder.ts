@@ -36,6 +36,7 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 		const row = rows[rowIndex];
 		if (mode === 'single') {
 			const imageInfo = resolveImageTemplate(row, fields, reservedFields, template.single.withImage.imageTemplate);
+			const excludeFromBody = imageInfo.markdown && imageInfo.field ? new Set([imageInfo.field]) : null;
 			const withImageContent = resolveSlideContent({
 				row,
 				fields,
@@ -43,22 +44,20 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				activeIndex: rowIndex,
 				reservedFields,
 				imageValue: imageInfo.raw,
-				includeBodyImages: true
+				excludeFields: excludeFromBody
 			});
-			const withImageBlocks = withImageContent.blocks;
-			const hasImage = Boolean(imageInfo.markdown) || withImageBlocks.some((block) => block.type === 'image');
+			const hasImage = Boolean(imageInfo.markdown);
 			const branch = hasImage ? template.single.withImage : template.single.withoutImage;
-			const content =
-				hasImage && withImageContent
-					? withImageContent
-					: resolveSlideContent({
-							row,
-							fields,
-							template: branch,
-							activeIndex: rowIndex,
-							reservedFields,
-							includeBodyImages: true
-						});
+			const content = hasImage
+				? withImageContent
+				: resolveSlideContent({
+						row,
+						fields,
+						template: branch,
+						activeIndex: rowIndex,
+						reservedFields,
+						excludeFields: excludeFromBody
+					});
 			pages.push(
 				buildPageFromBlocks(
 					rowIndex,
@@ -78,6 +77,9 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				)
 			);
 		} else {
+			const imageTemplate = template.split.withImage;
+			const imageInfo = resolveImageTemplate(row, fields, reservedFields, imageTemplate.imageTemplate);
+			const excludeFromBody = imageInfo.markdown && imageInfo.field ? new Set([imageInfo.field]) : null;
 			const textBranch = template.split.withoutImage;
 			const { title, blocks } = resolveSlideContent({
 				row,
@@ -85,7 +87,7 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				template: textBranch,
 				activeIndex: rowIndex,
 				reservedFields,
-				includeBodyImages: true
+				excludeFields: excludeFromBody
 			});
 			pages.push(
 				buildPageFromBlocks(
@@ -102,8 +104,6 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 				)
 			);
 
-			const imageTemplate = template.split.withImage;
-			const imageInfo = resolveImageTemplate(row, fields, reservedFields, imageTemplate.imageTemplate);
 			if (imageInfo.markdown) {
 				const imageContent = resolveSlideContent({
 					row,
@@ -112,7 +112,7 @@ export function buildSlidePages(options: BuildPagesOptions): SlidePage[] {
 					activeIndex: rowIndex,
 					reservedFields,
 					imageValue: imageInfo.raw,
-					includeBodyImages: true
+					excludeFields: excludeFromBody
 				});
 				pages.push(
 					buildPageFromBlocks(
@@ -168,16 +168,12 @@ function resolveImageTemplate(
 	fields: string[],
 	reservedFields: Set<string>,
 	template: string | null | undefined
-): { raw: string | null; markdown: string | null } {
-	const rendered = renderTemplateValue(template, row, fields, reservedFields);
-	const direct = resolveDirectImage(rendered);
-	if (direct) {
-		return { raw: rendered, markdown: direct };
-	}
+): { raw: string | null; markdown: string | null; field: string | null } {
 	const templateFields =
 		typeof template === 'string'
 			? Array.from(template.matchAll(/\{([^{}]+)\}/g)).map((match) => match[1]?.trim()).filter(Boolean)
 			: [];
+
 	for (const field of templateFields) {
 		if (!field || reservedFields.has(field)) {
 			continue;
@@ -190,12 +186,19 @@ function resolveImageTemplate(
 		if (!text) {
 			continue;
 		}
-		const fallback = resolveDirectImage(text);
-		if (fallback) {
-			return { raw: text, markdown: fallback };
+		const direct = resolveDirectImage(text);
+		if (direct) {
+			return { raw: text, markdown: direct, field };
 		}
 	}
-	return { raw: rendered, markdown: null };
+
+	const rendered = renderTemplateValue(template, row, fields, reservedFields);
+	const directRendered = resolveDirectImage(rendered);
+	if (directRendered) {
+		const field = templateFields.length > 0 ? templateFields[0] ?? null : null;
+		return { raw: rendered, markdown: directRendered, field };
+	}
+	return { raw: rendered, markdown: null, field: templateFields.length > 0 ? templateFields[0] ?? null : null };
 }
 
 function renderTemplateValue(

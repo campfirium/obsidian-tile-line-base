@@ -16,9 +16,10 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
 	const fields = view.schema?.columnNames ?? [];
+	const columnConfigs = view.schema?.columnConfigs ?? null;
 	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults;
 	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
-	const builtInTemplate = buildBuiltInSlideTemplate(fields);
+	const builtInTemplate = buildBuiltInSlideTemplate(fields, columnConfigs, slideRows);
 	const plugin = getPluginContext();
 	const globalConfig = plugin?.getDefaultSlideConfig?.() ?? null;
 	const globalConfigNormalized = globalConfig ? normalizeSlideViewConfig(globalConfig) : null;
@@ -63,6 +64,8 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			const modal = new SlideTemplateModal({
 				app: view.app,
 				fields,
+				fieldConfigs: columnConfigs,
+				sampleRows: slideRows,
 				initial: baseConfig.template,
 				onSave: (nextTemplate) => {
 					const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));

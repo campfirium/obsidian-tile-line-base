@@ -17,11 +17,16 @@ interface SlideContentOptions {
 	activeIndex: number;
 	reservedFields: Set<string>;
 	imageValue?: string | null;
-	includeBodyImages?: boolean;
+	excludeFields?: Set<string> | string[] | null;
 }
 
 export function resolveSlideContent(options: SlideContentOptions): { title: string; blocks: SlideBodyBlock[] } {
-	const orderedFields = options.fields.filter((field) => field && !options.reservedFields.has(field));
+	const excluded = options.excludeFields
+		? new Set(Array.isArray(options.excludeFields) ? options.excludeFields : Array.from(options.excludeFields))
+		: null;
+	const orderedFields = options.fields.filter(
+		(field) => field && !options.reservedFields.has(field) && !(excluded && excluded.has(field))
+	);
 	const values: Record<string, string> = {};
 	for (const field of orderedFields) {
 		if (field === 'status') continue;
@@ -39,20 +44,11 @@ export function resolveSlideContent(options: SlideContentOptions): { title: stri
 
 	const body = renderTemplate(options.template.bodyTemplate);
 	const lines = body ? body.split('\n') : [];
-	const templateAllowsImages = containsImageMarker(options.template.bodyTemplate ?? '') || containsImageMarker(body ?? '');
-	const allowImages = options.includeBodyImages !== false || templateAllowsImages;
 	const blocks: SlideBodyBlock[] = [];
 	for (const line of lines) {
 		if (line.trim().length === 0) {
 			blocks.push({ type: 'text', text: '' });
 			continue;
-		}
-		if (allowImages) {
-			const imageMarkdown = resolveImageMarkdown(line, values);
-			if (imageMarkdown) {
-				blocks.push({ type: 'image', markdown: imageMarkdown });
-				continue;
-			}
 		}
 		blocks.push({ type: 'text', text: line });
 	}
@@ -76,21 +72,6 @@ export function renderSlideTemplate(
 		}
 		return values[field] ?? '';
 	});
-}
-
-function containsImageMarker(text: string): boolean {
-	const normalized = (text ?? '').trim();
-	if (!normalized) return false;
-	return normalized.includes('![') || normalized.includes('![[');
-}
-
-function resolveImageMarkdown(line: string, _values: Record<string, string>): string | null {
-	const trimmed = line.trim();
-	if (!trimmed) {
-		return null;
-	}
-	const token = extractFirstImageToken(trimmed);
-	return token ? normalizeImageToken(token) : null;
 }
 
 export function resolveDirectImage(value: string | null | undefined): string | null {

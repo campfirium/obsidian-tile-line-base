@@ -84,6 +84,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			titleKey: 'galleryView.templateModal.title' as TranslationKey,
 			allowedModes: ['single'],
 			allowedSingleBranches: ['withImage'],
+			enableImageTypography: false,
 			cardSize: { width: active.cardWidth, height: active.cardHeight },
 			renderIntroSection: undefined,
 			buildBuiltInTemplate: (templateFields, templateConfigs, templateRows) =>

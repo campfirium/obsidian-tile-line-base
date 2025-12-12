@@ -28,6 +28,7 @@ interface SlideTemplateModalOptions {
 	allowedModes?: Array<'single' | 'split'>;
 	allowedSingleBranches?: Array<'withoutImage' | 'withImage'>;
 	allowedSplitBranches?: Array<'withoutImage' | 'withImage'>;
+	enableImageTypography?: boolean;
 	titleKey?: TranslationKey;
 	cardSize?: { width: number; height: number };
 	onCardSizeChange?: (size: { width: number; height: number }) => void;
@@ -55,6 +56,7 @@ export class SlideTemplateModal extends Modal {
 	private readonly allowedModes: Set<'single' | 'split'> | null;
 	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
 	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
+	private readonly imageTypographyEnabled: boolean;
 	private readonly titleKey?: TranslationKey;
 	private readonly onCardSizeChange?: (size: { width: number; height: number }) => void;
 	private readonly renderExtraSections?: (container: HTMLElement) => void;
@@ -97,6 +99,7 @@ export class SlideTemplateModal extends Modal {
 		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
 		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
 		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
+		this.imageTypographyEnabled = opts.enableImageTypography !== false;
 		this.titleKey = opts.titleKey;
 		this.onCardSizeChange = opts.onCardSizeChange;
 		this.renderExtraSections = opts.renderExtraSections;
@@ -1033,7 +1036,7 @@ export class SlideTemplateModal extends Modal {
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
 				(next) => (this.template.single.withImage.imageLayout = next),
-				{ includeTypography: false }
+				{ includeTypography: this.imageTypographyEnabled }
 			);
 		}
 	}
@@ -1127,7 +1130,7 @@ export class SlideTemplateModal extends Modal {
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.split.withImage.imageLayout ?? getDefaultBodyLayout(),
 				(next) => (this.template.split.withImage.imageLayout = next),
-				{ includeTypography: false }
+				{ includeTypography: this.imageTypographyEnabled }
 			);
 		}
 	}

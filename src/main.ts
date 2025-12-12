@@ -118,6 +118,7 @@ export default class TileLineBasePlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.tableTitleRefresher.refreshAll();
+				this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 			})
 		);
 		this.registerNavigatorPluginListener();
@@ -131,6 +132,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(this.app.workspace.on('file-open', (openedFile) => {
 			logger.debug('file-open event received', { file: openedFile?.path ?? null });
+			this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 			if (openedFile instanceof TFile) {
 				window.setTimeout(() => {
 					void this.viewCoordinator.maybeSwitchToTableView(openedFile);
@@ -559,6 +561,7 @@ export default class TileLineBasePlugin extends Plugin {
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 		const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
 		await this.viewCoordinator.toggleTableView(leaf, context ?? null);
+		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
 
 	async openFileInTableView(file: TFile): Promise<void> {

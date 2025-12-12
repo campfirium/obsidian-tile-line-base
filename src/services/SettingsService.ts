@@ -119,7 +119,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	defaultGalleryConfig: null,
 	defaultGalleryCardWidth: DEFAULT_GALLERY_CARD_WIDTH,
 	defaultGalleryCardHeight: DEFAULT_GALLERY_CARD_HEIGHT,
-	hideRightSidebar: false,
+	hideRightSidebar: true,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
 	stripeCustomColor: null,

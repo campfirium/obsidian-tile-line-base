@@ -1,5 +1,5 @@
 import type { App, WorkspaceLeaf } from 'obsidian';
-import { TableView } from '../TableView';
+import { TableView, TABLE_VIEW_TYPE } from '../TableView';
 import { getLogger } from '../utils/logger';
 
 interface RightSidebarState {
@@ -23,7 +23,7 @@ export class RightSidebarController {
 			return;
 		}
 
-		if (leaf?.view instanceof TableView) {
+		if (this.isTileLineBaseLeaf(leaf)) {
 			this.hide();
 			return;
 		}
@@ -60,16 +60,23 @@ export class RightSidebarController {
 		if (!split) {
 			return;
 		}
-		const wasCollapsed = this.isCollapsed(split);
-		if (wasCollapsed) {
+
+		const alreadyCollapsed = this.isCollapsed(split);
+		if (alreadyCollapsed && this.state.applied && !this.state.wasCollapsed) {
+			return;
+		}
+
+		if (alreadyCollapsed) {
 			this.state = { applied: false, wasCollapsed: true };
 			return;
 		}
 
+		const wasCollapsedBefore = this.state.applied ? this.state.wasCollapsed : alreadyCollapsed;
+
 		if (typeof split.collapse === 'function') {
 			try {
 				split.collapse();
-				this.state = { applied: true, wasCollapsed };
+				this.state = { applied: true, wasCollapsed: wasCollapsedBefore };
 				return;
 			} catch (error) {
 				logger.warn('Failed to collapse right sidebar via API', error);
@@ -77,7 +84,7 @@ export class RightSidebarController {
 		}
 
 		const toggled = this.toggleViaCommand();
-		this.state = { applied: toggled, wasCollapsed };
+		this.state = { applied: toggled || this.state.applied, wasCollapsed: wasCollapsedBefore };
 	}
 
 	private getRightSplit(): { collapsed?: boolean; collapse?: () => void; expand?: () => void } | null {
@@ -89,6 +96,17 @@ export class RightSidebarController {
 
 	private isCollapsed(split: { collapsed?: boolean }): boolean {
 		return typeof split?.collapsed === 'boolean' ? split.collapsed : false;
+	}
+
+	private isTileLineBaseLeaf(leaf: WorkspaceLeaf | null | undefined): boolean {
+		if (!leaf) {
+			return false;
+		}
+		if (leaf.view instanceof TableView) {
+			return true;
+		}
+		const viewType = typeof leaf.view?.getViewType === 'function' ? leaf.view.getViewType() : null;
+		return viewType === TABLE_VIEW_TYPE;
 	}
 
 	private toggleViaCommand(): boolean {

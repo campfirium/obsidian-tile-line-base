@@ -448,13 +448,20 @@ export default class TileLineBasePlugin extends Plugin {
 		return this.settingsService.getDefaultGalleryConfig();
 	}
 
+	getDefaultGalleryCardSize(): { width: number; height: number } | null {
+		return this.settingsService.getDefaultGalleryCardSize();
+	}
+
 	async setDefaultSlideConfig(config: SlideViewConfig | null): Promise<void> {
 		await this.settingsService.setDefaultSlideConfig(config);
 		this.settings = this.settingsService.getSettings();
 	}
 
-	async setDefaultGalleryConfig(config: SlideViewConfig | null): Promise<void> {
-		await this.settingsService.setDefaultGalleryConfig(config);
+	async setDefaultGalleryConfig(
+		config: SlideViewConfig | null,
+		cardSize?: { width?: number | null; height?: number | null } | null
+	): Promise<void> {
+		await this.settingsService.setDefaultGalleryConfig(config, cardSize);
 		this.settings = this.settingsService.getSettings();
 	}
 

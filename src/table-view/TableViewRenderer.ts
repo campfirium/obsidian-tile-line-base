@@ -89,30 +89,31 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		const hasFileScopedSlideConfig = Boolean(configBlock?.slide);
 		view.shouldAutoFillSlideDefaults = !hasFileScopedSlideConfig || templateEmpty;
 		view.slideTemplateTouched = Boolean(hasFileScopedSlideConfig && !templateEmpty);
-			view.slidePreferencesLoaded = true;
-		}
-		if (!view.galleryPreferencesLoaded) {
-			const globalGalleryConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
-			const galleryViewsState = configBlock?.galleryViews;
-			const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
-			if (hasGalleryViews) {
-				view.galleryViewStore.load({
-					views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
-						...entry,
-						template: normalizeSlideViewConfig(entry.template ?? null),
-						cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
-						cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
-						groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
-							? ((entry as { groupField: string }).groupField.trim() || undefined)
-							: undefined
-					})),
-					activeViewId: galleryViewsState.activeViewId ?? null
-				});
-				const activeGallery = view.galleryViewStore.ensureActive();
-				const normalizedGallery = normalizeSlideViewConfig(activeGallery?.template ?? null);
-				const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
-				view.galleryConfig = normalizedGallery;
-				view.activeGalleryViewId = activeGallery?.id ?? null;
+		view.slidePreferencesLoaded = true;
+	}
+	if (!view.galleryPreferencesLoaded) {
+		const globalGalleryConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
+		const globalGalleryCardSize = plugin?.getDefaultGalleryCardSize?.() ?? null;
+		const galleryViewsState = configBlock?.galleryViews;
+		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
+		if (hasGalleryViews) {
+			view.galleryViewStore.load({
+				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
+					...entry,
+					template: normalizeSlideViewConfig(entry.template ?? null),
+					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
+					groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
+						? ((entry as { groupField: string }).groupField.trim() || undefined)
+						: undefined
+				})),
+				activeViewId: galleryViewsState.activeViewId ?? null
+			});
+			const activeGallery = view.galleryViewStore.ensureActive();
+			const normalizedGallery = normalizeSlideViewConfig(activeGallery?.template ?? null);
+			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+			view.galleryConfig = normalizedGallery;
+			view.activeGalleryViewId = activeGallery?.id ?? null;
 			view.shouldAutoFillGalleryDefaults = false;
 			view.galleryTemplateTouched = !galleryTemplateEmpty;
 			view.galleryPreferencesLoaded = true;
@@ -123,7 +124,11 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
 			const hasFileScopedGalleryConfig = Boolean(configBlock?.gallery);
 			view.galleryConfig = normalizedGallery;
-			view.galleryViewStore.resetWithConfig(normalizedGallery);
+			view.galleryViewStore.resetWithConfig(
+				normalizedGallery,
+				'Gallery',
+				hasFileScopedGalleryConfig ? undefined : globalGalleryCardSize ?? undefined
+			);
 			view.activeGalleryViewId = view.galleryViewStore.getActive()?.id ?? null;
 			view.shouldAutoFillGalleryDefaults = !hasFileScopedGalleryConfig || galleryTemplateEmpty;
 			view.galleryTemplateTouched = Boolean(hasFileScopedGalleryConfig && !galleryTemplateEmpty);

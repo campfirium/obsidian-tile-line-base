@@ -5,10 +5,10 @@ import { t, type TranslationKey } from '../../i18n';
 import {
 	getDefaultBodyLayout,
 	getDefaultTitleLayout,
+	normalizeSlideViewConfig,
 	sanitizeSlideTemplateConfig,
 	type SlideLayoutConfig,
-	type SlideTemplateConfig,
-	type SlideViewConfig
+	type SlideTemplateConfig
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import type { ColumnConfig } from '../MarkdownBlockParser';
@@ -24,14 +24,15 @@ interface SlideTemplateModalOptions {
 	initial: SlideTemplateConfig;
 	onSave: (next: SlideTemplateConfig) => void;
 	renderIntroSection?: (container: HTMLElement) => void;
-	onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
+	onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
 	allowedModes?: Array<'single' | 'split'>;
 	allowedSingleBranches?: Array<'withoutImage' | 'withImage'>;
 	allowedSplitBranches?: Array<'withoutImage' | 'withImage'>;
 	titleKey?: TranslationKey;
 	cardSize?: { width: number; height: number };
 	onCardSizeChange?: (size: { width: number; height: number }) => void;
-	getGlobalDefault?: () => SlideViewConfig | null;
+	getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
+	buildBuiltInTemplate?: (fields: string[], fieldConfigs?: ColumnConfig[] | null, sampleRows?: RowData[]) => SlideTemplateConfig;
 	renderExtraSections?: (container: HTMLElement) => void;
 }
 
@@ -48,8 +49,9 @@ export class SlideTemplateModal extends Modal {
 	private readonly sampleRows: RowData[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
 	private readonly renderIntroSection?: (container: HTMLElement) => void;
-	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
-	private readonly getGlobalDefault?: () => SlideViewConfig | null;
+	private readonly onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
+	private readonly getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
+	private readonly buildBuiltInTemplate: (fields: string[], fieldConfigs?: ColumnConfig[] | null, sampleRows?: RowData[]) => SlideTemplateConfig;
 	private readonly allowedModes: Set<'single' | 'split'> | null;
 	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
 	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
@@ -78,7 +80,20 @@ export class SlideTemplateModal extends Modal {
 		this.onSave = opts.onSave;
 		this.renderIntroSection = opts.renderIntroSection;
 		this.onSaveDefault = opts.onSaveDefault;
-		this.getGlobalDefault = opts.getGlobalDefault ?? (() => getPluginContext()?.getDefaultSlideConfig() ?? null);
+		this.getGlobalDefault =
+			opts.getGlobalDefault ??
+			(() => {
+				const config = getPluginContext()?.getDefaultSlideConfig() ?? null;
+				if (!config) {
+					return null;
+				}
+				const normalized = normalizeSlideViewConfig(config);
+				return { template: normalized.template };
+			});
+		this.buildBuiltInTemplate =
+			opts.buildBuiltInTemplate ??
+			((templateFields, templateConfigs, templateRows) =>
+				buildBuiltInSlideTemplate(templateFields, templateConfigs, templateRows));
 		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
 		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
 		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
@@ -298,6 +313,9 @@ export class SlideTemplateModal extends Modal {
 			return false;
 		}
 		const raw = payload as Record<string, unknown>;
+		if (raw.template && raw.template !== payload && this.isTemplatePayload(raw.template)) {
+			return true;
+		}
 		return Boolean(
 			raw.single ||
 				raw.split ||
@@ -309,6 +327,53 @@ export class SlideTemplateModal extends Modal {
 		);
 	}
 
+	private normalizeCardSizeValue(value: unknown): number | null {
+		const numeric = typeof value === 'number' ? value : Number(value);
+		return Number.isFinite(numeric) && numeric > 40 && numeric < 2000 ? numeric : null;
+	}
+
+	private parsePresetPayload(payload: unknown): { template: SlideTemplateConfig; cardWidth?: number; cardHeight?: number } | null {
+		if (!payload || typeof payload !== 'object') {
+			return null;
+		}
+		const raw = payload as Record<string, unknown>;
+		if (raw.template && this.isTemplatePayload(raw.template)) {
+			const width = this.normalizeCardSizeValue((raw as { cardWidth?: unknown }).cardWidth);
+			const height = this.normalizeCardSizeValue((raw as { cardHeight?: unknown }).cardHeight);
+			return {
+				template: sanitizeSlideTemplateConfig(raw.template),
+				cardWidth: width ?? undefined,
+				cardHeight: height ?? undefined
+			};
+		}
+		if (this.isTemplatePayload(payload)) {
+			return { template: sanitizeSlideTemplateConfig(payload) };
+		}
+		return null;
+	}
+
+	private applyCardSizePayload(payload: { cardWidth?: number | null; cardHeight?: number | null } | null | undefined): void {
+		if (!payload) {
+			return;
+		}
+		const width = this.normalizeCardSizeValue(payload.cardWidth);
+		const height = this.normalizeCardSizeValue(payload.cardHeight);
+		if (width == null || height == null) {
+			return;
+		}
+		this.cardWidth = width;
+		this.cardHeight = height;
+		if (this.onCardSizeChange) {
+			this.onCardSizeChange({ width, height });
+		}
+	}
+
+	private getCardSizePayload(): { width: number; height: number } | null {
+		const width = this.normalizeCardSizeValue(this.cardWidth);
+		const height = this.normalizeCardSizeValue(this.cardHeight);
+		return width != null && height != null ? { width, height } : null;
+	}
+
 	private async copyPresetToClipboard(): Promise<void> {
 		const clipboard = this.getClipboard();
 		if (!clipboard?.writeText) {
@@ -316,8 +381,17 @@ export class SlideTemplateModal extends Modal {
 			return;
 		}
 		try {
-			const payload = JSON.stringify(sanitizeSlideTemplateConfig(this.template), null, 2);
-			await clipboard.writeText(payload);
+			const template = sanitizeSlideTemplateConfig(this.template);
+			const cardSize = this.getCardSizePayload();
+			const payload = this.onCardSizeChange
+				? {
+					template,
+					cardWidth: cardSize?.width ?? this.cardWidth,
+					cardHeight: cardSize?.height ?? this.cardHeight
+				}
+				: template;
+			const serialized = JSON.stringify(payload, null, 2);
+			await clipboard.writeText(serialized);
 			new Notice(t('slideView.templateModal.copyPresetSuccess'));
 		} catch (error) {
 			console.error('[SlideTemplateModal] Failed to copy preset', error);
@@ -351,15 +425,13 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.pastePresetInvalid'));
 			return;
 		}
-		if (!this.isTemplatePayload(parsed)) {
+		const preset = this.parsePresetPayload(parsed);
+		if (!preset) {
 			new Notice(t('slideView.templateModal.pastePresetInvalid'));
 			return;
 		}
 		try {
-			this.template = sanitizeSlideTemplateConfig(parsed);
-			this.setBranchSelection('single', this.resolveInitialBranch('single'));
-			this.setBranchSelection('split', this.resolveInitialBranch('split'));
-			this.renderModalContent();
+			this.applyPresetStyles(preset.template, preset);
 			new Notice(t('slideView.templateModal.pastePresetSuccess'));
 		} catch (error) {
 			console.error('[SlideTemplateModal] Failed to apply preset from clipboard', error);
@@ -373,7 +445,7 @@ export class SlideTemplateModal extends Modal {
 		}
 		try {
 			const nextTemplate = sanitizeSlideTemplateConfig(this.template);
-			const maybePromise = this.onSaveDefault(nextTemplate);
+			const maybePromise = this.onSaveDefault(nextTemplate, this.getCardSizePayload());
 			if (maybePromise && typeof (maybePromise as Promise<void>).catch === 'function') {
 				void maybePromise.catch((error: unknown) => {
 					console.error('[SlideTemplateModal] Failed to save global default', error);
@@ -386,9 +458,12 @@ export class SlideTemplateModal extends Modal {
 		}
 	}
 
-	private applyPresetStyles(preset: SlideTemplateConfig): void {
+	private applyPresetStyles(preset: SlideTemplateConfig, cardSize?: { cardWidth?: number | null; cardHeight?: number | null }): void {
 		const sanitizedPreset = sanitizeSlideTemplateConfig(preset);
 		this.template = sanitizedPreset;
+		if (cardSize) {
+			this.applyCardSizePayload(cardSize);
+		}
 		this.setBranchSelection('single', this.resolveInitialBranch('single'));
 		this.setBranchSelection('split', this.resolveInitialBranch('split'));
 		this.renderModalContent();
@@ -402,14 +477,14 @@ export class SlideTemplateModal extends Modal {
 		}
 		const preset = mergeSlideTemplateFields(
 			globalConfig.template,
-			buildBuiltInSlideTemplate(this.fields, this.fieldConfigs, this.sampleRows)
+			this.buildBuiltInTemplate(this.fields, this.fieldConfigs, this.sampleRows)
 		);
-		this.applyPresetStyles(preset);
+		this.applyPresetStyles(preset, globalConfig);
 	}
 
 	private applyBuiltInDefault(): void {
-		const preset = buildBuiltInSlideTemplate(this.fields, this.fieldConfigs, this.sampleRows);
-		this.applyPresetStyles(preset);
+		const preset = this.buildBuiltInTemplate(this.fields, this.fieldConfigs, this.sampleRows);
+		this.applyPresetStyles(preset, { cardWidth: DEFAULT_CARD_WIDTH, cardHeight: DEFAULT_CARD_HEIGHT });
 	}
 
 	private setBranchSelection(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): void {

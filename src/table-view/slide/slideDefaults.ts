@@ -128,6 +128,126 @@ const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
 	backgroundColor: ''
 });
 
+const BUILT_IN_GALLERY_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
+	mode: 'single',
+	single: {
+		withImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 90,
+				topPct: 60,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.5,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 90,
+				topPct: 68,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1.5,
+				fontWeight: 400
+			},
+			imageTemplate: '',
+			imageLayout: {
+				widthPct: 100,
+				topPct: 0,
+				insetPct: 0,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 0,
+				fontWeight: 400
+			}
+		},
+		withoutImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 90,
+				topPct: 60,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.5,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 90,
+				topPct: 68,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1.5,
+				fontWeight: 400
+			}
+		}
+	},
+	split: {
+		withImage: {
+			imageTemplate: '',
+			textPage: {
+				titleTemplate: '',
+				bodyTemplate: '',
+				titleLayout: {
+					widthPct: 90,
+					topPct: 60,
+					insetPct: 5,
+					align: 'left',
+					lineHeight: 1.2,
+					fontSize: 1.5,
+					fontWeight: 700
+				},
+				bodyLayout: {
+					widthPct: 90,
+					topPct: 68,
+					insetPct: 5,
+					align: 'left',
+					lineHeight: 1.5,
+					fontSize: 1.5,
+					fontWeight: 400
+				}
+			},
+			imageLayout: {
+				widthPct: 100,
+				topPct: 0,
+				insetPct: 0,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 0,
+				fontWeight: 400
+			}
+		},
+		withoutImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 90,
+				topPct: 60,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.5,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 90,
+				topPct: 68,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1.5,
+				fontWeight: 400
+			}
+		}
+	},
+	textColor: '',
+	backgroundColor: ''
+});
+
 const isEmptyTextTemplate = (template: SlideTextTemplate): boolean =>
 	!template.titleTemplate?.trim() && !template.bodyTemplate?.trim();
 
@@ -209,11 +329,12 @@ const applyTemplates = (template: SlideTextTemplate, title: string, body: string
 	bodyTemplate: body || template.bodyTemplate || ''
 });
 
-export function buildBuiltInSlideTemplate(
+const buildTemplateFromBase = (
+	base: SlideTemplateConfig,
 	fields: string[],
 	columnConfigs?: ColumnConfig[] | null,
 	sampleRows?: Array<Record<string, unknown>> | null
-): SlideTemplateConfig {
+): SlideTemplateConfig => {
 	const normalizedFields = normalizeFieldList(fields);
 	const primaryField = pickPrimaryField(normalizedFields);
 	const titleTemplate = primaryField ? `{${primaryField}}` : '';
@@ -223,7 +344,6 @@ export function buildBuiltInSlideTemplate(
 	const bodyFields = normalizedFields.filter((field) => field !== primaryField && field !== imageField);
 	const bodyTemplate = bodyFields.length > 0 ? bodyFields.map((field) => `{${field}}`).join('\n') : '';
 	const imageTemplate = imageField ? `{${imageField}}` : '';
-	const base = BUILT_IN_SLIDE_BASE;
 
 	const merged: SlideTemplateConfig = {
 		...base,
@@ -246,6 +366,22 @@ export function buildBuiltInSlideTemplate(
 	};
 
 	return sanitizeSlideTemplateConfig(merged);
+};
+
+export function buildBuiltInSlideTemplate(
+	fields: string[],
+	columnConfigs?: ColumnConfig[] | null,
+	sampleRows?: Array<Record<string, unknown>> | null
+): SlideTemplateConfig {
+	return buildTemplateFromBase(BUILT_IN_SLIDE_BASE, fields, columnConfigs, sampleRows);
+}
+
+export function buildBuiltInGalleryTemplate(
+	fields: string[],
+	columnConfigs?: ColumnConfig[] | null,
+	sampleRows?: Array<Record<string, unknown>> | null
+): SlideTemplateConfig {
+	return buildTemplateFromBase(BUILT_IN_GALLERY_BASE, fields, columnConfigs, sampleRows);
 }
 
 export function mergeSlideTemplateFields(

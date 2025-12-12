@@ -16,7 +16,7 @@ export interface GalleryViewState {
 
 const createId = (): string => `gal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const DEFAULT_CARD_WIDTH = 320;
-const DEFAULT_CARD_HEIGHT = 240;
+const DEFAULT_CARD_HEIGHT = 320;
 const normalizeSize = (value: unknown, fallback: number): number => {
 	const numeric = typeof value === 'number' ? value : Number(value);
 	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
@@ -70,16 +70,18 @@ export class GalleryViewStore {
 		this.ensureActive();
 	}
 
-	resetWithConfig(config: SlideViewConfig, name = 'Gallery'): void {
+	resetWithConfig(config: SlideViewConfig, name = 'Gallery', cardSize?: { width?: number | null; height?: number | null }): void {
 		const normalized = normalizeSlideViewConfig(config);
+		const width = normalizeSize(cardSize?.width, DEFAULT_CARD_WIDTH);
+		const height = normalizeSize(cardSize?.height, DEFAULT_CARD_HEIGHT);
 		this.state = {
 				views: [
 					{
 						id: createId(),
 						name,
 						template: normalized,
-						cardWidth: DEFAULT_CARD_WIDTH,
-						cardHeight: DEFAULT_CARD_HEIGHT,
+						cardWidth: width,
+						cardHeight: height,
 						groupField: null
 					}
 				],

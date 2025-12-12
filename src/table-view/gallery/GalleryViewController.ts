@@ -1,4 +1,4 @@
-import { App, Component } from 'obsidian';
+import { App, Component, Menu } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
@@ -14,6 +14,8 @@ import {
 import { applyLayoutStyles } from '../slide/slideLayout';
 import { renderSlideEditForm, serializeTemplateSegments, type EditState } from '../slide/slideTemplateEditing';
 import { optimizeGalleryMediaElements } from './galleryMediaOptimizer';
+import type { GalleryCardFieldContext } from './galleryCardFieldMenu';
+import { getLogger } from '../../utils/logger';
 
 interface GalleryViewControllerOptions {
 	app: App;
@@ -28,6 +30,7 @@ interface GalleryViewControllerOptions {
 	onTemplateChange?: () => void;
 	quickFilterManager?: GlobalQuickFilterManager | null;
 	subscribeToRows?: (listener: (rows: RowData[]) => void) => () => void;
+	getCardFieldMenu?: () => GalleryCardFieldContext | null;
 }
 
 type EditingKey = { rowIndex: number; templateRef: SlidePage['templateRef'] } | null;
@@ -45,6 +48,7 @@ const toFontPx = (value: number): string => {
 };
 
 export class GalleryViewController {
+	private static readonly logger = getLogger('gallery:controller');
 	private readonly app: App;
 	private readonly container: HTMLElement;
 	private rows: RowData[] = [];
@@ -71,6 +75,7 @@ export class GalleryViewController {
 	private renderScheduled = false;
 	private destroyed = false;
 	private renderCount = 0;
+	private readonly cardFieldMenuProvider: (() => GalleryCardFieldContext | null) | null;
 
 	constructor(options: GalleryViewControllerOptions) {
 		this.app = options.app;
@@ -85,6 +90,7 @@ export class GalleryViewController {
 		this.onTemplateChange = options.onTemplateChange ?? null;
 		this.quickFilterManager = options.quickFilterManager ?? null;
 		this.quickFilterValue = this.quickFilterManager?.getValue() ?? '';
+		this.cardFieldMenuProvider = options.getCardFieldMenu ?? null;
 		if (options.subscribeToRows) {
 			this.unsubscribeRows = options.subscribeToRows((rows) => {
 				this.rows = rows;
@@ -275,6 +281,14 @@ export class GalleryViewController {
 					this.beginEdit(page, row);
 				};
 			}
+			if (!isEditing && this.cardFieldMenuProvider && row) {
+				card.oncontextmenu = (evt) => {
+					if (evt.defaultPrevented) return;
+					this.showCardFieldMenu(row, evt);
+				};
+			} else {
+				card.oncontextmenu = null;
+			}
 		});
 		if (this.cardEls.length > this.pages.length) {
 			for (let i = this.pages.length; i < this.cardEls.length; i += 1) {
@@ -354,6 +368,69 @@ export class GalleryViewController {
 		this.editState.fieldInputs = {};
 		this.editState.template = null;
 		this.requestRender();
+	}
+
+	private showCardFieldMenu(row: RowData, event: MouseEvent): void {
+		const context = this.cardFieldMenuProvider?.();
+		if (!context || !context.field || !Array.isArray(context.options) || context.options.length === 0) {
+			return;
+		}
+
+		const menu = new Menu();
+		const rawCurrent = row[context.field];
+		const currentValue = typeof rawCurrent === 'string' ? rawCurrent.trim() : String(rawCurrent ?? '').trim();
+		const currentKey = currentValue.toLowerCase();
+		let added = false;
+
+		for (const option of context.options) {
+			const value = typeof option.value === 'string' ? option.value.trim() : String(option.value ?? '').trim();
+			if (!value) {
+				continue;
+			}
+			const label =
+				typeof option.label === 'string' && option.label.trim().length > 0
+					? option.label.trim()
+					: value;
+			const normalizedValue = value.toLowerCase();
+			const isActive = normalizedValue === currentKey;
+
+			menu.addItem((item) => {
+				item.setTitle(label);
+				if (isActive) {
+					item.setChecked(true);
+					item.setDisabled(true);
+				}
+				item.onClick(() => {
+					if (isActive) {
+						return;
+					}
+					void this.applyFieldValueChange(row, context.field, value);
+				});
+			});
+			added = true;
+		}
+
+		if (!added) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		menu.showAtMouseEvent(event);
+	}
+
+	private async applyFieldValueChange(row: RowData, field: string, value: string): Promise<void> {
+		const payload: Record<string, string> = { [field]: value };
+		try {
+			const nextRows = await this.onSaveRow(row, payload);
+			if (nextRows) {
+				this.updateRows(nextRows);
+			} else {
+				this.requestRender();
+			}
+		} catch (error) {
+			GalleryViewController.logger.error('Failed to apply gallery card field change', error);
+		}
 	}
 
 	private async persistEdit(page: SlidePage): Promise<void> {

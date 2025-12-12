@@ -9,6 +9,7 @@ import { normalizeSlideViewConfig } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { getLogger } from '../../utils/logger';
 import { renderGalleryFilterControls } from './galleryFilterPresenter';
+import { resolveGalleryCardFieldContext } from './galleryCardFieldMenu';
 
 const DEFAULT_CARD_WIDTH = 320;
 const DEFAULT_CARD_HEIGHT = 240;
@@ -178,6 +179,11 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		sourcePath,
 		quickFilterManager: view.galleryQuickFilterManager,
 		subscribeToRows: (listener) => view.galleryFilterOrchestrator.addVisibleRowsListener(listener),
+		getCardFieldMenu: () =>
+			resolveGalleryCardFieldContext({
+				activeGroup: view.galleryTagGroupStore.getActiveGroup(),
+				filterViews: view.galleryFilterViewState?.views ?? []
+			}),
 		onSaveRow: async (row, values) => {
 			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
 			if (rowIndex == null) return;

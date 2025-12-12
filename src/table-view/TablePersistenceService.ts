@@ -1,5 +1,5 @@
-import type { App, TFile } from 'obsidian';
-import { Notice } from 'obsidian';
+import type { App } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import type { TableDataStore } from './TableDataStore';
@@ -120,19 +120,25 @@ export class TablePersistenceService {
 			this.cancelScheduledSave();
 			return;
 		}
+		const targetFile = this.deps.app.vault.getAbstractFileByPath(file.path);
+		if (!(targetFile instanceof TFile) || targetFile !== file) {
+			logger.warn('save:aborted file missing or replaced', { path: file.path });
+			this.cancelScheduledSave();
+			return;
+		}
 
 		try {
 			const markdown = this.deps.dataStore.blocksToMarkdown().trimEnd();
 			const backupManager = this.deps.getBackupManager();
 			if (backupManager) {
 				try {
-					await backupManager.ensureBackup(file, `${markdown}\n`);
+					await backupManager.ensureBackup(targetFile, `${markdown}\n`);
 				} catch (error) {
 					logger.warn('Backup snapshot failed before save', error);
 				}
 			}
-			this.deps.markSelfMutation?.(file);
-			await this.deps.app.vault.modify(file, `${markdown}\n`);
+			this.deps.markSelfMutation?.(targetFile);
+			await this.deps.app.vault.modify(targetFile, `${markdown}\n`);
 			await this.saveConfig({
 				beforeWrite: (target) => this.deps.markSelfMutation?.(target)
 			});

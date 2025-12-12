@@ -1,4 +1,4 @@
-import type { TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { getLogger } from '../utils/logger';
 import { getPluginContext } from '../pluginContext';
 import type { TableView } from '../TableView';
@@ -58,9 +58,16 @@ export class ConversionSessionManager {
 			return false;
 		}
 		this.view.persistenceService?.cancelScheduledSave();
+		const liveFile = this.view.app.vault.getAbstractFileByPath(file.path);
+		if (!(liveFile instanceof TFile) || liveFile !== file) {
+			logger.info('restore:skipped missing file', { file: file.path });
+			this.baseline = null;
+			this.baselinePersisted = false;
+			return false;
+		}
 		try {
 			try {
-				const current = await this.view.app.vault.read(file);
+				const current = await this.view.app.vault.read(liveFile);
 				if (current === baseline) {
 					logger.debug('restore: skipped (content unchanged)', { file: file.path });
 					return false;
@@ -69,7 +76,7 @@ export class ConversionSessionManager {
 				logger.warn('restore: failed to read current content, falling back to write', error);
 			}
 			logger.debug('restore', { file: file.path });
-			await this.view.app.vault.modify(file, baseline);
+			await this.view.app.vault.modify(liveFile, baseline);
 			return true;
 		} catch (error) {
 			logger.error('restore-failed', error);

@@ -34,6 +34,7 @@ import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelper
 const logger = getLogger('service:settings');
 const FILE_SETTINGS_CLEANUP_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
 const DEFAULT_GALLERY_CARD_WIDTH = 320;
+const DEFAULT_GALLERY_CARD_HEIGHT = 320;
 const normalizeCardSize = (value: unknown): number | null => {
 	const numeric = typeof value === 'number' ? value : Number(value);
 	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
@@ -82,6 +83,8 @@ export interface TileLineBaseSettings {
 	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null }>;
 	defaultSlideConfig: SlideViewConfig | null;
 	defaultGalleryConfig: SlideViewConfig | null;
+	defaultGalleryCardWidth: number | null;
+	defaultGalleryCardHeight: number | null;
 	hideRightSidebar: boolean;
 	borderContrast: number;
 	stripeColorMode: StripeColorMode;
@@ -114,6 +117,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	galleryViews: {},
 	defaultSlideConfig: null,
 	defaultGalleryConfig: null,
+	defaultGalleryCardWidth: DEFAULT_GALLERY_CARD_WIDTH,
+	defaultGalleryCardHeight: DEFAULT_GALLERY_CARD_HEIGHT,
 	hideRightSidebar: false,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
@@ -165,6 +170,12 @@ export class SettingsService {
 		merged.galleryPreferences = { ...DEFAULT_SETTINGS.galleryPreferences, ...(merged.galleryPreferences ?? {}) };
 		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
 		merged.defaultGalleryConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultGalleryConfig);
+		const defaultGalleryWidth =
+			normalizeCardSize((merged as TileLineBaseSettings).defaultGalleryCardWidth) ?? DEFAULT_GALLERY_CARD_WIDTH;
+		const defaultGalleryHeight =
+			normalizeCardSize((merged as TileLineBaseSettings).defaultGalleryCardHeight) ?? DEFAULT_GALLERY_CARD_HEIGHT;
+		merged.defaultGalleryCardWidth = defaultGalleryWidth;
+		merged.defaultGalleryCardHeight = defaultGalleryHeight;
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -656,6 +667,12 @@ export class SettingsService {
 		return stored ? normalizeSlideViewConfig(stored) : null;
 	}
 
+	getDefaultGalleryCardSize(): { width: number; height: number } | null {
+		const width = normalizeCardSize(this.settings.defaultGalleryCardWidth) ?? DEFAULT_GALLERY_CARD_WIDTH;
+		const height = normalizeCardSize(this.settings.defaultGalleryCardHeight) ?? DEFAULT_GALLERY_CARD_HEIGHT;
+		return width != null && height != null ? { width, height } : null;
+	}
+
 	async setDefaultSlideConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
 		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
 		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
@@ -671,17 +688,27 @@ export class SettingsService {
 		return next;
 	}
 
-	async setDefaultGalleryConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
+	async setDefaultGalleryConfig(preferences: SlideViewConfig | null, cardSize?: { width?: number | null; height?: number | null } | null): Promise<SlideViewConfig | null> {
 		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
 		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
 		const previous = this.getDefaultGalleryConfig();
+		const nextCardSize = preferences ? this.sanitizeDefaultCardSize(cardSize, true) : null;
+		const previousCardSize = this.getDefaultGalleryCardSize();
 		const unchanged =
 			(next === null && previous === null) ||
 			(next !== null && previous !== null && JSON.stringify(next) === JSON.stringify(previous));
-		if (unchanged) {
+		const cardSizeUnchanged =
+			(nextCardSize === null && previousCardSize === null) ||
+			(nextCardSize !== null &&
+				previousCardSize !== null &&
+				nextCardSize.width === previousCardSize.width &&
+				nextCardSize.height === previousCardSize.height);
+		if (unchanged && cardSizeUnchanged) {
 			return previous;
 		}
 		this.settings.defaultGalleryConfig = next;
+		this.settings.defaultGalleryCardWidth = nextCardSize?.width ?? DEFAULT_GALLERY_CARD_WIDTH;
+		this.settings.defaultGalleryCardHeight = nextCardSize?.height ?? DEFAULT_GALLERY_CARD_HEIGHT;
 		await this.persist();
 		return next;
 	}
@@ -1055,6 +1082,25 @@ export class SettingsService {
 			map.set(path, { path, markedAt });
 		}
 		return Array.from(map.values());
+	}
+
+	private sanitizeDefaultCardSize(
+		raw: { width?: number | null; height?: number | null } | null | undefined,
+		applyFallback = false
+	): { width: number; height: number } | null {
+		if (!raw || typeof raw !== 'object') {
+			return applyFallback
+				? { width: DEFAULT_GALLERY_CARD_WIDTH, height: DEFAULT_GALLERY_CARD_HEIGHT }
+				: null;
+		}
+		const width = normalizeCardSize((raw as { width?: unknown }).width);
+		const height = normalizeCardSize((raw as { height?: unknown }).height);
+		if (width == null || height == null) {
+			return applyFallback
+				? { width: DEFAULT_GALLERY_CARD_WIDTH, height: DEFAULT_GALLERY_CARD_HEIGHT }
+				: null;
+		}
+		return { width, height };
 	}
 
 	private sanitizeDefaultSlideConfig(raw: unknown): SlideViewConfig | null {

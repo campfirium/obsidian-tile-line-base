@@ -67,25 +67,25 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 				fieldConfigs: columnConfigs,
 				sampleRows: slideRows,
 				initial: baseConfig.template,
-				onSave: (nextTemplate) => {
-					const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));
-					const nextRenderState = buildRenderConfig({
-						config: nextConfig
-					});
+			onSave: (nextTemplate) => {
+				const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));
+				const nextRenderState = buildRenderConfig({
+					config: nextConfig
+				});
 					view.slideTemplateTouched = true;
 					view.shouldAutoFillSlideDefaults = false;
 					view.slideConfig = nextRenderState.renderConfig;
 					view.slideController?.controller.updateConfig(nextRenderState.renderConfig);
 					view.markUserMutation('slide-template');
 					view.persistenceService.scheduleSave();
-				},
-				onSaveDefault: plugin
-					? async (nextTemplate) => {
-						try {
-							const nextConfig = normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate });
-							await plugin.setDefaultSlideConfig(nextConfig);
-							new Notice(t('slideView.templateModal.setDefaultSuccess'));
-						} catch (error) {
+			},
+			onSaveDefault: plugin
+				? async (nextTemplate, _cardSize) => {
+					try {
+						const nextConfig = normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate });
+						await plugin.setDefaultSlideConfig(nextConfig);
+						new Notice(t('slideView.templateModal.setDefaultSuccess'));
+					} catch (error) {
 							logger.error('Failed to set slide template as default', error);
 							new Notice(t('slideView.templateModal.setDefaultError'));
 						}

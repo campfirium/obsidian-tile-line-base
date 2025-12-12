@@ -4,7 +4,7 @@ import type { TableView } from '../../TableView';
 import { GalleryViewController } from './GalleryViewController';
 import { SlideTemplateModal } from '../slide/SlideTemplateModal';
 import { ensureLayoutDefaults } from '../slide/slideConfigHelpers';
-import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from '../slide/slideDefaults';
+import { buildBuiltInGalleryTemplate, mergeSlideTemplateFields } from '../slide/slideDefaults';
 import { normalizeSlideViewConfig } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { getLogger } from '../../utils/logger';
@@ -12,7 +12,7 @@ import { renderGalleryFilterControls } from './galleryFilterPresenter';
 import { resolveGalleryCardFieldContext } from './galleryCardFieldMenu';
 
 const DEFAULT_CARD_WIDTH = 320;
-const DEFAULT_CARD_HEIGHT = 240;
+const DEFAULT_CARD_HEIGHT = 320;
 const logger = getLogger('gallery:render-mode');
 
 export function renderGalleryMode(view: TableView, container: HTMLElement): void {
@@ -29,7 +29,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const columnConfigs = view.schema?.columnConfigs ?? null;
 	const sourcePath = view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '';
 	let shouldApplyBuiltIn = view.shouldAutoFillGalleryDefaults;
-	const builtInTemplate = buildBuiltInSlideTemplate(fields, columnConfigs, rows);
+	const builtInTemplate = buildBuiltInGalleryTemplate(fields, columnConfigs, rows);
 	const plugin = getPluginContext();
 	const enforceSingleWithImageConfig = (config: ReturnType<typeof normalizeSlideViewConfig>): ReturnType<typeof normalizeSlideViewConfig> => {
 		const base = ensureLayoutDefaults(config);
@@ -86,6 +86,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			allowedSingleBranches: ['withImage'],
 			cardSize: { width: active.cardWidth, height: active.cardHeight },
 			renderIntroSection: undefined,
+			buildBuiltInTemplate: (templateFields, templateConfigs, templateRows) =>
+				buildBuiltInGalleryTemplate(templateFields, templateConfigs, templateRows),
 			onCardSizeChange: (size) => {
 				const width = normalizeSize(size.width, DEFAULT_CARD_WIDTH);
 				const height = normalizeSize(size.height, DEFAULT_CARD_HEIGHT);
@@ -107,12 +109,14 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				view.persistenceService.scheduleSave();
 			},
 			onSaveDefault: plugin
-				? async (nextTemplate) => {
+				? async (nextTemplate, cardSize) => {
 					try {
 						const enforced = enforceSingleWithImageConfig(
 							normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 						);
-						await plugin.setDefaultGalleryConfig(enforced);
+						const width = normalizeSize(cardSize?.width ?? active.cardWidth, DEFAULT_CARD_WIDTH);
+						const height = normalizeSize(cardSize?.height ?? active.cardHeight, DEFAULT_CARD_HEIGHT);
+						await plugin.setDefaultGalleryConfig(enforced, { width, height });
 						new Notice(t('slideView.templateModal.setDefaultSuccess'));
 					} catch (error) {
 						logger.error('Failed to set gallery template as default', error);
@@ -122,7 +126,16 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				: undefined,
 			getGlobalDefault: () => {
 				const globalConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
-				return globalConfig ? enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig)) : null;
+				const globalCardSize = plugin?.getDefaultGalleryCardSize?.() ?? null;
+				if (!globalConfig && !globalCardSize) {
+					return null;
+				}
+				const enforced = enforceSingleWithImageConfig(normalizeSlideViewConfig(globalConfig ?? null));
+				return {
+					template: enforced.template,
+					cardWidth: globalCardSize?.width ?? undefined,
+					cardHeight: globalCardSize?.height ?? undefined
+				};
 			}
 		});
 		modal.open();

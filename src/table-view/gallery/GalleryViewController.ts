@@ -209,13 +209,7 @@ export class GalleryViewController {
 		const hasPages = this.pages.length > 0;
 		const isFirstBatch = this.renderCount === 0 && hasPages;
 		if (!hasPages) {
-			this.cardEls = [];
-			if (this.gridEl) {
-				this.gridEl.remove();
-			}
-			this.gridEl = null;
-			this.container.empty();
-			this.container.createDiv({ cls: 'tlb-gallery-empty', text: t('galleryView.emptyState') });
+			this.renderEmptyState();
 			return;
 		}
 		this.renderCount += 1;
@@ -225,11 +219,15 @@ export class GalleryViewController {
 		grid.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 		this.pages.forEach((page, index) => {
 			const card = this.ensureCard(grid, index);
+			card.removeClass('tlb-gallery-card--empty');
+			card.removeAttribute('aria-label');
 			card.setAttr('data-tlb-gallery-index', String(index));
 			card.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			card.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			const slideEl = this.ensureSlide(card);
 			slideEl.empty();
+			slideEl.removeClass('tlb-gallery-card__slide--empty');
+			slideEl.removeAttribute('aria-label');
 			slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			slideEl.style.setProperty('--tlb-gallery-base-font', `${TEMPLATE_FONT_BASE_PX}px`);
@@ -525,5 +523,31 @@ export class GalleryViewController {
 		return slide;
 	}
 
+	private renderEmptyState(): void {
+		this.cardEls = [];
+		if (this.gridEl) {
+			this.gridEl.remove();
+		}
+		this.gridEl = null;
+		this.container.empty();
+
+		const grid = this.ensureGrid();
+		grid.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
+		grid.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
+
+		const card = this.ensureCard(grid, 0);
+		card.addClass('tlb-gallery-card--empty');
+		card.removeAttribute('data-tlb-gallery-index');
+		card.onclick = null;
+		card.oncontextmenu = null;
+
+		const slideEl = this.ensureSlide(card);
+		slideEl.empty();
+		slideEl.addClass('tlb-gallery-card__slide--empty');
+		slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
+		slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
+		slideEl.style.setProperty('--tlb-gallery-base-font', `${TEMPLATE_FONT_BASE_PX}px`);
+		slideEl.setAttr('aria-label', t('galleryView.emptyState'));
+	}
 
 }

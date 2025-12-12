@@ -400,6 +400,13 @@
 	aspect-ratio: 16 / 9;
 	object-fit: cover;
 }
+.tlb-gallery-card--empty {
+	pointer-events: none;
+}
+.tlb-gallery-card__slide--empty {
+	display: block;
+}
+
 
 .tlb-filter-view-icon-control {
   width: 100%;

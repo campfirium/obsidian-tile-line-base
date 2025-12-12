@@ -189,8 +189,7 @@ export class SlideTemplateModal extends Modal {
 		this.resolveThemeDefaults();
 		this.renderSingleSection(this.template.mode === 'single');
 		this.renderSplitSection(this.template.mode === 'split');
-		this.renderColorSection(this.contentEl);
-		this.renderCardSizeSection(this.contentEl);
+		this.renderCardSettingsSection(this.contentEl);
 		if (this.renderExtraSections) {
 			this.renderExtraSections(this.contentEl);
 		}
@@ -555,8 +554,8 @@ export class SlideTemplateModal extends Modal {
 		const head = cell.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
 		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: label });
 		const textarea = cell.createEl('textarea', {
-			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
-			attr: { rows: '3' }
+			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body tlb-slide-template__textarea--image',
+			attr: { rows: '2' }
 		}) as HTMLTextAreaElement;
 		textarea.value = value;
 		this.registerFocusTracking(textarea);
@@ -565,9 +564,16 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderLayoutTwoColumn(container: HTMLElement, heading: string, value: SlideLayoutConfig, onChange: (next: SlideLayoutConfig) => void): void {
+	private renderLayoutTwoColumn(
+		container: HTMLElement,
+		heading: string,
+		value: SlideLayoutConfig,
+		onChange: (next: SlideLayoutConfig) => void,
+		options?: { includeTypography?: boolean }
+	): void {
 		if (heading) container.createDiv({ cls: 'tlb-slide-template__cell-head', text: heading });
 		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
+		const includeTypography = options?.includeTypography ?? true;
 
 		const addSelectRow = (parent: HTMLElement, label: string, update: (val: string) => void) => {
 			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
@@ -662,31 +668,49 @@ export class SlideTemplateModal extends Modal {
 		);
 		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
 
-		const row3 = layoutRow('three');
-		numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
-		numberRow(
-			row3,
-			t('slideView.templateModal.fontWeightLabel'),
-			value.fontWeight,
-			100,
-			900,
-			50,
-			(v) => (value.fontWeight = v)
-		);
-		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
+		if (includeTypography) {
+			const row3 = layoutRow('three');
+			numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
+			numberRow(
+				row3,
+				t('slideView.templateModal.fontWeightLabel'),
+				value.fontWeight,
+				100,
+				900,
+				50,
+				(v) => (value.fontWeight = v)
+			);
+			numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
+		}
 	}
 
-	private renderCardSizeSection(container: HTMLElement): void {
+	private renderCardSettingsSection(container: HTMLElement): void {
+		const hasCardSizeControls = Boolean(this.onCardSizeChange);
+		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
+		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
+		const headingKey = hasCardSizeControls ? 'galleryView.templateModal.cardSizeLabel' : 'slideView.templateModal.globalSettingsLabel';
+		headRow.createDiv({ cls: 'tlb-slide-template__cell-head', text: t(headingKey as TranslationKey) });
+		const grid = section.createDiv({ cls: 'tlb-slide-template__grid' });
+		if (hasCardSizeControls) {
+			const sizeCell = grid.createDiv({ cls: 'tlb-slide-template__cell' });
+			this.renderCardSizeControls(sizeCell);
+		}
+		const colorCell = grid.createDiv({
+			cls: `tlb-slide-template__cell${hasCardSizeControls ? '' : ' tlb-slide-template__cell--full'}`
+		});
+		const row = colorCell.createDiv({ cls: 'tlb-slide-template__color-row' });
+		this.renderColorControls(row, 'text');
+		this.renderColorControls(row, 'background');
+	}
+
+	private renderCardSizeControls(container: HTMLElement): void {
 		if (!this.onCardSizeChange) {
 			return;
 		}
-		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
-		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
-		headRow.createDiv({ cls: 'tlb-slide-template__cell-head', text: t('galleryView.templateModal.cardSizeLabel') });
-		const grid = section.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--colors' });
-		const row = grid.createDiv({ cls: 'tlb-slide-template__layout-line tlb-slide-template__layout-line--sizes' });
+		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
+		const row = layout.createDiv({ cls: 'tlb-slide-template__layout-line tlb-slide-template__layout-line--sizes' });
 		const buildNumberInput = (label: string, value: number, onChange: (val: number) => void) => {
-			const field = row.createDiv({ cls: 'tlb-slide-template__layout-field' });
+			const field = row.createDiv({ cls: 'tlb-slide-template__layout-field tlb-slide-template__layout-field--size' });
 			field.createDiv({ cls: 'tlb-slide-template__mini-label', text: label });
 			const input = field.createEl('input', {
 				attr: { type: 'number', min: '40', max: '2000', step: '10' },
@@ -708,20 +732,6 @@ export class SlideTemplateModal extends Modal {
 			this.cardHeight = next;
 			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
 		});
-	}
-
-
-	private renderColorSection(container: HTMLElement): void {
-		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
-		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
-		headRow.createDiv({
-			cls: 'tlb-slide-template__cell-head',
-			text: t('slideView.templateModal.globalSettingsLabel')
-		});
-		const grid = section.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--colors' });
-		const row = grid.createDiv({ cls: 'tlb-slide-template__color-row' });
-		this.renderColorControls(row, 'text');
-		this.renderColorControls(row, 'background');
 	}
 
 	private renderColorControls(container: HTMLElement, kind: 'text' | 'background'): void {
@@ -947,7 +957,8 @@ export class SlideTemplateModal extends Modal {
 				imageLayoutRow.right,
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
-				(next) => (this.template.single.withImage.imageLayout = next)
+				(next) => (this.template.single.withImage.imageLayout = next),
+				{ includeTypography: false }
 			);
 		}
 	}
@@ -1040,7 +1051,8 @@ export class SlideTemplateModal extends Modal {
 				imageLayoutRow.right,
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.split.withImage.imageLayout ?? getDefaultBodyLayout(),
-				(next) => (this.template.split.withImage.imageLayout = next)
+				(next) => (this.template.split.withImage.imageLayout = next),
+				{ includeTypography: false }
 			);
 		}
 	}

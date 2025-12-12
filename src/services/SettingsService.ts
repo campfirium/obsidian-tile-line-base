@@ -117,8 +117,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	galleryViews: {},
 	defaultSlideConfig: null,
 	defaultGalleryConfig: null,
-	defaultGalleryCardWidth: DEFAULT_GALLERY_CARD_WIDTH,
-	defaultGalleryCardHeight: DEFAULT_GALLERY_CARD_HEIGHT,
+	defaultGalleryCardWidth: null,
+	defaultGalleryCardHeight: null,
 	hideRightSidebar: true,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
@@ -170,12 +170,19 @@ export class SettingsService {
 		merged.galleryPreferences = { ...DEFAULT_SETTINGS.galleryPreferences, ...(merged.galleryPreferences ?? {}) };
 		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
 		merged.defaultGalleryConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultGalleryConfig);
-		const defaultGalleryWidth =
-			normalizeCardSize((merged as TileLineBaseSettings).defaultGalleryCardWidth) ?? DEFAULT_GALLERY_CARD_WIDTH;
-		const defaultGalleryHeight =
-			normalizeCardSize((merged as TileLineBaseSettings).defaultGalleryCardHeight) ?? DEFAULT_GALLERY_CARD_HEIGHT;
-		merged.defaultGalleryCardWidth = defaultGalleryWidth;
-		merged.defaultGalleryCardHeight = defaultGalleryHeight;
+		const defaultGalleryCardSize = this.sanitizeDefaultCardSize(
+			{
+				width: (merged as TileLineBaseSettings).defaultGalleryCardWidth,
+				height: (merged as TileLineBaseSettings).defaultGalleryCardHeight
+			},
+			false
+		);
+		merged.defaultGalleryCardWidth = defaultGalleryCardSize?.width ?? null;
+		merged.defaultGalleryCardHeight = defaultGalleryCardSize?.height ?? null;
+		if (!merged.defaultGalleryConfig) {
+			merged.defaultGalleryCardWidth = null;
+			merged.defaultGalleryCardHeight = null;
+		}
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -668,9 +675,16 @@ export class SettingsService {
 	}
 
 	getDefaultGalleryCardSize(): { width: number; height: number } | null {
-		const width = normalizeCardSize(this.settings.defaultGalleryCardWidth) ?? DEFAULT_GALLERY_CARD_WIDTH;
-		const height = normalizeCardSize(this.settings.defaultGalleryCardHeight) ?? DEFAULT_GALLERY_CARD_HEIGHT;
-		return width != null && height != null ? { width, height } : null;
+		if (!this.settings.defaultGalleryConfig) {
+			return null;
+		}
+		return this.sanitizeDefaultCardSize(
+			{
+				width: this.settings.defaultGalleryCardWidth,
+				height: this.settings.defaultGalleryCardHeight
+			},
+			false
+		);
 	}
 
 	async setDefaultSlideConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
@@ -707,8 +721,8 @@ export class SettingsService {
 			return previous;
 		}
 		this.settings.defaultGalleryConfig = next;
-		this.settings.defaultGalleryCardWidth = nextCardSize?.width ?? DEFAULT_GALLERY_CARD_WIDTH;
-		this.settings.defaultGalleryCardHeight = nextCardSize?.height ?? DEFAULT_GALLERY_CARD_HEIGHT;
+		this.settings.defaultGalleryCardWidth = nextCardSize?.width ?? null;
+		this.settings.defaultGalleryCardHeight = nextCardSize?.height ?? null;
 		await this.persist();
 		return next;
 	}

@@ -39,7 +39,7 @@ interface SlideTemplateModalOptions {
 
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
 const DEFAULT_CARD_WIDTH = 320;
-const DEFAULT_CARD_HEIGHT = 240;
+const DEFAULT_CARD_HEIGHT = 320;
 
 export class SlideTemplateModal extends Modal {
 	private static lastSelectedSingleBranch: 'withoutImage' | 'withImage' = 'withoutImage';

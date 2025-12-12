@@ -4709,7 +4709,7 @@
 	height: 100%;
 	width: 100%;
 	align-items: center;
-	justify-content: flex-start;
+	justify-content: center;
 	overflow: hidden;
 	background: transparent;
 	position: relative;
@@ -4734,7 +4734,7 @@
 	height: 100%;
 	display: flex;
 	align-items: center;
-	justify-content: flex-start;
+	justify-content: center;
 	position: relative;
 	padding: 0;
 	background: var(--tlb-slide-full-bg, transparent);
@@ -4748,7 +4748,7 @@
 	height: 100%;
 	display: flex;
 	align-items: center;
-	justify-content: flex-start;
+	justify-content: center;
 	overflow: hidden;
 }
 
@@ -4840,7 +4840,7 @@
 	color: var(--text-muted);
 	display: inline-flex;
 	align-items: center;
-	justify-content: flex-start;
+	justify-content: center;
 	cursor: pointer;
 	padding: 0;
 	line-height: 1;

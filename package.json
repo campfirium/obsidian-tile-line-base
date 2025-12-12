@@ -11,7 +11,8 @@
     "test:magic": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\"}' .lab/scripts/test-magic-migration.ts",
     "deploy": "npm run build && node scripts/deploy.mjs",
     "deploy:wsl": "npm run build && node scripts/deploy-wsl.mjs",
-    "mirror:dropbox": "node .lab/scripts/mirror-dropbox-plugin.mjs",
+    "mirror:obs": "node .lab/scripts/mirror-obs.mjs",
+    "mirror:demo": "node .lab/scripts/mirror-demo.mjs",
     "version": "node version-bump.mjs && git add package.json manifest.json versions.json",
     "check:release": "node scripts/check-release.mjs"
   },

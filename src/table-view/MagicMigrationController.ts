@@ -87,6 +87,8 @@ export class MagicMigrationController {
 				context.onApplied?.();
 			},
 			onIgnore: () => {
+				const clearEdits = context.sections.map((section) => ({ section, text: '' }));
+				void this.applyMalformedSectionEdits(context.file, context.content, clearEdits);
 				context.onIgnore?.();
 			},
 			onClose: () => {

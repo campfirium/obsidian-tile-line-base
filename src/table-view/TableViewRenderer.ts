@@ -168,7 +168,9 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 			file: view.file,
 			content,
 			sections: h2ParseResult.invalidSections,
-			totalSections: parsedBlocks.length + h2ParseResult.invalidSections.length
+			totalSections: parsedBlocks.length + h2ParseResult.invalidSections.length,
+			onApplied: () => { void view.render(); },
+			onIgnore: () => { void view.render(); }
 		});
 		return;
 	}

@@ -597,7 +597,18 @@
     "defaultFileName": "Converted note",
     "successNotice": "Converted to {{fileName}}",
     "failureNotice": "Conversion failed. Please try again.",
-    "previewRenameHint": "Click table headers to rename columns."
+    "previewRenameHint": "Click table headers to rename columns.",
+    "malformedTitle": "Malformed H2 sections detected",
+    "malformedDescription": "Some H2 sections are missing key/value pairs. Edit them below or ignore to continue.",
+    "malformedSummary": "Found {{total}} H2 sections; {{invalid}} need fixes and {{valid}} parsed normally.",
+    "malformedSectionLabel": "Section starting on line {{line}}",
+    "malformedReasonMissingColon": "Heading must include a colon separating key and value.",
+    "malformedReasonInvalidField": "Heading must contain both a key and a value.",
+    "malformedApply": "Save and refresh",
+    "malformedIgnore": "Ignore once",
+    "malformedEditWarning": "Changes here replace the original text for these sections.",
+    "malformedSaveSuccess": "Updated malformed H2 sections.",
+    "malformedSaveError": "Failed to update malformed H2 sections."
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView constructor start ===",

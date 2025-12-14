@@ -16,7 +16,6 @@ import { normalizeSlideViewConfig } from '../types/slide';
 import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
 import { extractFrontmatter } from './MarkdownFrontmatter';
-
 	const logger = getLogger('table-view:renderer');
 	export async function renderTableView(view: TableView): Promise<void> {
 		const rootEl = view.containerEl;
@@ -29,7 +28,6 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	container.classList.remove('tlb-kanban-mode');
 	container.classList.remove('tlb-slide-mode');
 	container.classList.remove('tlb-gallery-mode');
-
 		if (view.gridAdapter) { view.gridController.destroy(); view.gridAdapter = null; view.tableContainer = null; }
 		if (view.kanbanController) { view.kanbanController.destroy(); view.kanbanController = null; }
 		if (view.slideController) { view.slideController.destroy(); view.slideController = null; }
@@ -79,7 +77,6 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 			view.copyTemplate = loadedTemplate.trim().length > 0 ? loadedTemplate : null;
 		}
 	}
-
 	if (!view.slidePreferencesLoaded) {
 		const globalSlideConfig = plugin?.getDefaultSlideConfig?.() ?? null;
 		const preferredConfig = configBlock?.slide ?? globalSlideConfig ?? view.slideConfig;
@@ -136,7 +133,6 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 			view.galleryViewsLoaded = true;
 		}
 	}
-
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
 		if (preference === 'kanban' || preference === 'table' || preference === 'slide' || preference === 'gallery') view.activeViewMode = preference;
@@ -157,18 +153,25 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		}
 		view.kanbanPreferencesLoaded = true;
 	}
-
 	view.filterViewState = view.filterStateStore.getState();
 	view.galleryFilterViewState = view.galleryFilterStateStore.getState();
 	syncTagGroupState(view);
-
 	const headerColumnConfigs = view.markdownParser.parseHeaderConfig(parsedFrontmatter.body);
 	const persistedColumnConfigs = configBlock?.columnConfigs
 		? deserializeColumnConfigs(view, configBlock.columnConfigs)
 		: null;
 	const columnConfigs = mergeColumnConfigs(headerColumnConfigs, persistedColumnConfigs);
-
-	const parsedBlocks = view.markdownParser.parseH2Blocks(parsedFrontmatter.body);
+	const h2ParseResult = view.markdownParser.parseH2(parsedFrontmatter.body);
+	const parsedBlocks = h2ParseResult.blocks;
+	if (view.file && h2ParseResult.invalidSections.length > 0) {
+		view.magicMigrationController?.handleMalformedH2Sections({
+			file: view.file,
+			content,
+			sections: h2ParseResult.invalidSections,
+			totalSections: parsedBlocks.length + h2ParseResult.invalidSections.length
+		});
+		return;
+	}
 	const hasStructuredBlocks = view.markdownParser.hasStructuredH2Blocks(parsedBlocks);
 	if (!hasStructuredBlocks) {
 		if (view.file) {
@@ -178,9 +181,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		}
 		return;
 	}
-
 	view.blocks = parsedBlocks;
-
 	const schemaResult = view.schemaBuilder.buildSchema(view.blocks, columnConfigs ?? null);
 	view.dataStore.initialise(schemaResult, columnConfigs ?? null, {
 		frontmatter: parsedFrontmatter.frontmatter,
@@ -191,7 +192,6 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	const dirtyFlags = view.dataStore.consumeDirtyFlags();
 	view.schemaDirty = dirtyFlags.schemaDirty;
 	view.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;
-
 	if (!view.schema) { container.createDiv({ text: t('tableViewRenderer.noSchema') }); return; }
 	view.kanbanBoardController?.processPendingLaneFieldRepairs();
 	if (view.schemaDirty || view.sparseCleanupRequired) {
@@ -199,7 +199,6 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.schemaDirty = false;
 		view.sparseCleanupRequired = false;
 	}
-
 	if (!view.filterViewState || view.filterViewState.views.length === 0) {
 		view.filterStateStore.loadFromSettings();
 		view.filterViewState = view.filterStateStore.getState();
@@ -210,7 +209,6 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	syncTagGroupState(view);
 	view.tagGroupController.syncWithAvailableViews();
 	syncTagGroupState(view);
-
 	if (!view.galleryFilterViewState || view.galleryFilterViewState.views.length === 0) {
 		view.galleryFilterStateStore.loadFromSettings();
 		view.galleryFilterViewState = view.galleryFilterStateStore.getState();
@@ -221,12 +219,10 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	syncGalleryTagGroupState(view);
 	view.galleryTagGroupController.syncWithAvailableViews();
 	syncGalleryTagGroupState(view);
-
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();
 	view.initialColumnState = null;
 	const primaryField = view.schema.columnNames[0] ?? null;
-
 	const filterViewBar = view.filterViewBar;
 	if (filterViewBar) {
 		filterViewBar.destroy();

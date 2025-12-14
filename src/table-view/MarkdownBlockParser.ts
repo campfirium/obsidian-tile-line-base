@@ -32,6 +32,19 @@ export interface H2Block {
 	collapsedFields?: CollapsedFieldEntry[];
 }
 
+export interface InvalidH2Section {
+	startLine: number;
+	endLine: number;
+	heading: string;
+	text: string;
+	reason: 'missingColon' | 'invalidField';
+}
+
+export interface H2ParseResult {
+	blocks: H2Block[];
+	invalidSections: InvalidH2Section[];
+}
+
 const FULL_WIDTH_COLON = '\uFF1A';
 const COLLAPSED_COMMENT_PREFIX = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}`, 'i');
 
@@ -75,9 +88,10 @@ export class MarkdownBlockParser {
 		return null;
 	}
 
-	parseH2Blocks(content: string): H2Block[] {
+	parseH2(content: string): H2ParseResult {
 		const lines = content.split('\n');
 		const blocks: H2Block[] = [];
+		const invalidSections: InvalidH2Section[] = [];
 		let currentBlock: H2Block | null = null;
 		let inCodeBlock = false;
 
@@ -94,22 +108,27 @@ export class MarkdownBlockParser {
 				continue;
 			}
 
-			if (trimmed.startsWith('## ')) {
+			if (/^##(?!#)/.test(trimmed)) {
 				if (currentBlock) {
 					blocks.push(currentBlock);
 				}
-				const titleText = trimmed.substring(3).trim();
+				const titleText = trimmed.replace(/^##\s*/, '').trim();
+				const colonIndex = resolveColonIndex(titleText);
+				if (colonIndex <= 0) {
+					invalidSections.push(this.buildInvalidSection(lines, index, 'missingColon'));
+					currentBlock = null;
+					continue;
+				}
+				const parsedHeadingField = this.extractField(titleText, colonIndex);
+				if (!parsedHeadingField || !parsedHeadingField.key || !parsedHeadingField.value) {
+					invalidSections.push(this.buildInvalidSection(lines, index, 'invalidField'));
+					currentBlock = null;
+					continue;
+				}
 				currentBlock = {
 					title: titleText,
-					data: {}
+					data: { [parsedHeadingField.key]: parsedHeadingField.value }
 				};
-				const colonIndex = resolveColonIndex(titleText);
-				if (colonIndex > 0) {
-					const parsedHeadingField = this.extractField(titleText, colonIndex);
-					if (parsedHeadingField) {
-						currentBlock.data[parsedHeadingField.key] = parsedHeadingField.value;
-					}
-				}
 				continue;
 			}
 
@@ -148,7 +167,11 @@ export class MarkdownBlockParser {
 			blocks.push(currentBlock);
 		}
 
-		return blocks;
+		return { blocks, invalidSections };
+	}
+
+	parseH2Blocks(content: string): H2Block[] {
+		return this.parseH2(content).blocks;
 	}
 
 	hasStructuredH2Blocks(blocks: H2Block[]): boolean {
@@ -252,6 +275,29 @@ export class MarkdownBlockParser {
 		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
 		return runtimeKeyPattern.test(firstContentLine);
 	}
+	private buildInvalidSection(lines: string[], headingIndex: number, reason: InvalidH2Section['reason']): InvalidH2Section {
+		let endIndex = headingIndex;
+		let probeInCodeBlock = false;
+		for (let i = headingIndex + 1; i < lines.length; i++) {
+			const trimmed = lines[i].trim();
+			if (trimmed.startsWith('```')) {
+				probeInCodeBlock = !probeInCodeBlock;
+			}
+			if (!probeInCodeBlock && /^##(?!#)/.test(trimmed)) {
+				break;
+			}
+			endIndex = i;
+		}
+		return {
+			startLine: headingIndex,
+			endLine: endIndex,
+			text: lines.slice(headingIndex, endIndex + 1).join('\n'),
+			heading: lines[headingIndex] ?? '',
+			reason
+		};
+	}
+
+
 }
 
 function resolveColonIndex(text: string): number {

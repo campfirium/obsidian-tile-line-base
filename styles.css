@@ -6257,6 +6257,6 @@
 }
 
 .modal.tlb-malformed-modal {
-	width: min(760px, calc(100vw - 48px));
-	max-width: min(820px, calc(100vw - 32px));
+	width: min(600px, calc(100vw - 48px));
+	max-width: min(680px, calc(100vw - 32px));
 }

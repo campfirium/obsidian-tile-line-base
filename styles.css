@@ -1778,7 +1778,8 @@
 
 .tlb-magic-inline__textarea {
 	width: 100%;
-	min-height: 220px;
+	min-height: 320px;
+	flex: 1;
 	font-size: 13px;
 }
 .tlb-magic-inline__textarea--code {
@@ -6269,12 +6270,15 @@
 
 .tlb-malformed-simple {
 	padding: 16px;
+	display: flex;
+	flex-direction: column;
 }
 
 .tlb-malformed-container {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	flex: 1;
 }
 
 .tlb-malformed-heading {
@@ -6290,6 +6294,7 @@
 	flex-direction: column;
 	gap: 4px;
 	padding: 8px 0;
+	flex: 1;
 }
 
 .tlb-malformed-section-title {
@@ -6308,7 +6313,8 @@
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
 	padding: 10px 12px;
-	min-height: 220px;
+	min-height: 320px;
+	flex: 1;
 	font-size: 13px;
 }
 
@@ -6321,6 +6327,7 @@
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;
+	margin-top: auto;
 }
 
 .modal.tlb-conversion-modal.tlb-malformed-modal {

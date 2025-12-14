@@ -6256,7 +6256,8 @@
 	gap: 16px;
 }
 
-.modal.tlb-malformed-modal {
-	width: min(600px, calc(100vw - 48px));
-	max-width: min(680px, calc(100vw - 32px));
+.modal.tlb-conversion-modal.tlb-malformed-modal {
+	width: min(600px, 60vw);
+	max-width: min(700px, 70vw);
+	min-width: 0;
 }

@@ -6328,3 +6328,38 @@
 	max-width: min(700px, 70vw);
 	min-width: 0;
 }
+
+/* Fallback flattening for legacy magic inline markup */
+.modal.tlb-malformed-modal .tlb-magic-inline,
+.modal.tlb-malformed-modal .tlb-magic-inline--panel,
+.modal.tlb-malformed-modal .tlb-magic-inline__header,
+.modal.tlb-malformed-modal .tlb-magic-inline__callout,
+.modal.tlb-malformed-modal .tlb-magic-inline__section,
+.modal.tlb-malformed-modal .tlb-magic-inline__footer {
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	padding: 0;
+	margin: 0;
+}
+
+.modal.tlb-malformed-modal .tlb-magic-inline__section-title,
+.modal.tlb-malformed-modal .tlb-magic-inline__header h3 {
+	margin: 0 0 4px;
+}
+
+.modal.tlb-malformed-modal .tlb-magic-inline__section-reason {
+	margin-bottom: 6px;
+}
+
+.modal.tlb-malformed-modal .tlb-magic-inline__textarea {
+	font-family: var(--font-monospace);
+	background: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px 12px;
+}
+
+.modal.tlb-malformed-modal .tlb-magic-inline__actions {
+	justify-content: flex-end;
+}

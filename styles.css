@@ -6224,6 +6224,22 @@
 	color: var(--text-normal);
 }
 
+.tlb-magic-inline__malformed-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.tlb-magic-inline__section--simple {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 8px 10px;
+	background: var(--background-secondary);
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
 .tlb-magic-inline__card {
 	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);

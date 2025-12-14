@@ -38,38 +38,35 @@ export class MalformedH2Modal extends Modal {
 		modalEl.addClass('tlb-conversion-modal');
 		modalEl.addClass('tlb-malformed-modal');
 		contentEl.addClass('tlb-magic-inline');
-		const shell = contentEl.createDiv({ cls: 'tlb-magic-inline tlb-magic-inline--panel tlb-magic-inline--single tlb-malformed-shell' });
 
+		const shell = contentEl.createDiv({ cls: 'tlb-magic-inline tlb-magic-inline--panel tlb-magic-inline--single tlb-malformed-shell' });
 		const header = shell.createDiv({ cls: 'tlb-magic-inline__header tlb-magic-inline__header--compact' });
 		header.createEl('h3', { text: t('magicMigration.malformedTitle') });
 		const summary = shell.createDiv({ cls: 'tlb-magic-inline__callout' });
-		summary.createDiv({
-			cls: 'tlb-magic-inline__summary tlb-magic-inline__summary--primary',
-			text: t('magicMigration.malformedSummary', {
+		summary.setText(
+			t('magicMigration.malformedSummary', {
 				total: this.params.totalSections,
 				invalid: this.params.sections.length,
 				valid: Math.max(0, this.params.totalSections - this.params.sections.length)
 			})
-		});
+		);
 
-		const body = shell.createDiv({ cls: 'tlb-magic-inline__body tlb-magic-inline__body--stack' });
-		const list = body.createDiv({ cls: 'tlb-magic-inline__malformed-list' });
 		for (const section of this.params.sections) {
-			const card = list.createDiv({ cls: 'tlb-magic-inline__section tlb-magic-inline__card' });
-			const titleRow = card.createDiv({ cls: 'tlb-magic-inline__card-title' });
-			titleRow.createEl('div', {
+			const block = shell.createDiv({ cls: 'tlb-magic-inline__section tlb-magic-inline__section--simple' });
+			block.createEl('div', {
 				text: t('magicMigration.malformedSectionLabel', { line: section.startLine + 1 }),
 				cls: 'tlb-magic-inline__section-title'
 			});
-			titleRow.createEl('div', {
+			block.createEl('div', {
 				text:
 					section.reason === 'missingColon'
 						? t('magicMigration.malformedReasonMissingColon')
 						: t('magicMigration.malformedReasonInvalidField'),
 				cls: 'tlb-magic-inline__section-reason'
 			});
-			const editor = card.createDiv({ cls: 'tlb-magic-inline__editor' });
-			const textarea = editor.createEl('textarea', { cls: 'tlb-magic-inline__textarea tlb-magic-inline__textarea--code' });
+			const textarea = block.createEl('textarea', {
+				cls: 'tlb-magic-inline__textarea tlb-magic-inline__textarea--code'
+			});
 			textarea.value = section.text;
 			textarea.setAttr('rows', Math.max(14, Math.min(24, section.endLine - section.startLine + 6)));
 			const edit: MalformedH2Edit = { section, text: section.text };
@@ -97,4 +94,5 @@ export class MalformedH2Modal extends Modal {
 			this.close();
 		});
 	}
+
 }

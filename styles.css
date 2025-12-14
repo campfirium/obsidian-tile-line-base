@@ -6267,9 +6267,60 @@
 	width: 100%;
 }
 
-.tlb-malformed-shell {
-	padding: 20px;
-	gap: 16px;
+.tlb-malformed-simple {
+	padding: 16px;
+}
+
+.tlb-malformed-container {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.tlb-malformed-heading {
+	margin: 0;
+}
+
+.tlb-malformed-summary {
+	color: var(--text-normal);
+}
+
+.tlb-malformed-section {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 0;
+}
+
+.tlb-malformed-section-title {
+	font-weight: 600;
+}
+
+.tlb-malformed-section-hint {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+.tlb-malformed-textarea {
+	width: 100%;
+	font-family: var(--font-monospace);
+	background: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px 12px;
+	min-height: 220px;
+	font-size: 13px;
+}
+
+.tlb-malformed-hint {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+.tlb-malformed-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
 }
 
 .modal.tlb-conversion-modal.tlb-malformed-modal {

@@ -35,7 +35,13 @@ type ExtraTranslationKeys =
 	| 'galleryView.emptyState'
 	| 'galleryView.actions.openFromMarkdown'
 	| 'galleryView.actions.switchToGallery'
-	| 'commands.openGalleryView';
+	| 'commands.openGalleryView'
+	| 'settings.navigatorPinnedWarning'
+	| 'settings.navigatorPinnedModalTitle'
+	| 'settings.navigatorPinnedModalHeading'
+	| 'settings.navigatorPinnedModalBody1'
+	| 'settings.navigatorPinnedModalBody2'
+	| 'settings.navigatorPinnedModalAction';
 
 type LeafPaths<T, Prefix extends string = ''> =
 	T extends string

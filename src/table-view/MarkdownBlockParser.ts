@@ -11,9 +11,7 @@ import {
 	type CollapsedFieldEntry,
 	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
-
 export type ColumnFieldDisplayType = 'text' | 'date' | 'time' | 'image';
-
 export interface ColumnConfig {
 	name: string;
 	width?: string;
@@ -25,98 +23,115 @@ export interface ColumnConfig {
 	timeFormat?: TimeFormatPreset;
 	formulaFormat?: FormulaFormatPreset;
 }
-
 export interface H2Block {
 	title: string;
 	data: Record<string, string>;
 	collapsedFields?: CollapsedFieldEntry[];
 }
-
+export interface InvalidH2Section {
+	startLine: number;
+	endLine: number;
+	heading: string;
+	text: string;
+	reason: 'missingColon' | 'invalidField';
+}
+export interface StrayContentSection { startLine: number; endLine: number; text: string; }
+export interface H2ParseResult { blocks: H2Block[]; invalidSections: InvalidH2Section[]; straySections: StrayContentSection[]; }
 const FULL_WIDTH_COLON = '\uFF1A';
 const COLLAPSED_COMMENT_PREFIX = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}`, 'i');
-
 const LIST_OR_QUOTE_PREFIX = /^(?:[-*+]\s|\d+\.\s|>\s?)/;
 const HEADING_PREFIX = /^#{1,6}\s/;
 const TABLE_ROW_PREFIX = /^\|/;
-
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
 		const blockRegex = /```(?:tlb|tilelinebase)\s*\n([\s\S]*?)\n```/gi;
 		let match: RegExpExecArray | null;
-
 		while ((match = blockRegex.exec(content)) !== null) {
 			const blockContent = match[1];
 			const blockStartIndex = match.index ?? 0;
-
 			if (this.isRuntimeConfigBlock(content, blockStartIndex, blockContent)) {
 				continue;
 			}
-
 			const lines = blockContent.split(/\r?\n/);
 			const columnConfigs: ColumnConfig[] = [];
-
 			for (const line of lines) {
 				const trimmed = line.trim();
 				if (trimmed.length === 0 || trimmed.startsWith('#')) {
 					continue;
 				}
-
 				const config = parseColumnDefinitionLine(trimmed);
 				if (config) {
 					columnConfigs.push(config);
 				}
 			}
-
 			if (columnConfigs.length > 0) {
 				return columnConfigs;
 			}
 		}
-
 		return null;
 	}
-
-	parseH2Blocks(content: string): H2Block[] {
+	parseH2(content: string): H2ParseResult {
 		const lines = content.split('\n');
-		const blocks: H2Block[] = [];
+		const blocks: H2Block[] = []; const straySections: StrayContentSection[] = []; const invalidSections: InvalidH2Section[] = [];
 		let currentBlock: H2Block | null = null;
 		let inCodeBlock = false;
-
+		let strayStart = -1;
+		let strayBuffer: string[] = [];
+		let skipUntil = -1;
+		let skippedFirstH1 = false;
+		const flushStray = (currentIndex: number): void => {
+			if (strayStart === -1 || strayBuffer.length === 0) return;
+			straySections.push({ startLine: strayStart, endLine: currentIndex - 1, text: strayBuffer.join('\n') });
+			strayStart = -1;
+			strayBuffer = [];
+		};
+		const appendStray = (lineIndex: number, lineValue: string): void => {
+			if (lineIndex <= skipUntil) return;
+			if (strayStart === -1) strayStart = lineIndex;
+			strayBuffer.push(lineValue);
+		};
 		for (let index = 0; index < lines.length; index++) {
+			if (index <= skipUntil) continue;
 			const line = lines[index];
 			const trimmed = line.trim();
-
 			if (trimmed.startsWith('```')) {
+				flushStray(index);
 				inCodeBlock = !inCodeBlock;
 				continue;
 			}
-
-			if (inCodeBlock || trimmed.length === 0) {
+			if (inCodeBlock) continue;
+			if (!skippedFirstH1 && /^#\s/.test(trimmed)) {
+				skippedFirstH1 = true;
 				continue;
 			}
-
-			if (trimmed.startsWith('## ')) {
-				if (currentBlock) {
-					blocks.push(currentBlock);
-				}
-				const titleText = trimmed.substring(3).trim();
-				currentBlock = {
-					title: titleText,
-					data: {}
-				};
+			if (trimmed.length === 0) {
+				if (strayStart != -1) appendStray(index, line);
+				continue;
+			}
+			if (/^##(?!#)/.test(trimmed)) {
+				flushStray(index);
+				if (currentBlock) blocks.push(currentBlock);
+				const titleText = trimmed.replace(/^##\s*/, '').trim();
 				const colonIndex = resolveColonIndex(titleText);
-				if (colonIndex > 0) {
-					const parsedHeadingField = this.extractField(titleText, colonIndex);
-					if (parsedHeadingField) {
-						currentBlock.data[parsedHeadingField.key] = parsedHeadingField.value;
-					}
+				if (colonIndex <= 0) {
+					const invalid = this.buildInvalidSection(lines, index, 'missingColon');
+					invalidSections.push(invalid);
+					skipUntil = Math.max(skipUntil, invalid.endLine);
+					currentBlock = null;
+					continue;
 				}
+				const parsedHeadingField = this.extractField(titleText, colonIndex);
+				if (!parsedHeadingField || !parsedHeadingField.key || !parsedHeadingField.value) {
+					const invalid = this.buildInvalidSection(lines, index, 'invalidField');
+					invalidSections.push(invalid);
+					skipUntil = Math.max(skipUntil, invalid.endLine);
+					currentBlock = null;
+					continue;
+				}
+				currentBlock = { title: titleText, data: { [parsedHeadingField.key]: parsedHeadingField.value } };
 				continue;
 			}
-
-			if (!currentBlock) {
-				continue;
-			}
-
+			if (!currentBlock) { appendStray(index, line); continue; }
 			if (isCollapsedCalloutStart(trimmed)) {
 				const result = parseCollapsedCallout(lines, index);
 				if (result) {
@@ -126,36 +141,46 @@ export class MarkdownBlockParser {
 				}
 			}
 			if (isCollapsedDataLine(trimmed)) {
-				const entries = parseCollapsedDataLine(trimmed);
-				mergeCollapsedEntries(currentBlock, entries);
+				mergeCollapsedEntries(currentBlock, parseCollapsedDataLine(trimmed));
 				continue;
 			}
-
 			if (COLLAPSED_COMMENT_PREFIX.test(trimmed)) {
 				const commentEntries = parseCollapsedCommentSource(trimmed);
-				if (commentEntries.length > 0) {
-					mergeCollapsedEntries(currentBlock, commentEntries);
-				}
+				if (commentEntries.length > 0) mergeCollapsedEntries(currentBlock, commentEntries);
 				continue;
 			}
 			const parsedField = this.extractField(trimmed);
 			if (parsedField) {
 				currentBlock.data[parsedField.key] = parsedField.value;
+				flushStray(index + 1);
+				continue;
 			}
+			appendStray(index, line);
 		}
-
-		if (currentBlock) {
-			blocks.push(currentBlock);
+		if (currentBlock) blocks.push(currentBlock);
+		flushStray(lines.length);
+		if (straySections.length > 1) {
+			straySections.sort((a, b) => a.startLine - b.startLine);
+			const merged: StrayContentSection[] = [];
+			for (const section of straySections) {
+				const last = merged[merged.length - 1];
+				if (last && section.startLine <= last.endLine) {
+					last.endLine = Math.max(last.endLine, section.endLine);
+					last.text = `${last.text}
+${section.text}`;
+				} else {
+					merged.push({ ...section });
+				}
+			}
+			return { blocks, invalidSections, straySections: merged };
 		}
-
-		return blocks;
+		return { blocks, invalidSections, straySections };
 	}
-
+	parseH2Blocks(content: string): H2Block[] { return this.parseH2(content).blocks; }
 	hasStructuredH2Blocks(blocks: H2Block[]): boolean {
 		if (!blocks || blocks.length === 0) {
 			return false;
 		}
-
 		let headingKey: string | null = null;
 		for (const block of blocks) {
 			const colonIndex = resolveColonIndex(block.title);
@@ -175,14 +200,9 @@ export class MarkdownBlockParser {
 				return false;
 			}
 		}
-
 		return true;
 	}
-
-	parseColumnDefinition(line: string): ColumnConfig | null {
-		return parseColumnDefinitionLine(line);
-	}
-
+	parseColumnDefinition(line: string): ColumnConfig | null { return parseColumnDefinitionLine(line); }
 	private extractField(line: string, existingColonIndex?: number): { key: string; value: string } | null {
 		if (!this.isFieldCandidateLine(line)) {
 			return null;
@@ -202,7 +222,6 @@ export class MarkdownBlockParser {
 		const value = line.substring(colonIndex + 1).trim();
 		return { key, value };
 	}
-
 	private isFieldCandidateLine(line: string): boolean {
 		if (!line || line.length === 0) {
 			return false;
@@ -218,12 +237,10 @@ export class MarkdownBlockParser {
 		}
 		return true;
 	}
-
 	private isRuntimeConfigBlock(content: string, blockStartIndex: number, blockContent: string): boolean {
 		const preceding = content.slice(0, blockStartIndex).replace(/\r/g, '');
 		let headingLine = '';
 		const lastHeadingStart = preceding.lastIndexOf('\n## ');
-
 		if (lastHeadingStart >= 0) {
 			const headingStart = lastHeadingStart + 1;
 			const headingEnd = preceding.indexOf('\n', headingStart);
@@ -234,37 +251,50 @@ export class MarkdownBlockParser {
 			const firstLineEnd = preceding.indexOf('\n');
 			headingLine = (firstLineEnd === -1 ? preceding : preceding.slice(0, firstLineEnd)).trim();
 		}
-
 		const runtimeHeadingPattern = /^##\s+tlb\s+[A-Za-z0-9-]{4,}\s+\d+$/;
 		if (headingLine && runtimeHeadingPattern.test(headingLine)) {
 			return true;
 		}
-
 		const firstContentLine = blockContent
 			.split(/\r?\n/)
 			.map((line) => line.trim())
 			.find((line) => line.length > 0 && !line.startsWith('#'));
-
 		if (!firstContentLine) {
 			return false;
 		}
-
 		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
 		return runtimeKeyPattern.test(firstContentLine);
 	}
+	private buildInvalidSection(lines: string[], headingIndex: number, reason: InvalidH2Section['reason']): InvalidH2Section {
+		let endIndex = headingIndex;
+		let probeInCodeBlock = false;
+		for (let i = headingIndex + 1; i < lines.length; i++) {
+			const trimmed = lines[i].trim();
+			if (trimmed.startsWith('```')) {
+				probeInCodeBlock = !probeInCodeBlock;
+			}
+			if (!probeInCodeBlock && /^##(?!#)/.test(trimmed)) {
+				break;
+			}
+			endIndex = i;
+		}
+		return {
+			startLine: headingIndex,
+			endLine: endIndex,
+			text: lines.slice(headingIndex, endIndex + 1).join('\n'),
+			heading: lines[headingIndex] ?? '',
+			reason
+		};
+	}
 }
-
 function resolveColonIndex(text: string): number {
 	const asciiIndex = text.indexOf(':');
 	const fullWidthIndex = text.indexOf(FULL_WIDTH_COLON);
-
 	if (asciiIndex === -1) {
 		return fullWidthIndex;
 	}
-
 	if (fullWidthIndex === -1) {
 		return asciiIndex;
 	}
-
 	return Math.min(asciiIndex, fullWidthIndex);
 }

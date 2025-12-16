@@ -112,7 +112,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
 			view.galleryConfig = normalizedGallery;
 			view.activeGalleryViewId = activeGallery?.id ?? null;
-			view.shouldAutoFillGalleryDefaults = false;
+			view.shouldAutoFillGalleryDefaults = galleryTemplateEmpty;
 			view.galleryTemplateTouched = !galleryTemplateEmpty;
 			view.galleryPreferencesLoaded = true;
 			view.galleryViewsLoaded = true;

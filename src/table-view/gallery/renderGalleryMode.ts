@@ -4,8 +4,8 @@ import type { TableView } from '../../TableView';
 import { GalleryViewController } from './GalleryViewController';
 import { SlideTemplateModal } from '../slide/SlideTemplateModal';
 import { ensureLayoutDefaults } from '../slide/slideConfigHelpers';
-import { buildBuiltInGalleryTemplate, mergeSlideTemplateFields } from '../slide/slideDefaults';
-import { normalizeSlideViewConfig } from '../../types/slide';
+import { buildBuiltInGalleryTemplate } from '../slide/slideDefaults';
+import { normalizeSlideViewConfig, type SlideViewConfig } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
 import { getLogger } from '../../utils/logger';
 import { renderGalleryFilterControls } from './galleryFilterPresenter';
@@ -28,7 +28,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	const fields = view.schema?.columnNames ?? [];
 	const columnConfigs = view.schema?.columnConfigs ?? null;
 	const sourcePath = view.file?.path ?? view.app.workspace.getActiveFile()?.path ?? '';
-	let shouldApplyBuiltIn = view.shouldAutoFillGalleryDefaults;
+	const galleryState = view.galleryViewStore.getState();
+	let shouldApplyBuiltIn = view.shouldAutoFillGalleryDefaults || !view.galleryTemplateTouched;
 	const builtInTemplate = buildBuiltInGalleryTemplate(fields, columnConfigs, rows);
 	const plugin = getPluginContext();
 	const enforceSingleWithImageConfig = (config: ReturnType<typeof normalizeSlideViewConfig>): ReturnType<typeof normalizeSlideViewConfig> => {
@@ -48,14 +49,28 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		};
 	};
 
-	const hydrateConfig = (config: ReturnType<typeof normalizeSlideViewConfig>) => {
+	const applyBuiltInTemplateFields = (config: SlideViewConfig) => {
 		const base = normalizeSlideViewConfig(config);
-		const template = shouldApplyBuiltIn
-			? mergeSlideTemplateFields(base.template, builtInTemplate)
-			: base.template;
-		const merged = normalizeSlideViewConfig({ ...base, template });
+		const merged = normalizeSlideViewConfig({ ...base, template: builtInTemplate });
 		return enforceSingleWithImageConfig(ensureLayoutDefaults(merged));
 	};
+
+	const hydrateConfig = (config: SlideViewConfig) => {
+		if (shouldApplyBuiltIn) {
+			return applyBuiltInTemplateFields(config);
+		}
+		return enforceSingleWithImageConfig(ensureLayoutDefaults(normalizeSlideViewConfig(config)));
+	};
+
+	if (shouldApplyBuiltIn) {
+		if (galleryState.views.length > 0) {
+			const updatedViews = galleryState.views.map((entry) => ({
+				...entry,
+				template: applyBuiltInTemplateFields(entry.template)
+			}));
+			view.galleryViewStore.load({ views: updatedViews, activeViewId: galleryState.activeViewId });
+		}
+	}
 
 	const ensureActiveGalleryConfig = (targetId?: string) => {
 		const activeDef = targetId ? view.galleryViewStore.setActive(targetId) : view.galleryViewStore.ensureActive();

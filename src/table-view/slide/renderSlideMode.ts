@@ -6,7 +6,7 @@ import { normalizeSlideViewConfig } from '../../types/slide';
 import { getLogger } from '../../utils/logger';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
-import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from './slideDefaults';
+import { buildBuiltInSlideTemplate } from './slideDefaults';
 import { buildRenderConfig, ensureLayoutDefaults } from './slideConfigHelpers';
 
 const logger = getLogger('slide:render-mode');
@@ -17,23 +17,17 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	const slideRows = view.dataStore.extractRowData();
 	const fields = view.schema?.columnNames ?? [];
 	const columnConfigs = view.schema?.columnConfigs ?? null;
-	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults;
-	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
-	const builtInTemplate = buildBuiltInSlideTemplate(fields, columnConfigs, slideRows);
 	const plugin = getPluginContext();
 	const globalConfig = plugin?.getDefaultSlideConfig?.() ?? null;
 	const globalConfigNormalized = globalConfig ? normalizeSlideViewConfig(globalConfig) : null;
-	const hydratedConfig = shouldApplyBuiltIn
-		? globalConfigNormalized
-			? normalizeSlideViewConfig({
-					...globalConfigNormalized,
-					template: mergeSlideTemplateFields(globalConfigNormalized.template, builtInTemplate)
-				})
-			: normalizeSlideViewConfig({
-					...baseConfig,
-					template: builtInTemplate
-				})
-		: baseConfig;
+	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
+	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults || !view.slideTemplateTouched;
+	const builtInTemplate = buildBuiltInSlideTemplate(fields, columnConfigs, slideRows);
+	const hydrateWithBuiltIn = (): ReturnType<typeof normalizeSlideViewConfig> => {
+		const base = globalConfigNormalized ?? baseConfig;
+		return normalizeSlideViewConfig({ ...base, template: builtInTemplate });
+	};
+	const hydratedConfig = shouldApplyBuiltIn ? hydrateWithBuiltIn() : baseConfig;
 	const renderState = buildRenderConfig({
 		config: hydratedConfig
 	});

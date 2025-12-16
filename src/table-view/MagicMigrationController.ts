@@ -7,6 +7,7 @@ import { SchemaBuilder } from './SchemaBuilder';
 import { TableDataStore } from './TableDataStore';
 import type { H2Block, InvalidH2Section, StrayContentSection } from './MarkdownBlockParser';
 import { getPluginContext } from '../pluginContext';
+import { TABLE_VIEW_TYPE } from '../TableView';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import { MalformedH2Modal } from './MalformedH2Modal';
@@ -76,6 +77,14 @@ export class MagicMigrationController {
 		if (this.activeMalformedModal || allSections.length === 0) {
 			return false;
 		}
+		const plugin = getPluginContext();
+		const canToggle =
+			plugin && typeof (plugin as { toggleLeafView?: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView === 'function';
+		const startedInTable = this.view.leaf.view?.getViewType?.() === TABLE_VIEW_TYPE;
+		const shouldReturnToTable = startedInTable && Boolean(canToggle);
+		if (startedInTable && canToggle) {
+			void (plugin as { toggleLeafView: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView(this.view.leaf);
+		}
 		this.activeMalformedModal = new MalformedH2Modal({
 			app: this.view.app,
 			sections: allSections,
@@ -83,11 +92,17 @@ export class MagicMigrationController {
 			onApply: async (edits) => {
 				await this.applySectionEdits(context.file, context.content, edits);
 				context.onApplied?.();
+				if (shouldReturnToTable && this.view.leaf.view?.getViewType?.() !== TABLE_VIEW_TYPE && canToggle) {
+					void (plugin as { toggleLeafView: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView(this.view.leaf);
+				}
 			},
 			onIgnore: async () => {
 				const clearEdits = allSections.map((section) => ({ section, text: '' }));
 				await this.applySectionEdits(context.file, context.content, clearEdits);
 				await context.onIgnore?.();
+				if (shouldReturnToTable && this.view.leaf.view?.getViewType?.() !== TABLE_VIEW_TYPE && canToggle) {
+					void (plugin as { toggleLeafView: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView(this.view.leaf);
+				}
 			},
 			onClose: () => {
 				this.activeMalformedModal = null;

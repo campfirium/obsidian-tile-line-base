@@ -5,11 +5,12 @@ import { MagicMigrationModal, type MagicMigrationPreview } from './MagicMigratio
 import { getLogger } from '../utils/logger';
 import { SchemaBuilder } from './SchemaBuilder';
 import { TableDataStore } from './TableDataStore';
-import type { H2Block, InvalidH2Section } from './MarkdownBlockParser';
+import type { H2Block, InvalidH2Section, StrayContentSection } from './MarkdownBlockParser';
 import { getPluginContext } from '../pluginContext';
+import { TABLE_VIEW_TYPE } from '../TableView';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { getCurrentLocalDateTime } from '../utils/datetime';
-import { MalformedH2Modal, type MalformedH2Edit } from './MalformedH2Modal';
+import { MalformedH2Modal } from './MalformedH2Modal';
 import {
 	buildColumnNames,
 	buildRecordUnits,
@@ -67,29 +68,36 @@ export class MagicMigrationController {
 		file: TFile;
 		content: string;
 		sections: InvalidH2Section[];
-		totalSections: number;
+		straySections: StrayContentSection[];
+		convertibleCount: number;
 		onApplied?: () => void;
-		onIgnore?: () => void;
+		onIgnore?: () => Promise<void> | void;
 	}): boolean {
-		if (this.activeMalformedModal || context.sections.length === 0) {
+		const allSections = [...context.sections, ...context.straySections].sort((a, b) => a.startLine - b.startLine);
+		if (this.activeMalformedModal || allSections.length === 0) {
 			return false;
 		}
 		const plugin = getPluginContext();
-		if (plugin && typeof (plugin as { toggleLeafView?: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView === 'function') {
+		const currentViewType = this.view.leaf.view?.getViewType?.();
+		if (
+			plugin &&
+			currentViewType !== TABLE_VIEW_TYPE &&
+			typeof (plugin as { toggleLeafView?: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView === 'function'
+		) {
 			void plugin.toggleLeafView(this.view.leaf);
 		}
 		this.activeMalformedModal = new MalformedH2Modal({
 			app: this.view.app,
-			sections: context.sections,
-			totalSections: context.totalSections,
+			sections: allSections,
+			convertibleCount: context.convertibleCount,
 			onApply: async (edits) => {
-				await this.applyMalformedSectionEdits(context.file, context.content, edits);
+				await this.applySectionEdits(context.file, context.content, edits);
 				context.onApplied?.();
 			},
-			onIgnore: () => {
-				const clearEdits = context.sections.map((section) => ({ section, text: '' }));
-				void this.applyMalformedSectionEdits(context.file, context.content, clearEdits);
-				context.onIgnore?.();
+			onIgnore: async () => {
+				const clearEdits = allSections.map((section) => ({ section, text: '' }));
+				await this.applySectionEdits(context.file, context.content, clearEdits);
+				await context.onIgnore?.();
 			},
 			onClose: () => {
 				this.activeMalformedModal = null;
@@ -98,6 +106,7 @@ export class MagicMigrationController {
 		this.activeMalformedModal.open();
 		return true;
 	}
+
 
 	resetPromptState(): void {
 		if (this.activeModal) {
@@ -128,7 +137,11 @@ export class MagicMigrationController {
 		});
 	}
 
-	private async applyMalformedSectionEdits(file: TFile, originalContent: string, edits: MalformedH2Edit[]): Promise<void> {
+	private async applySectionEdits(
+		file: TFile,
+		originalContent: string,
+		edits: Array<{ section: { startLine: number; endLine: number }; text: string }>
+	): Promise<void> {
 		let baseContent = originalContent;
 		try {
 			baseContent = await this.view.app.vault.read(file);
@@ -145,7 +158,7 @@ export class MagicMigrationController {
 		}
 	}
 
-	private replaceMalformedSections(content: string, edits: MalformedH2Edit[]): string {
+	private replaceMalformedSections(content: string, edits: Array<{ section: { startLine: number; endLine: number }; text: string }>): string {
 		const lines = content.split('\n');
 		const sorted = [...edits].sort((a, b) => b.section.startLine - a.section.startLine);
 		for (const edit of sorted) {

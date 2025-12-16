@@ -607,9 +607,17 @@
     "malformedApply": "Save and refresh",
     "malformedIgnore": "Ignore once",
     "malformedEditWarning": "Changes here replace the original text for these sections.",
-    "malformedIgnoreWarning": "Ignore once will remove these malformed sections and continue.",
+    "malformedIgnoreWarning": "Ignore once will remove these malformed sections and continue to the table view.",
     "malformedSaveSuccess": "Updated malformed H2 sections.",
-    "malformedSaveError": "Failed to update malformed H2 sections."
+    "malformedSaveError": "Failed to update malformed H2 sections.",
+    "unstructuredTitle": "Partial content doesn't match the conversion format",
+    "unstructuredBody": "Opening the TLB view has triggered the Conversion Assistant. Detected {{sectionCount}} convertible H2 sections; however, some content still doesn't match the conversion format and requires attention.",
+    "unstructuredInstruction": "Please choose how to proceed: Edit & Convert / Delete & Convert / Cancel.",
+    "unstructuredSectionLabel": "Unstructured text starting on line {{line}}",
+    "unstructuredHint": "Content below will be removed unless you edit it to match the required format.",
+    "unstructuredEditConvert": "Edit & Convert",
+    "unstructuredDeleteConvert": "Delete & Convert",
+    "unstructuredCancel": "Cancel"
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView constructor start ===",

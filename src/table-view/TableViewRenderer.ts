@@ -163,12 +163,14 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	const columnConfigs = mergeColumnConfigs(headerColumnConfigs, persistedColumnConfigs);
 	const h2ParseResult = view.markdownParser.parseH2(parsedFrontmatter.body);
 	const parsedBlocks = h2ParseResult.blocks;
-	if (view.file && h2ParseResult.invalidSections.length > 0) {
+	const straySections = h2ParseResult.straySections ?? [];
+	if (view.file && (h2ParseResult.invalidSections.length > 0 || straySections.length > 0)) {
 		view.magicMigrationController?.handleMalformedH2Sections({
 			file: view.file,
 			content,
 			sections: h2ParseResult.invalidSections,
-			totalSections: parsedBlocks.length + h2ParseResult.invalidSections.length,
+			straySections,
+			convertibleCount: parsedBlocks.length,
 			onApplied: () => { void view.render(); },
 			onIgnore: () => { void view.render(); }
 		});

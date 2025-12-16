@@ -32,6 +32,8 @@ interface TablePersistenceDeps {
 	getGalleryFilterViewState?: () => FileFilterViewState;
 	getGalleryTagGroupState?: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
+	isCopyTemplateLoaded?: () => boolean;
+	getPersistedCopyTemplate?: (filePath: string) => string | null;
 	getBackupManager: () => BackupManager | null;
 	getViewPreference: () => 'table' | 'kanban' | 'slide' | 'gallery';
 	getKanbanConfig: () => {
@@ -151,6 +153,15 @@ export class TablePersistenceService {
 	}
 
 	getConfigPayload(): TableConfigData {
+		const copyTemplateLoaded = this.deps.isCopyTemplateLoaded?.() ?? true;
+		let copyTemplate: string | null | undefined = this.deps.getCopyTemplate?.() ?? null;
+		if (!copyTemplateLoaded) {
+			const filePath = this.deps.getFile()?.path ?? null;
+			copyTemplate =
+				filePath && this.deps.getPersistedCopyTemplate
+					? this.deps.getPersistedCopyTemplate(filePath) ?? undefined
+					: undefined;
+		}
 		const schema = this.deps.dataStore.getSchema();
 		const columnConfigs = schema?.columnConfigs
 			?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
@@ -216,7 +227,7 @@ export class TablePersistenceService {
 			columnWidths: this.deps.columnLayoutStore.exportPreferences(),
 			columnConfigs,
 			viewPreference,
-			copyTemplate: this.deps.getCopyTemplate(),
+			copyTemplate,
 			kanban:
 				laneField && laneField.trim().length > 0
 					? {

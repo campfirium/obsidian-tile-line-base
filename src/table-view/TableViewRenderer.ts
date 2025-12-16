@@ -49,7 +49,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.galleryFilterStateStore.resetState();
 		view.galleryTagGroupStore.setFilePath(view.file.path);
 		view.galleryTagGroupStore.resetState();
-		view.copyTemplate = null;
+		view.copyTemplate = null; view.copyTemplateLoaded = false;
 		const content = await view.app.vault.read(view.file);
 		view.captureConversionBaseline(content);
 		const parsedFrontmatter = extractFrontmatter(content);
@@ -77,6 +77,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 			view.copyTemplate = loadedTemplate.trim().length > 0 ? loadedTemplate : null;
 		}
 	}
+	view.copyTemplateLoaded = true;
 	if (!view.slidePreferencesLoaded) {
 		const globalSlideConfig = plugin?.getDefaultSlideConfig?.() ?? null;
 		const preferredConfig = configBlock?.slide ?? globalSlideConfig ?? view.slideConfig;

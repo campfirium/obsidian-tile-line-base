@@ -161,9 +161,11 @@ export class TableConfigManager {
 			tasks.push(settingsService.saveColumnConfigsForFile(filePath, serializedConfigs));
 		}
 
-		const copyTemplate =
-			typeof data.copyTemplate === 'string' && data.copyTemplate.trim().length > 0 ? data.copyTemplate : null;
-		tasks.push(settingsService.saveCopyTemplateForFile(filePath, copyTemplate));
+		if (data.copyTemplate !== undefined) {
+			const copyTemplate =
+				typeof data.copyTemplate === 'string' && data.copyTemplate.trim().length > 0 ? data.copyTemplate : null;
+			tasks.push(settingsService.saveCopyTemplateForFile(filePath, copyTemplate));
+		}
 
 		const viewPreference = data.viewPreference ?? 'table';
 		tasks.push(settingsService.setFileViewPreference(filePath, viewPreference));

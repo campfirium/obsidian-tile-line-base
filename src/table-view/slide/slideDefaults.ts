@@ -7,6 +7,7 @@ import type { ColumnConfig } from '../MarkdownBlockParser';
 import { resolveDirectImage } from './SlideContentResolver';
 
 export const RESERVED_SLIDE_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
+const RESERVED_SLIDE_FIELDS_LOWER = new Set(Array.from(RESERVED_SLIDE_FIELDS).map((field) => field.toLowerCase()));
 
 const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
 	mode: 'single',
@@ -251,6 +252,15 @@ const BUILT_IN_GALLERY_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
 const isEmptyTextTemplate = (template: SlideTextTemplate): boolean =>
 	!template.titleTemplate?.trim() && !template.bodyTemplate?.trim();
 
+const isReservedField = (field: string): boolean => {
+	const normalized = (field ?? '').trim();
+	if (!normalized) {
+		return false;
+	}
+	const lower = normalized.toLowerCase();
+	return RESERVED_SLIDE_FIELDS.has(normalized) || RESERVED_SLIDE_FIELDS_LOWER.has(lower);
+};
+
 export function isSlideTemplateEmpty(template: SlideTemplateConfig): boolean {
 	const singleWithImageEmpty =
 		isEmptyTextTemplate(template.single.withImage) && !template.single.withImage.imageTemplate?.trim();
@@ -267,7 +277,7 @@ const normalizeFieldList = (fields: string[]): string[] => {
 	for (const field of fields) {
 		const trimmed = (field ?? '').trim();
 		const lower = trimmed.toLowerCase();
-		if (!trimmed || RESERVED_SLIDE_FIELDS.has(trimmed) || seen.has(lower)) {
+		if (!trimmed || isReservedField(trimmed) || seen.has(lower)) {
 			continue;
 		}
 		seen.add(lower);
@@ -336,11 +346,10 @@ const buildTemplateFromBase = (
 	sampleRows?: Array<Record<string, unknown>> | null
 ): SlideTemplateConfig => {
 	const normalizedFields = normalizeFieldList(fields);
+	const imageField =
+		resolveImageFieldFromConfigs(normalizedFields, columnConfigs) ?? resolveImageFieldFromRows(normalizedFields, sampleRows);
 	const primaryField = pickPrimaryField(normalizedFields);
 	const titleTemplate = primaryField ? `{${primaryField}}` : '';
-	const imageField =
-		resolveImageFieldFromConfigs(normalizedFields, columnConfigs) ??
-		resolveImageFieldFromRows(normalizedFields, sampleRows);
 	const bodyFields = normalizedFields.filter((field) => field !== primaryField && field !== imageField);
 	const bodyTemplate = bodyFields.length > 0 ? bodyFields.map((field) => `{${field}}`).join('\n') : '';
 	const imageTemplate = imageField ? `{${imageField}}` : '';

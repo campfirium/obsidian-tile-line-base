@@ -837,20 +837,24 @@
   height: var(--tlb-filter-view-icon-cell-size, 32px);
 }
 
+.tlb-filter-view-bar .tlb-filter-view-icon-nav,
+.tlb-gallery-toolbar .tlb-filter-view-icon-nav,
+.tlb-kanban-toolbar .tlb-filter-view-icon-nav,
 .tlb-filter-view-icon-nav {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
-  height: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
-  border-radius: var(--radius-s);
-  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
-  background: color-mix(in srgb, var(--background-primary) 92%, transparent);
-  transition: border-color 120ms ease, background 120ms ease;
-  justify-self: center;
-  align-self: center;
-  grid-row: 3 / span 1;
-  margin-right: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+	width: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
+	height: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
+	border-radius: var(--radius-s);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
+	background: transparent !important;
+	color: var(--text-muted) !important;
+	transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+	justify-self: center;
+	align-self: center;
+	grid-row: 3 / span 1;
+	margin-right: 4px;
 }
 
 .tlb-filter-view-icon-nav-button {
@@ -870,10 +874,17 @@
   cursor: default;
 }
 
+.tlb-filter-view-bar .tlb-filter-view-icon-nav:not(:disabled):hover,
+.tlb-gallery-toolbar .tlb-filter-view-icon-nav:not(:disabled):hover,
+.tlb-kanban-toolbar .tlb-filter-view-icon-nav:not(:disabled):hover,
 .tlb-filter-view-icon-nav:not(:disabled):hover,
+.tlb-filter-view-bar .tlb-filter-view-icon-nav:not(:disabled):focus-visible,
+.tlb-gallery-toolbar .tlb-filter-view-icon-nav:not(:disabled):focus-visible,
+.tlb-kanban-toolbar .tlb-filter-view-icon-nav:not(:disabled):focus-visible,
 .tlb-filter-view-icon-nav:not(:disabled):focus-visible {
-  border-color: var(--interactive-accent);
-  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
+	background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+	color: var(--text-normal) !important;
 }
 
 .tlb-filter-view-icon-nav--prev {
@@ -1100,29 +1111,37 @@
 	pointer-events: none;
 }
 
+.tlb-filter-view-bar .tlb-filter-view-button,
+.tlb-gallery-toolbar .tlb-filter-view-button,
+.tlb-kanban-toolbar .tlb-filter-view-button,
 .tlb-filter-view-button {
   display: inline-flex;
   align-items: center;
   gap: calc(var(--ag-grid-size, 8px) * 0.5);
   border-radius: var(--ag-border-radius, 6px);
-  border: 1px solid var(--ag-border-color, var(--background-modifier-border));
-  background: color-mix(in srgb, var(--ag-background-color, var(--background-primary)) 95%, transparent);
-  color: var(--ag-foreground-color, var(--text-muted));
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
   padding: calc(var(--ag-grid-size, 8px) * 0.5) calc(var(--ag-grid-size, 8px) * 1.25);
  font-size: var(--ag-font-size, 12px);
  line-height: 1.4;
  min-height: calc(var(--ag-grid-size, 8px) * 2.5);
-  min-width: calc(var(--ag-font-size, 12px) * 6);
+  min-width: auto;
   cursor: pointer;
   transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
   font-weight: 500;
   position: relative;
+  box-shadow: none !important;
 }
 
+.tlb-filter-view-bar .tlb-filter-view-button:hover,
+.tlb-gallery-toolbar .tlb-filter-view-button:hover,
+.tlb-kanban-toolbar .tlb-filter-view-button:hover,
 .tlb-filter-view-button:hover {
-  background: color-mix(in srgb, var(--ag-header-background-color, var(--background-modifier-hover)) 85%, transparent);
-  color: var(--ag-foreground-color, var(--text-normal));
-  border-color: var(--ag-border-color, var(--interactive-accent));
+  background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+  color: var(--text-normal) !important;
+  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
+  box-shadow: none !important;
 }
 
 .tlb-filter-view-button:focus-visible {
@@ -1130,27 +1149,19 @@
   outline-offset: 2px;
 }
 
+.tlb-filter-view-bar .tlb-filter-view-button.is-active,
+.tlb-gallery-toolbar .tlb-filter-view-button.is-active,
+.tlb-kanban-toolbar .tlb-filter-view-button.is-active,
 .tlb-filter-view-button.is-active {
-  background: color-mix(
-    in srgb,
-    var(--ag-active-color, var(--interactive-accent)) 22%,
-    var(--ag-background-color, var(--background-primary))
-  );
-  color: var(--ag-foreground-color, var(--text-normal));
-  border-color: color-mix(
-    in srgb,
-    var(--ag-active-color, var(--interactive-accent)) 40%,
-    var(--ag-border-color, var(--background-modifier-border))
-  );
-  box-shadow: inset 0 0 0 1px color-mix(
-    in srgb,
-    var(--ag-active-color, var(--interactive-accent)) 20%,
-    transparent
-  );
+  background: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 12%, transparent) !important;
+  color: var(--text-normal) !important;
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 24%, var(--background-modifier-border)) !important;
+  font-weight: 700;
+  box-shadow: none !important;
 }
 
 .tlb-filter-view-button.is-active .tlb-filter-view-button__icon {
-  color: var(--ag-active-color, var(--interactive-accent));
+  color: inherit;
 }
 
 .tlb-filter-view-button--add {
@@ -1920,10 +1931,20 @@
 
 .tlb-conversion-aux-button {
 	padding: 4px 8px;
-	border: 1px solid var(--background-modifier-border);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 	border-radius: 6px;
-	background: var(--background-secondary);
+	background: transparent;
+	color: var(--text-muted);
 	cursor: pointer;
+	box-shadow: none;
+	transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.tlb-conversion-aux-button:hover,
+.tlb-conversion-aux-button:focus-visible {
+	background: var(--background-modifier-hover);
+	border-color: var(--background-modifier-border);
+	color: var(--text-normal);
 }
 
 .tlb-conversion-textarea {
@@ -1959,15 +1980,33 @@
 .tlb-conversion-button {
 	padding: 8px 14px;
 	border-radius: 6px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+	background: transparent;
+	color: var(--text-muted);
 	cursor: pointer;
+	box-shadow: none;
+	transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .tlb-conversion-button--primary {
-	border-color: var(--interactive-accent);
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
+	border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
+	background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+	color: var(--text-normal);
+	font-weight: 600;
+}
+
+.tlb-conversion-button:hover,
+.tlb-conversion-button:focus-visible {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	border-color: var(--background-modifier-border);
+}
+
+.tlb-conversion-button--primary:hover,
+.tlb-conversion-button--primary:focus-visible {
+	background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+	color: var(--text-normal);
+	border-color: color-mix(in srgb, var(--interactive-accent) 45%, var(--background-modifier-border));
 }
 
 .tlb-conversion-right {
@@ -3713,6 +3752,8 @@
 	cursor: pointer;
 	border-radius: 4px;
 	padding: 0;
+	box-shadow: none;
+	transition: background-color 120ms ease, color 120ms ease;
 }
 
 .theme-dark .tlb-date-editor-button {
@@ -3722,12 +3763,13 @@
 .tlb-date-editor-button:hover,
 .tlb-date-editor-button:focus-visible {
   color: var(--interactive-accent);
-  background-color: color-mix(in srgb, var(--background-modifier-hover) 80%, transparent);
+  background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
 }
 
 .tlb-date-editor-button:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 32%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .tlb-text-editor-input {
@@ -4673,16 +4715,17 @@
 	margin-left: auto;
 	padding: 0.35rem 0.75rem;
 	border-radius: var(--radius-s);
-	border: 1px solid var(--background-modifier-border);
-	background-color: var(--background-modifier-form-field);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+	background-color: transparent;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
-	transition: background-color 120ms ease;
+	transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .tlb-kanban-content-settings__insert-button:not(:disabled):hover {
-	background-color: var(--background-modifier-form-field-highlighted);
+	background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
 	color: var(--text-normal);
+	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 }
 
 .tlb-kanban-content-settings__group {
@@ -4769,14 +4812,18 @@
   width: 28px!important;
   height: 28px!important;
   border-radius: var(--radius-s);
-  border: 1px solid var(--background-modifier-border);
-  background-color: var(--background-modifier-form-field);
-  color: var(--text-normal);
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+  background-color: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .tlb-filter-view-modal__remove-button:hover,
 .tlb-filter-view-modal__remove-button:focus-visible {
-  background-color: var(--background-modifier-form-field-highlighted);
+  background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
+  color: var(--text-normal);
+  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 }
 
 .tlb-filter-view-modal__remove-button svg {
@@ -5780,20 +5827,21 @@
 	padding: 0.2rem 0.55rem;
 	min-height: 30px;
 	border-radius: 16px;
-	border: 1px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 	background-color: transparent;
 	color: var(--text-muted);
-	opacity: 0.5;
+	opacity: 0.75;
 	cursor: pointer;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
+	box-shadow: none;
 }
 
 .tlb-slide-template__insert:not(:disabled):hover,
 .tlb-slide-template__insert:not(:disabled):focus-visible {
-	background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
-	border-color: color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+	background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
+	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 	color: var(--text-normal);
 	opacity: 1;
 }
@@ -5807,19 +5855,21 @@
 	margin-left: auto;
 	padding: 0.35rem 0.75rem;
 	border-radius: 6px;
-	border: 1px solid var(--background-modifier-border);
-	background-color: var(--background-secondary);
-	color: var(--text-normal);
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+	background-color: transparent;
+	color: var(--text-muted);
 	cursor: pointer;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
+	box-shadow: none;
 }
 
 .tlb-slide-template__mode-toggle:not(:disabled):hover,
 .tlb-slide-template__mode-toggle:not(:disabled):focus-visible {
-	background-color: var(--background-modifier-form-field-highlighted);
+	background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
 	color: var(--text-normal);
+	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
 }
 
 .tlb-slide-template__insert-icon {

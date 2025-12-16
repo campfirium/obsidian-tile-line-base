@@ -406,7 +406,7 @@ export class GalleryViewController {
 		const menu = new Menu();
 		const rawCurrent = row[context.field];
 		const currentValue = typeof rawCurrent === 'string' ? rawCurrent.trim() : String(rawCurrent ?? '').trim();
-		const currentKey = currentValue.toLowerCase();
+		const currentKey = this.normalizeCardFieldValue(context.field, currentValue);
 		let added = false;
 
 		for (const option of context.options) {
@@ -418,7 +418,7 @@ export class GalleryViewController {
 				typeof option.label === 'string' && option.label.trim().length > 0
 					? option.label.trim()
 					: value;
-			const normalizedValue = value.toLowerCase();
+			const normalizedValue = this.normalizeCardFieldValue(context.field, value);
 			const isActive = normalizedValue === currentKey;
 
 			menu.addItem((item) => {
@@ -444,6 +444,18 @@ export class GalleryViewController {
 		event.preventDefault();
 		event.stopPropagation();
 		menu.showAtMouseEvent(event);
+	}
+
+	private normalizeCardFieldValue(field: string, value: unknown): string {
+		const normalizedField = typeof field === 'string' ? field.trim().toLowerCase() : '';
+		const normalizedValue = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
+		if (!normalizedValue) {
+			return '';
+		}
+		if (normalizedField === 'status') {
+			return normalizedValue.toLowerCase().replace(/[\s_/-]+/g, '');
+		}
+		return normalizedValue.toLowerCase();
 	}
 
 	private async applyFieldValueChange(row: RowData, field: string, value: string): Promise<void> {

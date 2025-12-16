@@ -4,6 +4,25 @@ type RgbColor = { r: number; g: number; b: number };
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
+// Prevent hover overlays from fully replacing the base background when themes supply opaque values.
+const clampHoverWeight = (value: number | null, isDarkMode: boolean): number => {
+	const maxHoverWeight = isDarkMode ? 0.24 : 0.18;
+	const fallbackWeight = isDarkMode ? 0.16 : 0.1;
+	if (value === null || Number.isNaN(value)) { return fallbackWeight; }
+	return clamp(value, 0, maxHoverWeight);
+};
+
+const resolveHoverOverlayWeight = (hoverValue: string, isDarkMode: boolean): number => {
+	const numeric = hoverValue.match(/[\d.]+/g);
+	const alphaValue = numeric && numeric.length >= 4 ? Number(numeric[3]) : null;
+	const hasExplicitAlpha = typeof alphaValue === 'number' && Number.isFinite(alphaValue);
+	if (hasExplicitAlpha) {
+		return clampHoverWeight(alphaValue, isDarkMode);
+	}
+	// No explicit alpha: theme likely provided an opaque color, fall back to a softened weight only in this case.
+	return clampHoverWeight(null, isDarkMode);
+};
+
 const parseRgb = (value: string | null | undefined): RgbColor | null => {
 	if (!value) { return null; }
 	const hex = value.trim().replace('#', '');
@@ -113,17 +132,11 @@ const resolveHoverColor = (options: { hoverValue: string; base: RgbColor; accent
 	const { hoverValue, base, accent, isDarkMode } = options;
 	const normalized = normalizeColorInput(hoverValue);
 	const parsed = parseRgb(normalized);
+	const overlayWeight = resolveHoverOverlayWeight(hoverValue, isDarkMode);
 	if (parsed) {
-		const numeric = hoverValue.match(/[\d.]+/g);
-		const alphaValue = numeric && numeric.length >= 4 ? Number(numeric[3]) : null;
-		const alpha = typeof alphaValue === 'number' && Number.isFinite(alphaValue) ? clamp(alphaValue, 0, 1) : null;
-		if (alpha !== null) {
-			return mixColors(base, parsed, alpha);
-		}
-		return parsed;
+		return mixColors(base, parsed, overlayWeight);
 	}
-	const weight = isDarkMode ? 0.12 : 0.08;
-	return mixColors(base, accent, weight);
+	return mixColors(base, accent, overlayWeight);
 };
 
 const applyGridThemePalette = (options: { container: HTMLElement; docStyles: CSSStyleDeclaration | null; isDarkMode: boolean }): void => {

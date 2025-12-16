@@ -6292,7 +6292,7 @@
 
 .tlb-malformed-summary {
 	color: var(--text-normal);
-	font-weight: 600;
+	font-weight: 400;
 	margin: 0;
 }
 
@@ -6327,6 +6327,7 @@
 	min-height: 80px;
 	font-size: 13px;
 	resize: vertical;
+	overflow: hidden;
 }
 
 .tlb-malformed-hint {

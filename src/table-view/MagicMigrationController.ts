@@ -7,7 +7,6 @@ import { SchemaBuilder } from './SchemaBuilder';
 import { TableDataStore } from './TableDataStore';
 import type { H2Block, InvalidH2Section, StrayContentSection } from './MarkdownBlockParser';
 import { getPluginContext } from '../pluginContext';
-import { TABLE_VIEW_TYPE } from '../TableView';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import { MalformedH2Modal } from './MalformedH2Modal';
@@ -76,15 +75,6 @@ export class MagicMigrationController {
 		const allSections = [...context.sections, ...context.straySections].sort((a, b) => a.startLine - b.startLine);
 		if (this.activeMalformedModal || allSections.length === 0) {
 			return false;
-		}
-		const plugin = getPluginContext();
-		const currentViewType = this.view.leaf.view?.getViewType?.();
-		if (
-			plugin &&
-			currentViewType !== TABLE_VIEW_TYPE &&
-			typeof (plugin as { toggleLeafView?: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView === 'function'
-		) {
-			void plugin.toggleLeafView(this.view.leaf);
 		}
 		this.activeMalformedModal = new MalformedH2Modal({
 			app: this.view.app,

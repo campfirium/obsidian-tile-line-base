@@ -69,6 +69,7 @@ export class TableView extends ItemView {
 	public schema: Schema | null = null; public schemaDirty = false;
 	public sparseCleanupRequired = false; public hiddenSortableFields: Set<string> = new Set();
 	public copyTemplate: string | null = null;
+	public copyTemplateLoaded = false;
 	public gridAdapter: GridAdapter | null = null;
 	public gridController = new GridController();
 	public columnLayoutStore = new ColumnLayoutStore(null);

@@ -49,6 +49,11 @@ export function initializeTableView(view: TableView): void {
 		getFilterViewState: () => view.filterViewState,
 		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null,
+		isCopyTemplateLoaded: () => view.copyTemplateLoaded,
+		getPersistedCopyTemplate: (filePath) => {
+			const plugin = getPluginContext();
+			return plugin ? plugin.getSettingsService().getCopyTemplateForFile(filePath) : null;
+		},
 		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null,
 		getViewPreference: () => view.activeViewMode,
 		getKanbanConfig: () => ({
@@ -113,6 +118,7 @@ export function initializeTableView(view: TableView): void {
 		getBlocks: () => view.blocks,
 		getTemplate: () => view.copyTemplate,
 		setTemplate: (template) => {
+			view.copyTemplateLoaded = true;
 			view.copyTemplate = template;
 		},
 		persistTemplate: () => view.persistenceService.saveConfig()

@@ -1131,6 +1131,7 @@
   transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
   font-weight: 500;
   position: relative;
+  box-shadow: none !important;
 }
 
 .tlb-filter-view-bar .tlb-filter-view-button:hover,
@@ -1152,11 +1153,11 @@
 .tlb-gallery-toolbar .tlb-filter-view-button.is-active,
 .tlb-kanban-toolbar .tlb-filter-view-button.is-active,
 .tlb-filter-view-button.is-active {
-  background: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 8%, transparent) !important;
+  background: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 12%, transparent) !important;
   color: var(--text-normal) !important;
-  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 18%, var(--background-modifier-border)) !important;
-  font-weight: 600;
-  box-shadow: none;
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 24%, var(--background-modifier-border)) !important;
+  font-weight: 700;
+  box-shadow: none !important;
 }
 
 .tlb-filter-view-button.is-active .tlb-filter-view-button__icon {

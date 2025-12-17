@@ -1,24 +1,20 @@
-import { App, Component, Menu } from 'obsidian';
+import { App } from 'obsidian';
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlideViewConfig } from '../../types/slide';
 import type { GlobalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { buildSlidePages, type SlidePage } from '../slide/SlidePageBuilder';
 import { RESERVED_SLIDE_FIELDS } from '../slide/slideDefaults';
-import {
-	applyLayoutWithWatcher,
-	resetRenderArtifacts
-} from '../slide/SlideRenderUtils';
+import { applyLayoutWithWatcher } from '../slide/SlideRenderUtils';
 import { applyLayoutStyles } from '../slide/slideLayout';
 import { renderSlideEditForm, serializeTemplateSegments, type EditState } from '../slide/slideTemplateEditing';
 import { optimizeGalleryMediaElements } from './galleryMediaOptimizer';
-import type { GalleryCardFieldContext } from './galleryCardFieldMenu';
 import { GalleryVirtualizer } from './GalleryVirtualizer';
+import { openGalleryCardFieldMenu, type GalleryCardFieldContext } from './galleryCardFieldMenu';
+import { GalleryCardDeck } from './GalleryCardDeck';
 import {
 	applyGallerySlideColors,
-	ensureGalleryCard,
 	ensureGalleryGrid,
-	ensureGallerySlide,
 	renderGalleryDisplayCard,
 	renderGalleryEmptyState,
 	type GalleryDomState
@@ -58,6 +54,7 @@ const toFontPx = (value: number): string => {
 export class GalleryViewController {
 	private static readonly logger = getLogger('gallery:controller');
 	private readonly app: App;
+	private readonly rootContainer: HTMLElement;
 	private readonly container: HTMLElement;
 	private rows: RowData[] = [];
 	private visibleRows: RowData[] = [];
@@ -66,8 +63,6 @@ export class GalleryViewController {
 	private cardWidth = DEFAULT_CARD_WIDTH;
 	private cardHeight = DEFAULT_CARD_HEIGHT;
 	private pages: SlidePage[] = [];
-	private readonly renderCleanup: Array<() => void> = [];
-	private readonly markdownComponents: Component[] = [];
 	private editingKey: EditingKey = null;
 	private readonly editState: EditState = { template: null, values: {}, fieldInputs: {} };
 	private readonly onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
@@ -85,11 +80,17 @@ export class GalleryViewController {
 	private pagesDirty = true;
 	private lastCardSize = { width: DEFAULT_CARD_WIDTH, height: DEFAULT_CARD_HEIGHT };
 	private readonly virtualizer: GalleryVirtualizer;
+	private readonly cardDeck = new GalleryCardDeck();
 	private readonly cardFieldMenuProvider: (() => GalleryCardFieldContext | null) | null;
+	private readonly processingIndicator: HTMLElement;
+	private processingVisible = false;
 
 	constructor(options: GalleryViewControllerOptions) {
 		this.app = options.app;
-		this.container = options.container;
+		this.rootContainer = options.container;
+		this.rootContainer.empty();
+		this.container = this.rootContainer.createDiv({ cls: 'tlb-gallery-surface' });
+		this.processingIndicator = this.createProcessingIndicator(this.rootContainer);
 		this.rows = options.rows;
 		this.fields = options.fields;
 		this.config = options.config;
@@ -139,14 +140,6 @@ export class GalleryViewController {
 		this.requestRender();
 	}
 
-	private getTitleFontSize(value: number): string {
-		return toFontPx(value);
-	}
-
-	private getBodyFontSize(value: number): string {
-		return toFontPx(value);
-	}
-
 	updateRows(rows: RowData[]): void {
 		this.rows = rows;
 		this.requestRender();
@@ -165,39 +158,57 @@ export class GalleryViewController {
 		this.unsubscribeRows = null;
 		this.unsubscribeQuickFilter?.();
 		this.unsubscribeQuickFilter = null;
-		resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
+		this.cardDeck.clear();
 		this.domState.cardEls = [];
 		this.domState.gridEl = null;
-		this.container.empty();
+		this.toggleProcessingHint(false);
+		this.rootContainer.empty();
 	}
 
-	// Coalesce heavy gallery renders to avoid blocking rapid UI updates.
 	private requestRender(immediate = false, rebuildPages = true): void {
 		if (this.destroyed) {
 			return;
 		}
 		if (rebuildPages) {
 			this.pagesDirty = true;
+			this.toggleProcessingHint(true);
 		}
 		if (immediate) {
 			this.cancelScheduledRender();
-			this.renderInternal();
-			return;
-		}
-		if (this.renderScheduled) {
+		} else if (this.renderScheduled) {
 			return;
 		}
 		this.renderScheduled = true;
 		const raf = typeof requestAnimationFrame === 'function'
 			? requestAnimationFrame
 			: (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
-		this.renderRaf = raf(() => {
+		const runRender = () => {
 			this.renderScheduled = false;
 			this.renderRaf = null;
 			if (this.destroyed) {
+				this.toggleProcessingHint(false);
 				return;
 			}
-			this.renderInternal();
+			try {
+				this.renderInternal();
+			} finally {
+				if (!this.pagesDirty) {
+					this.toggleProcessingHint(false);
+				}
+			}
+		};
+		this.renderRaf = raf(() => {
+			if (this.destroyed) {
+				this.renderScheduled = false;
+				this.toggleProcessingHint(false);
+				this.renderRaf = null;
+				return;
+			}
+			if (rebuildPages) {
+				this.renderRaf = raf(runRender);
+				return;
+			}
+			runRender();
 		});
 	}
 
@@ -213,14 +224,31 @@ export class GalleryViewController {
 		this.renderScheduled = false;
 	}
 
+	private createProcessingIndicator(container: HTMLElement): HTMLElement {
+		const indicator = container.createDiv({
+			cls: 'tlb-gallery-processing',
+			attr: { role: 'status', 'aria-live': 'polite' }
+		});
+		const bubble = indicator.createDiv({ cls: 'tlb-gallery-processing__bubble' });
+		bubble.createDiv({ cls: 'tlb-gallery-processing__spinner', attr: { 'aria-hidden': 'true' } });
+		bubble.createDiv({ cls: 'tlb-gallery-processing__label', text: t('galleryView.processingHint') });
+		return indicator;
+	}
+
+	private toggleProcessingHint(isActive: boolean): void {
+		if (this.processingVisible === isActive) {
+			return;
+		}
+		this.processingVisible = isActive;
+		this.processingIndicator.toggleClass('is-active', isActive);
+	}
+
 	private renderInternal(): void {
 		const shouldRebuildPages = this.pagesDirty;
 		if (!shouldRebuildPages && this.pages.length === 0) {
 			return;
 		}
 		if (shouldRebuildPages) {
-			resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
-			this.container.querySelector('.tlb-gallery-empty')?.remove();
 			this.visibleRows = this.filterRows(this.rows);
 			this.pages = buildSlidePages({
 				rows: this.visibleRows,
@@ -235,6 +263,7 @@ export class GalleryViewController {
 		const hasPages = this.pages.length > 0;
 		const isFirstBatch = this.renderCount === 0 && hasPages;
 		if (!hasPages) {
+			this.cardDeck.clear();
 			renderGalleryEmptyState({
 				state: this.domState,
 				container: this.container,
@@ -250,6 +279,12 @@ export class GalleryViewController {
 		}
 
 		const grid = ensureGalleryGrid(this.domState, this.container);
+		if (this.domState.cardEls.length > 0) {
+			for (const card of this.domState.cardEls) {
+				card.remove();
+			}
+			this.domState.cardEls.length = 0;
+		}
 		grid.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 		grid.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 
@@ -266,11 +301,6 @@ export class GalleryViewController {
 			return;
 		}
 
-		if (!shouldRebuildPages) {
-			resetRenderArtifacts(this.renderCleanup, this.markdownComponents);
-			this.container.querySelector('.tlb-gallery-empty')?.remove();
-		}
-
 		this.virtualizer.commitWindow(virtualWindow);
 		this.lastCardSize = { width: this.cardWidth, height: this.cardHeight };
 		this.pagesDirty = false;
@@ -281,27 +311,36 @@ export class GalleryViewController {
 		grid.style.paddingTop = `${virtualWindow.paddingTop}px`;
 		grid.style.paddingBottom = `${virtualWindow.paddingBottom}px`;
 
-		const renderPages = this.pages.slice(virtualWindow.start, virtualWindow.end);
-		const renderPageCount = renderPages.length;
-
-		for (let i = 0; i < renderPageCount; i += 1) {
-			const pageIndex = virtualWindow.start + i;
-			const page = renderPages[i];
-			const card = ensureGalleryCard(this.domState, grid, i);
+		const cardEntries = this.cardDeck.reconcileRange({
+			grid,
+			start: virtualWindow.start,
+			end: virtualWindow.end,
+			invalidate: shouldRebuildPages || cardSizeChanged
+		});
+		let renderedCards = 0;
+		for (const entry of cardEntries) {
+			if (!entry.shouldRender) {
+				continue;
+			}
+			const page = this.pages[entry.pageIndex];
+			if (!page) {
+				continue;
+			}
+			renderedCards += 1;
+			const card = entry.slot.cardEl;
 			card.removeClass('tlb-gallery-card--empty');
 			card.removeAttribute('aria-label');
-			card.setAttr('data-tlb-gallery-index', String(pageIndex));
+			card.setAttr('data-tlb-gallery-index', String(entry.pageIndex));
 			card.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			card.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
-			const slideEl = ensureGallerySlide(card);
-			slideEl.empty();
+			const slideEl = entry.slot.slideEl;
 			slideEl.removeClass('tlb-gallery-card__slide--empty');
 			slideEl.removeAttribute('aria-label');
 			slideEl.style.setProperty('--tlb-gallery-card-width', `${this.cardWidth}px`);
 			slideEl.style.setProperty('--tlb-gallery-card-height', `${this.cardHeight}px`);
 			slideEl.style.setProperty('--tlb-gallery-base-font', `${TEMPLATE_FONT_BASE_PX}px`);
-			const titleFontSize = this.getTitleFontSize(page.titleLayout.fontSize);
-			const bodyFontSize = this.getBodyFontSize(page.textLayout.fontSize);
+			const titleFontSize = toFontPx(page.titleLayout.fontSize);
+			const bodyFontSize = toFontPx(page.textLayout.fontSize);
 			slideEl.style.setProperty('--tlb-gallery-title-font-size', titleFontSize);
 			slideEl.style.setProperty('--tlb-gallery-title-line-height', `${page.titleLayout.lineHeight}`);
 			slideEl.style.setProperty('--tlb-gallery-title-font-weight', String(page.titleLayout.fontWeight));
@@ -316,7 +355,7 @@ export class GalleryViewController {
 			applyGallerySlideColors(slideEl, page.textColor, page.backgroundColor);
 			const row = this.visibleRows[page.rowIndex];
 			const applyLayout = (el: HTMLElement, layout: SlidePage['titleLayout']) =>
-				applyLayoutWithWatcher(this.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
+				applyLayoutWithWatcher(entry.slot.renderCleanup, el, layout, slideEl, (target, layoutSpec, container) =>
 					applyLayoutStyles(target, layoutSpec, container));
 			const isEditing = this.isEditingPage(page);
 
@@ -352,7 +391,7 @@ export class GalleryViewController {
 					bodyFontWeight: page.textLayout.fontWeight,
 					textAlign: page.textLayout.align,
 					cardWidth: this.cardWidth,
-					markdownComponents: this.markdownComponents
+					markdownComponents: entry.slot.markdownComponents
 				});
 				card.onclick = (evt) => {
 					if (evt.defaultPrevented) return;
@@ -362,19 +401,24 @@ export class GalleryViewController {
 			if (!isEditing && this.cardFieldMenuProvider && row) {
 				card.oncontextmenu = (evt) => {
 					if (evt.defaultPrevented) return;
-					this.showCardFieldMenu(row, evt);
+					const context = this.cardFieldMenuProvider?.();
+					if (!context) {
+						return;
+					}
+					openGalleryCardFieldMenu({
+						row,
+						context,
+						event: evt,
+						onApply: (value) => {
+							void this.applyFieldValueChange(row, context.field, value);
+						}
+					});
 				};
 			} else {
 				card.oncontextmenu = null;
 			}
 		}
-		if (this.domState.cardEls.length > renderPageCount) {
-			for (let i = renderPageCount; i < this.domState.cardEls.length; i += 1) {
-				this.domState.cardEls[i].remove();
-			}
-			this.domState.cardEls.length = renderPageCount;
-		}
-		if (hasPages && this.domState.gridEl) {
+		if (hasPages && this.domState.gridEl && renderedCards > 0) {
 			void optimizeGalleryMediaElements(
 				this.domState.gridEl,
 				{ width: this.cardWidth, height: this.cardHeight },
@@ -395,67 +439,6 @@ export class GalleryViewController {
 		this.editState.fieldInputs = {};
 		this.editState.template = null;
 		this.requestRender();
-	}
-
-	private showCardFieldMenu(row: RowData, event: MouseEvent): void {
-		const context = this.cardFieldMenuProvider?.();
-		if (!context || !context.field || !Array.isArray(context.options) || context.options.length === 0) {
-			return;
-		}
-
-		const menu = new Menu();
-		const rawCurrent = row[context.field];
-		const currentValue = typeof rawCurrent === 'string' ? rawCurrent.trim() : String(rawCurrent ?? '').trim();
-		const currentKey = this.normalizeCardFieldValue(context.field, currentValue);
-		let added = false;
-
-		for (const option of context.options) {
-			const value = typeof option.value === 'string' ? option.value.trim() : String(option.value ?? '').trim();
-			if (!value) {
-				continue;
-			}
-			const label =
-				typeof option.label === 'string' && option.label.trim().length > 0
-					? option.label.trim()
-					: value;
-			const normalizedValue = this.normalizeCardFieldValue(context.field, value);
-			const isActive = normalizedValue === currentKey;
-
-			menu.addItem((item) => {
-				item.setTitle(label);
-				if (isActive) {
-					item.setChecked(true);
-					item.setDisabled(true);
-				}
-				item.onClick(() => {
-					if (isActive) {
-						return;
-					}
-					void this.applyFieldValueChange(row, context.field, value);
-				});
-			});
-			added = true;
-		}
-
-		if (!added) {
-			return;
-		}
-
-		event.preventDefault();
-		event.stopPropagation();
-		menu.showAtMouseEvent(event);
-	}
-
-	private normalizeCardFieldValue(field: string, value: unknown): string {
-		const normalizedField = typeof field === 'string' ? field.trim().toLowerCase() : '';
-		const normalizedValue = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
-		if (!normalizedValue) {
-			return '';
-		}
-		if (normalizedField === 'status') {
-			return normalizedValue.toLowerCase().replace(/[\s_/-]+/g, '');
-		}
-		return normalizedValue.toLowerCase();
 	}
 
 	private async applyFieldValueChange(row: RowData, field: string, value: string): Promise<void> {

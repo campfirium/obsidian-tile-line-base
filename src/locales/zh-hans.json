@@ -4,13 +4,51 @@
     "mode": {
       "table": "表格",
       "kanban": "看板",
-      "slide": "幻灯片"
+      "slide": "幻灯片",
+      "gallery": "画廊"
     }
   },
   "viewControls": {
     "openTableView": "切换到 TileLineBase 表格视图",
     "openMarkdownView": "切换回 Markdown 编辑器",
     "switchViewMenu": "切换视图（当前：{{mode}}）"
+  },
+  "galleryView": {
+    "emptyState": "还没有卡片。可在表格视图中新增行来填充此画廊。",
+    "processingHint": "正在准备画廊卡片...",
+    "actions": {
+      "openFromMarkdown": "打开 TileLineBase 画廊视图",
+      "switchToGallery": "切换到画廊视图"
+    },
+    "toolbar": {
+      "title": "画廊",
+      "addCardButtonAriaLabel": "新增画廊卡片",
+      "settingsMenuAriaLabel": "画廊设置",
+      "editTemplate": "编辑画廊模板",
+      "addGalleryButtonAriaLabel": "新增画廊视图",
+      "unnamedGalleryLabel": "未命名画廊",
+      "editGalleryLabel": "编辑画廊",
+      "duplicateGalleryLabel": "复制画廊",
+      "deleteGalleryLabel": "删除画廊",
+      "cannotDeleteLastGallery": "请至少保留一个画廊视图。"
+    },
+    "templateModal": {
+      "title": "画廊模板",
+      "cardSizeLabel": "卡片设置",
+      "widthLabel": "宽度（px）",
+      "heightLabel": "高度（px）",
+      "groupFieldTitle": "分组字段",
+      "groupFieldLabel": "使用字段",
+      "groupFieldNone": "无",
+      "filterSectionTitle": "筛选与排序",
+      "filterSectionActive": "当前筛选：{{name}}",
+      "filterSectionEmpty": "还没有筛选视图。创建一个以限定此画廊的范围。",
+      "filterPickerLabel": "筛选视图",
+      "filterAllLabel": "所有条目",
+      "newFilterButton": "新建筛选视图",
+      "editFilterButton": "编辑筛选/排序",
+      "manageGroupsButton": "管理筛选分组"
+    }
   },
   "kanbanView": {
     "schemaUnavailable": "看板视图需要有效的表结构，请重新加载后再试。",
@@ -37,6 +75,9 @@
       "switchToKanban": "切换到看板视图",
       "switchToTable": "切换回表格视图"
     },
+    "laneActions": {
+      "addCard": "将卡片添加到“{{lane}}”"
+    },
     "fieldModal": {
       "title": "选择看板列",
       "description": "请选择要作为泳道的列，列中的不同值会生成不同泳道。",
@@ -59,6 +100,20 @@
       "successNotice": "已创建泳道「{{name}}」。",
       "statusFieldBlocked": "状态列已有内置泳道，请在表格中调整状态值。",
       "missingLaneField": "请先选择看板列再创建泳道。"
+    },
+    "cardCreateModal": {
+      "title": "新项目",
+      "description": "填写以下字段，直接在此泳道中创建一行。",
+      "laneFieldLabel": "泳道值（{{field}}）",
+      "laneFieldDesc": "在此创建的卡片默认使用“{{lane}}”作为泳道值。",
+      "submitLabel": "创建项目",
+      "cancelLabel": "取消",
+      "laneRequiredError": "请先输入泳道值再创建项目。"
+    },
+    "cardEditModal": {
+      "title": "编辑项目",
+      "submitLabel": "保存",
+      "deleteLabel": "删除项目"
     },
     "content": {
       "sectionTitle": "卡片内容",
@@ -209,7 +264,8 @@
     "toggleTableView": "切换表格视图",
     "importCsvAsTable": "导入 CSV 并创建新表格",
     "openKanbanView": "打开 TileLineBase 看板视图",
-    "openSlideView": "打开 TileLineBase 幻灯片视图"
+    "openSlideView": "打开 TileLineBase 幻灯片视图",
+    "openGalleryView": "打开 TileLineBase 画廊视图"
   },
   "csv": {
     "errorNoFile": "请先保存当前笔记或选择有效的 CSV 文件后再试。",
@@ -260,6 +316,20 @@
     "loggingLevelOptionInfo": "信息、警告和错误",
     "loggingLevelOptionDebug": "调试、信息、警告和错误",
     "loggingLevelOptionTrace": "跟踪（最详细）",
+    "compatibilityHeading": "兼容性",
+    "navigatorCompatLabel": "Notebook Navigator 兼容性",
+    "navigatorCompatDesc": "启用且安装了 Notebook Navigator 时，会阻止其重复重新打开当前 TileLineBase 视图，以避免闪烁。出于合规原因默认关闭。",
+    "navigatorCompatModalTitle": "TileLineBase 兼容性提示",
+    "navigatorCompatModalHeading": "已启用 Notebook Navigator 兼容性",
+    "navigatorCompatModalBody1": "检测到 Notebook Navigator。其刷新机制会导致 TileLineBase 视图严重闪烁并频繁切换。为确保正常使用，TileLineBase 已自动启用实例级隔离。",
+    "navigatorCompatModalBody2": "该保护仅作用于 TileLineBase 视图，不影响其他场景。",
+    "navigatorCompatModalBody3": "你可以随时在 TileLineBase 设置的“兼容性”中关闭它。",
+    "navigatorPinnedWarning": "Notebook Navigator 已启用。为避免冲突，请不要在 Obsidian 中固定 TileLineBase 视图。",
+    "navigatorPinnedModalTitle": "TileLineBase 兼容性提示",
+    "navigatorPinnedModalHeading": "固定视图与 Notebook Navigator 冲突",
+    "navigatorPinnedModalBody1": "由于 Notebook Navigator 与 Obsidian 的刷新机制，固定 TileLineBase 视图会导致无限重载循环，从而出现屏幕闪烁、焦点跳转以及意外的新标签页。",
+    "navigatorPinnedModalBody2": "我们正在与 Notebook Navigator 作者协作解决该问题。",
+    "navigatorPinnedModalAction": "在此之前，请取消固定该标签页以恢复正常使用。问题解决前请避免固定 TileLineBase 视图。",
     "backupHeading": "备份",
     "backupEnableLabel": "启用自动备份",
     "backupEnableDesc": "在写入 Markdown 之前保存快照，便于回滚误操作。",
@@ -535,7 +605,27 @@
     "defaultFileName": "已转换的笔记",
     "successNotice": "已转换为 {{fileName}}",
     "failureNotice": "转换失败，请重试。",
-    "previewRenameHint": "点击表头可重命名列。"
+    "previewRenameHint": "点击表头可重命名列。",
+    "malformedTitle": "检测到格式错误的 H2 区块",
+    "malformedDescription": "部分 H2 区块缺少键/值对。你可以在下方编辑，或忽略后继续。",
+    "malformedSummary": "共找到 {{total}} 个 H2 区块，其中 {{invalid}} 个需要处理。",
+    "malformedSectionLabel": "从第 {{line}} 行开始的区块",
+    "malformedReasonMissingColon": "标题必须包含用于分隔键和值的冒号。",
+    "malformedReasonInvalidField": "标题必须同时包含键和值。",
+    "malformedApply": "保存并刷新",
+    "malformedIgnore": "仅忽略一次",
+    "malformedEditWarning": "此处的修改会替换这些区块的原始文本。",
+    "malformedIgnoreWarning": "“仅忽略一次”将移除这些格式错误的区块并继续进入表格视图。",
+    "malformedSaveSuccess": "已更新格式错误的 H2 区块。",
+    "malformedSaveError": "更新格式错误的 H2 区块失败。",
+    "unstructuredTitle": "转换前需要检查内容",
+    "unstructuredBody": "打开 TLB 视图触发了转换向导。检测到 {{sectionCount}} 个可转换的 H2 区块；在转换前仍有部分内容需要处理。",
+    "unstructuredInstruction": "请选择如何继续：编辑并转换 / 删除并转换 / 取消。",
+    "unstructuredSectionLabel": "从第 {{line}} 行开始的非结构化文本",
+    "unstructuredHint": "除非你将其编辑为符合要求的格式，否则下面的内容将被移除。",
+    "unstructuredEditConvert": "编辑并转换",
+    "unstructuredDeleteConvert": "删除并转换",
+    "unstructuredCancel": "取消"
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView 构造函数开始 ===",

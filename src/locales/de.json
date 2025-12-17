@@ -4,13 +4,51 @@
     "mode": {
       "table": "Tabelle",
       "kanban": "Kanban",
-      "slide": "Folie"
+      "slide": "Folie",
+      "gallery": "Galerie"
     }
   },
   "viewControls": {
     "openTableView": "Zur TileLineBase-Tabellenansicht wechseln",
     "openMarkdownView": "Zurück zum Markdown-Editor wechseln",
     "switchViewMenu": "Ansicht wechseln (aktuell: {{mode}})"
+  },
+  "galleryView": {
+    "emptyState": "Noch keine Karten. Füge Zeilen aus der Tabellenansicht hinzu, um diese Galerie zu füllen.",
+    "processingHint": "Galeriekarten werden vorbereitet...",
+    "actions": {
+      "openFromMarkdown": "TileLineBase-Galerieansicht öffnen",
+      "switchToGallery": "Zur Galerieansicht wechseln"
+    },
+    "toolbar": {
+      "title": "Galerie",
+      "addCardButtonAriaLabel": "Galeriekarte hinzufügen",
+      "settingsMenuAriaLabel": "Galerieeinstellungen",
+      "editTemplate": "Galerievorlage bearbeiten",
+      "addGalleryButtonAriaLabel": "Galerieansicht hinzufügen",
+      "unnamedGalleryLabel": "Unbenannte Galerie",
+      "editGalleryLabel": "Galerie bearbeiten",
+      "duplicateGalleryLabel": "Galerie duplizieren",
+      "deleteGalleryLabel": "Galerie löschen",
+      "cannotDeleteLastGallery": "Mindestens eine Galerieansicht behalten."
+    },
+    "templateModal": {
+      "title": "Galerievorlage",
+      "cardSizeLabel": "Karteneinstellungen",
+      "widthLabel": "Breite (px)",
+      "heightLabel": "Höhe (px)",
+      "groupFieldTitle": "Gruppierungsfeld",
+      "groupFieldLabel": "Feld verwenden",
+      "groupFieldNone": "Keine",
+      "filterSectionTitle": "Filter & Sortierung",
+      "filterSectionActive": "Aktiver Filter: {{name}}",
+      "filterSectionEmpty": "Noch keine Filteransicht. Erstelle eine, um diese Galerie einzugrenzen.",
+      "filterPickerLabel": "Filteransicht",
+      "filterAllLabel": "Alle Einträge",
+      "newFilterButton": "Neue Filteransicht",
+      "editFilterButton": "Filter/Sortierung bearbeiten",
+      "manageGroupsButton": "Filtergruppen verwalten"
+    }
   },
   "kanbanView": {
     "schemaUnavailable": "Die Kanban-Ansicht benötigt ein gültiges Tabellenschema. Notiz neu laden und erneut versuchen.",
@@ -37,6 +75,9 @@
       "switchToKanban": "Zur Kanban-Ansicht wechseln",
       "switchToTable": "Zur Tabellenansicht wechseln"
     },
+    "laneActions": {
+      "addCard": "Karte zu \"{{lane}}\" hinzufügen"
+    },
     "fieldModal": {
       "title": "Kanban-Spalte auswählen",
       "description": "Die Spalte wählen, deren Werte die Spuren im Kanban-Board bilden sollen.",
@@ -59,6 +100,20 @@
       "successNotice": "Spur \"{{name}}\" erstellt.",
       "statusFieldBlocked": "Status-Spuren decken die Status-Spalte bereits ab. Bearbeite die Statusoptionen stattdessen in der Tabelle.",
       "missingLaneField": "Vor dem Erstellen einer neuen Spur eine Kanban-Spalte wählen."
+    },
+    "cardCreateModal": {
+      "title": "Neuer Eintrag",
+      "description": "Fülle die Felder unten aus, um direkt in dieser Spur eine Zeile zu erstellen.",
+      "laneFieldLabel": "Spurwert ({{field}})",
+      "laneFieldDesc": "Karten, die hier erstellt werden, verwenden standardmäßig \"{{lane}}\" als Spurwert.",
+      "submitLabel": "Eintrag erstellen",
+      "cancelLabel": "Abbrechen",
+      "laneRequiredError": "Gib einen Spurwert ein, bevor du einen Eintrag erstellst."
+    },
+    "cardEditModal": {
+      "title": "Eintrag bearbeiten",
+      "submitLabel": "Speichern",
+      "deleteLabel": "Eintrag löschen"
     },
     "content": {
       "sectionTitle": "Karteninhalt",
@@ -209,7 +264,8 @@
     "importCsvAsTable": "CSV als neue Tabelle importieren",
     "toggleTableView": "Tabellenansicht umschalten",
     "openKanbanView": "TileLineBase-Kanban-Ansicht öffnen",
-    "openSlideView": "TileLineBase-Folienansicht öffnen"
+    "openSlideView": "TileLineBase-Folienansicht öffnen",
+    "openGalleryView": "TileLineBase-Galerieansicht öffnen"
   },
   "csv": {
     "errorNoFile": "Notiz vor dem Export speichern; die aktuelle Datei wurde nicht gefunden.",
@@ -260,6 +316,20 @@
     "loggingLevelOptionInfo": "Infos, Warnungen und Fehler",
     "loggingLevelOptionDebug": "Debug, Infos, Warnungen und Fehler",
     "loggingLevelOptionTrace": "Trace (sehr ausführlich)",
+    "compatibilityHeading": "Kompatibilität",
+    "navigatorCompatLabel": "Notebook Navigator-Kompatibilität",
+    "navigatorCompatDesc": "Wenn aktiviert und Notebook Navigator installiert ist, blockiert die redundante Wiederöffnung der aktuellen TileLineBase-Ansicht, um Flackern zu verhindern. Standardmäßig aus Compliance-Gründen deaktiviert.",
+    "navigatorCompatModalTitle": "TileLineBase-Kompatibilitätshinweis",
+    "navigatorCompatModalHeading": "Notebook Navigator-Kompatibilität aktiviert",
+    "navigatorCompatModalBody1": "Notebook Navigator wurde erkannt. Sein Reload-Mechanismus verursacht starkes Flackern und Ansichtswechsel in TileLineBase-Ansichten. Um eine normale Nutzung sicherzustellen, hat TileLineBase automatisch eine instanzbasierte Isolation aktiviert.",
+    "navigatorCompatModalBody2": "Dieser Schutz gilt nur für TileLineBase-Ansichten und beeinflusst andere Szenarien nicht.",
+    "navigatorCompatModalBody3": "Du kannst dies jederzeit in den TileLineBase-Einstellungen unter Kompatibilität deaktivieren.",
+    "navigatorPinnedWarning": "Notebook Navigator ist aktiviert. Um Konflikte zu vermeiden, pinne TileLineBase-Ansichten in Obsidian nicht an.",
+    "navigatorPinnedModalTitle": "TileLineBase-Kompatibilitätshinweis",
+    "navigatorPinnedModalHeading": "Angeheftete Ansicht kollidiert mit Notebook Navigator",
+    "navigatorPinnedModalBody1": "Durch die Aktualisierungsmechanismen von Notebook Navigator und Obsidian verursacht das Anheften einer TileLineBase-Ansicht eine endlose Neuladerschleife. Das führt zu Bildschirmflackern, springendem Fokus und unbeabsichtigten neuen Tabs.",
+    "navigatorPinnedModalBody2": "Wir koordinieren derzeit mit dem Autor von Notebook Navigator, um dies zu beheben.",
+    "navigatorPinnedModalAction": "Bitte löse in der Zwischenzeit die Anheftung dieses Tabs, um die normale Funktion wiederherzustellen. Vermeide das Anheften von TileLineBase-Ansichten, bis dies behoben ist.",
     "backupHeading": "Backups",
     "backupEnableLabel": "Automatische Backups aktivieren",
     "backupEnableDesc": "Vor dem Schreiben von Markdown einen Schnappschuss erstellen, um Änderungen rückgängig machen zu können.",
@@ -539,7 +609,27 @@
     "defaultFileName": "Konvertierte Notiz",
     "successNotice": "Konvertiert zu {{fileName}}",
     "failureNotice": "Konvertierung fehlgeschlagen. Bitte erneut versuchen.",
-    "previewRenameHint": "Spaltenüberschriften anklicken, um sie umzubenennen."
+    "previewRenameHint": "Spaltenüberschriften anklicken, um sie umzubenennen.",
+    "malformedTitle": "Fehlerhafte H2-Abschnitte erkannt",
+    "malformedDescription": "Einige H2-Abschnitte fehlen Schlüssel/Wert-Paare. Unten bearbeiten oder einmal ignorieren, um fortzufahren.",
+    "malformedSummary": "{{total}} H2-Abschnitte gefunden; {{invalid}} müssen behandelt werden.",
+    "malformedSectionLabel": "Abschnitt ab Zeile {{line}}",
+    "malformedReasonMissingColon": "Überschrift muss einen Doppelpunkt enthalten, der Schlüssel und Wert trennt.",
+    "malformedReasonInvalidField": "Überschrift muss sowohl einen Schlüssel als auch einen Wert enthalten.",
+    "malformedApply": "Speichern und aktualisieren",
+    "malformedIgnore": "Einmal ignorieren",
+    "malformedEditWarning": "Änderungen hier ersetzen den Originaltext dieser Abschnitte.",
+    "malformedIgnoreWarning": "Einmal ignorieren entfernt diese fehlerhaften Abschnitte und führt zur Tabellenansicht fort.",
+    "malformedSaveSuccess": "Fehlerhafte H2-Abschnitte aktualisiert.",
+    "malformedSaveError": "Fehlerhafte H2-Abschnitte konnten nicht aktualisiert werden.",
+    "unstructuredTitle": "Inhalt muss vor der Konvertierung geprüft werden",
+    "unstructuredBody": "Das Öffnen der TLB-Ansicht hat den Konvertierungsassistenten gestartet. {{sectionCount}} konvertierbare H2-Abschnitte erkannt; einige Inhalte benötigen vor der Konvertierung noch Aufmerksamkeit.",
+    "unstructuredInstruction": "Bitte wählen, wie fortgefahren werden soll: Bearbeiten & Konvertieren / Löschen & Konvertieren / Abbrechen.",
+    "unstructuredSectionLabel": "Unstrukturierter Text ab Zeile {{line}}",
+    "unstructuredHint": "Inhalt unten wird entfernt, sofern du ihn nicht bearbeitest, um das erforderliche Format zu erfüllen.",
+    "unstructuredEditConvert": "Bearbeiten & Konvertieren",
+    "unstructuredDeleteConvert": "Löschen & Konvertieren",
+    "unstructuredCancel": "Abbrechen"
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView-Konstruktor startet ===",

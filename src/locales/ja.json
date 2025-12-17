@@ -4,7 +4,8 @@
     "mode": {
       "table": "テーブル",
       "kanban": "カンバン",
-      "slide": "スライド"
+      "slide": "スライド",
+      "gallery": "ギャラリー"
     }
   },
   "slideView": {
@@ -97,6 +98,43 @@
     "openMarkdownView": "Markdown エディターに戻る",
     "switchViewMenu": "ビューを切り替え (現在: {{mode}})"
   },
+  "galleryView": {
+    "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
+    "processingHint": "ギャラリーカードを準備しています...",
+    "actions": {
+      "openFromMarkdown": "TileLineBase のギャラリービューを開く",
+      "switchToGallery": "ギャラリービューに切り替える"
+    },
+    "toolbar": {
+      "title": "ギャラリー",
+      "addCardButtonAriaLabel": "ギャラリーカードを追加",
+      "settingsMenuAriaLabel": "ギャラリー設定",
+      "editTemplate": "ギャラリーテンプレートを編集",
+      "addGalleryButtonAriaLabel": "ギャラリービューを追加",
+      "unnamedGalleryLabel": "無題のギャラリー",
+      "editGalleryLabel": "ギャラリーを編集",
+      "duplicateGalleryLabel": "ギャラリーを複製",
+      "deleteGalleryLabel": "ギャラリーを削除",
+      "cannotDeleteLastGallery": "少なくとも 1 つのギャラリービューを残してください。"
+    },
+    "templateModal": {
+      "title": "ギャラリーテンプレート",
+      "cardSizeLabel": "カード設定",
+      "widthLabel": "幅 (px)",
+      "heightLabel": "高さ (px)",
+      "groupFieldTitle": "グループ化フィールド",
+      "groupFieldLabel": "フィールドを使用",
+      "groupFieldNone": "なし",
+      "filterSectionTitle": "フィルターと並び替え",
+      "filterSectionActive": "有効なフィルター: {{name}}",
+      "filterSectionEmpty": "フィルタービューがまだありません。作成してこのギャラリーの範囲を絞り込んでください。",
+      "filterPickerLabel": "フィルタービュー",
+      "filterAllLabel": "すべての項目",
+      "newFilterButton": "新しいフィルタービュー",
+      "editFilterButton": "フィルター/並び替えを編集",
+      "manageGroupsButton": "フィルターグループを管理"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "カンバン表示には有効なテーブルスキーマが必要です。ノートを再読み込みしてからもう一度お試しください。",
     "missingLaneField": "カンバン表示には「{{field}}」列が必要です。テーブルビューで追加するか元の表示に戻ってください。",
@@ -122,6 +160,9 @@
       "switchToKanban": "カンバンビューに切り替える",
       "switchToTable": "テーブルビューに切り替える"
     },
+    "laneActions": {
+      "addCard": "「{{lane}}」にカードを追加"
+    },
     "fieldModal": {
       "title": "カンバン列を選択",
       "description": "カンバンボードのレーンを構成する列を選んでください。",
@@ -144,6 +185,20 @@
       "successNotice": "レーン「{{name}}」を作成しました。",
       "statusFieldBlocked": "ステータスレーンはステータス列をすでにカバーしています。テーブルでステータスのオプションを編集してください。",
       "missingLaneField": "新しいレーンを作成する前にカンバン列を選択してください。"
+    },
+    "cardCreateModal": {
+      "title": "新しい項目",
+      "description": "以下のフィールドを入力して、このレーンに直接行を作成します。",
+      "laneFieldLabel": "レーンの値 ({{field}})",
+      "laneFieldDesc": "ここで作成したカードは、既定でレーンの値として「{{lane}}」を使用します。",
+      "submitLabel": "項目を作成",
+      "cancelLabel": "キャンセル",
+      "laneRequiredError": "項目を作成する前にレーンの値を入力してください。"
+    },
+    "cardEditModal": {
+      "title": "項目を編集",
+      "submitLabel": "保存",
+      "deleteLabel": "項目を削除"
     },
     "content": {
       "sectionTitle": "カードの内容",
@@ -209,7 +264,8 @@
     "importCsvAsTable": "CSV を新しいテーブルとして取り込む",
     "toggleTableView": "テーブルビューを切り替える",
     "openKanbanView": "TileLineBase のカンバンビューを開く",
-    "openSlideView": "TileLineBase のスライドビューを開く"
+    "openSlideView": "TileLineBase のスライドビューを開く",
+    "openGalleryView": "TileLineBase のギャラリービューを開く"
   },
   "csv": {
     "errorNoFile": "エクスポートする前にノートを保存してください。現在のファイルが見つかりません。",
@@ -260,6 +316,20 @@
     "loggingLevelOptionInfo": "情報・警告・エラー",
     "loggingLevelOptionDebug": "デバッグ・情報・警告・エラー",
     "loggingLevelOptionTrace": "トレース（最も詳細）",
+    "compatibilityHeading": "互換性",
+    "navigatorCompatLabel": "Notebook Navigator 互換性",
+    "navigatorCompatDesc": "有効で Notebook Navigator がインストールされている場合、現在の TileLineBase ビューを冗長に再オープンする動作をブロックしてちらつきを防ぎます。コンプライアンスのため既定でオフです。",
+    "navigatorCompatModalTitle": "TileLineBase 互換性のお知らせ",
+    "navigatorCompatModalHeading": "Notebook Navigator 互換性が有効になりました",
+    "navigatorCompatModalBody1": "Notebook Navigator が検出されました。再読み込み機構により、TileLineBase ビューで激しいちらつきやビュー切り替えが発生します。正常に利用できるよう、TileLineBase は自動的にインスタンス単位の分離を有効にしました。",
+    "navigatorCompatModalBody2": "この保護は TileLineBase ビューにのみ適用され、他のシナリオには影響しません。",
+    "navigatorCompatModalBody3": "これは TileLineBase 設定の「互換性」からいつでもオフにできます。",
+    "navigatorPinnedWarning": "Notebook Navigator が有効です。競合を避けるため、Obsidian で TileLineBase ビューをピン留めしないでください。",
+    "navigatorPinnedModalTitle": "TileLineBase 互換性のお知らせ",
+    "navigatorPinnedModalHeading": "Notebook Navigator とのピン留めビューの競合",
+    "navigatorPinnedModalBody1": "Notebook Navigator と Obsidian の更新機構により、TileLineBase ビューをピン留めすると無限の再読み込みループが発生します。その結果、画面のちらつき、フォーカスの移動、意図しない新しいタブの作成が起こります。",
+    "navigatorPinnedModalBody2": "現在、Notebook Navigator の作者と連携して修正に取り組んでいます。",
+    "navigatorPinnedModalAction": "それまでの間、このタブのピン留めを解除して正常な動作を復元してください。解決するまで TileLineBase ビューをピン留めしないでください。",
     "backupHeading": "バックアップ",
     "backupEnableLabel": "自動バックアップを有効にする",
     "backupEnableDesc": "Markdown を書き出す前にスナップショットを保存し、誤った変更を元に戻せるようにします。",
@@ -539,7 +609,27 @@
     "defaultFileName": "変換されたノート",
     "successNotice": "{{fileName}} に変換しました",
     "failureNotice": "変換に失敗しました。もう一度お試しください。",
-    "previewRenameHint": "列ヘッダーをクリックして列名を変更します。"
+    "previewRenameHint": "列ヘッダーをクリックして列名を変更します。",
+    "malformedTitle": "不正な H2 セクションを検出しました",
+    "malformedDescription": "一部の H2 セクションでキー/値のペアが欠けています。下で編集するか、無視して続行してください。",
+    "malformedSummary": "{{total}} 件の H2 セクションが見つかりました。{{invalid}} 件は対応が必要です。",
+    "malformedSectionLabel": "{{line}} 行目から始まるセクション",
+    "malformedReasonMissingColon": "見出しにはキーと値を区切るコロンが必要です。",
+    "malformedReasonInvalidField": "見出しにはキーと値の両方が含まれている必要があります。",
+    "malformedApply": "保存して再読み込み",
+    "malformedIgnore": "今回のみ無視",
+    "malformedEditWarning": "ここでの変更は、これらのセクションの元のテキストを置き換えます。",
+    "malformedIgnoreWarning": "「今回のみ無視」を選ぶと、これらの不正なセクションを削除してテーブルビューに進みます。",
+    "malformedSaveSuccess": "不正な H2 セクションを更新しました。",
+    "malformedSaveError": "不正な H2 セクションの更新に失敗しました。",
+    "unstructuredTitle": "変換前に内容の確認が必要です",
+    "unstructuredBody": "TLB ビューを開いたことで変換アシスタントが起動しました。変換可能な H2 セクションを {{sectionCount}} 件検出しましたが、変換前に確認が必要な内容があります。",
+    "unstructuredInstruction": "続行方法を選択してください: 編集して変換 / 削除して変換 / キャンセル。",
+    "unstructuredSectionLabel": "{{line}} 行目から始まる未整形テキスト",
+    "unstructuredHint": "下の内容は、必要な形式に合わせて編集しない限り削除されます。",
+    "unstructuredEditConvert": "編集して変換",
+    "unstructuredDeleteConvert": "削除して変換",
+    "unstructuredCancel": "キャンセル"
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView コンストラクター開始 ===",

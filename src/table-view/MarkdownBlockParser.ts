@@ -11,6 +11,7 @@ import {
 	type CollapsedFieldEntry,
 	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
+import { consumeTildeFencedBlock, isTildeFenceMarker } from './MultilineFieldCodec';
 export type ColumnFieldDisplayType = 'text' | 'date' | 'time' | 'image';
 export interface ColumnConfig {
 	name: string;
@@ -121,7 +122,7 @@ export class MarkdownBlockParser {
 					continue;
 				}
 				const parsedHeadingField = this.extractField(titleText, colonIndex);
-				if (!parsedHeadingField || !parsedHeadingField.key || !parsedHeadingField.value) {
+				if (!parsedHeadingField || !parsedHeadingField.key) {
 					const invalid = this.buildInvalidSection(lines, index, 'invalidField');
 					invalidSections.push(invalid);
 					skipUntil = Math.max(skipUntil, invalid.endLine);
@@ -129,6 +130,15 @@ export class MarkdownBlockParser {
 					continue;
 				}
 				currentBlock = { title: titleText, data: { [parsedHeadingField.key]: parsedHeadingField.value } };
+				if (isTildeFenceMarker(parsedHeadingField.value)) {
+					const fenced = consumeTildeFencedBlock(lines, index, parsedHeadingField.value.trim());
+					if (fenced) { currentBlock.data[parsedHeadingField.key] = fenced.value; index = fenced.endIndex; }
+				} else if (!parsedHeadingField.value) {
+					const nextFence = (lines[index + 1] ?? '').trim();
+					const fenced = isTildeFenceMarker(nextFence) ? consumeTildeFencedBlock(lines, index + 1, nextFence) : null;
+					if (fenced) { currentBlock.data[parsedHeadingField.key] = fenced.value; index = fenced.endIndex; }
+					else { const invalid = this.buildInvalidSection(lines, index, 'invalidField'); invalidSections.push(invalid); skipUntil = Math.max(skipUntil, invalid.endLine); currentBlock = null; continue; }
+				}
 				continue;
 			}
 			if (!currentBlock) { appendStray(index, line); continue; }
@@ -151,6 +161,19 @@ export class MarkdownBlockParser {
 			}
 			const parsedField = this.extractField(trimmed);
 			if (parsedField) {
+				if (isTildeFenceMarker(parsedField.value)) {
+					const fenced = consumeTildeFencedBlock(lines, index, parsedField.value.trim());
+					if (fenced) {
+						currentBlock.data[parsedField.key] = fenced.value;
+						index = fenced.endIndex;
+						flushStray(index + 1);
+						continue;
+					}
+				} else if (!parsedField.value) {
+					const nextFence = (lines[index + 1] ?? '').trim();
+					const fenced = isTildeFenceMarker(nextFence) ? consumeTildeFencedBlock(lines, index + 1, nextFence) : null;
+					if (fenced) { currentBlock.data[parsedField.key] = fenced.value; index = fenced.endIndex; flushStray(index + 1); continue; }
+				}
 				currentBlock.data[parsedField.key] = parsedField.value;
 				flushStray(index + 1);
 				continue;
@@ -191,7 +214,7 @@ ${section.text}`;
 			if (!parsedHeading) {
 				return false;
 			}
-			if (parsedHeading.key.length === 0 || parsedHeading.value.length === 0) {
+			if (parsedHeading.key.length === 0 || (parsedHeading.value.length === 0 && (block.data[parsedHeading.key] ?? '').trim().length === 0)) {
 				return false;
 			}
 			if (headingKey === null) {
@@ -244,57 +267,31 @@ ${section.text}`;
 		if (lastHeadingStart >= 0) {
 			const headingStart = lastHeadingStart + 1;
 			const headingEnd = preceding.indexOf('\n', headingStart);
-			headingLine = preceding
-				.slice(headingStart, headingEnd === -1 ? preceding.length : headingEnd)
-				.trim();
+			headingLine = preceding.slice(headingStart, headingEnd === -1 ? preceding.length : headingEnd).trim();
 		} else if (preceding.startsWith('## ')) {
 			const firstLineEnd = preceding.indexOf('\n');
 			headingLine = (firstLineEnd === -1 ? preceding : preceding.slice(0, firstLineEnd)).trim();
 		}
-		const runtimeHeadingPattern = /^##\s+tlb\s+[A-Za-z0-9-]{4,}\s+\d+$/;
-		if (headingLine && runtimeHeadingPattern.test(headingLine)) {
-			return true;
-		}
-		const firstContentLine = blockContent
-			.split(/\r?\n/)
-			.map((line) => line.trim())
-			.find((line) => line.length > 0 && !line.startsWith('#'));
-		if (!firstContentLine) {
-			return false;
-		}
-		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
-		return runtimeKeyPattern.test(firstContentLine);
+		if (headingLine && /^##\s+tlb\s+[A-Za-z0-9-]{4,}\s+\d+$/.test(headingLine)) return true;
+		const firstContentLine =
+			blockContent.split(/\r?\n/).map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith('#')) ?? '';
+		return /^(filterViews|columnWidths|viewPreference|__meta__)\b/i.test(firstContentLine);
 	}
 	private buildInvalidSection(lines: string[], headingIndex: number, reason: InvalidH2Section['reason']): InvalidH2Section {
-		let endIndex = headingIndex;
-		let probeInCodeBlock = false;
+		let endIndex = headingIndex; let probeInCodeBlock = false;
 		for (let i = headingIndex + 1; i < lines.length; i++) {
 			const trimmed = lines[i].trim();
-			if (trimmed.startsWith('```')) {
-				probeInCodeBlock = !probeInCodeBlock;
-			}
-			if (!probeInCodeBlock && /^##(?!#)/.test(trimmed)) {
-				break;
-			}
+			if (trimmed.startsWith('```')) probeInCodeBlock = !probeInCodeBlock;
+			if (!probeInCodeBlock && /^##(?!#)/.test(trimmed)) break;
 			endIndex = i;
 		}
-		return {
-			startLine: headingIndex,
-			endLine: endIndex,
-			text: lines.slice(headingIndex, endIndex + 1).join('\n'),
-			heading: lines[headingIndex] ?? '',
-			reason
-		};
+		return { startLine: headingIndex, endLine: endIndex, text: lines.slice(headingIndex, endIndex + 1).join('\n'), heading: lines[headingIndex] ?? '', reason };
 	}
 }
 function resolveColonIndex(text: string): number {
 	const asciiIndex = text.indexOf(':');
 	const fullWidthIndex = text.indexOf(FULL_WIDTH_COLON);
-	if (asciiIndex === -1) {
-		return fullWidthIndex;
-	}
-	if (fullWidthIndex === -1) {
-		return asciiIndex;
-	}
+	if (asciiIndex === -1) return fullWidthIndex;
+	if (fullWidthIndex === -1) return asciiIndex;
 	return Math.min(asciiIndex, fullWidthIndex);
 }

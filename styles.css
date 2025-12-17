@@ -4008,7 +4008,7 @@
 	font-size: calc(var(--ag-font-size, 13px) + 2px);
 	line-height: 2;
 	font-family: inherit;
-	white-space: normal;
+	white-space: pre-wrap;
 	word-break: break-word;
 	background: var(--ag-tooltip-background-color, var(--ag-background-color, var(--background-primary)));
 	color: var(--ag-foreground-color, var(--text-normal));

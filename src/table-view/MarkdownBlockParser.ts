@@ -12,6 +12,7 @@ import {
 	type CollapsedFieldEntry,
 	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
+import { consumeTildeFencedBlock, isTildeFenceMarker } from './MultilineFieldCodec';
 export type ColumnFieldDisplayType = 'text' | 'date' | 'time' | 'image';
 export interface ColumnConfig {
 	name: string;
@@ -136,7 +137,7 @@ export class MarkdownBlockParser {
 					continue;
 				}
 				const parsedHeadingField = this.extractField(titleText, colonIndex);
-				if (!parsedHeadingField || !parsedHeadingField.key || !parsedHeadingField.value) {
+				if (!parsedHeadingField || !parsedHeadingField.key) {
 					const invalid = buildInvalidSection(lines, index, 'invalidField');
 					invalidSections.push(invalid);
 					skipUntil = Math.max(skipUntil, invalid.endLine);
@@ -144,6 +145,23 @@ export class MarkdownBlockParser {
 					continue;
 				}
 				currentBlock = { title: titleText, data: { [parsedHeadingField.key]: parsedHeadingField.value } };
+				if (isTildeFenceMarker(parsedHeadingField.value)) {
+					const fenced = consumeTildeFencedBlock(lines, index, parsedHeadingField.value.trim());
+					if (fenced) { currentBlock.data[parsedHeadingField.key] = fenced.value; index = fenced.endIndex; }
+				} else if (!parsedHeadingField.value) {
+					const nextFence = (lines[index + 1] ?? '').trim();
+					const fenced = isTildeFenceMarker(nextFence)
+						? consumeTildeFencedBlock(lines, index + 1, nextFence)
+						: null;
+					if (fenced) { currentBlock.data[parsedHeadingField.key] = fenced.value; index = fenced.endIndex; }
+					else {
+						const invalid = buildInvalidSection(lines, index, 'invalidField');
+						invalidSections.push(invalid);
+						skipUntil = Math.max(skipUntil, invalid.endLine);
+						currentBlock = null;
+						continue;
+					}
+				}
 				continue;
 			}
 			if (!currentBlock) { appendStray(index, line); continue; }
@@ -166,6 +184,19 @@ export class MarkdownBlockParser {
 			}
 			const parsedField = this.extractField(trimmed);
 			if (parsedField) {
+				if (isTildeFenceMarker(parsedField.value)) {
+					const fenced = consumeTildeFencedBlock(lines, index, parsedField.value.trim());
+					if (fenced) {
+						currentBlock.data[parsedField.key] = fenced.value;
+						index = fenced.endIndex;
+						flushStray(index + 1);
+						continue;
+					}
+				} else if (!parsedField.value) {
+					const nextFence = (lines[index + 1] ?? '').trim();
+					const fenced = isTildeFenceMarker(nextFence) ? consumeTildeFencedBlock(lines, index + 1, nextFence) : null;
+					if (fenced) { currentBlock.data[parsedField.key] = fenced.value; index = fenced.endIndex; flushStray(index + 1); continue; }
+				}
 				currentBlock.data[parsedField.key] = parsedField.value;
 				flushStray(index + 1);
 				continue;
@@ -206,7 +237,7 @@ ${section.text}`;
 			if (!parsedHeading) {
 				return false;
 			}
-			if (parsedHeading.key.length === 0 || parsedHeading.value.length === 0) {
+			if (parsedHeading.key.length === 0 || (parsedHeading.value.length === 0 && (block.data[parsedHeading.key] ?? '').trim().length === 0)) {
 				return false;
 			}
 			if (headingKey === null) {
@@ -253,4 +284,3 @@ ${section.text}`;
 		return true;
 	}
 }
-

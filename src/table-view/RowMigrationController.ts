@@ -11,6 +11,8 @@ import type { RowInteractionController } from './RowInteractionController';
 import type { Schema } from './SchemaBuilder';
 
 import type { H2Block } from './MarkdownBlockParser';
+import { encodeFieldValue, isTildeFenceMarker } from './MultilineFieldCodec';
+
 
 import { t } from '../i18n';
 
@@ -548,11 +550,40 @@ export class RowMigrationController {
 
 			const baseLines = this.deps.dataStore.blockToMarkdown(block).split(/\r?\n/);
 
-			const extrasStart = baseLines.findIndex((line) => !this.isColumnLine(line, columnSet));
+			let scanIndex = 0;
+			while (scanIndex < baseLines.length) {
+				const currentLine = baseLines[scanIndex] ?? '';
+				if (!this.isColumnLine(currentLine, columnSet)) {
+					break;
+				}
+				const trimmed = currentLine.trim();
+				const dataLine = trimmed.startsWith('## ') ? trimmed.slice(3) : trimmed;
+				const colonIndex = dataLine.indexOf(colon);
+				const valuePart = colonIndex >= 0 ? dataLine.slice(colonIndex + 1).trim() : '';
+				if (!isTildeFenceMarker(valuePart)) {
+					scanIndex += 1;
+					continue;
+				}
+				const fence = valuePart;
+				const fenceStart = scanIndex;
+				scanIndex += 1;
+				let closed = false;
+				while (scanIndex < baseLines.length) {
+					const candidate = baseLines[scanIndex] ?? '';
+					if (candidate.trim() === fence) {
+						closed = true;
+						scanIndex += 1;
+						break;
+					}
+					scanIndex += 1;
+				}
+				if (!closed) {
+					scanIndex = fenceStart;
+					break;
+				}
+			}
 
-			const extras = extrasStart >= 0 ? baseLines.slice(extrasStart) : [];
-
-
+			const extras = scanIndex < baseLines.length ? baseLines.slice(scanIndex) : [];
 
 			const fieldLines: string[] = [];
 
@@ -561,15 +592,12 @@ export class RowMigrationController {
 				const field = columnNames[columnIndex];
 
 				const value = block.data[field] ?? '';
-
-				if (columnIndex === 0) {
-
-					fieldLines.push(`## ${field}${colon}${value}`);
-
-				} else {
-
-					fieldLines.push(`${field}${colon}${value}`);
-
+				const encoded = encodeFieldValue(value);
+				const linePrefix = columnIndex === 0 ? `## ${field}${colon}` : `${field}${colon}`;
+				fieldLines.push(`${linePrefix}${encoded.inlineValue}`);
+				if (encoded.fence && encoded.contentLines) {
+					fieldLines.push(...encoded.contentLines);
+					fieldLines.push(`    ${encoded.fence}`);
 				}
 
 			}

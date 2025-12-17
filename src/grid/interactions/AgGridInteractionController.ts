@@ -25,9 +25,9 @@ export class AgGridInteractionController {
 	private focusedDoc: Document | null = null;
 	private focusedRowIndex: number | null = null;
 	private focusedColId: string | null = null;
-private pendingFocusShift: FocusShift | null = null;
-private editing = false;
-private readonly focusAccess: FocusStateAccess;
+	private pendingFocusShift: FocusShift | null = null;
+	private editing = false;
+	private readonly focusAccess: FocusStateAccess;
 	private readonly clipboard: GridClipboardService;
 	private readonly navigator: FocusNavigator;
 	private readonly composition: CompositionCaptureManager;
@@ -136,9 +136,24 @@ private readonly focusAccess: FocusStateAccess;
 	handlePasteEnd(): void {
 		this.pasteExit.handlePasteEnd();
 	}
+	startEditingFocusedCell(reason?: string): boolean {
+		const source = reason ?? 'unknown';
+		const started = this.composition.startEditingFromShortcut(source);
+		if (!started) {
+			this.debug('startEditingFocusedCell:skipped', { reason: source });
+		}
+		return started;
+	}
 	handleGridCellKeyDown(event: CellKeyDownEvent): void {
 		const keyEvent = normalizeKeyboardEvent(event.event);
 		if (!keyEvent) {
+			return;
+		}
+
+		if (keyEvent.key === 'F2') {
+			keyEvent.preventDefault?.();
+			keyEvent.stopPropagation?.();
+			this.startEditingFocusedCell('cell-keydown');
 			return;
 		}
 

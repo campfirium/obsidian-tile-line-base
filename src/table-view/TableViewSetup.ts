@@ -32,10 +32,13 @@ import { KanbanBoardController } from './kanban/KanbanBoardController';
 import { RowOrderController } from './row-sort/RowOrderController';
 import { MagicMigrationController } from './MagicMigrationController';
 import { initializeGalleryFilters } from './gallery/initGalleryFilters';
+import { installTableViewGridF2Keybinding } from './TableViewKeymap';
 const logger = getLogger('table-view:setup');
 export function initializeTableView(view: TableView): void {
 	logger.info(t('tableViewSetup.constructorStart'));
 	logger.debug('leaf', view.leaf);
+
+	installTableViewGridF2Keybinding(view);
 
 	view.refreshCoordinator = new TableRefreshCoordinator(view);
 	view.configManager = new TableConfigManager();

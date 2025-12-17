@@ -8,9 +8,9 @@ export type ViewMode = 'table' | 'kanban' | 'slide' | 'gallery';
 
 const MODE_ICONS: Record<ViewMode, string[]> = {
 	table: ['tilelinebase-table', 'table', 'layout-grid'],
-	kanban: ['layout-kanban', 'layout-grid'],
+	kanban: ['columns-3', 'layout-kanban', 'layout-grid'],
 	slide: ['presentation', 'slideshow', 'play', 'monitor'],
-	gallery: ['images', 'gallery', 'layout-grid']
+	gallery: ['layout-grid', 'images', 'gallery']
 };
 
 export class ViewModeManager {

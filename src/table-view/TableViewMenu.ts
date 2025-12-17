@@ -22,9 +22,9 @@ function getMenuItemCount(menu: Menu): number {
 function buildViewModeEntries(view: TableView): MenuEntry[] {
 	const modes: Array<{ mode: 'table' | 'kanban' | 'slide' | 'gallery'; label: string; icon: string; order: number }> = [
 		{ mode: 'table', label: t('kanbanView.actions.switchToTable'), icon: 'table', order: 1 },
-		{ mode: 'kanban', label: t('kanbanView.actions.switchToKanban'), icon: 'layout-kanban', order: 2 },
+		{ mode: 'kanban', label: t('kanbanView.actions.switchToKanban'), icon: 'columns-3', order: 2 },
 		{ mode: 'slide', label: t('slideView.actions.switchToSlide'), icon: 'presentation', order: 3 },
-		{ mode: 'gallery', label: t('galleryView.actions.switchToGallery'), icon: 'images', order: 4 }
+		{ mode: 'gallery', label: t('galleryView.actions.switchToGallery'), icon: 'layout-grid', order: 4 }
 	];
 	return modes
 		.filter((entry) => view.activeViewMode !== entry.mode)

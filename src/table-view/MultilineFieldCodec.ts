@@ -10,10 +10,14 @@ function normalizeLineBreaks(value: string): string {
 	return value.replace(/\r\n?/g, '\n');
 }
 
+function stripCarriageReturn(line: string): string {
+	return line.endsWith('\r') ? line.slice(0, -1) : line;
+}
+
 function resolveTildeFence(contentLines: string[]): string {
 	for (let length = 3; length < 100; length++) {
 		const fence = '~'.repeat(length);
-		const conflicts = contentLines.some((line) => line.trim() === fence);
+		const conflicts = contentLines.some((line) => line === fence);
 		if (!conflicts) {
 			return fence;
 		}
@@ -28,11 +32,11 @@ export function encodeFieldValue(value: string): MultilineFieldEncoding {
 	}
 	const contentLines = normalized.split('\n');
 	const fence = resolveTildeFence(contentLines);
-	return { inlineValue: fence, fence, contentLines };
+	return { inlineValue: '', fence, contentLines };
 }
 
 export function isTildeFenceMarker(value: string): boolean {
-	return TILDE_FENCE_PATTERN.test(value.trim());
+	return TILDE_FENCE_PATTERN.test(stripCarriageReturn(value));
 }
 
 export function consumeTildeFencedBlock(
@@ -43,8 +47,8 @@ export function consumeTildeFencedBlock(
 	const buffer: string[] = [];
 	for (let i = startIndex + 1; i < lines.length; i++) {
 		const rawLine = lines[i] ?? '';
-		const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
-		if (line.trim() === fence) {
+		const line = stripCarriageReturn(rawLine);
+		if (line === fence) {
 			return { endIndex: i, value: buffer.join('\n') };
 		}
 		buffer.push(line);

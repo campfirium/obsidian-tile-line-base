@@ -48,6 +48,7 @@ const COLLAPSED_COMMENT_PREFIX = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.re
 const LIST_OR_QUOTE_PREFIX = /^(?:[-*+]\s|\d+\.\s|>\s?)/;
 const HEADING_PREFIX = /^#{1,6}\s/;
 const TABLE_ROW_PREFIX = /^\|/;
+function stripCarriageReturn(line: string): string { return line.endsWith('\r') ? line.slice(0, -1) : line; }
 export class MarkdownBlockParser {
 	parseHeaderConfig(content: string): ColumnConfig[] | null {
 		const blockRegex = /```(?:tlb|tilelinebase)\s*\n([\s\S]*?)\n```/gi;
@@ -81,6 +82,7 @@ export class MarkdownBlockParser {
 		const blocks: H2Block[] = []; const straySections: StrayContentSection[] = []; const invalidSections: InvalidH2Section[] = [];
 		let leadingHeading: string | null = null;
 		let currentBlock: H2Block | null = null;
+		let currentBlockStartLine = -1;
 		let inCodeBlock = false;
 		let strayStart = -1;
 		let strayBuffer: string[] = [];
@@ -134,6 +136,7 @@ export class MarkdownBlockParser {
 					invalidSections.push(invalid);
 					skipUntil = Math.max(skipUntil, invalid.endLine);
 					currentBlock = null;
+					currentBlockStartLine = -1;
 					continue;
 				}
 				const parsedHeadingField = this.extractField(titleText, colonIndex);
@@ -142,14 +145,21 @@ export class MarkdownBlockParser {
 					invalidSections.push(invalid);
 					skipUntil = Math.max(skipUntil, invalid.endLine);
 					currentBlock = null;
+					currentBlockStartLine = -1;
+					continue;
+				}
+				if (parsedHeadingField.value && isTildeFenceMarker(parsedHeadingField.value)) {
+					const invalid = buildInvalidSection(lines, index, 'invalidField');
+					invalidSections.push(invalid);
+					skipUntil = Math.max(skipUntil, invalid.endLine);
+					currentBlock = null;
+					currentBlockStartLine = -1;
 					continue;
 				}
 				currentBlock = { title: titleText, data: { [parsedHeadingField.key]: parsedHeadingField.value } };
-				if (isTildeFenceMarker(parsedHeadingField.value)) {
-					const fenced = consumeTildeFencedBlock(lines, index, parsedHeadingField.value.trim());
-					if (fenced) { currentBlock.data[parsedHeadingField.key] = fenced.value; index = fenced.endIndex; }
-				} else if (!parsedHeadingField.value) {
-					const nextFence = (lines[index + 1] ?? '').trim();
+				currentBlockStartLine = index;
+				if (!parsedHeadingField.value) {
+					const nextFence = stripCarriageReturn(lines[index + 1] ?? '');
 					const fenced = isTildeFenceMarker(nextFence)
 						? consumeTildeFencedBlock(lines, index + 1, nextFence)
 						: null;
@@ -159,6 +169,7 @@ export class MarkdownBlockParser {
 						invalidSections.push(invalid);
 						skipUntil = Math.max(skipUntil, invalid.endLine);
 						currentBlock = null;
+						currentBlockStartLine = -1;
 						continue;
 					}
 				}
@@ -184,17 +195,19 @@ export class MarkdownBlockParser {
 			}
 			const parsedField = this.extractField(trimmed);
 			if (parsedField) {
-				if (isTildeFenceMarker(parsedField.value)) {
-					const fenced = consumeTildeFencedBlock(lines, index, parsedField.value.trim());
-					if (fenced) {
-						currentBlock.data[parsedField.key] = fenced.value;
-						index = fenced.endIndex;
-						flushStray(index + 1);
-						continue;
-					}
-				} else if (!parsedField.value) {
-					const nextFence = (lines[index + 1] ?? '').trim();
-					const fenced = isTildeFenceMarker(nextFence) ? consumeTildeFencedBlock(lines, index + 1, nextFence) : null;
+				if (parsedField.value && isTildeFenceMarker(parsedField.value)) {
+					const invalid = buildInvalidSection(lines, Math.max(currentBlockStartLine, 0), 'invalidField');
+					invalidSections.push(invalid);
+					skipUntil = Math.max(skipUntil, invalid.endLine);
+					currentBlock = null;
+					currentBlockStartLine = -1;
+					continue;
+				}
+				if (!parsedField.value) {
+					const nextFence = stripCarriageReturn(lines[index + 1] ?? '');
+					const fenced = isTildeFenceMarker(nextFence)
+						? consumeTildeFencedBlock(lines, index + 1, nextFence)
+						: null;
 					if (fenced) { currentBlock.data[parsedField.key] = fenced.value; index = fenced.endIndex; flushStray(index + 1); continue; }
 				}
 				currentBlock.data[parsedField.key] = parsedField.value;

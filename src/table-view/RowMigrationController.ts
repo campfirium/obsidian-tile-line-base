@@ -560,17 +560,28 @@ export class RowMigrationController {
 				const dataLine = trimmed.startsWith('## ') ? trimmed.slice(3) : trimmed;
 				const colonIndex = dataLine.indexOf(colon);
 				const valuePart = colonIndex >= 0 ? dataLine.slice(colonIndex + 1).trim() : '';
-				if (!isTildeFenceMarker(valuePart)) {
+				const fenceStart = scanIndex;
+				let fence: string | null = null;
+				let nextScanIndex: number | null = null;
+
+				if (!valuePart) {
+					const nextFence = baseLines[scanIndex + 1] ?? '';
+					if (isTildeFenceMarker(nextFence)) {
+						fence = nextFence;
+						nextScanIndex = scanIndex + 2;
+					}
+				}
+
+				if (!fence || nextScanIndex === null) {
 					scanIndex += 1;
 					continue;
 				}
-				const fence = valuePart;
-				const fenceStart = scanIndex;
-				scanIndex += 1;
+
+				scanIndex = nextScanIndex;
 				let closed = false;
 				while (scanIndex < baseLines.length) {
 					const candidate = baseLines[scanIndex] ?? '';
-					if (candidate.trim() === fence) {
+					if (candidate === fence) {
 						closed = true;
 						scanIndex += 1;
 						break;
@@ -594,10 +605,13 @@ export class RowMigrationController {
 				const value = block.data[field] ?? '';
 				const encoded = encodeFieldValue(value);
 				const linePrefix = columnIndex === 0 ? `## ${field}${colon}` : `${field}${colon}`;
-				fieldLines.push(`${linePrefix}${encoded.inlineValue}`);
 				if (encoded.fence && encoded.contentLines) {
+					fieldLines.push(linePrefix);
+					fieldLines.push(encoded.fence);
 					fieldLines.push(...encoded.contentLines);
-					fieldLines.push(`    ${encoded.fence}`);
+					fieldLines.push(encoded.fence);
+				} else {
+					fieldLines.push(`${linePrefix}${encoded.inlineValue}`);
 				}
 
 			}

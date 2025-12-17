@@ -82,25 +82,32 @@ function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: S
 		const rawValue = block.data[key] ?? '';
 		const trimmed = rawValue.trim();
 		const encoded = isFirstKey || trimmed.length > 0 ? encodeFieldValue(rawValue) : null;
+		const linePrefix = isFirstKey ? `## ${key}\uFF1A` : `${key}\uFF1A`;
 
 		if (isFirstKey) {
-			lines.push(`## ${key}\uFF1A${encoded?.inlineValue ?? ''}`);
 			if (encoded?.fence && encoded.contentLines) {
+				lines.push(linePrefix);
+				lines.push(encoded.fence);
 				lines.push(...encoded.contentLines);
-				lines.push(`    ${encoded.fence}`);
+				lines.push(encoded.fence);
+			} else {
+				lines.push(`${linePrefix}${encoded?.inlineValue ?? ''}`);
 			}
 			isFirstKey = false;
 			continue;
 		}
 
 		if (trimmed.length > 0) {
-			lines.push(`${key}\uFF1A${encoded?.inlineValue ?? ''}`);
 			if (encoded?.fence && encoded.contentLines) {
+				lines.push(linePrefix);
+				lines.push(encoded.fence);
 				lines.push(...encoded.contentLines);
-				lines.push(`    ${encoded.fence}`);
+				lines.push(encoded.fence);
+			} else {
+				lines.push(`${linePrefix}${encoded?.inlineValue ?? ''}`);
 			}
 		} else if (isSchemaBlock) {
-			lines.push(`${key}\uFF1A`);
+			lines.push(linePrefix);
 		}
 	}
 

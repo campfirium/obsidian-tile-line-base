@@ -2,15 +2,12 @@ import { Notice } from 'obsidian';
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
 import { getPluginContext } from '../../pluginContext';
-import {
-	getDefaultBodyLayout,
-	getDefaultTitleLayout,
-	normalizeSlideViewConfig
-} from '../../types/slide';
+import { normalizeSlideViewConfig } from '../../types/slide';
 import { getLogger } from '../../utils/logger';
 import { renderSlideView } from './renderSlideView';
 import { SlideTemplateModal } from './SlideTemplateModal';
-import { buildBuiltInSlideTemplate, mergeSlideTemplateFields } from './slideDefaults';
+import { buildBuiltInSlideTemplate } from './slideDefaults';
+import { buildRenderConfig, ensureLayoutDefaults } from './slideConfigHelpers';
 
 const logger = getLogger('slide:render-mode');
 
@@ -19,23 +16,18 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 	const slideContainer = container.createDiv({ cls: 'tlb-slide-container' });
 	const slideRows = view.dataStore.extractRowData();
 	const fields = view.schema?.columnNames ?? [];
-	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults;
-	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
-	const builtInTemplate = buildBuiltInSlideTemplate(fields);
+	const columnConfigs = view.schema?.columnConfigs ?? null;
 	const plugin = getPluginContext();
 	const globalConfig = plugin?.getDefaultSlideConfig?.() ?? null;
 	const globalConfigNormalized = globalConfig ? normalizeSlideViewConfig(globalConfig) : null;
-	const hydratedConfig = shouldApplyBuiltIn
-		? globalConfigNormalized
-			? normalizeSlideViewConfig({
-					...globalConfigNormalized,
-					template: mergeSlideTemplateFields(globalConfigNormalized.template, builtInTemplate)
-				})
-			: normalizeSlideViewConfig({
-					...baseConfig,
-					template: builtInTemplate
-				})
-		: baseConfig;
+	const baseConfig = normalizeSlideViewConfig(view.slideConfig);
+	const shouldApplyBuiltIn = view.shouldAutoFillSlideDefaults || !view.slideTemplateTouched;
+	const builtInTemplate = buildBuiltInSlideTemplate(fields, columnConfigs, slideRows);
+	const hydrateWithBuiltIn = (): ReturnType<typeof normalizeSlideViewConfig> => {
+		const base = globalConfigNormalized ?? baseConfig;
+		return normalizeSlideViewConfig({ ...base, template: builtInTemplate });
+	};
+	const hydratedConfig = shouldApplyBuiltIn ? hydrateWithBuiltIn() : baseConfig;
 	const renderState = buildRenderConfig({
 		config: hydratedConfig
 	});
@@ -66,94 +58,35 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			const modal = new SlideTemplateModal({
 				app: view.app,
 				fields,
+				fieldConfigs: columnConfigs,
+				sampleRows: slideRows,
 				initial: baseConfig.template,
-				onSave: (nextTemplate) => {
-					const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));
-					const nextRenderState = buildRenderConfig({
-						config: nextConfig
-					});
+			onSave: (nextTemplate) => {
+				const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));
+				const nextRenderState = buildRenderConfig({
+					config: nextConfig
+				});
 					view.slideTemplateTouched = true;
 					view.shouldAutoFillSlideDefaults = false;
 					view.slideConfig = nextRenderState.renderConfig;
 					view.slideController?.controller.updateConfig(nextRenderState.renderConfig);
 					view.markUserMutation('slide-template');
 					view.persistenceService.scheduleSave();
-				},
-				onSaveDefault: plugin
-					? async (nextTemplate) => {
-							try {
-								const nextConfig = normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate });
-								await plugin.setDefaultSlideConfig(nextConfig);
-								new Notice(t('slideView.templateModal.setDefaultSuccess'));
-							} catch (error) {
-								logger.error('Failed to set slide template as default', error);
-								new Notice(t('slideView.templateModal.setDefaultError'));
-							}
+			},
+			onSaveDefault: plugin
+				? async (nextTemplate, _cardSize) => {
+					try {
+						const nextConfig = normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate });
+						await plugin.setDefaultSlideConfig(nextConfig);
+						new Notice(t('slideView.templateModal.setDefaultSuccess'));
+					} catch (error) {
+							logger.error('Failed to set slide template as default', error);
+							new Notice(t('slideView.templateModal.setDefaultError'));
 						}
+					}
 					: undefined
 			});
 			modal.open();
 		}
 	});
-}
-
-function ensureLayoutDefaults(config: ReturnType<typeof normalizeSlideViewConfig>): typeof config {
-	const template = config.template;
-	return {
-		...config,
-		template: {
-			mode: template.mode ?? 'single',
-			textColor: template.textColor ?? '',
-			backgroundColor: template.backgroundColor ?? '',
-			single: {
-				withImage: {
-					...template.single.withImage,
-					titleLayout: template.single.withImage.titleLayout ?? getDefaultTitleLayout(),
-					bodyLayout: template.single.withImage.bodyLayout ?? getDefaultBodyLayout(),
-					imageLayout: template.single.withImage.imageLayout ?? getDefaultBodyLayout()
-				},
-				withoutImage: {
-					...template.single.withoutImage,
-					titleLayout: template.single.withoutImage.titleLayout ?? getDefaultTitleLayout(),
-					bodyLayout: template.single.withoutImage.bodyLayout ?? getDefaultBodyLayout()
-				}
-			},
-			split: {
-				withImage: {
-					...template.split.withImage,
-					textPage: {
-						...template.split.withImage.textPage,
-						titleLayout: template.split.withImage.textPage.titleLayout ?? getDefaultTitleLayout(),
-						bodyLayout: template.split.withImage.textPage.bodyLayout ?? getDefaultBodyLayout()
-					},
-					imageLayout: template.split.withImage.imageLayout ?? getDefaultBodyLayout()
-				},
-				withoutImage: {
-					...template.split.withoutImage,
-					titleLayout: template.split.withoutImage.titleLayout ?? getDefaultTitleLayout(),
-					bodyLayout: template.split.withoutImage.bodyLayout ?? getDefaultBodyLayout()
-				}
-			}
-		}
-	};
-}
-
-function buildRenderConfig(options: {
-	config: ReturnType<typeof normalizeSlideViewConfig>;
-}): {
-	normalizedConfig: ReturnType<typeof normalizeSlideViewConfig>;
-	renderConfig: ReturnType<typeof normalizeSlideViewConfig>;
-	templateTouched: boolean;
-	allowAutoFillNext: boolean;
-	appliedDefaults: boolean;
-} {
-	const baseConfig = ensureLayoutDefaults(normalizeSlideViewConfig(options.config));
-	const renderConfig = baseConfig;
-	return {
-		normalizedConfig: baseConfig,
-		renderConfig,
-		templateTouched: true,
-		allowAutoFillNext: false,
-		appliedDefaults: false
-	};
 }

@@ -1,5 +1,5 @@
-import type { App, TFile } from 'obsidian';
-import { Notice } from 'obsidian';
+import type { App } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 import type { FileFilterViewState } from '../types/filterView';
 import type { FileTagGroupState } from '../types/tagGroup';
 import type { TableDataStore } from './TableDataStore';
@@ -29,9 +29,13 @@ interface TablePersistenceDeps {
 	getFile: () => TFile | null;
 	getFilterViewState: () => FileFilterViewState;
 	getTagGroupState: () => FileTagGroupState;
+	getGalleryFilterViewState?: () => FileFilterViewState;
+	getGalleryTagGroupState?: () => FileTagGroupState;
 	getCopyTemplate: () => string | null;
+	isCopyTemplateLoaded?: () => boolean;
+	getPersistedCopyTemplate?: (filePath: string) => string | null;
 	getBackupManager: () => BackupManager | null;
-	getViewPreference: () => 'table' | 'kanban' | 'slide';
+	getViewPreference: () => 'table' | 'kanban' | 'slide' | 'gallery';
 	getKanbanConfig: () => {
 		laneField: string | null;
 		sortField: string | null;
@@ -42,7 +46,10 @@ interface TablePersistenceDeps {
 	} | null;
 	getKanbanBoards?: () => KanbanBoardState | null;
 	getSlideConfig?: () => SlideViewConfig | null;
+	getGalleryConfig?: () => SlideViewConfig | null;
+	getGalleryViews?: () => { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null;
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
+	getGlobalGalleryConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
 	shouldAllowSave?: () => boolean;
 	onSaveSettled?: () => void;
@@ -115,19 +122,25 @@ export class TablePersistenceService {
 			this.cancelScheduledSave();
 			return;
 		}
+		const targetFile = this.deps.app.vault.getAbstractFileByPath(file.path);
+		if (!(targetFile instanceof TFile) || targetFile !== file) {
+			logger.warn('save:aborted file missing or replaced', { path: file.path });
+			this.cancelScheduledSave();
+			return;
+		}
 
 		try {
 			const markdown = this.deps.dataStore.blocksToMarkdown().trimEnd();
 			const backupManager = this.deps.getBackupManager();
 			if (backupManager) {
 				try {
-					await backupManager.ensureBackup(file, `${markdown}\n`);
+					await backupManager.ensureBackup(targetFile, `${markdown}\n`);
 				} catch (error) {
 					logger.warn('Backup snapshot failed before save', error);
 				}
 			}
-			this.deps.markSelfMutation?.(file);
-			await this.deps.app.vault.modify(file, `${markdown}\n`);
+			this.deps.markSelfMutation?.(targetFile);
+			await this.deps.app.vault.modify(targetFile, `${markdown}\n`);
 			await this.saveConfig({
 				beforeWrite: (target) => this.deps.markSelfMutation?.(target)
 			});
@@ -140,6 +153,15 @@ export class TablePersistenceService {
 	}
 
 	getConfigPayload(): TableConfigData {
+		const copyTemplateLoaded = this.deps.isCopyTemplateLoaded?.() ?? true;
+		let copyTemplate: string | null | undefined = this.deps.getCopyTemplate?.() ?? null;
+		if (!copyTemplateLoaded) {
+			const filePath = this.deps.getFile()?.path ?? null;
+			copyTemplate =
+				filePath && this.deps.getPersistedCopyTemplate
+					? this.deps.getPersistedCopyTemplate(filePath) ?? undefined
+					: undefined;
+		}
 		const schema = this.deps.dataStore.getSchema();
 		const columnConfigs = schema?.columnConfigs
 			?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
@@ -168,14 +190,44 @@ export class TablePersistenceService {
 				? JSON.stringify(normalizedSlideConfig) === JSON.stringify(normalizedGlobalSlideConfig)
 				: false;
 		const hasSlideConfig = normalizedSlideConfig && !isDefaultSlideViewConfig(normalizedSlideConfig) && !matchesGlobalSlideConfig;
+		const galleryConfig = this.deps.getGalleryConfig?.() ?? null;
+		const normalizedGalleryConfig = galleryConfig ? normalizeSlideViewConfig(galleryConfig) : null;
+		const galleryViews = this.deps.getGalleryViews?.() ?? null;
+			const normalizedGalleryViews = galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0
+			? {
+				activeViewId: galleryViews.activeViewId ?? null,
+				views: galleryViews.views.map((entry) => ({
+					...entry,
+					template: normalizeSlideViewConfig(entry.template ?? null),
+					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
+					groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
+						? ((entry as { groupField: string }).groupField.trim() || undefined)
+						: undefined
+				}))
+			}
+			: null;
+		const activeGalleryTemplate = normalizedGalleryViews
+			? normalizedGalleryViews.views.find((entry) => entry.id === normalizedGalleryViews.activeViewId)?.template || normalizedGalleryViews.views[0]?.template || null
+			: normalizedGalleryConfig;
+		const globalGalleryConfig = this.deps.getGlobalGalleryConfig?.() ?? null;
+		const normalizedGlobalGalleryConfig = globalGalleryConfig ? normalizeSlideViewConfig(globalGalleryConfig) : null;
+		const matchesGlobalGalleryConfig =
+			activeGalleryTemplate && normalizedGlobalGalleryConfig
+				? JSON.stringify(activeGalleryTemplate) === JSON.stringify(normalizedGlobalGalleryConfig)
+				: false;
+		const hasGalleryConfig =
+			activeGalleryTemplate && !isDefaultSlideViewConfig(activeGalleryTemplate) && !matchesGlobalGalleryConfig;
 
 		return {
 			filterViews: this.deps.getFilterViewState(),
 			tagGroups: this.deps.getTagGroupState(),
+			galleryFilterViews: this.deps.getGalleryFilterViewState ? this.deps.getGalleryFilterViewState() : undefined,
+			galleryTagGroups: this.deps.getGalleryTagGroupState ? this.deps.getGalleryTagGroupState() : undefined,
 			columnWidths: this.deps.columnLayoutStore.exportPreferences(),
 			columnConfigs,
 			viewPreference,
-			copyTemplate: this.deps.getCopyTemplate(),
+			copyTemplate,
 			kanban:
 				laneField && laneField.trim().length > 0
 					? {
@@ -186,15 +238,17 @@ export class TablePersistenceService {
 									? sortDirection
 									: undefined,
 							heightMode: heightMode && heightMode !== DEFAULT_KANBAN_HEIGHT_MODE ? heightMode : undefined,
-						fontScale:
-							typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
+							fontScale:
+								typeof fontScale === 'number' && Math.abs(fontScale - DEFAULT_KANBAN_FONT_SCALE) > 0.001
 								? fontScale
 								: undefined,
-						multiRow: multiRow === false ? false : undefined
+							multiRow: multiRow === false ? false : undefined
 						}
 					: undefined,
 			kanbanBoards: hasKanbanBoards ? kanbanBoards : undefined,
-			slide: hasSlideConfig ? normalizedSlideConfig : undefined
+			slide: hasSlideConfig ? normalizedSlideConfig : undefined,
+			gallery: hasGalleryConfig ? activeGalleryTemplate : undefined,
+			galleryViews: normalizedGalleryViews ?? undefined
 		};
 	}
 

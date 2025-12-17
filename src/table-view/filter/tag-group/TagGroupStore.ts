@@ -7,13 +7,17 @@ export const DEFAULT_TAG_GROUP_ID = '__tlb_tag_group_default__';
 export const STATUS_TAG_GROUP_ID = '__tlb_tag_group_status__';
 const PROTECTED_GROUP_IDS = new Set<string>([DEFAULT_TAG_GROUP_ID]);
 
+type TagGroupScope = 'table' | 'gallery';
+
 export class TagGroupStore {
 	private state: FileTagGroupState = this.createEmptyState();
 	private filePath: string | null;
 	private fallbackDefaultName = 'Default';
+	private readonly scope: TagGroupScope;
 
-	constructor(filePath: string | null) {
+	constructor(filePath: string | null, scope: TagGroupScope = 'table') {
 		this.filePath = filePath;
+		this.scope = scope;
 	}
 
 	setFilePath(filePath: string | null): void {
@@ -43,28 +47,50 @@ export class TagGroupStore {
 		this.state = this.cloneState(next);
 	}
 
-	loadFromSettings(): FileTagGroupState {
+	loadFromSettings = (): FileTagGroupState => {
 		const plugin = getPluginContext();
-		if (!plugin || !this.filePath || typeof plugin.getTagGroupsForFile !== 'function') {
+		if (!plugin || !this.filePath) {
 			this.resetState();
 			return this.state;
 		}
 
-		const stored = plugin.getTagGroupsForFile(this.filePath);
+		const stored = this.scope === 'gallery'
+			? (typeof (plugin as any).getGalleryTagGroupsForFile === 'function'
+				? (plugin as any).getGalleryTagGroupsForFile(this.filePath)
+				: null)
+			: (typeof plugin.getTagGroupsForFile === 'function'
+				? plugin.getTagGroupsForFile(this.filePath)
+				: null);
+		if (!stored) {
+			this.resetState();
+			return this.state;
+		}
+
 		this.state = this.cloneState(stored);
 		return this.state;
-	}
+	};
 
-	async persist(): Promise<void> {
+	persist = async (): Promise<void> => {
 		if (!this.filePath) {
 			return;
 		}
 		const plugin = getPluginContext();
-		if (!plugin || typeof plugin.saveTagGroupsForFile !== 'function') {
+		if (!plugin) {
+			return;
+		}
+		if (this.scope === 'gallery') {
+			const saver = (plugin as any).saveGalleryTagGroupsForFile;
+			if (typeof saver !== 'function') {
+				return;
+			}
+			await saver.call(plugin, this.filePath, this.state);
+			return;
+		}
+		if (typeof plugin.saveTagGroupsForFile !== 'function') {
 			return;
 		}
 		await plugin.saveTagGroupsForFile(this.filePath, this.state);
-	}
+	};
 
 	updateState(updater: (state: FileTagGroupState) => void): void {
 		updater(this.state);
@@ -153,6 +179,10 @@ export class TagGroupStore {
 			}
 			if (!metadata.defaultSeeded) {
 				defaultIds = this.seedDefaultGroupViewIds(defaultIds, filterState, idSet, metadata);
+			}
+			if (!metadata.defaultSeeded && defaultIds.length === 0 && idSet.size > 0) {
+				defaultIds = this.collectViewIds(views);
+				metadata.defaultSeeded = defaultIds.length > 0;
 			}
 
 			defaultGroup.viewIds = defaultIds;

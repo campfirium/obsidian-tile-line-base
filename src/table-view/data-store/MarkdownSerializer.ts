@@ -6,6 +6,8 @@ import {
 	type CollapsedFieldEntry
 } from '../collapsed/CollapsedFieldCodec';
 
+import { encodeFieldValue } from '../MultilineFieldCodec';
+
 function buildHiddenFieldSet(schema: Schema, hiddenFields: Set<string>): Set<string> {
 	const result = new Set<string>(hiddenFields);
 	for (const config of schema.columnConfigs ?? []) {
@@ -77,19 +79,35 @@ function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: S
 		if (hiddenFields.has(key)) {
 			continue;
 		}
-		const value = block.data[key] ?? '';
-		const trimmed = value.trim();
+		const rawValue = block.data[key] ?? '';
+		const trimmed = rawValue.trim();
+		const encoded = isFirstKey || trimmed.length > 0 ? encodeFieldValue(rawValue) : null;
+		const linePrefix = isFirstKey ? `## ${key}\uFF1A` : `${key}\uFF1A`;
 
 		if (isFirstKey) {
-			lines.push(`## ${key}\uFF1A${value}`);
+			if (encoded?.fence && encoded.contentLines) {
+				lines.push(linePrefix);
+				lines.push(encoded.fence);
+				lines.push(...encoded.contentLines);
+				lines.push(encoded.fence);
+			} else {
+				lines.push(`${linePrefix}${encoded?.inlineValue ?? ''}`);
+			}
 			isFirstKey = false;
 			continue;
 		}
 
 		if (trimmed.length > 0) {
-			lines.push(`${key}\uFF1A${value}`);
+			if (encoded?.fence && encoded.contentLines) {
+				lines.push(linePrefix);
+				lines.push(encoded.fence);
+				lines.push(...encoded.contentLines);
+				lines.push(encoded.fence);
+			} else {
+				lines.push(`${linePrefix}${encoded?.inlineValue ?? ''}`);
+			}
 		} else if (isSchemaBlock) {
-			lines.push(`${key}\uFF1A`);
+			lines.push(linePrefix);
 		}
 	}
 

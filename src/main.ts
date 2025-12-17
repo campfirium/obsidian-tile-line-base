@@ -1,10 +1,11 @@
 /* eslint-disable max-lines */
-import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView } from 'obsidian';
+import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView, Modal } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
 import { applyStripeStyles } from './table-view/stripeStyles';
+import { syncGridContainerTheme, syncGridPopupRoot } from './grid/themeSync';
 import type { BorderColorMode, StripeColorMode } from './types/appearance';
 import {
 	applyLoggingConfig,
@@ -33,7 +34,6 @@ import { snapshotLeaf } from './plugin/utils/snapshotLeaf';
 import { syncLocale } from './plugin/LocaleSync';
 import { RightSidebarController } from './plugin/RightSidebarController';
 import { resolveEnvironmentLocale } from './i18n/localeEnvironment';
-import { NavigatorCompatibilityPatcher } from './plugin/NavigatorCompatibilityPatcher';
 
 const logger = getLogger('plugin:main');
 
@@ -52,7 +52,7 @@ export default class TileLineBasePlugin extends Plugin {
 	private activeLocale: LocaleCode = 'en';
 	private onboardingManager: OnboardingManager | null = null;
 	private commandTableCreationController: TableCreationController | null = null;
-	private navigatorCompatibilityPatcher: NavigatorCompatibilityPatcher | null = null;
+	private navigatorCompatModalShown = false;
 
 	async onload() {
 		setPluginContext(this);
@@ -62,9 +62,9 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
 		this.rightSidebarController = new RightSidebarController(this.app);
-		this.navigatorCompatibilityPatcher = new NavigatorCompatibilityPatcher(this.app, this.windowContextManager);
 		await this.loadSettings();
 		await this.updateLocalizedLocalePreferenceFromEnvironment();
+		this.maybeNotifyNavigatorCompatibility();
 
 		this.backupManager = new BackupManager({
 			plugin: this,
@@ -110,20 +110,19 @@ export default class TileLineBasePlugin extends Plugin {
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 		this.viewActionManager.refreshAll();
-		this.navigatorCompatibilityPatcher?.enable();
-		this.registerNavigatorPluginListener();
 
 		this.app.workspace.onLayoutReady(() => {
 			this.tableTitleRefresher.refreshAll();
 			void this.applyLocaleSettings();
 			void this.updateLocalizedLocalePreferenceFromEnvironment();
-			this.navigatorCompatibilityPatcher?.enable();
 		});
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.tableTitleRefresher.refreshAll();
+				this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 			})
 		);
+		this.registerNavigatorPluginListener();
 
 		this.onboardingManager = new OnboardingManager({
 			app: this.app,
@@ -134,6 +133,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.registerEvent(this.app.workspace.on('file-open', (openedFile) => {
 			logger.debug('file-open event received', { file: openedFile?.path ?? null });
+			this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 			if (openedFile instanceof TFile) {
 				window.setTimeout(() => {
 					void this.viewCoordinator.maybeSwitchToTableView(openedFile);
@@ -208,6 +208,11 @@ export default class TileLineBasePlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.viewActionManager.refreshAll();
+			})
+		);
+		this.registerEvent(
+			this.app.workspace.on('css-change', () => {
+				this.refreshTableVisualVars();
 			})
 		);
 		// Register file-menu handler once (avoid duplicate registration per window)
@@ -361,7 +366,6 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager.clearInjectedActions();
 		logger.info('Plugin unload: cleaning up resources');
 		this.rightSidebarController.restoreIfNeeded();
-		this.navigatorCompatibilityPatcher?.dispose();
 
 		this.onboardingManager = null;
 		this.commandTableCreationController = null;
@@ -400,6 +404,19 @@ export default class TileLineBasePlugin extends Plugin {
 		logger.debug('saveFilterViewsForFile', { filePath, viewCount: sanitized.views.length, activeView: sanitized.activeViewId });
 	}
 
+	getGalleryFilterViewsForFile(filePath: string): FileFilterViewState {
+		return this.settingsService.getGalleryFilterViewsForFile(filePath);
+	}
+
+	async saveGalleryFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<void> {
+		const sanitized = await this.settingsService.saveGalleryFilterViewsForFile(filePath, state);
+		logger.debug('saveGalleryFilterViewsForFile', {
+			filePath,
+			viewCount: sanitized.views.length,
+			activeView: sanitized.activeViewId
+		});
+	}
+
 	getTagGroupsForFile(filePath: string): FileTagGroupState {
 		return this.settingsService.getTagGroupsForFile(filePath);
 	}
@@ -407,6 +424,19 @@ export default class TileLineBasePlugin extends Plugin {
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<void> {
 		const sanitized = await this.settingsService.saveTagGroupsForFile(filePath, state);
 		logger.debug('saveTagGroupsForFile', { filePath, groupCount: sanitized.groups.length, activeGroup: sanitized.activeGroupId });
+	}
+
+	getGalleryTagGroupsForFile(filePath: string): FileTagGroupState {
+		return this.settingsService.getGalleryTagGroupsForFile(filePath);
+	}
+
+	async saveGalleryTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<void> {
+		const sanitized = await this.settingsService.saveGalleryTagGroupsForFile(filePath, state);
+		logger.debug('saveGalleryTagGroupsForFile', {
+			filePath,
+			groupCount: sanitized.groups.length,
+			activeGroup: sanitized.activeGroupId
+		});
 	}
 
 	getKanbanBoardsForFile(filePath: string): KanbanBoardState {
@@ -422,8 +452,24 @@ export default class TileLineBasePlugin extends Plugin {
 		return this.settingsService.getDefaultSlideConfig();
 	}
 
+	getDefaultGalleryConfig(): SlideViewConfig | null {
+		return this.settingsService.getDefaultGalleryConfig();
+	}
+
+	getDefaultGalleryCardSize(): { width: number; height: number } | null {
+		return this.settingsService.getDefaultGalleryCardSize();
+	}
+
 	async setDefaultSlideConfig(config: SlideViewConfig | null): Promise<void> {
 		await this.settingsService.setDefaultSlideConfig(config);
+		this.settings = this.settingsService.getSettings();
+	}
+
+	async setDefaultGalleryConfig(
+		config: SlideViewConfig | null,
+		cardSize?: { width?: number | null; height?: number | null } | null
+	): Promise<void> {
+		await this.settingsService.setDefaultGalleryConfig(config, cardSize);
 		this.settings = this.settingsService.getSettings();
 	}
 
@@ -502,8 +548,12 @@ export default class TileLineBasePlugin extends Plugin {
 		this.windowContextManager.forEachWindowContext((context) => {
 			const doc = context.window?.document;
 			if (!doc) return;
-			const isDarkMode = doc.body.classList.contains('theme-dark');
-			doc.querySelectorAll<HTMLElement>('.tlb-table-container').forEach((el) => {
+			const containers = Array.from(doc.querySelectorAll<HTMLElement>('.tlb-table-container'));
+			if (containers.length === 0) {
+				return;
+			}
+			containers.forEach((el) => {
+				const { isDarkMode } = syncGridContainerTheme(el, { ownerDocument: doc });
 				applyStripeStyles({
 					container: el,
 					ownerDocument: doc,
@@ -514,6 +564,7 @@ export default class TileLineBasePlugin extends Plugin {
 					borderContrast: border,
 					isDarkMode
 				});
+				syncGridPopupRoot(el, { ownerDocument: doc, isDarkMode });
 			});
 		});
 	}
@@ -521,6 +572,7 @@ export default class TileLineBasePlugin extends Plugin {
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
 		const context = this.windowContextManager.getWindowContext(leafWindow) ?? this.mainContext;
 		await this.viewCoordinator.toggleTableView(leaf, context ?? null);
+		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 	}
 
 	async openFileInTableView(file: TFile): Promise<void> {
@@ -578,6 +630,35 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 		const config = setGlobalLogLevel(level);
 		this.settings.logging = config;
+	}
+
+	getNavigatorCompatibilityEnabled(): boolean {
+		return this.settingsService.getNavigatorCompatibilityEnabled();
+	}
+
+	async setNavigatorCompatibilityEnabled(enabled: boolean): Promise<void> {
+		const changed = await this.settingsService.setNavigatorCompatibilityEnabled(enabled);
+		if (changed) {
+			this.settings = this.settingsService.getSettings();
+		}
+	}
+
+	private maybeNotifyNavigatorCompatibility(): void {
+		if (this.navigatorCompatModalShown || this.settingsService.getNavigatorCompatNoticeShown()) {
+			return;
+		}
+		const pluginManager = (this.app as any)?.plugins;
+		if (!pluginManager?.enabledPlugins?.has?.('notebook-navigator')) {
+			return;
+		}
+		if (!this.getNavigatorCompatibilityEnabled()) {
+			return;
+		}
+		this.navigatorCompatModalShown = true;
+		const modal = new NavigatorCompatModal(this.app, async () => {
+			await this.settingsService.setNavigatorCompatNoticeShown(true);
+		});
+		modal.open();
 	}
 
 	getLocaleOverride(): LocaleCode | null {
@@ -639,7 +720,7 @@ export default class TileLineBasePlugin extends Plugin {
 		}
 		const handler = (pluginId: string) => {
 			if (pluginId === 'notebook-navigator') {
-				this.navigatorCompatibilityPatcher?.enable();
+				this.maybeNotifyNavigatorCompatibility();
 			}
 		};
 		try {
@@ -648,7 +729,7 @@ export default class TileLineBasePlugin extends Plugin {
 				try {
 					pluginManager.off?.('load', handler);
 				} catch (error) {
-					logger.debug('navigator-compat: failed to remove plugin-load listener', error);
+					logger.debug('navigator-compat: failed to remove plugin-load listener', { error });
 				}
 			});
 		} catch (error) {
@@ -718,5 +799,39 @@ export default class TileLineBasePlugin extends Plugin {
 			candidates: result.candidates
 		});
 		return result.locale;
+	}
+}
+
+class NavigatorCompatModal extends Modal {
+	private readonly onResult: () => Promise<void> | void;
+
+	constructor(app: Plugin['app'], onResult: () => Promise<void> | void) {
+		super(app);
+		this.onResult = onResult;
+	}
+
+	onOpen(): void {
+		const { contentEl, titleEl } = this;
+		contentEl.empty();
+		titleEl.setText(t('settings.navigatorCompatModalTitle'));
+
+		const header = contentEl.createEl('h2', { text: t('settings.navigatorCompatModalHeading') });
+		header.addClass('tlb-compat-title');
+
+		const body = contentEl.createDiv({ cls: 'tlb-compat-body' });
+		body.createEl('p', {
+			text: t('settings.navigatorCompatModalBody1')
+		});
+		body.createEl('p', {
+			text: t('settings.navigatorCompatModalBody2')
+		});
+		body.createEl('p', {
+			text: t('settings.navigatorCompatModalBody3')
+		}).addClass('mod-muted');
+	}
+
+	onClose(): void {
+		void this.onResult();
+		this.contentEl.empty();
 	}
 }

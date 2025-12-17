@@ -4,7 +4,8 @@
     "mode": {
       "table": "Tabela",
       "kanban": "Kanban",
-      "slide": "Slajd"
+      "slide": "Slajd",
+      "gallery": "Galeria"
     }
   },
   "slideView": {
@@ -97,6 +98,43 @@
     "openMarkdownView": "Wróć do edytora Markdown",
     "switchViewMenu": "Zmień widok (obecny: {{mode}})"
   },
+  "galleryView": {
+    "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
+    "processingHint": "Przygotowywanie kart galerii...",
+    "actions": {
+      "openFromMarkdown": "Otwórz widok galerii TileLineBase",
+      "switchToGallery": "Przełącz na widok galerii"
+    },
+    "toolbar": {
+      "title": "Galeria",
+      "addCardButtonAriaLabel": "Dodaj kartę do galerii",
+      "settingsMenuAriaLabel": "Ustawienia galerii",
+      "editTemplate": "Edytuj szablon galerii",
+      "addGalleryButtonAriaLabel": "Dodaj widok galerii",
+      "unnamedGalleryLabel": "Galeria bez tytułu",
+      "editGalleryLabel": "Edytuj galerię",
+      "duplicateGalleryLabel": "Duplikuj galerię",
+      "deleteGalleryLabel": "Usuń galerię",
+      "cannotDeleteLastGallery": "Zachowaj co najmniej jeden widok galerii."
+    },
+    "templateModal": {
+      "title": "Szablon galerii",
+      "cardSizeLabel": "Ustawienia karty",
+      "widthLabel": "Szerokość (px)",
+      "heightLabel": "Wysokość (px)",
+      "groupFieldTitle": "Pole grupowania",
+      "groupFieldLabel": "Użyj pola",
+      "groupFieldNone": "Brak",
+      "filterSectionTitle": "Filtry i sortowanie",
+      "filterSectionActive": "Aktywny filtr: {{name}}",
+      "filterSectionEmpty": "Brak widoku filtrów. Utwórz go, aby zawęzić tę galerię.",
+      "filterPickerLabel": "Widok filtrów",
+      "filterAllLabel": "Wszystkie wpisy",
+      "newFilterButton": "Nowy widok filtrów",
+      "editFilterButton": "Edytuj filtr/sortowanie",
+      "manageGroupsButton": "Zarządzaj grupami filtrów"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "Widok kanban wymaga prawidłowego schematu tabeli. Wczytaj notatkę ponownie i spróbuj jeszcze raz.",
     "missingLaneField": "Widok kanban potrzebuje kolumny \"{{field}}\". Dodaj ją w widoku tabeli albo wróć.",
@@ -122,6 +160,9 @@
       "switchToKanban": "Przełącz na widok kanban",
       "switchToTable": "Przełącz na widok tabeli"
     },
+    "laneActions": {
+      "addCard": "Dodaj kartę do \"{{lane}}\""
+    },
     "fieldModal": {
       "title": "Wybierz kolumnę kanban",
       "description": "Wskaż kolumnę, której wartości utworzą kolumny w tablicy kanban.",
@@ -144,6 +185,20 @@
       "successNotice": "Utworzono kolumnę \"{{name}}\".",
       "statusFieldBlocked": "Kolumny statusu już obsługują pole Status. Zmień opcje statusu w tabeli.",
       "missingLaneField": "Wybierz kolumnę kanban przed utworzeniem nowej kolumny."
+    },
+    "cardCreateModal": {
+      "title": "Nowy wpis",
+      "description": "Wypełnij pola poniżej, aby utworzyć wiersz bezpośrednio w tej kolumnie.",
+      "laneFieldLabel": "Wartość kolumny ({{field}})",
+      "laneFieldDesc": "Karty utworzone tutaj domyślnie używają \"{{lane}}\" jako wartości kolumny.",
+      "submitLabel": "Utwórz wpis",
+      "cancelLabel": "Anuluj",
+      "laneRequiredError": "Wpisz wartość kolumny przed utworzeniem wpisu."
+    },
+    "cardEditModal": {
+      "title": "Edytuj wpis",
+      "submitLabel": "Zapisz",
+      "deleteLabel": "Usuń wpis"
     },
     "content": {
       "sectionTitle": "Zawartość karty",
@@ -209,7 +264,8 @@
     "importCsvAsTable": "Zaimportuj CSV jako nową tabelę",
     "toggleTableView": "Przełącz widok tabeli",
     "openKanbanView": "Otwórz widok kanban TileLineBase",
-    "openSlideView": "Otwórz widok slajdów TileLineBase"
+    "openSlideView": "Otwórz widok slajdów TileLineBase",
+    "openGalleryView": "Otwórz widok galerii TileLineBase"
   },
   "csv": {
     "errorNoFile": "Zapisz notatkę przed eksportem; bieżącego pliku nie znaleziono.",
@@ -260,6 +316,20 @@
     "loggingLevelOptionInfo": "Informacje, ostrzeżenia i błędy",
     "loggingLevelOptionDebug": "Debugowanie, informacje, ostrzeżenia i błędy",
     "loggingLevelOptionTrace": "Śledzenie (najbardziej szczegółowe)",
+    "compatibilityHeading": "Zgodność",
+    "navigatorCompatLabel": "Zgodność z Notebook Navigator",
+    "navigatorCompatDesc": "Gdy włączone i Notebook Navigator jest zainstalowany, blokuje jego zbędne ponowne otwieranie bieżącego widoku TileLineBase, aby zapobiec migotaniu. Domyślnie wyłączone ze względów zgodności.",
+    "navigatorCompatModalTitle": "Komunikat zgodności TileLineBase",
+    "navigatorCompatModalHeading": "Włączono zgodność z Notebook Navigator",
+    "navigatorCompatModalBody1": "Wykryto Notebook Navigator. Jego mechanizm odświeżania powoduje silne migotanie i przełączanie widoków w widokach TileLineBase. Aby zapewnić normalne działanie, TileLineBase automatycznie włączył izolację na poziomie instancji.",
+    "navigatorCompatModalBody2": "Ta ochrona dotyczy tylko widoków TileLineBase i nie wpływa na inne scenariusze.",
+    "navigatorCompatModalBody3": "Możesz to wyłączyć w dowolnym momencie w ustawieniach TileLineBase w sekcji Zgodność.",
+    "navigatorPinnedWarning": "Notebook Navigator jest włączony. Aby uniknąć konfliktów, nie przypinaj widoków TileLineBase w Obsidian.",
+    "navigatorPinnedModalTitle": "Komunikat zgodności TileLineBase",
+    "navigatorPinnedModalHeading": "Konflikt przypiętego widoku z Notebook Navigator",
+    "navigatorPinnedModalBody1": "Ze względu na mechanizmy odświeżania w Notebook Navigator i Obsidian, przypięcie widoku TileLineBase powoduje nieskończoną pętlę przeładowania. Skutkuje to migotaniem ekranu, przeskakiwaniem fokusu i niezamierzonym otwieraniem nowych kart.",
+    "navigatorPinnedModalBody2": "Obecnie współpracujemy z autorem Notebook Navigator, aby to naprawić.",
+    "navigatorPinnedModalAction": "Na razie odepnij tę kartę, aby przywrócić normalne działanie. Unikaj przypinania widoków TileLineBase, dopóki problem nie zostanie rozwiązany.",
     "backupHeading": "Kopie zapasowe",
     "backupEnableLabel": "Włącz automatyczne kopie zapasowe",
     "backupEnableDesc": "Twórz migawkę przed zapisaniem Markdown, aby móc cofnąć przypadkowe zmiany.",
@@ -539,7 +609,27 @@
     "defaultFileName": "Przekonwertowana notatka",
     "successNotice": "Przekonwertowano do {{fileName}}",
     "failureNotice": "Konwersja nie powiodła się. Spróbuj ponownie.",
-    "previewRenameHint": "Kliknij nagłówki tabeli, aby zmienić nazwy kolumn."
+    "previewRenameHint": "Kliknij nagłówki tabeli, aby zmienić nazwy kolumn.",
+    "malformedTitle": "Wykryto nieprawidłowe sekcje H2",
+    "malformedDescription": "W niektórych sekcjach H2 brakuje par klucz/wartość. Edytuj je poniżej lub zignoruj, aby kontynuować.",
+    "malformedSummary": "Znaleziono {{total}} sekcji H2; {{invalid}} wymaga obsługi.",
+    "malformedSectionLabel": "Sekcja zaczynająca się w linii {{line}}",
+    "malformedReasonMissingColon": "Nagłówek musi zawierać dwukropek oddzielający klucz i wartość.",
+    "malformedReasonInvalidField": "Nagłówek musi zawierać zarówno klucz, jak i wartość.",
+    "malformedApply": "Zapisz i odśwież",
+    "malformedIgnore": "Zignoruj raz",
+    "malformedEditWarning": "Zmiany tutaj zastąpią oryginalny tekst tych sekcji.",
+    "malformedIgnoreWarning": "Zignoruj raz usunie te nieprawidłowe sekcje i przejdzie do widoku tabeli.",
+    "malformedSaveSuccess": "Zaktualizowano nieprawidłowe sekcje H2.",
+    "malformedSaveError": "Nie udało się zaktualizować nieprawidłowych sekcji H2.",
+    "unstructuredTitle": "Treść wymaga weryfikacji przed konwersją",
+    "unstructuredBody": "Otwarcie widoku TLB uruchomiło Asystenta konwersji. Wykryto {{sectionCount}} sekcji H2 możliwych do konwersji; część treści nadal wymaga uwagi przed konwersją.",
+    "unstructuredInstruction": "Wybierz sposób postępowania: Edytuj i konwertuj / Usuń i konwertuj / Anuluj.",
+    "unstructuredSectionLabel": "Nieuporządkowany tekst zaczynający się w linii {{line}}",
+    "unstructuredHint": "Poniższa treść zostanie usunięta, chyba że ją edytujesz, aby spełniała wymagany format.",
+    "unstructuredEditConvert": "Edytuj i konwertuj",
+    "unstructuredDeleteConvert": "Usuń i konwertuj",
+    "unstructuredCancel": "Anuluj"
   },
   "tableViewSetup": {
     "constructorStart": "=== Początek konstruktora TableView ===",

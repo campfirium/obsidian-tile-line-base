@@ -8,11 +8,13 @@ import type { WindowContext, WindowContextManager } from './WindowContextManager
 
 const logger = getLogger('plugin:view-switch');
 
+type TableViewMode = 'table' | 'kanban' | 'slide' | 'gallery';
+
 export interface ViewOpenContext {
 	leaf?: WorkspaceLeaf | null;
 	preferredWindow?: Window | null;
 	workspace?: Workspace | null;
-	mode?: 'table' | 'kanban' | 'slide';
+	mode?: TableViewMode;
 	trigger?: 'manual' | 'auto';
 }
 
@@ -126,23 +128,23 @@ export class ViewSwitchCoordinator {
 		const requestedLeaf = options?.leaf ?? null;
 		const preferredWindow = options?.preferredWindow ?? this.windowContextManager.getLeafWindow(requestedLeaf);
 		const workspace = options?.workspace ?? this.windowContextManager.getWorkspaceForLeaf(requestedLeaf) ?? this.app.workspace;
-		const requestedMode = options?.mode;
-		const preferenceToSet: 'markdown' | 'table' | 'kanban' | 'slide' = requestedMode ?? 'table';
+		const targetMode = this.resolveTargetViewMode(file.path, options?.mode ?? null);
+		const persistViewPreference = () => this.settingsService.setFileViewPreference(file.path, targetMode);
 
 		if (requestedLeaf?.view instanceof TableView && requestedLeaf.view.file?.path === file.path) {
 			logger.debug('openTableView reuse requested table leaf', this.describeLeaf(requestedLeaf));
-			await this.settingsService.setFileViewPreference(file.path, preferenceToSet);
+			await persistViewPreference();
 			await workspace.revealLeaf(requestedLeaf);
-			await this.applyViewMode(requestedLeaf, requestedMode);
+			await this.applyViewMode(requestedLeaf, targetMode);
 			return;
 		}
 
 		const existingTableLeaf = this.findLeafForFile(file, TABLE_VIEW_TYPE, preferredWindow);
 		if (existingTableLeaf) {
 			logger.debug('openTableView reuse existing table leaf', this.describeLeaf(existingTableLeaf));
-			await this.settingsService.setFileViewPreference(file.path, preferenceToSet);
+			await persistViewPreference();
 			await workspace.revealLeaf(existingTableLeaf);
-			await this.applyViewMode(existingTableLeaf, requestedMode);
+			await this.applyViewMode(existingTableLeaf, targetMode);
 			return;
 		}
 
@@ -185,6 +187,8 @@ export class ViewSwitchCoordinator {
 			return;
 		}
 
+		await persistViewPreference();
+
 		logger.debug('openTableView preparing leaf.setViewState', {
 			leaf: this.describeLeaf(leaf),
 			viewType: TABLE_VIEW_TYPE,
@@ -200,8 +204,7 @@ export class ViewSwitchCoordinator {
 				}
 			});
 			logger.debug('openTableView setViewState completed', this.describeLeaf(leaf));
-			await this.settingsService.setFileViewPreference(file.path, preferenceToSet);
-			await this.applyViewMode(leaf, requestedMode);
+			await this.applyViewMode(leaf, targetMode);
 		} catch (error) {
 			logger.error('openTableView setViewState failed', error);
 			throw error;
@@ -211,7 +214,7 @@ export class ViewSwitchCoordinator {
 		logger.debug('openTableView finish');
 	}
 
-	private async applyViewMode(leaf: WorkspaceLeaf | null, mode?: 'table' | 'kanban' | 'slide'): Promise<void> {
+	private async applyViewMode(leaf: WorkspaceLeaf | null, mode?: TableViewMode | null): Promise<void> {
 		if (!leaf || !mode) {
 			return;
 		}
@@ -219,6 +222,22 @@ export class ViewSwitchCoordinator {
 		if (view instanceof TableView) {
 			await view.setActiveViewMode(mode);
 		}
+	}
+
+	private resolveTargetViewMode(filePath: string, requestedMode: TableViewMode | null): TableViewMode {
+		const normalizedRequest = this.normalizeViewMode(requestedMode);
+		if (normalizedRequest) {
+			return normalizedRequest;
+		}
+		const storedPreference = this.normalizeViewMode(this.settingsService.getFileViewPreference(filePath));
+		return storedPreference ?? 'table';
+	}
+
+	private normalizeViewMode(mode: string | null | undefined): TableViewMode | null {
+		if (mode === 'table' || mode === 'kanban' || mode === 'slide' || mode === 'gallery') {
+			return mode;
+		}
+		return null;
 	}
 
 	private recordAutoSwitchAttempt(filePath: string): boolean {

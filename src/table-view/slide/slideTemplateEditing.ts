@@ -25,7 +25,7 @@ export function renderSlideEditForm(options: {
 	options.state.template = { title: [], body: [] };
 	const editingTemplate = options.state.template;
 	const titleLine = options.container.createDiv({
-		cls: 'tlb-slide-full__title tlb-slide-full__editable-title'
+		cls: 'tlb-slide-full__title tlb-slide-full__editable-title' + (options.container.hasClass('tlb-gallery-edit') ? ' tlb-gallery-edit__title' : '')
 	});
 	titleLine.style.lineHeight = `${options.page.titleLayout.lineHeight}`;
 	titleLine.style.fontSize = `${options.page.titleLayout.fontSize}rem`;
@@ -42,8 +42,8 @@ export function renderSlideEditForm(options: {
 		editingTemplate.title
 	);
 
-	const bodyContainer = options.container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' });
-	const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' });
+	const bodyContainer = options.container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' + (options.container.hasClass('tlb-gallery-edit') ? ' tlb-gallery-edit__body' : '') });
+	const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' + (options.container.hasClass('tlb-gallery-edit') ? ' tlb-gallery-edit__block' : '') });
 	bodyBlock.style.lineHeight = `${options.page.textLayout.lineHeight}`;
 	bodyBlock.style.fontSize = `${options.page.textLayout.fontSize}rem`;
 	bodyBlock.style.fontWeight = String(options.page.textLayout.fontWeight);

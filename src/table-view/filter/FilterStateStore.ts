@@ -8,12 +8,16 @@ import type {
 	DefaultFilterViewPreferences
 } from '../../types/filterView';
 
+type FilterScope = 'table' | 'gallery';
+
 export class FilterStateStore {
 	private state: FileFilterViewState = { views: [], activeViewId: null, metadata: {} };
 	private filePath: string | null;
+	private readonly scope: FilterScope;
 
-	constructor(filePath: string | null) {
+	constructor(filePath: string | null, scope: FilterScope = 'table') {
 		this.filePath = filePath;
+		this.scope = scope;
 	}
 
 	setFilePath(filePath: string | null): void {
@@ -40,35 +44,57 @@ export class FilterStateStore {
 		};
 	}
 
-	loadFromSettings(): FileFilterViewState {
+	loadFromSettings = (): FileFilterViewState => {
 		const plugin = getPluginContext();
-		if (!plugin || !this.filePath || typeof plugin.getFilterViewsForFile !== 'function') {
+		if (!plugin || !this.filePath) {
 			this.resetState();
 			return this.state;
 		}
-		const stored = plugin.getFilterViewsForFile(this.filePath);
-		const availableIds = new Set(stored.views.map((view) => view.id));
-		const activeId = stored.activeViewId && availableIds.has(stored.activeViewId)
-			? stored.activeViewId
+		const stored = this.scope === 'gallery'
+			? (typeof (plugin as any).getGalleryFilterViewsForFile === 'function'
+				? (plugin as any).getGalleryFilterViewsForFile(this.filePath)
+				: null)
+			: (typeof plugin.getFilterViewsForFile === 'function'
+				? plugin.getFilterViewsForFile(this.filePath)
+				: null);
+		if (!stored) {
+			this.resetState();
+			return this.state;
+		}
+		const storedState = stored as FileFilterViewState;
+		const availableIds = new Set(storedState.views.map((view) => view.id));
+		const activeId = storedState.activeViewId && availableIds.has(storedState.activeViewId)
+			? storedState.activeViewId
 			: null;
-	this.state = {
-		activeViewId: activeId,
-		views: stored.views.map((view) => this.cloneFilterViewDefinition(view)),
-		metadata: this.cloneMetadata(stored.metadata)
-	};
+		this.state = {
+			activeViewId: activeId,
+			views: storedState.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneMetadata(storedState.metadata)
+		};
 		return this.state;
-	}
+	};
 
-	async persist(): Promise<void> {
+	persist = async (): Promise<void> => {
 		if (!this.filePath) {
 			return;
 		}
 		const plugin = getPluginContext();
-		if (!plugin || typeof plugin.saveFilterViewsForFile !== 'function') {
+		if (!plugin) {
+			return;
+		}
+		if (this.scope === 'gallery') {
+			const saver = (plugin as any).saveGalleryFilterViewsForFile;
+			if (typeof saver !== 'function') {
+				return;
+			}
+			await saver.call(plugin, this.filePath, this.state);
+			return;
+		}
+		if (typeof plugin.saveFilterViewsForFile !== 'function') {
 			return;
 		}
 		await plugin.saveFilterViewsForFile(this.filePath, this.state);
-	}
+	};
 
 	cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
 		if (!state) {

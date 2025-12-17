@@ -1,34 +1,65 @@
 /* eslint-disable max-lines */
 import type { App } from 'obsidian';
 import { Menu, Modal, Notice, parseYaml, setIcon } from 'obsidian';
-import { t } from '../../i18n';
+import { t, type TranslationKey } from '../../i18n';
 import {
 	getDefaultBodyLayout,
 	getDefaultTitleLayout,
+	normalizeSlideViewConfig,
 	sanitizeSlideTemplateConfig,
 	type SlideLayoutConfig,
 	type SlideTemplateConfig
 } from '../../types/slide';
 import { getPluginContext } from '../../pluginContext';
+import type { ColumnConfig } from '../MarkdownBlockParser';
+import type { RowData } from '../../grid/GridAdapter';
 import { buildBuiltInSlideTemplate, mergeSlideTemplateFields, RESERVED_SLIDE_FIELDS } from './slideDefaults';
 import { toHexColor } from './SlideColorUtils';
 
 interface SlideTemplateModalOptions {
 	app: App;
 	fields: string[];
+	fieldConfigs?: ColumnConfig[] | null;
+	sampleRows?: RowData[];
 	initial: SlideTemplateConfig;
 	onSave: (next: SlideTemplateConfig) => void;
-	onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
+	renderIntroSection?: (container: HTMLElement) => void;
+	onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
+	allowedModes?: Array<'single' | 'split'>;
+	allowedSingleBranches?: Array<'withoutImage' | 'withImage'>;
+	allowedSplitBranches?: Array<'withoutImage' | 'withImage'>;
+	enableImageTypography?: boolean;
+	titleKey?: TranslationKey;
+	cardSize?: { width: number; height: number };
+	onCardSizeChange?: (size: { width: number; height: number }) => void;
+	getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
+	buildBuiltInTemplate?: (fields: string[], fieldConfigs?: ColumnConfig[] | null, sampleRows?: RowData[]) => SlideTemplateConfig;
+	renderExtraSections?: (container: HTMLElement) => void;
 }
 
+
 const clampPct = (value: number): number => Math.min(100, Math.max(0, value));
+const DEFAULT_CARD_WIDTH = 320;
+const DEFAULT_CARD_HEIGHT = 320;
 
 export class SlideTemplateModal extends Modal {
 	private static lastSelectedSingleBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private static lastSelectedSplitBranch: 'withoutImage' | 'withImage' = 'withoutImage';
 	private readonly fields: string[];
+	private readonly fieldConfigs: ColumnConfig[] | null;
+	private readonly sampleRows: RowData[];
 	private readonly onSave: (next: SlideTemplateConfig) => void;
-	private readonly onSaveDefault?: (next: SlideTemplateConfig) => Promise<void> | void;
+	private readonly renderIntroSection?: (container: HTMLElement) => void;
+	private readonly onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
+	private readonly getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
+	private readonly buildBuiltInTemplate: (fields: string[], fieldConfigs?: ColumnConfig[] | null, sampleRows?: RowData[]) => SlideTemplateConfig;
+	private readonly allowedModes: Set<'single' | 'split'> | null;
+	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
+	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
+	private readonly imageTypographyEnabled: boolean;
+	private readonly titleKey?: TranslationKey;
+	private readonly onCardSizeChange?: (size: { width: number; height: number }) => void;
+	private readonly renderExtraSections?: (container: HTMLElement) => void;
 	private template: SlideTemplateConfig;
 	private defaultTextColor = '';
 	private defaultBackgroundColor = '';
@@ -38,17 +69,50 @@ export class SlideTemplateModal extends Modal {
 	private lastFocusedInput: HTMLTextAreaElement | null = null;
 	private singleBranch: 'withoutImage' | 'withImage';
 	private splitBranch: 'withoutImage' | 'withImage';
+	private cardWidth = DEFAULT_CARD_WIDTH;
+	private cardHeight = DEFAULT_CARD_HEIGHT;
 	private containerNode: HTMLElement | null = null;
 
 	constructor(opts: SlideTemplateModalOptions) {
 		super(opts.app);
 		this.modalEl.addClass('tlb-slide-template-modal');
 		this.fields = opts.fields.filter((field) => field && !RESERVED_SLIDE_FIELDS.has(field));
+		this.fieldConfigs = opts.fieldConfigs?.length ? opts.fieldConfigs : null;
+		this.sampleRows = Array.isArray(opts.sampleRows) ? opts.sampleRows : [];
 		this.onSave = opts.onSave;
+		this.renderIntroSection = opts.renderIntroSection;
 		this.onSaveDefault = opts.onSaveDefault;
+		this.getGlobalDefault =
+			opts.getGlobalDefault ??
+			(() => {
+				const config = getPluginContext()?.getDefaultSlideConfig() ?? null;
+				if (!config) {
+					return null;
+				}
+				const normalized = normalizeSlideViewConfig(config);
+				return { template: normalized.template };
+			});
+		this.buildBuiltInTemplate =
+			opts.buildBuiltInTemplate ??
+			((templateFields, templateConfigs, templateRows) =>
+				buildBuiltInSlideTemplate(templateFields, templateConfigs, templateRows));
+		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
+		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
+		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
+		this.imageTypographyEnabled = opts.enableImageTypography !== false;
+		this.titleKey = opts.titleKey;
+		this.onCardSizeChange = opts.onCardSizeChange;
+		this.renderExtraSections = opts.renderExtraSections;
+		if (opts.cardSize) {
+			const width = Number(opts.cardSize.width);
+			const height = Number(opts.cardSize.height);
+			this.cardWidth = Number.isFinite(width) && width > 40 ? width : DEFAULT_CARD_WIDTH;
+			this.cardHeight = Number.isFinite(height) && height > 40 ? height : DEFAULT_CARD_HEIGHT;
+		}
 		this.template = JSON.parse(JSON.stringify(opts.initial)) as SlideTemplateConfig;
-		this.singleBranch = this.resolveInitialBranch('single');
-		this.splitBranch = this.resolveInitialBranch('split');
+		this.template.mode = this.clampMode(this.template.mode);
+		this.singleBranch = this.clampBranch('single', this.resolveInitialBranch('single'));
+		this.splitBranch = this.clampBranch('split', this.resolveInitialBranch('split'));
 	}
 
 	onOpen(): void {
@@ -73,6 +137,52 @@ export class SlideTemplateModal extends Modal {
 	}
 
 
+	private getAllowedModes(): Array<'single' | 'split'> {
+		if (this.allowedModes && this.allowedModes.size > 0) {
+			return Array.from(this.allowedModes);
+		}
+		return ['single', 'split'];
+	}
+
+	private isModeAllowed(mode: 'single' | 'split'): boolean {
+		return !this.allowedModes || this.allowedModes.has(mode);
+	}
+
+	private getAllowedBranches(mode: 'single' | 'split'): Array<'withoutImage' | 'withImage'> {
+		if (mode === 'single' && this.allowedSingleBranches && this.allowedSingleBranches.size > 0) {
+			return Array.from(this.allowedSingleBranches);
+		}
+		if (mode === 'split' && this.allowedSplitBranches && this.allowedSplitBranches.size > 0) {
+			return Array.from(this.allowedSplitBranches);
+		}
+		return ['withoutImage', 'withImage'];
+	}
+
+	private clampMode(mode: 'single' | 'split'): 'single' | 'split' {
+		if (this.isModeAllowed(mode)) {
+			return mode;
+		}
+		const allowed = this.getAllowedModes();
+		return allowed[0] ?? 'single';
+	}
+
+	private clampBranch(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): 'withoutImage' | 'withImage' {
+		const allowed = this.getAllowedBranches(mode);
+		if (allowed.includes(branch)) {
+			return branch;
+		}
+		return allowed[0] ?? 'withImage';
+	}
+
+	private enforceConstraints(): void {
+		this.template.mode = this.clampMode(this.template.mode);
+		if (this.template.mode === 'single') {
+			this.singleBranch = this.clampBranch('single', this.singleBranch);
+		} else {
+			this.splitBranch = this.clampBranch('split', this.splitBranch);
+		}
+	}
+
 	private renderModalContent(): void {
 		this.contentEl.empty();
 		this.titleInputEl = null;
@@ -81,7 +191,12 @@ export class SlideTemplateModal extends Modal {
 		this.lastFocusedInput = null;
 		this.contentEl.addClass('tlb-slide-template');
 		this.modalEl.addClass('tlb-slide-template-modal');
-		this.titleEl.setText(t('slideView.templateModal.title'));
+		const titleKey = this.titleKey ?? 'slideView.templateModal.title';
+		this.titleEl.setText(t(titleKey as TranslationKey));
+		this.enforceConstraints();
+		if (this.renderIntroSection) {
+			this.renderIntroSection(this.contentEl);
+		}
 
 		const toolbar = this.contentEl.createDiv({ cls: 'tlb-slide-template__header' });
 		const toolbarLeft = toolbar.createDiv({ cls: 'tlb-slide-template__toolbar-left' });
@@ -92,7 +207,10 @@ export class SlideTemplateModal extends Modal {
 		this.resolveThemeDefaults();
 		this.renderSingleSection(this.template.mode === 'single');
 		this.renderSplitSection(this.template.mode === 'split');
-		this.renderColorSection(this.contentEl);
+		this.renderCardSettingsSection(this.contentEl);
+		if (this.renderExtraSections) {
+			this.renderExtraSections(this.contentEl);
+		}
 		this.renderActions();
 	}
 
@@ -104,17 +222,25 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private renderSlideModeSwitch(container: HTMLElement): void {
+		const allowedModes = this.getAllowedModes();
+		if (allowedModes.length <= 1) {
+			return;
+		}
 		const switchRow = container.createDiv({ cls: 'tlb-slide-template__mode-switch' });
-		this.renderModeButton(
-			switchRow,
-			'single',
-			t('slideView.templateModal.modeSingleLabel')
-		);
-		this.renderModeButton(
-			switchRow,
-			'split',
-			t('slideView.templateModal.modeSplitLabel')
-		);
+		if (allowedModes.includes('single')) {
+			this.renderModeButton(
+				switchRow,
+				'single',
+				t('slideView.templateModal.modeSingleLabel')
+			);
+		}
+		if (allowedModes.includes('split')) {
+			this.renderModeButton(
+				switchRow,
+				'split',
+				t('slideView.templateModal.modeSplitLabel')
+			);
+		}
 	}
 
 	private renderModeButton(container: HTMLElement, mode: 'single' | 'split', label: string): void {
@@ -190,6 +316,9 @@ export class SlideTemplateModal extends Modal {
 			return false;
 		}
 		const raw = payload as Record<string, unknown>;
+		if (raw.template && raw.template !== payload && this.isTemplatePayload(raw.template)) {
+			return true;
+		}
 		return Boolean(
 			raw.single ||
 				raw.split ||
@@ -201,6 +330,53 @@ export class SlideTemplateModal extends Modal {
 		);
 	}
 
+	private normalizeCardSizeValue(value: unknown): number | null {
+		const numeric = typeof value === 'number' ? value : Number(value);
+		return Number.isFinite(numeric) && numeric > 40 && numeric < 2000 ? numeric : null;
+	}
+
+	private parsePresetPayload(payload: unknown): { template: SlideTemplateConfig; cardWidth?: number; cardHeight?: number } | null {
+		if (!payload || typeof payload !== 'object') {
+			return null;
+		}
+		const raw = payload as Record<string, unknown>;
+		if (raw.template && this.isTemplatePayload(raw.template)) {
+			const width = this.normalizeCardSizeValue((raw as { cardWidth?: unknown }).cardWidth);
+			const height = this.normalizeCardSizeValue((raw as { cardHeight?: unknown }).cardHeight);
+			return {
+				template: sanitizeSlideTemplateConfig(raw.template),
+				cardWidth: width ?? undefined,
+				cardHeight: height ?? undefined
+			};
+		}
+		if (this.isTemplatePayload(payload)) {
+			return { template: sanitizeSlideTemplateConfig(payload) };
+		}
+		return null;
+	}
+
+	private applyCardSizePayload(payload: { cardWidth?: number | null; cardHeight?: number | null } | null | undefined): void {
+		if (!payload) {
+			return;
+		}
+		const width = this.normalizeCardSizeValue(payload.cardWidth);
+		const height = this.normalizeCardSizeValue(payload.cardHeight);
+		if (width == null || height == null) {
+			return;
+		}
+		this.cardWidth = width;
+		this.cardHeight = height;
+		if (this.onCardSizeChange) {
+			this.onCardSizeChange({ width, height });
+		}
+	}
+
+	private getCardSizePayload(): { width: number; height: number } | null {
+		const width = this.normalizeCardSizeValue(this.cardWidth);
+		const height = this.normalizeCardSizeValue(this.cardHeight);
+		return width != null && height != null ? { width, height } : null;
+	}
+
 	private async copyPresetToClipboard(): Promise<void> {
 		const clipboard = this.getClipboard();
 		if (!clipboard?.writeText) {
@@ -208,8 +384,17 @@ export class SlideTemplateModal extends Modal {
 			return;
 		}
 		try {
-			const payload = JSON.stringify(sanitizeSlideTemplateConfig(this.template), null, 2);
-			await clipboard.writeText(payload);
+			const template = sanitizeSlideTemplateConfig(this.template);
+			const cardSize = this.getCardSizePayload();
+			const payload = this.onCardSizeChange
+				? {
+					template,
+					cardWidth: cardSize?.width ?? this.cardWidth,
+					cardHeight: cardSize?.height ?? this.cardHeight
+				}
+				: template;
+			const serialized = JSON.stringify(payload, null, 2);
+			await clipboard.writeText(serialized);
 			new Notice(t('slideView.templateModal.copyPresetSuccess'));
 		} catch (error) {
 			console.error('[SlideTemplateModal] Failed to copy preset', error);
@@ -243,15 +428,13 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.pastePresetInvalid'));
 			return;
 		}
-		if (!this.isTemplatePayload(parsed)) {
+		const preset = this.parsePresetPayload(parsed);
+		if (!preset) {
 			new Notice(t('slideView.templateModal.pastePresetInvalid'));
 			return;
 		}
 		try {
-			this.template = sanitizeSlideTemplateConfig(parsed);
-			this.setBranchSelection('single', this.resolveInitialBranch('single'));
-			this.setBranchSelection('split', this.resolveInitialBranch('split'));
-			this.renderModalContent();
+			this.applyPresetStyles(preset.template, preset);
 			new Notice(t('slideView.templateModal.pastePresetSuccess'));
 		} catch (error) {
 			console.error('[SlideTemplateModal] Failed to apply preset from clipboard', error);
@@ -265,7 +448,7 @@ export class SlideTemplateModal extends Modal {
 		}
 		try {
 			const nextTemplate = sanitizeSlideTemplateConfig(this.template);
-			const maybePromise = this.onSaveDefault(nextTemplate);
+			const maybePromise = this.onSaveDefault(nextTemplate, this.getCardSizePayload());
 			if (maybePromise && typeof (maybePromise as Promise<void>).catch === 'function') {
 				void maybePromise.catch((error: unknown) => {
 					console.error('[SlideTemplateModal] Failed to save global default', error);
@@ -278,28 +461,33 @@ export class SlideTemplateModal extends Modal {
 		}
 	}
 
-	private applyPresetStyles(preset: SlideTemplateConfig): void {
+	private applyPresetStyles(preset: SlideTemplateConfig, cardSize?: { cardWidth?: number | null; cardHeight?: number | null }): void {
 		const sanitizedPreset = sanitizeSlideTemplateConfig(preset);
 		this.template = sanitizedPreset;
+		if (cardSize) {
+			this.applyCardSizePayload(cardSize);
+		}
 		this.setBranchSelection('single', this.resolveInitialBranch('single'));
 		this.setBranchSelection('split', this.resolveInitialBranch('split'));
 		this.renderModalContent();
 	}
 
 	private applyGlobalDefault(): void {
-		const plugin = getPluginContext();
-		const globalConfig = plugin?.getDefaultSlideConfig();
+		const globalConfig = this.getGlobalDefault?.() ?? null;
 		if (!globalConfig || !globalConfig.template) {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;
 		}
-		const preset = mergeSlideTemplateFields(globalConfig.template, buildBuiltInSlideTemplate(this.fields));
-		this.applyPresetStyles(preset);
+		const preset = mergeSlideTemplateFields(
+			globalConfig.template,
+			this.buildBuiltInTemplate(this.fields, this.fieldConfigs, this.sampleRows)
+		);
+		this.applyPresetStyles(preset, globalConfig);
 	}
 
 	private applyBuiltInDefault(): void {
-		const preset = buildBuiltInSlideTemplate(this.fields);
-		this.applyPresetStyles(preset);
+		const preset = this.buildBuiltInTemplate(this.fields, this.fieldConfigs, this.sampleRows);
+		this.applyPresetStyles(preset, { cardWidth: DEFAULT_CARD_WIDTH, cardHeight: DEFAULT_CARD_HEIGHT });
 	}
 
 	private setBranchSelection(mode: 'single' | 'split', branch: 'withoutImage' | 'withImage'): void {
@@ -318,9 +506,10 @@ export class SlideTemplateModal extends Modal {
 				? Boolean(this.template.single.withImage.imageTemplate?.trim())
 				: Boolean(this.template.split.withImage.imageTemplate?.trim());
 		if (hasImageTemplate) {
-			return 'withImage';
+			return this.clampBranch(mode, 'withImage');
 		}
-		return mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
+		const fallback = mode === 'single' ? SlideTemplateModal.lastSelectedSingleBranch : SlideTemplateModal.lastSelectedSplitBranch;
+		return this.clampBranch(mode, fallback);
 	}
 
 	private renderInsertButton(container: HTMLElement, getPreferredTarget?: () => HTMLTextAreaElement | null): void {
@@ -404,8 +593,13 @@ export class SlideTemplateModal extends Modal {
 		container: HTMLElement,
 		current: 'withoutImage' | 'withImage',
 		labels: { without: string; with: string },
-		onSelect: (next: 'withoutImage' | 'withImage') => void
+		onSelect: (next: 'withoutImage' | 'withImage') => void,
+		allowed?: Array<'withoutImage' | 'withImage'>
 	): void {
+		const allowedBranches = allowed && allowed.length > 0 ? allowed : ['withoutImage', 'withImage'];
+		if (allowedBranches.length <= 1) {
+			return;
+		}
 		const row = container.createDiv({ cls: 'tlb-slide-template__mode-switch tlb-slide-template__branch-switch' });
 		const buildBtn = (value: 'withoutImage' | 'withImage', text: string) => {
 			const btn = row.createEl('button', {
@@ -420,8 +614,12 @@ export class SlideTemplateModal extends Modal {
 				}
 			});
 		};
-		buildBtn('withoutImage', labels.without);
-		buildBtn('withImage', labels.with);
+		if (allowedBranches.includes('withoutImage')) {
+			buildBtn('withoutImage', labels.without);
+		}
+		if (allowedBranches.includes('withImage')) {
+			buildBtn('withImage', labels.with);
+		}
 	}
 
 	private renderImageContent(
@@ -434,8 +632,8 @@ export class SlideTemplateModal extends Modal {
 		const head = cell.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
 		head.createDiv({ cls: 'tlb-slide-template__cell-head', text: label });
 		const textarea = cell.createEl('textarea', {
-			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
-			attr: { rows: '3' }
+			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body tlb-slide-template__textarea--image',
+			attr: { rows: '2' }
 		}) as HTMLTextAreaElement;
 		textarea.value = value;
 		this.registerFocusTracking(textarea);
@@ -444,9 +642,16 @@ export class SlideTemplateModal extends Modal {
 		this.refreshInsertButton();
 	}
 
-	private renderLayoutTwoColumn(container: HTMLElement, heading: string, value: SlideLayoutConfig, onChange: (next: SlideLayoutConfig) => void): void {
+	private renderLayoutTwoColumn(
+		container: HTMLElement,
+		heading: string,
+		value: SlideLayoutConfig,
+		onChange: (next: SlideLayoutConfig) => void,
+		options?: { includeTypography?: boolean }
+	): void {
 		if (heading) container.createDiv({ cls: 'tlb-slide-template__cell-head', text: heading });
 		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
+		const includeTypography = options?.includeTypography ?? true;
 
 		const addSelectRow = (parent: HTMLElement, label: string, update: (val: string) => void) => {
 			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
@@ -541,31 +746,70 @@ export class SlideTemplateModal extends Modal {
 		);
 		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
 
-		const row3 = layoutRow('three');
-		numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
-		numberRow(
-			row3,
-			t('slideView.templateModal.fontWeightLabel'),
-			value.fontWeight,
-			100,
-			900,
-			50,
-			(v) => (value.fontWeight = v)
-		);
-		numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
+		if (includeTypography) {
+			const row3 = layoutRow('three');
+			numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
+			numberRow(
+				row3,
+				t('slideView.templateModal.fontWeightLabel'),
+				value.fontWeight,
+				100,
+				900,
+				50,
+				(v) => (value.fontWeight = v)
+			);
+			numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
+		}
 	}
 
-	private renderColorSection(container: HTMLElement): void {
+	private renderCardSettingsSection(container: HTMLElement): void {
+		const hasCardSizeControls = Boolean(this.onCardSizeChange);
 		const section = container.createDiv({ cls: 'tlb-slide-template__section' });
 		const headRow = section.createDiv({ cls: 'tlb-slide-template__cell-head-row' });
-		headRow.createDiv({
-			cls: 'tlb-slide-template__cell-head',
-			text: t('slideView.templateModal.globalSettingsLabel')
+		const headingKey = hasCardSizeControls ? 'galleryView.templateModal.cardSizeLabel' : 'slideView.templateModal.globalSettingsLabel';
+		headRow.createDiv({ cls: 'tlb-slide-template__cell-head', text: t(headingKey as TranslationKey) });
+		const grid = section.createDiv({ cls: 'tlb-slide-template__grid' });
+		if (hasCardSizeControls) {
+			const sizeCell = grid.createDiv({ cls: 'tlb-slide-template__cell' });
+			this.renderCardSizeControls(sizeCell);
+		}
+		const colorCell = grid.createDiv({
+			cls: `tlb-slide-template__cell${hasCardSizeControls ? '' : ' tlb-slide-template__cell--full'}`
 		});
-		const grid = section.createDiv({ cls: 'tlb-slide-template__grid tlb-slide-template__grid--colors' });
-		const row = grid.createDiv({ cls: 'tlb-slide-template__color-row' });
+		const row = colorCell.createDiv({ cls: 'tlb-slide-template__color-row' });
 		this.renderColorControls(row, 'text');
 		this.renderColorControls(row, 'background');
+	}
+
+	private renderCardSizeControls(container: HTMLElement): void {
+		if (!this.onCardSizeChange) {
+			return;
+		}
+		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
+		const row = layout.createDiv({ cls: 'tlb-slide-template__layout-line tlb-slide-template__layout-line--sizes' });
+		const buildNumberInput = (label: string, value: number, onChange: (val: number) => void) => {
+			const field = row.createDiv({ cls: 'tlb-slide-template__layout-field tlb-slide-template__layout-field--size' });
+			field.createDiv({ cls: 'tlb-slide-template__mini-label', text: label });
+			const input = field.createEl('input', {
+				attr: { type: 'number', min: '40', max: '2000', step: '10' },
+				cls: 'tlb-slide-template__layout-number'
+			}) as HTMLInputElement;
+			input.value = String(value);
+			input.addEventListener('input', () => {
+				const next = Number(input.value);
+				if (Number.isFinite(next) && next > 40 && next < 2000) {
+					onChange(next);
+				}
+			});
+		};
+		buildNumberInput(t('galleryView.templateModal.widthLabel'), this.cardWidth, (next) => {
+			this.cardWidth = next;
+			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
+		});
+		buildNumberInput(t('galleryView.templateModal.heightLabel'), this.cardHeight, (next) => {
+			this.cardHeight = next;
+			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
+		});
 	}
 
 	private renderColorControls(container: HTMLElement, kind: 'text' | 'background'): void {
@@ -711,23 +955,27 @@ export class SlideTemplateModal extends Modal {
 		if (!active) {
 			return;
 		}
+		if (!this.isModeAllowed('single')) {
+			return;
+		}
+		const branches = this.getAllowedBranches('single');
+		if (branches.length === 1) {
+			this.singleBranch = branches[0];
+		}
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
-		wrapper.createDiv({
-			cls: 'tlb-slide-template__hint',
-			text: t('slideView.templateModal.modeSingleDesc')
-		});
-			this.renderBranchTabs(
-				wrapper,
-				this.singleBranch,
-				{
-					without: t('slideView.templateModal.noImageTabLabel'),
-					with: t('slideView.templateModal.withImageTabLabel')
-				},
-				(next) => {
-					this.setBranchSelection('single', next);
-					this.renderModalContent();
-				}
-			);
+		this.renderBranchTabs(
+			wrapper,
+			this.singleBranch,
+			{
+				without: t('slideView.templateModal.noImageTabLabel'),
+				with: t('slideView.templateModal.withImageTabLabel')
+			},
+			(next) => {
+				this.setBranchSelection('single', next);
+				this.renderModalContent();
+			},
+			branches
+		);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.singleBranch === 'withoutImage') {
@@ -787,7 +1035,8 @@ export class SlideTemplateModal extends Modal {
 				imageLayoutRow.right,
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
-				(next) => (this.template.single.withImage.imageLayout = next)
+				(next) => (this.template.single.withImage.imageLayout = next),
+				{ includeTypography: this.imageTypographyEnabled }
 			);
 		}
 	}
@@ -796,23 +1045,31 @@ export class SlideTemplateModal extends Modal {
 		if (!active) {
 			return;
 		}
+		if (!this.isModeAllowed('split')) {
+			return;
+		}
+		const branches = this.getAllowedBranches('split');
+		if (branches.length === 1) {
+			this.splitBranch = branches[0];
+		}
 		const wrapper = this.contentEl.createDiv({ cls: 'tlb-slide-template__section' });
 		wrapper.createDiv({
 			cls: 'tlb-slide-template__hint',
 			text: t('slideView.templateModal.modeSplitDesc')
 		});
-			this.renderBranchTabs(
-				wrapper,
-				this.splitBranch,
-				{
-					without: t('slideView.templateModal.splitTextTabLabel'),
-					with: t('slideView.templateModal.splitImageTabLabel')
-				},
-				(next) => {
-					this.setBranchSelection('split', next);
-					this.renderModalContent();
-				}
-			);
+		this.renderBranchTabs(
+			wrapper,
+			this.splitBranch,
+			{
+				without: t('slideView.templateModal.splitTextTabLabel'),
+				with: t('slideView.templateModal.splitImageTabLabel')
+			},
+			(next) => {
+				this.setBranchSelection('split', next);
+				this.renderModalContent();
+			},
+			branches
+		);
 		const grid = wrapper.createDiv({ cls: 'tlb-slide-template__grid' });
 
 		if (this.splitBranch === 'withoutImage') {
@@ -872,8 +1129,10 @@ export class SlideTemplateModal extends Modal {
 				imageLayoutRow.right,
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.split.withImage.imageLayout ?? getDefaultBodyLayout(),
-				(next) => (this.template.split.withImage.imageLayout = next)
+				(next) => (this.template.split.withImage.imageLayout = next),
+				{ includeTypography: this.imageTypographyEnabled }
 			);
 		}
 	}
+
 }

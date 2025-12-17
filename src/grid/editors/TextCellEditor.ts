@@ -97,7 +97,11 @@ export function createTextCellEditor() {
 			});
 
 			this.eInput.addEventListener('keydown', (event) => {
-				if (event.key === 'Enter' && !event.shiftKey) {
+				if (event.key === 'Enter') {
+					if (event.shiftKey) {
+						event.stopPropagation();
+						return;
+					}
 					event.preventDefault();
 					event.stopPropagation();
 					params.stopEditing(false);

@@ -4,13 +4,51 @@
     "mode": {
       "table": "Table",
       "kanban": "Kanban",
-      "slide": "Slide"
+      "slide": "Slide",
+      "gallery": "Gallery"
     }
   },
   "viewControls": {
     "openTableView": "Switch to TileLineBase table view",
     "openMarkdownView": "Switch back to Markdown editor",
     "switchViewMenu": "Switch view (current: {{mode}})"
+  },
+  "galleryView": {
+    "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
+    "processingHint": "Preparing gallery cards...",
+    "actions": {
+      "openFromMarkdown": "Open TileLineBase gallery view",
+      "switchToGallery": "Switch to gallery view"
+    },
+    "toolbar": {
+      "title": "Gallery",
+      "addCardButtonAriaLabel": "Add gallery card",
+      "settingsMenuAriaLabel": "Gallery settings",
+      "editTemplate": "Edit gallery template",
+      "addGalleryButtonAriaLabel": "Add gallery view",
+      "unnamedGalleryLabel": "Untitled gallery",
+      "editGalleryLabel": "Edit gallery",
+      "duplicateGalleryLabel": "Duplicate gallery",
+      "deleteGalleryLabel": "Delete gallery",
+      "cannotDeleteLastGallery": "Keep at least one gallery view."
+    },
+    "templateModal": {
+      "title": "Gallery template",
+      "cardSizeLabel": "Card settings",
+      "widthLabel": "Width (px)",
+      "heightLabel": "Height (px)",
+      "groupFieldTitle": "Group field",
+      "groupFieldLabel": "Use field",
+      "groupFieldNone": "None",
+      "filterSectionTitle": "Filters & sorting",
+      "filterSectionActive": "Active filter: {{name}}",
+      "filterSectionEmpty": "No filter view yet. Create one to scope this gallery.",
+      "filterPickerLabel": "Filter view",
+      "filterAllLabel": "All entries",
+      "newFilterButton": "New filter view",
+      "editFilterButton": "Edit filter/sort",
+      "manageGroupsButton": "Manage filter groups"
+    }
   },
   "kanbanView": {
     "schemaUnavailable": "Kanban view requires a valid table schema. Reload the note and try again.",
@@ -226,7 +264,8 @@
     "importCsvAsTable": "Import CSV as new table",
     "toggleTableView": "Toggle table view",
     "openKanbanView": "Open TileLineBase kanban view",
-    "openSlideView": "Open TileLineBase slide view"
+    "openSlideView": "Open TileLineBase slide view",
+    "openGalleryView": "Open TileLineBase gallery view"
   },
   "csv": {
     "errorNoFile": "Save the note before exporting; the current file could not be found.",
@@ -257,8 +296,8 @@
     "interfaceLanguageOptionKo": "한국어",
     "interfaceLanguageOptionZhHans": "简体中文",
     "interfaceLanguageOptionZhHant": "繁體中文",
-    "hideRightSidebarLabel": "Hide right sidebar in table view",
-    "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever the TileLineBase table view is active. Other views remain unaffected.",
+    "hideRightSidebarLabel": "Hide right sidebar in TileLineBase views",
+    "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever any TileLineBase view is active, then restore the previous state after leaving.",
     "tableViewHeading": "Table view",
     "stripeColorLabel": "Row stripe color",
     "stripeColorDesc": "Default uses theme-based stripes (±4% lightness).",
@@ -277,6 +316,20 @@
     "loggingLevelOptionInfo": "Info, warnings, and errors",
     "loggingLevelOptionDebug": "Debug, info, warnings, and errors",
     "loggingLevelOptionTrace": "Trace (most verbose)",
+    "compatibilityHeading": "Compatibility",
+    "navigatorCompatLabel": "Notebook Navigator compatibility",
+    "navigatorCompatDesc": "When enabled and Notebook Navigator is installed, block its redundant reopen of the current TileLineBase view to prevent flicker. Off by default for compliance.",
+    "navigatorCompatModalTitle": "TileLineBase Compatibility Notice",
+    "navigatorCompatModalHeading": "Notebook Navigator Compatibility Enabled",
+    "navigatorCompatModalBody1": "Notebook Navigator is detected. Its reload mechanism causes severe flickering and view switching in TileLineBase views. To ensure normal usage, TileLineBase has automatically enabled instance-level isolation.",
+    "navigatorCompatModalBody2": "This protection is locally scoped to TileLineBase views and does not affect other scenarios.",
+    "navigatorCompatModalBody3": "You can turn this off anytime in TileLineBase settings under Compatibility.",
+    "navigatorPinnedWarning": "Notebook Navigator is enabled. To avoid conflicts, do not pin TileLineBase views in Obsidian.",
+    "navigatorPinnedModalTitle": "TileLineBase Compatibility Notice",
+    "navigatorPinnedModalHeading": "Pinned View Conflict with Notebook Navigator",
+    "navigatorPinnedModalBody1": "Due to the refresh mechanisms in Notebook Navigator and Obsidian, pinning a TileLineBase view causes an infinite reload loop. This results in screen flickering, focus jumping, and unintended new tabs.",
+    "navigatorPinnedModalBody2": "We are currently coordinating with the Notebook Navigator author to fix this.",
+    "navigatorPinnedModalAction": "In the meantime, please unpin this tab to restore normal functionality. Avoid pinning TileLineBase views until this is resolved.",
     "backupHeading": "Backups",
     "backupEnableLabel": "Enable automatic backups",
     "backupEnableDesc": "Capture a snapshot before writing Markdown so you can roll back accidental changes.",
@@ -556,7 +609,27 @@
     "defaultFileName": "Converted note",
     "successNotice": "Converted to {{fileName}}",
     "failureNotice": "Conversion failed. Please try again.",
-    "previewRenameHint": "Click table headers to rename columns."
+    "previewRenameHint": "Click table headers to rename columns.",
+    "malformedTitle": "Malformed H2 sections detected",
+    "malformedDescription": "Some H2 sections are missing key/value pairs. Edit them below or ignore to continue.",
+    "malformedSummary": "Found {{total}} H2 sections; {{invalid}} need handling.",
+    "malformedSectionLabel": "Section starting on line {{line}}",
+    "malformedReasonMissingColon": "Heading must include a colon separating key and value.",
+    "malformedReasonInvalidField": "Heading must contain both a key and a value.",
+    "malformedApply": "Save and refresh",
+    "malformedIgnore": "Ignore once",
+    "malformedEditWarning": "Changes here replace the original text for these sections.",
+    "malformedIgnoreWarning": "Ignore once will remove these malformed sections and continue to the table view.",
+    "malformedSaveSuccess": "Updated malformed H2 sections.",
+    "malformedSaveError": "Failed to update malformed H2 sections.",
+    "unstructuredTitle": "Content needs review for conversion",
+    "unstructuredBody": "Opening the TLB view has triggered the Conversion Assistant. Detected {{sectionCount}} convertible H2 sections; some content still needs attention before conversion.",
+    "unstructuredInstruction": "Please choose how to proceed: Edit & Convert / Delete & Convert / Cancel.",
+    "unstructuredSectionLabel": "Unstructured text starting on line {{line}}",
+    "unstructuredHint": "Content below will be removed unless you edit it to match the required format.",
+    "unstructuredEditConvert": "Edit & Convert",
+    "unstructuredDeleteConvert": "Delete & Convert",
+    "unstructuredCancel": "Cancel"
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView constructor start ===",
@@ -576,7 +649,7 @@
     "settingsMenuImportCsvLabel": "Import CSV into table",
     "settingsMenuImportCsvAsTableLabel": "Import CSV as new table",
     "settingsMenuHelpLabel": "Open help note",
-    "unnamedViewLabel": "Unnamed view"
+    "unnamedViewLabel": "Over"
   },
   "rowOrder": {
     "menuLabel": "Reorder rows (physical)",

@@ -4,13 +4,51 @@
     "mode": {
       "table": "Tabla",
       "kanban": "Kanban",
-      "slide": "Diapositivas"
+      "slide": "Diapositivas",
+      "gallery": "Galería"
     }
   },
   "viewControls": {
     "openTableView": "Cambiar a la vista de tabla de TileLineBase",
     "openMarkdownView": "Volver al editor de Markdown",
     "switchViewMenu": "Cambiar vista (actual: {{mode}})"
+  },
+  "galleryView": {
+    "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
+    "processingHint": "Preparando tarjetas de la galería...",
+    "actions": {
+      "openFromMarkdown": "Abrir la vista de galería de TileLineBase",
+      "switchToGallery": "Cambiar a la vista de galería"
+    },
+    "toolbar": {
+      "title": "Galería",
+      "addCardButtonAriaLabel": "Añadir tarjeta a la galería",
+      "settingsMenuAriaLabel": "Configuración de la galería",
+      "editTemplate": "Editar plantilla de la galería",
+      "addGalleryButtonAriaLabel": "Añadir vista de galería",
+      "unnamedGalleryLabel": "Galería sin título",
+      "editGalleryLabel": "Editar galería",
+      "duplicateGalleryLabel": "Duplicar galería",
+      "deleteGalleryLabel": "Eliminar galería",
+      "cannotDeleteLastGallery": "Mantén al menos una vista de galería."
+    },
+    "templateModal": {
+      "title": "Plantilla de galería",
+      "cardSizeLabel": "Ajustes de tarjeta",
+      "widthLabel": "Ancho (px)",
+      "heightLabel": "Alto (px)",
+      "groupFieldTitle": "Campo de agrupación",
+      "groupFieldLabel": "Usar campo",
+      "groupFieldNone": "Ninguno",
+      "filterSectionTitle": "Filtros y ordenación",
+      "filterSectionActive": "Filtro activo: {{name}}",
+      "filterSectionEmpty": "Aún no hay vista de filtros. Crea una para acotar esta galería.",
+      "filterPickerLabel": "Vista de filtros",
+      "filterAllLabel": "Todas las entradas",
+      "newFilterButton": "Nueva vista de filtros",
+      "editFilterButton": "Editar filtro/orden",
+      "manageGroupsButton": "Gestionar grupos de filtros"
+    }
   },
   "kanbanView": {
     "schemaUnavailable": "La vista Kanban requiere un esquema de tabla válido. Recarga la nota e inténtalo de nuevo.",
@@ -37,6 +75,9 @@
       "switchToKanban": "Cambiar a la vista Kanban",
       "switchToTable": "Cambiar a la vista de tabla"
     },
+    "laneActions": {
+      "addCard": "Añadir tarjeta a \"{{lane}}\""
+    },
     "fieldModal": {
       "title": "Seleccionar columna de Kanban",
       "description": "Elige la columna cuyos valores deben formar las vías en el tablero Kanban.",
@@ -59,6 +100,20 @@
       "successNotice": "Se creó la vía \"{{name}}\".",
       "statusFieldBlocked": "Las vías de estado ya cubren la columna Status. Edita las opciones de Status en la tabla.",
       "missingLaneField": "Selecciona una columna de Kanban antes de crear una nueva vía."
+    },
+    "cardCreateModal": {
+      "title": "Nueva entrada",
+      "description": "Rellena los campos de abajo para crear una fila directamente en esta vía.",
+      "laneFieldLabel": "Valor de la vía ({{field}})",
+      "laneFieldDesc": "Las tarjetas creadas aquí usan \"{{lane}}\" como valor de vía por defecto.",
+      "submitLabel": "Crear entrada",
+      "cancelLabel": "Cancelar",
+      "laneRequiredError": "Introduce un valor de vía antes de crear una entrada."
+    },
+    "cardEditModal": {
+      "title": "Editar entrada",
+      "submitLabel": "Guardar",
+      "deleteLabel": "Eliminar entrada"
     },
     "content": {
       "sectionTitle": "Contenido de la tarjeta",
@@ -209,7 +264,8 @@
     "importCsvAsTable": "Importar CSV como nueva tabla",
     "toggleTableView": "Alternar vista de tabla",
     "openKanbanView": "Abrir la vista Kanban de TileLineBase",
-    "openSlideView": "Abrir la vista de diapositivas de TileLineBase"
+    "openSlideView": "Abrir la vista de diapositivas de TileLineBase",
+    "openGalleryView": "Abrir la vista de galería de TileLineBase"
   },
   "csv": {
     "errorNoFile": "Guarda la nota antes de exportar; no se encontró el archivo actual.",
@@ -260,6 +316,20 @@
     "loggingLevelOptionInfo": "Información, advertencias y errores",
     "loggingLevelOptionDebug": "Depuración, información, advertencias y errores",
     "loggingLevelOptionTrace": "Seguimiento (más detallado)",
+    "compatibilityHeading": "Compatibilidad",
+    "navigatorCompatLabel": "Compatibilidad con Notebook Navigator",
+    "navigatorCompatDesc": "Cuando está activado y Notebook Navigator está instalado, bloquea su reapertura redundante de la vista actual de TileLineBase para evitar parpadeos. Desactivado por defecto por cumplimiento.",
+    "navigatorCompatModalTitle": "Aviso de compatibilidad de TileLineBase",
+    "navigatorCompatModalHeading": "Compatibilidad con Notebook Navigator activada",
+    "navigatorCompatModalBody1": "Se detectó Notebook Navigator. Su mecanismo de recarga causa un parpadeo intenso y cambios de vista en las vistas de TileLineBase. Para garantizar un uso normal, TileLineBase ha activado automáticamente el aislamiento por instancia.",
+    "navigatorCompatModalBody2": "Esta protección se limita a las vistas de TileLineBase y no afecta a otros escenarios.",
+    "navigatorCompatModalBody3": "Puedes desactivar esto en cualquier momento en la configuración de TileLineBase, en Compatibilidad.",
+    "navigatorPinnedWarning": "Notebook Navigator está activado. Para evitar conflictos, no fijes vistas de TileLineBase en Obsidian.",
+    "navigatorPinnedModalTitle": "Aviso de compatibilidad de TileLineBase",
+    "navigatorPinnedModalHeading": "Conflicto de vista fijada con Notebook Navigator",
+    "navigatorPinnedModalBody1": "Debido a los mecanismos de actualización de Notebook Navigator y Obsidian, fijar una vista de TileLineBase causa un bucle infinito de recarga. Esto provoca parpadeo de pantalla, saltos de enfoque y nuevas pestañas no deseadas.",
+    "navigatorPinnedModalBody2": "Estamos coordinándonos con el autor de Notebook Navigator para solucionarlo.",
+    "navigatorPinnedModalAction": "Mientras tanto, desfija esta pestaña para restaurar el funcionamiento normal. Evita fijar vistas de TileLineBase hasta que se resuelva.",
     "backupHeading": "Copias de seguridad",
     "backupEnableLabel": "Activar copias de seguridad automáticas",
     "backupEnableDesc": "Captura una instantánea antes de escribir Markdown para poder revertir cambios accidentales.",
@@ -539,7 +609,27 @@
     "defaultFileName": "Nota convertida",
     "successNotice": "Convertido a {{fileName}}",
     "failureNotice": "La conversión falló. Inténtalo de nuevo.",
-    "previewRenameHint": "Haz clic en los encabezados de tabla para renombrar columnas."
+    "previewRenameHint": "Haz clic en los encabezados de tabla para renombrar columnas.",
+    "malformedTitle": "Se detectaron secciones H2 mal formadas",
+    "malformedDescription": "A algunas secciones H2 les faltan pares clave/valor. Edítalas abajo o ignóralas para continuar.",
+    "malformedSummary": "Se encontraron {{total}} secciones H2; {{invalid}} requieren atención.",
+    "malformedSectionLabel": "Sección que empieza en la línea {{line}}",
+    "malformedReasonMissingColon": "El encabezado debe incluir dos puntos que separen la clave y el valor.",
+    "malformedReasonInvalidField": "El encabezado debe contener tanto una clave como un valor.",
+    "malformedApply": "Guardar y refrescar",
+    "malformedIgnore": "Ignorar una vez",
+    "malformedEditWarning": "Los cambios aquí reemplazan el texto original de estas secciones.",
+    "malformedIgnoreWarning": "Ignorar una vez eliminará estas secciones mal formadas y continuará a la vista de tabla.",
+    "malformedSaveSuccess": "Se actualizaron las secciones H2 mal formadas.",
+    "malformedSaveError": "No se pudieron actualizar las secciones H2 mal formadas.",
+    "unstructuredTitle": "El contenido necesita revisión para la conversión",
+    "unstructuredBody": "Al abrir la vista TLB se activó el Asistente de conversión. Se detectaron {{sectionCount}} secciones H2 convertibles; parte del contenido aún requiere atención antes de convertir.",
+    "unstructuredInstruction": "Elige cómo continuar: Editar y convertir / Eliminar y convertir / Cancelar.",
+    "unstructuredSectionLabel": "Texto no estructurado que empieza en la línea {{line}}",
+    "unstructuredHint": "El contenido de abajo se eliminará a menos que lo edites para que cumpla el formato requerido.",
+    "unstructuredEditConvert": "Editar y convertir",
+    "unstructuredDeleteConvert": "Eliminar y convertir",
+    "unstructuredCancel": "Cancelar"
   },
   "tableViewSetup": {
     "constructorStart": "=== Inicio del constructor de TableView ===",

@@ -1,8 +1,9 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
-import { cp, rm } from "fs/promises";
+import { cp, readFile, rm, writeFile } from "fs/promises";
 import path from "path";
+import { minify } from "terser";
 
 const banner =
 `/*
@@ -27,6 +28,41 @@ const cleanDistPlugin = {
 			}
 
 			await rm(distDir, { recursive: true, force: true }).catch(() => {});
+		});
+	}
+};
+
+const terserMinifyPlugin = {
+	name: 'terser-minify',
+	setup(build) {
+		build.onEnd(async (result) => {
+			if (!prod || (result && result.errors && result.errors.length > 0)) {
+				return;
+			}
+
+			const mainPath = path.join(distDir, 'main.js');
+
+			try {
+				const source = await readFile(mainPath, 'utf8');
+				const { code } = await minify(source, {
+					compress: { ecma: 2020 },
+					mangle: true,
+					format: {
+						comments: false,
+						ecma: 2020
+					}
+				});
+
+				if (!code) {
+					throw new Error('Terser produced empty output for dist/main.js');
+				}
+
+				await writeFile(mainPath, code, 'utf8');
+				console.info('[terser] dist/main.js minified');
+			} catch (error) {
+				console.error('[terser] Failed to minify bundle', error);
+				throw error;
+			}
 		});
 	}
 };
@@ -83,7 +119,7 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
 	outfile: 'dist/main.js',
-	plugins: [cleanDistPlugin, copyStaticPlugin],
+	plugins: [cleanDistPlugin, copyStaticPlugin, terserMinifyPlugin],
 });
 
 if (prod) {

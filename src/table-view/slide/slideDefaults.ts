@@ -3,8 +3,11 @@ import {
 	type SlideTemplateConfig,
 	type SlideTextTemplate
 } from '../../types/slide';
+import type { ColumnConfig } from '../MarkdownBlockParser';
+import { resolveDirectImage } from './SlideContentResolver';
 
 export const RESERVED_SLIDE_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
+const RESERVED_SLIDE_FIELDS_LOWER = new Set(Array.from(RESERVED_SLIDE_FIELDS).map((field) => field.toLowerCase()));
 
 const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
 	mode: 'single',
@@ -126,8 +129,137 @@ const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
 	backgroundColor: ''
 });
 
+const BUILT_IN_GALLERY_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({
+	mode: 'single',
+	single: {
+		withImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 90,
+				topPct: 60,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.5,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 90,
+				topPct: 68,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1.5,
+				fontWeight: 400
+			},
+			imageTemplate: '',
+			imageLayout: {
+				widthPct: 100,
+				topPct: 0,
+				insetPct: 0,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 0,
+				fontWeight: 400
+			}
+		},
+		withoutImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 90,
+				topPct: 60,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.5,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 90,
+				topPct: 68,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1.5,
+				fontWeight: 400
+			}
+		}
+	},
+	split: {
+		withImage: {
+			imageTemplate: '',
+			textPage: {
+				titleTemplate: '',
+				bodyTemplate: '',
+				titleLayout: {
+					widthPct: 90,
+					topPct: 60,
+					insetPct: 5,
+					align: 'left',
+					lineHeight: 1.2,
+					fontSize: 1.5,
+					fontWeight: 700
+				},
+				bodyLayout: {
+					widthPct: 90,
+					topPct: 68,
+					insetPct: 5,
+					align: 'left',
+					lineHeight: 1.5,
+					fontSize: 1.5,
+					fontWeight: 400
+				}
+			},
+			imageLayout: {
+				widthPct: 100,
+				topPct: 0,
+				insetPct: 0,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 0,
+				fontWeight: 400
+			}
+		},
+		withoutImage: {
+			titleTemplate: '',
+			bodyTemplate: '',
+			titleLayout: {
+				widthPct: 90,
+				topPct: 60,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.2,
+				fontSize: 1.5,
+				fontWeight: 700
+			},
+			bodyLayout: {
+				widthPct: 90,
+				topPct: 68,
+				insetPct: 5,
+				align: 'left',
+				lineHeight: 1.5,
+				fontSize: 1.5,
+				fontWeight: 400
+			}
+		}
+	},
+	textColor: '',
+	backgroundColor: ''
+});
+
 const isEmptyTextTemplate = (template: SlideTextTemplate): boolean =>
 	!template.titleTemplate?.trim() && !template.bodyTemplate?.trim();
+
+const isReservedField = (field: string): boolean => {
+	const normalized = (field ?? '').trim();
+	if (!normalized) {
+		return false;
+	}
+	const lower = normalized.toLowerCase();
+	return RESERVED_SLIDE_FIELDS.has(normalized) || RESERVED_SLIDE_FIELDS_LOWER.has(lower);
+};
 
 export function isSlideTemplateEmpty(template: SlideTemplateConfig): boolean {
 	const singleWithImageEmpty =
@@ -145,7 +277,7 @@ const normalizeFieldList = (fields: string[]): string[] => {
 	for (const field of fields) {
 		const trimmed = (field ?? '').trim();
 		const lower = trimmed.toLowerCase();
-		if (!trimmed || RESERVED_SLIDE_FIELDS.has(trimmed) || seen.has(lower)) {
+		if (!trimmed || isReservedField(trimmed) || seen.has(lower)) {
 			continue;
 		}
 		seen.add(lower);
@@ -159,19 +291,68 @@ const pickPrimaryField = (fields: string[]): string | null => {
 	return fields[0];
 };
 
+const resolveImageFieldFromConfigs = (fields: string[], columnConfigs?: ColumnConfig[] | null): string | null => {
+	if (!columnConfigs || columnConfigs.length === 0) {
+		return null;
+	}
+	const configMap = new Map<string, ColumnConfig>();
+	for (const config of columnConfigs) {
+		const name = (config?.name ?? '').trim();
+		if (!name) continue;
+		configMap.set(name, config);
+		configMap.set(name.toLowerCase(), config);
+	}
+	for (const field of fields) {
+		const normalized = (field ?? '').trim();
+		if (!normalized) continue;
+		const config = configMap.get(normalized) ?? configMap.get(normalized.toLowerCase());
+		if (config?.type === 'image') {
+			return normalized;
+		}
+	}
+	return null;
+};
+
+const resolveImageFieldFromRows = (
+	fields: string[],
+	sampleRows?: Array<Record<string, unknown>> | null
+): string | null => {
+	if (!sampleRows || sampleRows.length === 0) {
+		return null;
+	}
+	for (const row of sampleRows) {
+		for (const field of fields) {
+			const raw = (row as Record<string, unknown>)[field];
+			const text = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
+			if (!text) continue;
+			if (resolveDirectImage(text)) {
+				return field;
+			}
+		}
+	}
+	return null;
+};
+
 const applyTemplates = (template: SlideTextTemplate, title: string, body: string): SlideTextTemplate => ({
 	...template,
 	titleTemplate: title || template.titleTemplate || '',
 	bodyTemplate: body || template.bodyTemplate || ''
 });
 
-export function buildBuiltInSlideTemplate(fields: string[]): SlideTemplateConfig {
+const buildTemplateFromBase = (
+	base: SlideTemplateConfig,
+	fields: string[],
+	columnConfigs?: ColumnConfig[] | null,
+	sampleRows?: Array<Record<string, unknown>> | null
+): SlideTemplateConfig => {
 	const normalizedFields = normalizeFieldList(fields);
+	const imageField =
+		resolveImageFieldFromConfigs(normalizedFields, columnConfigs) ?? resolveImageFieldFromRows(normalizedFields, sampleRows);
 	const primaryField = pickPrimaryField(normalizedFields);
 	const titleTemplate = primaryField ? `{${primaryField}}` : '';
-	const bodyFields = normalizedFields.filter((field) => field !== primaryField);
+	const bodyFields = normalizedFields.filter((field) => field !== primaryField && field !== imageField);
 	const bodyTemplate = bodyFields.length > 0 ? bodyFields.map((field) => `{${field}}`).join('\n') : '';
-	const base = BUILT_IN_SLIDE_BASE;
+	const imageTemplate = imageField ? `{${imageField}}` : '';
 
 	const merged: SlideTemplateConfig = {
 		...base,
@@ -179,14 +360,14 @@ export function buildBuiltInSlideTemplate(fields: string[]): SlideTemplateConfig
 			withImage: {
 				...base.single.withImage,
 				...applyTemplates(base.single.withImage, titleTemplate, bodyTemplate),
-				imageTemplate: ''
+				imageTemplate
 			},
 			withoutImage: applyTemplates(base.single.withoutImage, titleTemplate, bodyTemplate)
 		},
 		split: {
 			withImage: {
 				...base.split.withImage,
-				imageTemplate: '',
+				imageTemplate,
 				textPage: applyTemplates(base.split.withImage.textPage, titleTemplate, bodyTemplate)
 			},
 			withoutImage: applyTemplates(base.split.withoutImage, titleTemplate, bodyTemplate)
@@ -194,6 +375,22 @@ export function buildBuiltInSlideTemplate(fields: string[]): SlideTemplateConfig
 	};
 
 	return sanitizeSlideTemplateConfig(merged);
+};
+
+export function buildBuiltInSlideTemplate(
+	fields: string[],
+	columnConfigs?: ColumnConfig[] | null,
+	sampleRows?: Array<Record<string, unknown>> | null
+): SlideTemplateConfig {
+	return buildTemplateFromBase(BUILT_IN_SLIDE_BASE, fields, columnConfigs, sampleRows);
+}
+
+export function buildBuiltInGalleryTemplate(
+	fields: string[],
+	columnConfigs?: ColumnConfig[] | null,
+	sampleRows?: Array<Record<string, unknown>> | null
+): SlideTemplateConfig {
+	return buildTemplateFromBase(BUILT_IN_GALLERY_BASE, fields, columnConfigs, sampleRows);
 }
 
 export function mergeSlideTemplateFields(

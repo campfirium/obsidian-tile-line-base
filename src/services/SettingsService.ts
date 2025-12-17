@@ -22,15 +22,36 @@ import {
 	getCopyTemplate,
 	getKanbanPreferences,
 	getSlidePreferences,
+	getGalleryPreferences,
 	saveColumnConfigs,
 	saveCopyTemplate,
 	saveKanbanPreferences,
-	saveSlidePreferences
+	saveSlidePreferences,
+	saveGalleryPreferences
 } from './fileConfigStore';
 import { cloneTagGroupState, cloneKanbanBoardState } from './settingsCloneHelpers';
 
 const logger = getLogger('service:settings');
 const FILE_SETTINGS_CLEANUP_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+const DEFAULT_GALLERY_CARD_WIDTH = 320;
+const DEFAULT_GALLERY_CARD_HEIGHT = 320;
+const normalizeCardSize = (value: unknown): number | null => {
+	const numeric = typeof value === 'number' ? value : Number(value);
+	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
+		return numeric;
+	}
+	return null;
+};
+
+const deriveCardSizeFromAspect = (aspect: unknown): { width: number; height: number } | null => {
+	const ratio = typeof aspect === 'number' ? aspect : Number(aspect);
+	if (!Number.isFinite(ratio) || ratio <= 0.1 || ratio >= 10) {
+		return null;
+	}
+	const width = DEFAULT_GALLERY_CARD_WIDTH;
+	const height = Math.max(40, Math.min(2000, Math.round(width / ratio)));
+	return { width, height };
+};
 
 interface PendingDeletionRecord {
 	path: string;
@@ -47,16 +68,23 @@ export interface OnboardingState {
 }
 
 export interface TileLineBaseSettings {
-	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban' | 'slide'>;
+	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
 	tagGroups: Record<string, FileTagGroupState>;
+	galleryFilterViews: Record<string, FileFilterViewState>;
+	galleryTagGroups: Record<string, FileTagGroupState>;
 	kanbanBoards: Record<string, KanbanBoardState>;
 	columnConfigs: Record<string, string[]>;
 	copyTemplates: Record<string, string>;
 	kanbanPreferences: Record<string, KanbanViewPreferenceConfig>;
 	slidePreferences: Record<string, SlideViewConfig>;
+	galleryPreferences: Record<string, SlideViewConfig>;
+	galleryViews: Record<string, { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null }>;
 	defaultSlideConfig: SlideViewConfig | null;
+	defaultGalleryConfig: SlideViewConfig | null;
+	defaultGalleryCardWidth: number | null;
+	defaultGalleryCardHeight: number | null;
 	hideRightSidebar: boolean;
 	borderContrast: number;
 	stripeColorMode: StripeColorMode;
@@ -68,6 +96,8 @@ export interface TileLineBaseSettings {
 	onboarding: OnboardingState;
 	locale: LocaleCode | null;
 	localizedLocale: LocaleCode;
+	navigatorCompatibilityEnabled: boolean;
+	navigatorCompatNoticeShown: boolean;
 	pendingDeletions: PendingDeletionRecord[];
 }
 
@@ -76,13 +106,20 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	columnLayouts: {},
 	filterViews: {},
 	tagGroups: {},
+	galleryFilterViews: {},
+	galleryTagGroups: {},
 	kanbanBoards: {},
 	columnConfigs: {},
 	copyTemplates: {},
 	kanbanPreferences: {},
 	slidePreferences: {},
+	galleryPreferences: {},
+	galleryViews: {},
 	defaultSlideConfig: null,
-	hideRightSidebar: false,
+	defaultGalleryConfig: null,
+	defaultGalleryCardWidth: null,
+	defaultGalleryCardHeight: null,
+	hideRightSidebar: true,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
 	stripeCustomColor: null,
@@ -101,6 +138,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	},
 	locale: null,
 	localizedLocale: 'en',
+	navigatorCompatibilityEnabled: true,
+	navigatorCompatNoticeShown: false,
 	pendingDeletions: []
 };
 
@@ -121,12 +160,29 @@ export class SettingsService {
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.tagGroups = { ...DEFAULT_SETTINGS.tagGroups, ...(merged.tagGroups ?? {}) };
+		merged.galleryFilterViews = { ...DEFAULT_SETTINGS.galleryFilterViews, ...(merged as TileLineBaseSettings).galleryFilterViews ?? {} };
+		merged.galleryTagGroups = { ...DEFAULT_SETTINGS.galleryTagGroups, ...(merged as TileLineBaseSettings).galleryTagGroups ?? {} };
 		merged.kanbanBoards = { ...DEFAULT_SETTINGS.kanbanBoards, ...(merged.kanbanBoards ?? {}) };
 		merged.columnConfigs = { ...DEFAULT_SETTINGS.columnConfigs, ...(merged.columnConfigs ?? {}) };
 		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
 		merged.kanbanPreferences = { ...DEFAULT_SETTINGS.kanbanPreferences, ...(merged.kanbanPreferences ?? {}) };
 		merged.slidePreferences = { ...DEFAULT_SETTINGS.slidePreferences, ...(merged.slidePreferences ?? {}) };
+		merged.galleryPreferences = { ...DEFAULT_SETTINGS.galleryPreferences, ...(merged.galleryPreferences ?? {}) };
 		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
+		merged.defaultGalleryConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultGalleryConfig);
+		const defaultGalleryCardSize = this.sanitizeDefaultCardSize(
+			{
+				width: (merged as TileLineBaseSettings).defaultGalleryCardWidth,
+				height: (merged as TileLineBaseSettings).defaultGalleryCardHeight
+			},
+			false
+		);
+		merged.defaultGalleryCardWidth = defaultGalleryCardSize?.width ?? null;
+		merged.defaultGalleryCardHeight = defaultGalleryCardSize?.height ?? null;
+		if (!merged.defaultGalleryConfig) {
+			merged.defaultGalleryCardWidth = null;
+			merged.defaultGalleryCardHeight = null;
+		}
 		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
 			? (merged as TileLineBaseSettings).hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
@@ -151,6 +207,10 @@ export class SettingsService {
 				: DEFAULT_SETTINGS.borderColorMode;
 		merged.borderCustomColor = this.sanitizeColorValue(borderCustomColor);
 		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
+		merged.navigatorCompatibilityEnabled =
+			typeof (merged as TileLineBaseSettings).navigatorCompatibilityEnabled === 'boolean'
+				? (merged as TileLineBaseSettings).navigatorCompatibilityEnabled
+				: DEFAULT_SETTINGS.navigatorCompatibilityEnabled;
 		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
 		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
 		const localeCandidate = typeof (merged as TileLineBaseSettings).locale === 'string'
@@ -161,6 +221,10 @@ export class SettingsService {
 			? (merged as TileLineBaseSettings).localizedLocale
 			: null;
 		merged.localizedLocale = normalizeLocaleCode(localizedCandidate) ?? DEFAULT_SETTINGS.localizedLocale;
+		merged.navigatorCompatNoticeShown =
+			typeof (merged as TileLineBaseSettings).navigatorCompatNoticeShown === 'boolean'
+				? (merged as TileLineBaseSettings).navigatorCompatNoticeShown
+				: DEFAULT_SETTINGS.navigatorCompatNoticeShown;
 		merged.pendingDeletions = this.sanitizePendingDeletionRecords((merged as TileLineBaseSettings).pendingDeletions);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
@@ -298,17 +362,17 @@ export class SettingsService {
 
 	shouldAutoOpen(filePath: string): boolean {
 		const pref = this.settings.fileViewPrefs[filePath];
-		return pref === 'table' || pref === 'kanban' || pref === 'slide';
+		return pref === 'table' || pref === 'kanban' || pref === 'slide' || pref === 'gallery';
 	}
 
-	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | 'slide' | null {
+	getFileViewPreference(filePath: string): 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery' | null {
 		const pref = this.settings.fileViewPrefs[filePath];
 		return typeof pref === 'string' ? pref : null;
 	}
 
 	async setFileViewPreference(
 		filePath: string,
-		view: 'markdown' | 'table' | 'kanban' | 'slide'
+		view: 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery'
 	): Promise<boolean> {
 		const current = this.settings.fileViewPrefs[filePath];
 		if (current === view) {
@@ -371,6 +435,29 @@ export class SettingsService {
 		return sanitized;
 	}
 
+	getGalleryFilterViewsForFile(filePath: string): FileFilterViewState {
+		const stored = (this.settings as TileLineBaseSettings).galleryFilterViews[filePath];
+		if (!stored) {
+			return { views: [], activeViewId: null, metadata: {} };
+		}
+		return {
+			activeViewId: stored.activeViewId ?? null,
+			views: stored.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneFilterViewMetadata(stored.metadata)
+		};
+	}
+
+	async saveGalleryFilterViewsForFile(filePath: string, state: FileFilterViewState): Promise<FileFilterViewState> {
+		const sanitized: FileFilterViewState = {
+			activeViewId: state.activeViewId ?? null,
+			views: state.views.map((view) => this.cloneFilterViewDefinition(view)),
+			metadata: this.cloneFilterViewMetadata(state.metadata)
+		};
+		(this.settings as TileLineBaseSettings).galleryFilterViews[filePath] = sanitized;
+		await this.persist();
+		return sanitized;
+	}
+
 	getTagGroupsForFile(filePath: string): FileTagGroupState {
 		const stored = this.settings.tagGroups[filePath];
 		return cloneTagGroupState(stored ?? null);
@@ -379,6 +466,18 @@ export class SettingsService {
 	async saveTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
 		const sanitized = cloneTagGroupState(state);
 		this.settings.tagGroups[filePath] = sanitized;
+		await this.persist();
+		return sanitized;
+	}
+
+	getGalleryTagGroupsForFile(filePath: string): FileTagGroupState {
+		const stored = (this.settings as TileLineBaseSettings).galleryTagGroups[filePath];
+		return cloneTagGroupState(stored ?? null);
+	}
+
+	async saveGalleryTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
+		const sanitized = cloneTagGroupState(state);
+		(this.settings as TileLineBaseSettings).galleryTagGroups[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
 	}
@@ -437,6 +536,82 @@ export class SettingsService {
 		return saveSlidePreferences(this.settings, filePath, preferences, () => this.persist());
 	}
 
+	getGalleryPreferencesForFile(filePath: string): SlideViewConfig | null {
+		return getGalleryPreferences(this.settings, filePath);
+	}
+
+	getGalleryViewsForFile(filePath: string) {
+		const stored = this.settings.galleryViews[filePath];
+		if (!stored) {
+			return null;
+		}
+		const views = Array.isArray(stored.views)
+			? stored.views.map((entry) => {
+				const cloned = this.deepClone(entry);
+				const width = normalizeCardSize((cloned as { cardWidth?: unknown }).cardWidth);
+				const height = normalizeCardSize((cloned as { cardHeight?: unknown }).cardHeight);
+				const fallback = (!width || !height)
+					? deriveCardSizeFromAspect((cloned as { cardAspectRatio?: unknown }).cardAspectRatio)
+					: null;
+				return {
+					...cloned,
+					cardWidth: width ?? fallback?.width ?? undefined,
+					cardHeight: height ?? fallback?.height ?? undefined,
+					groupField: typeof (cloned as { groupField?: unknown }).groupField === 'string'
+						? ((cloned as { groupField: string }).groupField.trim() || undefined)
+						: undefined
+				};
+			})
+			: [];
+		return {
+			activeViewId: stored.activeViewId ?? null,
+			views
+		};
+	}
+
+	async saveGalleryViewsForFile(
+		filePath: string,
+		state: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null
+	): Promise<{ views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null> {
+		const sanitized = state
+			? {
+				activeViewId: state.activeViewId ?? null,
+				views: Array.isArray(state.views)
+					? state.views.map((entry) => {
+						const cloned = this.deepClone(entry);
+						const width = normalizeCardSize((cloned as { cardWidth?: unknown }).cardWidth);
+						const height = normalizeCardSize((cloned as { cardHeight?: unknown }).cardHeight);
+						const fallback = (!width || !height)
+							? deriveCardSizeFromAspect((cloned as { cardAspectRatio?: unknown }).cardAspectRatio)
+							: null;
+						return {
+							...cloned,
+							cardWidth: width ?? fallback?.width ?? undefined,
+							cardHeight: height ?? fallback?.height ?? undefined,
+							groupField: typeof (cloned as { groupField?: unknown }).groupField === 'string'
+								? ((cloned as { groupField: string }).groupField.trim() || undefined)
+								: undefined
+						};
+					})
+					: []
+			}
+			: null;
+		if (sanitized) {
+			this.settings.galleryViews[filePath] = sanitized;
+		} else {
+			delete this.settings.galleryViews[filePath];
+		}
+		await this.persist();
+		return sanitized;
+	}
+
+	async saveGalleryPreferencesForFile(
+		filePath: string,
+		preferences: SlideViewConfig | null | undefined
+	): Promise<SlideViewConfig | null> {
+		return saveGalleryPreferences(this.settings, filePath, preferences, () => this.persist());
+	}
+
 	async migrateFileScopedSettings(oldPath: string, newPath: string): Promise<boolean> {
 		const source = typeof oldPath === 'string' ? oldPath.trim() : '';
 		const target = typeof newPath === 'string' ? newPath.trim() : '';
@@ -461,11 +636,15 @@ export class SettingsService {
 			migrate(this.settings.columnLayouts);
 			migrate(this.settings.filterViews);
 			migrate(this.settings.tagGroups);
+			migrate((this.settings as TileLineBaseSettings).galleryFilterViews);
+			migrate((this.settings as TileLineBaseSettings).galleryTagGroups);
 			migrate(this.settings.kanbanBoards);
 			migrate(this.settings.columnConfigs);
 			migrate(this.settings.copyTemplates);
 			migrate(this.settings.kanbanPreferences);
 			migrate(this.settings.slidePreferences);
+			migrate(this.settings.galleryPreferences);
+			migrate(this.settings.galleryViews);
 
 			if (!changed) {
 				return false;
@@ -490,6 +669,24 @@ export class SettingsService {
 		return stored ? normalizeSlideViewConfig(stored) : null;
 	}
 
+	getDefaultGalleryConfig(): SlideViewConfig | null {
+		const stored = this.settings.defaultGalleryConfig;
+		return stored ? normalizeSlideViewConfig(stored) : null;
+	}
+
+	getDefaultGalleryCardSize(): { width: number; height: number } | null {
+		if (!this.settings.defaultGalleryConfig) {
+			return null;
+		}
+		return this.sanitizeDefaultCardSize(
+			{
+				width: this.settings.defaultGalleryCardWidth,
+				height: this.settings.defaultGalleryCardHeight
+			},
+			false
+		);
+	}
+
 	async setDefaultSlideConfig(preferences: SlideViewConfig | null): Promise<SlideViewConfig | null> {
 		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
 		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
@@ -501,6 +698,31 @@ export class SettingsService {
 			return previous;
 		}
 		this.settings.defaultSlideConfig = next;
+		await this.persist();
+		return next;
+	}
+
+	async setDefaultGalleryConfig(preferences: SlideViewConfig | null, cardSize?: { width?: number | null; height?: number | null } | null): Promise<SlideViewConfig | null> {
+		const normalized = preferences ? normalizeSlideViewConfig(preferences) : null;
+		const next = normalized && !isDefaultSlideViewConfig(normalized) ? normalized : null;
+		const previous = this.getDefaultGalleryConfig();
+		const nextCardSize = preferences ? this.sanitizeDefaultCardSize(cardSize, true) : null;
+		const previousCardSize = this.getDefaultGalleryCardSize();
+		const unchanged =
+			(next === null && previous === null) ||
+			(next !== null && previous !== null && JSON.stringify(next) === JSON.stringify(previous));
+		const cardSizeUnchanged =
+			(nextCardSize === null && previousCardSize === null) ||
+			(nextCardSize !== null &&
+				previousCardSize !== null &&
+				nextCardSize.width === previousCardSize.width &&
+				nextCardSize.height === previousCardSize.height);
+		if (unchanged && cardSizeUnchanged) {
+			return previous;
+		}
+		this.settings.defaultGalleryConfig = next;
+		this.settings.defaultGalleryCardWidth = nextCardSize?.width ?? null;
+		this.settings.defaultGalleryCardHeight = nextCardSize?.height ?? null;
 		await this.persist();
 		return next;
 	}
@@ -684,11 +906,17 @@ export class SettingsService {
 		pruneStore(this.settings.columnLayouts);
 		pruneStore(this.settings.filterViews);
 		pruneStore(this.settings.tagGroups);
+		pruneStore((this.settings as TileLineBaseSettings).galleryFilterViews);
+		pruneStore((this.settings as TileLineBaseSettings).galleryTagGroups);
+		pruneStore((this.settings as TileLineBaseSettings).galleryFilterViews);
+		pruneStore((this.settings as TileLineBaseSettings).galleryTagGroups);
 		pruneStore(this.settings.kanbanBoards);
 		pruneStore(this.settings.columnConfigs);
 		pruneStore(this.settings.copyTemplates);
 		pruneStore(this.settings.kanbanPreferences);
 		pruneStore(this.settings.slidePreferences);
+		pruneStore(this.settings.galleryPreferences);
+		pruneStore(this.settings.galleryViews);
 
 		if (!changed) {
 			return false;
@@ -720,6 +948,32 @@ export class SettingsService {
 	async saveLoggingConfig(config: LoggingConfig): Promise<void> {
 		this.settings.logging = this.sanitizeLoggingConfig(config);
 		await this.persist();
+	}
+
+	getNavigatorCompatibilityEnabled(): boolean {
+		return this.settings.navigatorCompatibilityEnabled === true;
+	}
+
+	getNavigatorCompatNoticeShown(): boolean {
+		return this.settings.navigatorCompatNoticeShown === true;
+	}
+
+	async setNavigatorCompatNoticeShown(shown: boolean): Promise<boolean> {
+		if (this.settings.navigatorCompatNoticeShown === shown) {
+			return false;
+		}
+		this.settings.navigatorCompatNoticeShown = shown;
+		await this.persist();
+		return true;
+	}
+
+	async setNavigatorCompatibilityEnabled(enabled: boolean): Promise<boolean> {
+		if (this.settings.navigatorCompatibilityEnabled === enabled) {
+			return false;
+		}
+		this.settings.navigatorCompatibilityEnabled = enabled;
+		await this.persist();
+		return true;
 	}
 
 	private sanitizeLoggingConfig(raw: Partial<LoggingConfig> | undefined): LoggingConfig {
@@ -842,6 +1096,25 @@ export class SettingsService {
 			map.set(path, { path, markedAt });
 		}
 		return Array.from(map.values());
+	}
+
+	private sanitizeDefaultCardSize(
+		raw: { width?: number | null; height?: number | null } | null | undefined,
+		applyFallback = false
+	): { width: number; height: number } | null {
+		if (!raw || typeof raw !== 'object') {
+			return applyFallback
+				? { width: DEFAULT_GALLERY_CARD_WIDTH, height: DEFAULT_GALLERY_CARD_HEIGHT }
+				: null;
+		}
+		const width = normalizeCardSize((raw as { width?: unknown }).width);
+		const height = normalizeCardSize((raw as { height?: unknown }).height);
+		if (width == null || height == null) {
+			return applyFallback
+				? { width: DEFAULT_GALLERY_CARD_WIDTH, height: DEFAULT_GALLERY_CARD_HEIGHT }
+				: null;
+		}
+		return { width, height };
 	}
 
 	private sanitizeDefaultSlideConfig(raw: unknown): SlideViewConfig | null {

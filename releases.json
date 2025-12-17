@@ -1,4 +1,20 @@
 {
+"0.9.0": {
+    "date": "2025-12-17",
+    "info": "Major update: Gallery View (Beta), Multiline Editing, and Theme Fixes.",
+    "new": [
+      "**Gallery View (Beta)**: Experience a brand new card-based browsing mode. Features include **16:9 Covers**, **View Groups** toolbar for organizing content, and **Right-click quick actions** to change status without opening details."
+    ],
+    "improved": [
+      "**Table Multiline Support**: Cells now fully support multiline text display and editing. Added **keyboard-first workflows**: press `F2` to toggle edit mode and `Shift+Enter` to insert newlines.",
+      "**Conversion Assistant**: Redesigned the validation flow with refined processing logic, making header conversion smarter and more reliable."
+    ],
+    "fixed": [
+      "**Theme Compatibility**: Fixed an issue causing unreadable hover text when using the **Minimal** theme (or other themes with opaque backgrounds).",
+      "**Theme Switching**: Fixed table colors not reloading correctly when switching between Light and Dark modes.",
+      "Fixed slide template image detection accuracy and various UI alignment issues."
+    ]
+  },
   "0.8.3": {
     "date": "2025-12-07",
     "info": "",

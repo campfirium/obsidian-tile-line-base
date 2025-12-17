@@ -12,6 +12,7 @@ export class ViewActionManager {
 	private readonly markdownActionId = 'open-table-view';
 	private readonly kanbanActionId = 'open-kanban-view';
 	private readonly slideActionId = 'open-slide-view';
+	private readonly galleryActionId = 'open-gallery-view';
 
 	constructor(
 		private readonly app: App,
@@ -42,7 +43,8 @@ export class ViewActionManager {
 			if (
 				actionId === this.markdownActionId ||
 				actionId === this.kanbanActionId ||
-				actionId === this.slideActionId
+				actionId === this.slideActionId ||
+				actionId === this.galleryActionId
 			) {
 				el.remove();
 			}
@@ -92,6 +94,7 @@ export class ViewActionManager {
 
 		this.ensureKanbanAction(leaf, view);
 		this.ensureSlideAction(leaf, view);
+		this.ensureGalleryAction(leaf, view);
 	}
 
 	private ensureKanbanAction(leaf: WorkspaceLeaf, view: MarkdownView): void {
@@ -102,7 +105,7 @@ export class ViewActionManager {
 		}
 
 		const label = t('kanbanView.actions.openFromMarkdown');
-		const button = view.addAction('layout-kanban', label, async (evt) => {
+		const button = view.addAction('columns-3', label, async (evt) => {
 			const file = view.file;
 			if (!file) {
 				logger.warn('Markdown view header kanban action triggered without file');
@@ -134,8 +137,12 @@ export class ViewActionManager {
 		});
 
 		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
-		setIcon(iconEl, 'layout-kanban');
-		const svg = iconEl?.querySelector?.('svg');
+		setIcon(iconEl, 'columns-3');
+		let svg = iconEl?.querySelector?.('svg');
+		if (!svg) {
+			setIcon(iconEl, 'layout-kanban');
+			svg = iconEl?.querySelector?.('svg');
+		}
 		if (!svg) {
 			setIcon(iconEl, 'layout-grid');
 		}
@@ -188,6 +195,57 @@ export class ViewActionManager {
 		setIcon(iconEl, 'presentation');
 
 		button.setAttribute(this.actionAttribute, this.slideActionId);
+		button.setAttribute('aria-label', label);
+		button.setAttribute('title', label);
+	}
+
+	private ensureGalleryAction(leaf: WorkspaceLeaf, view: MarkdownView): void {
+		const container = view.containerEl;
+		const existing = container.querySelector(`[${this.actionAttribute}="${this.galleryActionId}"]`);
+		if (existing) {
+			return;
+		}
+
+		const label = t('galleryView.actions.openFromMarkdown');
+		const button = view.addAction('layout-grid', label, async (evt) => {
+			const file = view.file;
+			if (!file) {
+				logger.warn('Markdown view header gallery action triggered without file');
+				return;
+			}
+
+			const preferredWindow = this.windowContextManager.getLeafWindow(leaf);
+			const workspace = this.windowContextManager.getWorkspaceForLeaf(leaf) ?? this.app.workspace;
+
+			logger.debug('Switching from markdown to gallery view via header action', {
+				file: file.path,
+				preferredWindow: this.windowContextManager.describeWindow(preferredWindow),
+				workspaceIsMain: workspace === this.app.workspace
+			});
+
+			try {
+				await this.coordinator.openTableView(file, {
+					leaf,
+					preferredWindow,
+					workspace,
+					mode: 'gallery',
+					trigger: 'manual'
+				});
+			} catch (error) {
+				logger.error('Failed to switch to gallery view from markdown header action', error);
+			}
+			evt?.preventDefault();
+			evt?.stopPropagation();
+		});
+
+		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
+		setIcon(iconEl, 'layout-grid');
+		const svg = iconEl?.querySelector?.('svg');
+		if (!svg) {
+			setIcon(iconEl, 'images');
+		}
+
+		button.setAttribute(this.actionAttribute, this.galleryActionId);
 		button.setAttribute('aria-label', label);
 		button.setAttribute('title', label);
 	}

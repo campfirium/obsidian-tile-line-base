@@ -34,6 +34,36 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 	}
 
 	const gridAdapter = context.getGridAdapter();
+	if (event.key === 'F2') {
+		if (event.defaultPrevented) {
+			return;
+		}
+		event.preventDefault();
+		event.stopImmediatePropagation();
+
+		const win = ownerDoc.defaultView ?? window;
+		const schedule = (callback: () => void) => {
+			if (typeof win.queueMicrotask === 'function') {
+				win.queueMicrotask(callback);
+			} else {
+				win.setTimeout(callback, 0);
+			}
+		};
+
+		const invoke = () => {
+			context.getGridAdapter()?.startEditingFocusedCell?.();
+		};
+
+		if (gridAdapter && typeof gridAdapter.runWhenReady === 'function') {
+			gridAdapter.runWhenReady(() => {
+				schedule(invoke);
+			});
+			return;
+		}
+
+		schedule(invoke);
+		return;
+	}
 	const selectedRows = gridAdapter?.getSelectedRows?.() || [];
 	const ctrlLike = event.metaKey || event.ctrlKey;
 	if (ctrlLike && !event.altKey) {

@@ -1,85 +1,72 @@
 import type { TableView } from '../TableView';
-import { clampColumnWidth } from '../grid/columnSizing';
 import { getLogger } from '../utils/logger';
-import { buildColumnDefinitions, mountGrid } from './GridMountCoordinator';
-import { renderFilterViewControls, syncTagGroupState } from './TableViewFilterPresenter';
-import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } from './TableViewInteractions';
-import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
-import { handleCellLinkOpen } from './LinkNavigation';
+import { syncTagGroupState } from './TableViewFilterPresenter';
+import { syncGalleryTagGroupState } from './gallery/galleryFilterPresenter';
 import { t } from '../i18n';
 import { getPluginContext } from '../pluginContext';
+import type { GalleryFilterBar } from './gallery/GalleryFilterBar';
 import { renderKanbanView } from './kanban/renderKanbanView';
 import { sanitizeKanbanHeightMode } from './kanban/kanbanHeight';
 import { sanitizeKanbanFontScale } from '../types/kanban';
 import { renderKanbanToolbar } from './kanban/renderKanbanToolbar';
 import { renderSlideMode } from './slide/renderSlideMode';
+import { renderGalleryMode } from './gallery/renderGalleryMode';
+import { renderGridMode } from './renderGridMode';
 import { normalizeSlideViewConfig } from '../types/slide';
 import { isSlideTemplateEmpty } from './slide/slideDefaults';
 import { deserializeColumnConfigs, mergeColumnConfigs } from './columnConfigUtils';
-import { applyStripeStyles } from './stripeStyles';
 import { extractFrontmatter } from './MarkdownFrontmatter';
-
-const logger = getLogger('table-view:renderer');
-export async function renderTableView(view: TableView): Promise<void> {
-	const rootEl = view.containerEl;
-	rootEl.classList.add('tile-line-base-view');
-
-	const container = rootEl.children[1] as HTMLElement | undefined;
-	if (!container) { return; }
-	container.empty();
-	container.classList.add('tlb-table-view-content');
-	container.classList.remove('tlb-has-grid');
+	const logger = getLogger('table-view:renderer');
+	export async function renderTableView(view: TableView): Promise<void> {
+		const rootEl = view.containerEl;
+		rootEl.classList.add('tile-line-base-view');
+		const container = rootEl.children[1] as HTMLElement | undefined;
+		if (!container) { return; }
+		container.empty();
+		container.classList.add('tlb-table-view-content');
+		container.classList.remove('tlb-has-grid');
 	container.classList.remove('tlb-kanban-mode');
 	container.classList.remove('tlb-slide-mode');
-
-	if (view.gridAdapter) {
-		view.gridController.destroy();
-		view.gridAdapter = null;
-		view.tableContainer = null;
-	}
-	if (view.kanbanController) {
-		view.kanbanController.destroy();
-		view.kanbanController = null;
-	}
-	if (view.slideController) {
-		view.slideController.destroy();
-		view.slideController = null;
-	}
-
-	const ownerDoc = container.ownerDocument;
-	logger.debug('render start', {
-		file: view.file?.path,
-		containerTag: container.tagName,
-		containerClass: container.className
-	});
-
-	if (!view.file) { container.createDiv({ text: t('tableViewRenderer.noFile') }); return; }
-
-	view.historyManager.reset();
-
-	view.columnLayoutStore.reset(view.file.path);
-	view.configManager.reset();
-	view.filterStateStore.setFilePath(view.file.path);
-	view.filterStateStore.resetState();
-	view.tagGroupStore.setFilePath(view.file.path);
-	view.tagGroupStore.resetState();
-	syncTagGroupState(view);
-	view.copyTemplate = null;
-
-	const content = await view.app.vault.read(view.file);
-	view.captureConversionBaseline(content);
-	const parsedFrontmatter = extractFrontmatter(content);
-	const configBlock = await view.persistenceService.loadConfig();
-	const plugin = getPluginContext();
-
-	view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
-
-	if (configBlock) {
-		if (configBlock.filterViews) {
-			view.filterStateStore.setState(configBlock.filterViews);
-		}
+	container.classList.remove('tlb-gallery-mode');
+		if (view.gridAdapter) { view.gridController.destroy(); view.gridAdapter = null; view.tableContainer = null; }
+		if (view.kanbanController) { view.kanbanController.destroy(); view.kanbanController = null; }
+		if (view.slideController) { view.slideController.destroy(); view.slideController = null; }
+		if (view.galleryController) { view.galleryController.destroy(); view.galleryController = null; }
+		if (view.galleryFilterBar) { view.galleryFilterBar.destroy(); view.galleryFilterBar = null; }
+		if (view.galleryQuickFilterController) view.galleryQuickFilterController.cleanup();
+		const ownerDoc = container.ownerDocument;
+		logger.debug('render start', { file: view.file?.path, containerTag: container.tagName, containerClass: container.className });
+		if (!view.file) { container.createDiv({ text: t('tableViewRenderer.noFile') }); return; }
+		view.historyManager.reset();
+		view.columnLayoutStore.reset(view.file.path);
+		view.configManager.reset();
+		view.filterStateStore.setFilePath(view.file.path);
+		view.filterStateStore.resetState();
+		view.tagGroupStore.setFilePath(view.file.path);
+		view.tagGroupStore.resetState();
+		syncTagGroupState(view);
+		view.galleryFilterStateStore.setFilePath(view.file.path);
+		view.galleryFilterStateStore.resetState();
+		view.galleryTagGroupStore.setFilePath(view.file.path);
+		view.galleryTagGroupStore.resetState();
+		view.copyTemplate = null; view.copyTemplateLoaded = false;
+		const content = await view.app.vault.read(view.file);
+		view.captureConversionBaseline(content);
+		const parsedFrontmatter = extractFrontmatter(content); const configBlock = await view.persistenceService.loadConfig();
+		const plugin = getPluginContext();
+		view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
+		if (configBlock) {
+			if (configBlock.filterViews) {
+				view.filterStateStore.setState(configBlock.filterViews);
+			}
 		if (configBlock.tagGroups) {
 			view.tagGroupStore.setState(configBlock.tagGroups);
+		}
+		if ((configBlock as any).galleryFilterViews) {
+			view.galleryFilterStateStore.setState((configBlock as any).galleryFilterViews);
+		}
+		if ((configBlock as any).galleryTagGroups) {
+			view.galleryTagGroupStore.setState((configBlock as any).galleryTagGroups);
 		}
 		if (configBlock.columnWidths) {
 			view.columnLayoutStore.applyConfig(configBlock.columnWidths);
@@ -89,7 +76,7 @@ export async function renderTableView(view: TableView): Promise<void> {
 			view.copyTemplate = loadedTemplate.trim().length > 0 ? loadedTemplate : null;
 		}
 	}
-
+	view.copyTemplateLoaded = true;
 	if (!view.slidePreferencesLoaded) {
 		const globalSlideConfig = plugin?.getDefaultSlideConfig?.() ?? null;
 		const preferredConfig = configBlock?.slide ?? globalSlideConfig ?? view.slideConfig;
@@ -101,10 +88,54 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.slideTemplateTouched = Boolean(hasFileScopedSlideConfig && !templateEmpty);
 		view.slidePreferencesLoaded = true;
 	}
-
+	if (!view.galleryPreferencesLoaded) {
+		const globalGalleryConfig = plugin?.getDefaultGalleryConfig?.() ?? null;
+		const globalGalleryCardSize = plugin?.getDefaultGalleryCardSize?.() ?? null;
+		const galleryViewsState = configBlock?.galleryViews;
+		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
+		if (hasGalleryViews) {
+			view.galleryViewStore.load({
+				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
+					...entry,
+					template: normalizeSlideViewConfig(entry.template ?? null),
+					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
+					groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
+						? ((entry as { groupField: string }).groupField.trim() || undefined)
+						: undefined
+				})),
+				activeViewId: galleryViewsState.activeViewId ?? null
+			});
+			const activeGallery = view.galleryViewStore.ensureActive();
+			const normalizedGallery = normalizeSlideViewConfig(activeGallery?.template ?? null);
+			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+			view.galleryConfig = normalizedGallery;
+			view.activeGalleryViewId = activeGallery?.id ?? null;
+			view.shouldAutoFillGalleryDefaults = galleryTemplateEmpty;
+			view.galleryTemplateTouched = !galleryTemplateEmpty;
+			view.galleryPreferencesLoaded = true;
+			view.galleryViewsLoaded = true;
+		} else {
+			const preferredGalleryConfig = configBlock?.gallery ?? globalGalleryConfig ?? view.galleryConfig;
+			const normalizedGallery = normalizeSlideViewConfig(preferredGalleryConfig ?? null);
+			const galleryTemplateEmpty = isSlideTemplateEmpty(normalizedGallery.template);
+			const hasFileScopedGalleryConfig = Boolean(configBlock?.gallery);
+			view.galleryConfig = normalizedGallery;
+			view.galleryViewStore.resetWithConfig(
+				normalizedGallery,
+				'Gallery',
+				hasFileScopedGalleryConfig ? undefined : globalGalleryCardSize ?? undefined
+			);
+			view.activeGalleryViewId = view.galleryViewStore.getActive()?.id ?? null;
+			view.shouldAutoFillGalleryDefaults = !hasFileScopedGalleryConfig || galleryTemplateEmpty;
+			view.galleryTemplateTouched = Boolean(hasFileScopedGalleryConfig && !galleryTemplateEmpty);
+			view.galleryPreferencesLoaded = true;
+			view.galleryViewsLoaded = true;
+		}
+	}
 	if (!view.kanbanPreferencesLoaded) {
 		const preference = configBlock?.viewPreference;
-		if (preference === 'kanban' || preference === 'table' || preference === 'slide') view.activeViewMode = preference;
+		if (preference === 'kanban' || preference === 'table' || preference === 'slide' || preference === 'gallery') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);
 		view.kanbanMultiRowEnabled = kanbanConfig?.multiRow !== false;
@@ -122,17 +153,29 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 		view.kanbanPreferencesLoaded = true;
 	}
-
 	view.filterViewState = view.filterStateStore.getState();
+	view.galleryFilterViewState = view.galleryFilterStateStore.getState();
 	syncTagGroupState(view);
-
 	const headerColumnConfigs = view.markdownParser.parseHeaderConfig(parsedFrontmatter.body);
 	const persistedColumnConfigs = configBlock?.columnConfigs
 		? deserializeColumnConfigs(view, configBlock.columnConfigs)
 		: null;
 	const columnConfigs = mergeColumnConfigs(headerColumnConfigs, persistedColumnConfigs);
-
-	const parsedBlocks = view.markdownParser.parseH2Blocks(parsedFrontmatter.body);
+	const h2ParseResult = view.markdownParser.parseH2(parsedFrontmatter.body);
+	const parsedBlocks = h2ParseResult.blocks;
+	const straySections = h2ParseResult.straySections ?? [];
+	if (view.file && (h2ParseResult.invalidSections.length > 0 || straySections.length > 0)) {
+		view.magicMigrationController?.handleMalformedH2Sections({
+			file: view.file,
+			content,
+			sections: h2ParseResult.invalidSections,
+			straySections,
+			convertibleCount: parsedBlocks.length,
+			onApplied: () => { void view.render(); },
+			onIgnore: () => { void view.render(); }
+		});
+		return;
+	}
 	const hasStructuredBlocks = view.markdownParser.hasStructuredH2Blocks(parsedBlocks);
 	if (!hasStructuredBlocks) {
 		if (view.file) {
@@ -142,20 +185,18 @@ export async function renderTableView(view: TableView): Promise<void> {
 		}
 		return;
 	}
-
 	view.blocks = parsedBlocks;
-
 	const schemaResult = view.schemaBuilder.buildSchema(view.blocks, columnConfigs ?? null);
 	view.dataStore.initialise(schemaResult, columnConfigs ?? null, {
 		frontmatter: parsedFrontmatter.frontmatter,
-		frontmatterPadding: parsedFrontmatter.padding
+		frontmatterPadding: parsedFrontmatter.padding,
+		leadingHeading: h2ParseResult.leadingHeading ?? null
 	});
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();
 	const dirtyFlags = view.dataStore.consumeDirtyFlags();
 	view.schemaDirty = dirtyFlags.schemaDirty;
 	view.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;
-
 	if (!view.schema) { container.createDiv({ text: t('tableViewRenderer.noSchema') }); return; }
 	view.kanbanBoardController?.processPendingLaneFieldRepairs();
 	if (view.schemaDirty || view.sparseCleanupRequired) {
@@ -163,7 +204,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.schemaDirty = false;
 		view.sparseCleanupRequired = false;
 	}
-
 	if (!view.filterViewState || view.filterViewState.views.length === 0) {
 		view.filterStateStore.loadFromSettings();
 		view.filterViewState = view.filterStateStore.getState();
@@ -174,21 +214,44 @@ export async function renderTableView(view: TableView): Promise<void> {
 	syncTagGroupState(view);
 	view.tagGroupController.syncWithAvailableViews();
 	syncTagGroupState(view);
-
+	if (!view.galleryFilterViewState || view.galleryFilterViewState.views.length === 0) {
+		view.galleryFilterStateStore.loadFromSettings();
+		view.galleryFilterViewState = view.galleryFilterStateStore.getState();
+	}
+	if (!configBlock || (configBlock as any).galleryTagGroups == null) {
+		view.galleryTagGroupStore.loadFromSettings();
+	}
+	syncGalleryTagGroupState(view);
+	view.galleryTagGroupController.syncWithAvailableViews();
+	syncGalleryTagGroupState(view);
 	view.filterOrchestrator.refresh();
+	view.galleryFilterOrchestrator.refresh();
 	view.initialColumnState = null;
 	const primaryField = view.schema.columnNames[0] ?? null;
-
-	if (view.filterViewBar) {
-		view.filterViewBar.destroy();
+	const filterViewBar = view.filterViewBar;
+	if (filterViewBar) {
+		filterViewBar.destroy();
 		view.filterViewBar = null;
+	}
+	const galleryFilterBar = view.galleryFilterBar as GalleryFilterBar | null;
+	if (galleryFilterBar) {
+		(galleryFilterBar as { destroy: () => void }).destroy();
+		view.galleryFilterBar = null;
 	}
 	if (view.kanbanToolbar) {
 		view.kanbanToolbar.destroy();
 		view.kanbanToolbar = null;
 	}
+	if (view.galleryToolbar) {
+		view.galleryToolbar.destroy();
+		view.galleryToolbar = null;
+	}
 	if (view.activeViewMode === 'slide') {
 		renderSlideMode(view, container);
+		return;
+	}
+	if (view.activeViewMode === 'gallery') {
+		renderGalleryMode(view, container);
 		return;
 	}
 	if (view.activeViewMode === 'kanban') {
@@ -232,93 +295,6 @@ export async function renderTableView(view: TableView): Promise<void> {
 		view.filterOrchestrator.applyActiveView();
 		return;
 	}
-	renderFilterViewControls(view, container);
-
 	container.classList.add('tlb-has-grid');
-
-	const columns = [
-		{
-			field: '#',
-			headerName: '',
-			headerTooltip: 'Index',
-			editable: false
-		},
-		...buildColumnDefinitions({
-			schema: view.schema,
-			columnConfigs: view.schema.columnConfigs ?? null,
-			primaryField,
-			dataStore: view.dataStore,
-			columnLayoutStore: view.columnLayoutStore,
-			clampWidth: (value) => clampColumnWidth(value, { clampMax: false })
-		})
-	];
-
-	const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
-	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
-	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
-	const stripeColorMode = plugin?.getStripeColorMode?.() ?? 'recommended';
-	const stripeCustomColor = plugin?.getStripeCustomColor?.() ?? null;
-	const borderColorMode = plugin?.getBorderColorMode?.() ?? 'recommended';
-	const borderCustomColor = plugin?.getBorderCustomColor?.() ?? null;
-	const borderContrast = plugin?.getBorderContrast?.() ?? 0.16;
-	applyStripeStyles({
-		container: tableContainer,
-		ownerDocument: ownerDoc,
-		stripeColorMode,
-		stripeCustomColor,
-		borderColorMode,
-		borderCustomColor,
-		borderContrast,
-		isDarkMode
-	});
-	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
-	const sideBarVisible = !hideRightSidebar;
-
-	const containerWindow = ownerDoc?.defaultView ?? window;
-	const executeMount = () => {
-		const { gridAdapter, container: gridContainer } = mountGrid({
-			gridController: view.gridController,
-			container: tableContainer,
-			columns,
-			rowData: view.filterOrchestrator.getVisibleRows(),
-			sideBarVisible,
-			handlers: {
-				onStatusChange: (rowId, newStatus) => handleStatusChange(view, rowId, newStatus),
-				onColumnResize: (field, width) => handleColumnResize(view, field, width),
-				onCopySelectionAsTemplate: (rowIndex) => {
-					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
-				},
-				onCopyH2Section: (rowIndex) => {
-					void view.gridInteractionController.copySectionAsTemplate(rowIndex);
-				},
-				onColumnOrderChange: (fields) => handleColumnOrderChange(view, fields),
-				onModelUpdated: () => view.focusManager.handleGridModelUpdated(),
-				onCellEdit: (event) => handleCellEdit(view, event),
-				onHeaderEdit: (event) => handleHeaderEditEvent(view, event),
-				onColumnHeaderContextMenu: (field, event) => view.columnInteractionController.handleColumnHeaderContextMenu(field, event),
-				onOpenCellLink: (context) => handleCellLinkOpen(view, context),
-				onEnterAtLastRow: (field) => {
-					const oldRowCount = view.blocks.length;
-					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });
-				},
-				onRowDragEnd: (payload) => {
-					view.rowInteractionController.reorderRowsByDrag(payload);
-				}
-			}
-		});
-
-	view.gridAdapter = gridAdapter;
-		view.tableContainer = gridContainer;
-		view.gridLayoutController.attach(gridContainer);
-		view.filterOrchestrator.applyActiveView();
-		view.gridInteractionController.attach(gridContainer);
-	};
-
-	if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
-		containerWindow.requestAnimationFrame(() => {
-			executeMount();
-		});
-	} else {
-		executeMount();
-	}
+	renderGridMode({ view, container, ownerDoc, primaryField, plugin });
 }

@@ -39,6 +39,7 @@ export class TagGroupController {
 	private readonly getUniqueFieldValues: (field: string, limit: number) => string[];
 	private readonly ensureFilterViewsForFieldValues: (field: string, values: string[]) => FilterViewDefinition[];
 	private readonly activateFilterView: (viewId: string | null) => void;
+	private readonly setActiveView: (viewId: string | null) => void;
 	private readonly renderBar: () => void;
 	private readonly persist: () => Promise<void> | void;
 	private readonly isStatusBaselineSeeded: () => boolean;
@@ -55,6 +56,7 @@ export class TagGroupController {
 		this.getUniqueFieldValues = options.getUniqueFieldValues;
 		this.ensureFilterViewsForFieldValues = options.ensureFilterViewsForFieldValues;
 		this.activateFilterView = options.activateFilterView;
+		this.setActiveView = options.activateFilterView;
 		this.renderBar = options.renderBar;
 		this.persist = options.persist;
 		this.isStatusBaselineSeeded = options.isStatusBaselineSeeded;
@@ -264,6 +266,8 @@ export class TagGroupController {
 
 	private activateGroup(group: TagGroupDefinition): void {
 		this.store.setActiveGroup(group.id);
+		// Reset active view to default when switching groups so the first tab is focused
+		this.setActiveView(null);
 		this.ensureVisibleFilterSelection();
 		void this.persistAndRender();
 	}
@@ -502,13 +506,17 @@ export class TagGroupController {
 	}
 
 	private ensureVisibleFilterSelection(): void {
+		const state = this.getFilterViewState();
+		const activeId = state.activeViewId;
+		if (!activeId) {
+			this.activateFilterView(null);
+			return;
+		}
 		const visible = this.store.getVisibleViewIds();
 		if (!visible) {
 			return;
 		}
-		const state = this.getFilterViewState();
-		const activeId = state.activeViewId;
-		if (activeId && visible.has(activeId)) {
+		if (visible.has(activeId)) {
 			return;
 		}
 		const fallback = state.views.find((view) => visible.has(view.id));

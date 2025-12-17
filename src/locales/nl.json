@@ -4,7 +4,8 @@
     "mode": {
       "table": "Tabel",
       "kanban": "Kanban",
-      "slide": "Dia"
+      "slide": "Dia",
+      "gallery": "Galerij"
     }
   },
   "slideView": {
@@ -97,6 +98,43 @@
     "openMarkdownView": "Terugschakelen naar Markdown-editor",
     "switchViewMenu": "Weergave wisselen (huidig: {{mode}})"
   },
+  "galleryView": {
+    "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
+    "processingHint": "Galerijkaarten worden voorbereid...",
+    "actions": {
+      "openFromMarkdown": "TileLineBase-galerijweergave openen",
+      "switchToGallery": "Schakel naar galerijweergave"
+    },
+    "toolbar": {
+      "title": "Galerij",
+      "addCardButtonAriaLabel": "Galerijkaart toevoegen",
+      "settingsMenuAriaLabel": "Galerij-instellingen",
+      "editTemplate": "Galerijsjabloon bewerken",
+      "addGalleryButtonAriaLabel": "Galerijweergave toevoegen",
+      "unnamedGalleryLabel": "Naamloze galerij",
+      "editGalleryLabel": "Galerij bewerken",
+      "duplicateGalleryLabel": "Galerij dupliceren",
+      "deleteGalleryLabel": "Galerij verwijderen",
+      "cannotDeleteLastGallery": "Houd minstens één galerijweergave."
+    },
+    "templateModal": {
+      "title": "Galerijsjabloon",
+      "cardSizeLabel": "Kaartinstellingen",
+      "widthLabel": "Breedte (px)",
+      "heightLabel": "Hoogte (px)",
+      "groupFieldTitle": "Groepsveld",
+      "groupFieldLabel": "Gebruik veld",
+      "groupFieldNone": "Geen",
+      "filterSectionTitle": "Filters en sortering",
+      "filterSectionActive": "Actief filter: {{name}}",
+      "filterSectionEmpty": "Nog geen filterweergave. Maak er een om deze galerij te beperken.",
+      "filterPickerLabel": "Filterweergave",
+      "filterAllLabel": "Alle items",
+      "newFilterButton": "Nieuwe filterweergave",
+      "editFilterButton": "Filter/sortering bewerken",
+      "manageGroupsButton": "Filtergroepen beheren"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "Kanbanweergave vereist een geldig tabelschema. Laad de notitie opnieuw en probeer het opnieuw.",
     "missingLaneField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig. Voeg hem toe in de tabelweergave of schakel terug.",
@@ -122,6 +160,9 @@
       "switchToKanban": "Overschakelen naar kanbanweergave",
       "switchToTable": "Overschakelen naar tabelweergave"
     },
+    "laneActions": {
+      "addCard": "Kaart toevoegen aan \"{{lane}}\""
+    },
     "fieldModal": {
       "title": "Kanbankolom selecteren",
       "description": "Kies de kolom waarvan de waarden de kolommen in het kanbanbord vormen.",
@@ -144,6 +185,20 @@
       "successNotice": "Kolom \"{{name}}\" aangemaakt.",
       "statusFieldBlocked": "Statuskolommen dekken de Status-kolom al. Bewerk de Statusopties in de tabel.",
       "missingLaneField": "Kies een kanbankolom voordat je een nieuwe kolom maakt."
+    },
+    "cardCreateModal": {
+      "title": "Nieuwe invoer",
+      "description": "Vul de velden hieronder in om direct in deze kolom een rij te maken.",
+      "laneFieldLabel": "Kolomwaarde ({{field}})",
+      "laneFieldDesc": "Kaarten die hier worden gemaakt gebruiken standaard \"{{lane}}\" als kolomwaarde.",
+      "submitLabel": "Invoer maken",
+      "cancelLabel": "Annuleren",
+      "laneRequiredError": "Voer een kolomwaarde in voordat je een invoer maakt."
+    },
+    "cardEditModal": {
+      "title": "Invoer bewerken",
+      "submitLabel": "Opslaan",
+      "deleteLabel": "Invoer verwijderen"
     },
     "content": {
       "sectionTitle": "Kaartinhoud",
@@ -209,7 +264,8 @@
     "importCsvAsTable": "CSV als nieuwe tabel importeren",
     "toggleTableView": "Tabelweergave schakelen",
     "openKanbanView": "TileLineBase-kanbanweergave openen",
-    "openSlideView": "TileLineBase-diaweergave openen"
+    "openSlideView": "TileLineBase-diaweergave openen",
+    "openGalleryView": "TileLineBase-galerijweergave openen"
   },
   "csv": {
     "errorNoFile": "Sla de notitie op voordat je exporteert; het huidige bestand is niet gevonden.",
@@ -260,6 +316,20 @@
     "loggingLevelOptionInfo": "Info, waarschuwingen en fouten",
     "loggingLevelOptionDebug": "Debug, info, waarschuwingen en fouten",
     "loggingLevelOptionTrace": "Trace (meest uitgebreid)",
+    "compatibilityHeading": "Compatibiliteit",
+    "navigatorCompatLabel": "Notebook Navigator-compatibiliteit",
+    "navigatorCompatDesc": "Wanneer ingeschakeld en Notebook Navigator is geïnstalleerd, blokkeert het het redundante heropenen van de huidige TileLineBase-weergave om flikkeren te voorkomen. Standaard uitgeschakeld voor naleving.",
+    "navigatorCompatModalTitle": "TileLineBase-compatibiliteitsmelding",
+    "navigatorCompatModalHeading": "Notebook Navigator-compatibiliteit ingeschakeld",
+    "navigatorCompatModalBody1": "Notebook Navigator is gedetecteerd. Het herlaadmechanisme veroorzaakt hevig flikkeren en weergavewisselingen in TileLineBase-weergaven. Om normaal gebruik te garanderen, heeft TileLineBase automatisch isolatie per instantie ingeschakeld.",
+    "navigatorCompatModalBody2": "Deze bescherming is lokaal beperkt tot TileLineBase-weergaven en heeft geen invloed op andere scenario's.",
+    "navigatorCompatModalBody3": "Je kunt dit op elk moment uitschakelen in de TileLineBase-instellingen onder Compatibiliteit.",
+    "navigatorPinnedWarning": "Notebook Navigator is ingeschakeld. Om conflicten te voorkomen, pin geen TileLineBase-weergaven in Obsidian.",
+    "navigatorPinnedModalTitle": "TileLineBase-compatibiliteitsmelding",
+    "navigatorPinnedModalHeading": "Conflict met vastgezette weergave door Notebook Navigator",
+    "navigatorPinnedModalBody1": "Door de verversmechanismen van Notebook Navigator en Obsidian veroorzaakt het vastzetten van een TileLineBase-weergave een oneindige herlaadlus. Dit resulteert in schermflikkering, verspringende focus en onbedoelde nieuwe tabbladen.",
+    "navigatorPinnedModalBody2": "We stemmen momenteel af met de auteur van Notebook Navigator om dit op te lossen.",
+    "navigatorPinnedModalAction": "Maak deze tab in de tussentijd los om de normale werking te herstellen. Vermijd het vastzetten van TileLineBase-weergaven totdat dit is opgelost.",
     "backupHeading": "Back-ups",
     "backupEnableLabel": "Automatische back-ups inschakelen",
     "backupEnableDesc": "Maak een momentopname voordat Markdown wordt geschreven zodat je ongewenste wijzigingen kunt terugdraaien.",
@@ -539,7 +609,27 @@
     "defaultFileName": "Geconverteerde notitie",
     "successNotice": "Geconverteerd naar {{fileName}}",
     "failureNotice": "Conversie mislukt. Probeer het opnieuw.",
-    "previewRenameHint": "Klik op kolomkoppen om kolommen te hernoemen."
+    "previewRenameHint": "Klik op kolomkoppen om kolommen te hernoemen.",
+    "malformedTitle": "Onjuist gevormde H2-secties gedetecteerd",
+    "malformedDescription": "Sommige H2-secties missen sleutel/waarde-paren. Bewerk ze hieronder of negeer om door te gaan.",
+    "malformedSummary": "{{total}} H2-secties gevonden; {{invalid}} moeten worden behandeld.",
+    "malformedSectionLabel": "Sectie die begint op regel {{line}}",
+    "malformedReasonMissingColon": "Kop moet een dubbelepunt bevatten die sleutel en waarde scheidt.",
+    "malformedReasonInvalidField": "Kop moet zowel een sleutel als een waarde bevatten.",
+    "malformedApply": "Opslaan en vernieuwen",
+    "malformedIgnore": "Eenmalig negeren",
+    "malformedEditWarning": "Wijzigingen hier vervangen de oorspronkelijke tekst voor deze secties.",
+    "malformedIgnoreWarning": "Eenmalig negeren verwijdert deze onjuist gevormde secties en gaat verder naar de tabelweergave.",
+    "malformedSaveSuccess": "Onjuist gevormde H2-secties bijgewerkt.",
+    "malformedSaveError": "Bijwerken van onjuist gevormde H2-secties mislukt.",
+    "unstructuredTitle": "Inhoud moet worden nagekeken voor conversie",
+    "unstructuredBody": "Het openen van de TLB-weergave heeft de Conversie-assistent gestart. {{sectionCount}} converteerbare H2-secties gedetecteerd; sommige inhoud vereist nog aandacht vóór conversie.",
+    "unstructuredInstruction": "Kies hoe je wilt doorgaan: Bewerken & converteren / Verwijderen & converteren / Annuleren.",
+    "unstructuredSectionLabel": "Ongestructureerde tekst die begint op regel {{line}}",
+    "unstructuredHint": "De inhoud hieronder wordt verwijderd tenzij je die bewerkt zodat die voldoet aan het vereiste formaat.",
+    "unstructuredEditConvert": "Bewerken & converteren",
+    "unstructuredDeleteConvert": "Verwijderen & converteren",
+    "unstructuredCancel": "Annuleren"
   },
   "tableViewSetup": {
     "constructorStart": "=== TableView-constructor start ===",

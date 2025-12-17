@@ -97,7 +97,8 @@ export class OverflowTooltipController {
 		if (this.isTooltipDisabled(anchor)) {
 			return;
 		}
-		if (!this.isOverflowing(anchor)) {
+		const isMultiline = /[\r\n]/.test(text);
+		if (!isMultiline && !this.isOverflowing(anchor)) {
 			return;
 		}
 		this.currentAnchor = anchor;

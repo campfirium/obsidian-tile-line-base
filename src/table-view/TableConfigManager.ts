@@ -9,16 +9,40 @@ import { readConfigCallout, stripExistingConfigBlock } from './config/ConfigBloc
 
 const logger = getLogger('table-view:config');
 
+const DEFAULT_GALLERY_CARD_WIDTH = 320;
+const DEFAULT_GALLERY_CARD_HEIGHT = 240;
+const normalizeCardSize = (value: unknown, fallback: number): number => {
+	const numeric = typeof value === 'number' ? value : Number(value);
+	if (Number.isFinite(numeric) && numeric > 40 && numeric < 2000) {
+		return numeric;
+	}
+	return fallback;
+};
+
+const deriveCardSizeFromAspect = (aspect: unknown): { width: number; height: number } | null => {
+	const ratio = typeof aspect === 'number' ? aspect : Number(aspect);
+	if (!Number.isFinite(ratio) || ratio <= 0.1 || ratio >= 10) {
+		return null;
+	}
+	const width = DEFAULT_GALLERY_CARD_WIDTH;
+	const height = Math.max(40, Math.min(2000, Math.round(width / ratio)));
+	return { width, height };
+};
+
 export interface TableConfigData {
 	filterViews?: FileFilterViewState | null;
 	tagGroups?: FileTagGroupState | null;
+	galleryFilterViews?: FileFilterViewState | null;
+	galleryTagGroups?: FileTagGroupState | null;
 	columnWidths?: Record<string, number>;
 	columnConfigs?: string[] | null;
-	viewPreference?: 'table' | 'kanban' | 'slide';
+	viewPreference?: 'table' | 'kanban' | 'slide' | 'gallery';
 	copyTemplate?: string | null;
 	kanban?: KanbanViewPreferenceConfig | null;
 	kanbanBoards?: KanbanBoardState | null;
 	slide?: SlideViewConfig | null;
+	gallery?: SlideViewConfig | null;
+	galleryViews?: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null;
 }
 
 export class TableConfigManager {
@@ -53,6 +77,16 @@ export class TableConfigManager {
 		if (settings.tagGroups[filePath]) {
 			snapshot.tagGroups = plugin.getTagGroupsForFile(filePath);
 		}
+		if ((settings as any).galleryFilterViews?.[filePath]) {
+			snapshot.galleryFilterViews = (plugin as any).getGalleryFilterViewsForFile
+				? (plugin as any).getGalleryFilterViewsForFile(filePath)
+				: undefined;
+		}
+		if ((settings as any).galleryTagGroups?.[filePath]) {
+			snapshot.galleryTagGroups = (plugin as any).getGalleryTagGroupsForFile
+				? (plugin as any).getGalleryTagGroupsForFile(filePath)
+				: undefined;
+		}
 		const layout = settings.columnLayouts[filePath];
 		if (layout && Object.keys(layout).length > 0) {
 			snapshot.columnWidths = { ...layout };
@@ -66,7 +100,7 @@ export class TableConfigManager {
 			snapshot.copyTemplate = copyTemplate;
 		}
 		const viewPreference = settingsService.getFileViewPreference(filePath);
-		if (viewPreference === 'table' || viewPreference === 'kanban' || viewPreference === 'slide') {
+		if (viewPreference === 'table' || viewPreference === 'kanban' || viewPreference === 'slide' || viewPreference === 'gallery') {
 			snapshot.viewPreference = viewPreference;
 		}
 		const kanbanPrefs = settingsService.getKanbanPreferencesForFile(filePath);
@@ -76,6 +110,14 @@ export class TableConfigManager {
 		const slidePrefs = settingsService.getSlidePreferencesForFile(filePath);
 		if (slidePrefs) {
 			snapshot.slide = slidePrefs;
+		}
+		const galleryPrefs = settingsService.getGalleryPreferencesForFile(filePath);
+		if (galleryPrefs) {
+			snapshot.gallery = galleryPrefs;
+		}
+		const galleryViews = settingsService.getGalleryViewsForFile(filePath);
+		if (galleryViews && Array.isArray(galleryViews.views) && galleryViews.views.length > 0) {
+			snapshot.galleryViews = galleryViews;
 		}
 		const storedBoards = settings.kanbanBoards[filePath];
 		if (storedBoards && storedBoards.boards.length > 0) {
@@ -101,8 +143,15 @@ export class TableConfigManager {
 		const tasks: Array<Promise<unknown>> = [];
 		const filterViews = data.filterViews ?? { views: [], activeViewId: null, metadata: {} };
 		tasks.push(plugin.saveFilterViewsForFile(filePath, filterViews));
+		const galleryFilterViews = data.galleryFilterViews ?? { views: [], activeViewId: null, metadata: {} };
+		if ((plugin as any).saveGalleryFilterViewsForFile) {
+			tasks.push((plugin as any).saveGalleryFilterViewsForFile(filePath, galleryFilterViews));
+		}
 		if (data.tagGroups) {
 			tasks.push(plugin.saveTagGroupsForFile(filePath, data.tagGroups));
+		}
+		if (data.galleryTagGroups && (plugin as any).saveGalleryTagGroupsForFile) {
+			tasks.push((plugin as any).saveGalleryTagGroupsForFile(filePath, data.galleryTagGroups));
 		}
 		tasks.push(settingsService.setColumnLayout(filePath, data.columnWidths ?? null));
 
@@ -112,9 +161,11 @@ export class TableConfigManager {
 			tasks.push(settingsService.saveColumnConfigsForFile(filePath, serializedConfigs));
 		}
 
-		const copyTemplate =
-			typeof data.copyTemplate === 'string' && data.copyTemplate.trim().length > 0 ? data.copyTemplate : null;
-		tasks.push(settingsService.saveCopyTemplateForFile(filePath, copyTemplate));
+		if (data.copyTemplate !== undefined) {
+			const copyTemplate =
+				typeof data.copyTemplate === 'string' && data.copyTemplate.trim().length > 0 ? data.copyTemplate : null;
+			tasks.push(settingsService.saveCopyTemplateForFile(filePath, copyTemplate));
+		}
 
 		const viewPreference = data.viewPreference ?? 'table';
 		tasks.push(settingsService.setFileViewPreference(filePath, viewPreference));
@@ -127,6 +178,9 @@ export class TableConfigManager {
 			tasks.push(plugin.saveKanbanBoardsForFile(filePath, data.kanbanBoards));
 		}
 		tasks.push(settingsService.saveSlidePreferencesForFile(filePath, data.slide));
+		tasks.push(settingsService.saveGalleryPreferencesForFile(filePath, data.gallery));
+		const galleryViews = data.galleryViews ?? null;
+		tasks.push(settingsService.saveGalleryViewsForFile(filePath, galleryViews));
 
 		await Promise.all(
 			tasks.map((task) =>
@@ -183,6 +237,14 @@ export class TableConfigManager {
 			result.tagGroups = source.tagGroups as FileTagGroupState;
 			hasData = true;
 		}
+		if (isRecord(source.galleryFilterViews)) {
+			result.galleryFilterViews = source.galleryFilterViews as FileFilterViewState;
+			hasData = true;
+		}
+		if (isRecord(source.galleryTagGroups)) {
+			result.galleryTagGroups = source.galleryTagGroups as FileTagGroupState;
+			hasData = true;
+		}
 		if (isRecord(source.columnWidths)) {
 			const widths: Record<string, number> = {};
 			for (const [field, value] of Object.entries(source.columnWidths)) {
@@ -206,7 +268,7 @@ export class TableConfigManager {
 			result.copyTemplate = source.copyTemplate;
 			hasData = true;
 		}
-		if (source.viewPreference === 'table' || source.viewPreference === 'kanban' || source.viewPreference === 'slide') {
+		if (source.viewPreference === 'table' || source.viewPreference === 'kanban' || source.viewPreference === 'slide' || source.viewPreference === 'gallery') {
 			result.viewPreference = source.viewPreference;
 			hasData = true;
 		}
@@ -220,6 +282,32 @@ export class TableConfigManager {
 		}
 		if (isRecord(source.slide)) {
 			result.slide = source.slide as SlideViewConfig;
+			hasData = true;
+		}
+		if (isRecord(source.gallery)) {
+			result.gallery = source.gallery as SlideViewConfig;
+			hasData = true;
+		}
+		if (isRecord(source.galleryViews)) {
+			const rawViews = (source.galleryViews as { views?: unknown }).views;
+			const views = Array.isArray(rawViews)
+				? rawViews.map((entry: any) => {
+					const width = normalizeCardSize(entry?.cardWidth, DEFAULT_GALLERY_CARD_WIDTH);
+					const height = normalizeCardSize(entry?.cardHeight, DEFAULT_GALLERY_CARD_HEIGHT);
+					const fallback = (!width || !height) ? deriveCardSizeFromAspect(entry?.cardAspectRatio) : null;
+					return {
+						id: entry?.id,
+						name: entry?.name,
+						template: entry?.template,
+						cardWidth: width ?? fallback?.width ?? undefined,
+						cardHeight: height ?? fallback?.height ?? undefined
+					};
+				})
+				: [];
+			result.galleryViews = {
+				views: views as Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>,
+				activeViewId: (source.galleryViews as { activeViewId?: string | null }).activeViewId ?? null
+			};
 			hasData = true;
 		}
 

@@ -5,6 +5,7 @@ import { ColumnInteractionController } from './ColumnInteractionController';
 import { RowInteractionController } from './RowInteractionController';
 import { GlobalQuickFilterController } from './GlobalQuickFilterController';
 import { FilterViewOrchestrator } from './FilterViewOrchestrator';
+import { GalleryFilterOrchestrator } from './gallery/GalleryFilterOrchestrator';
 import { GridInteractionController } from './GridInteractionController';
 import { RowMigrationController } from './RowMigrationController';
 import { GridLayoutController } from './GridLayoutController';
@@ -30,12 +31,14 @@ import { TableFileDuplicationController } from './TableFileDuplicationController
 import { KanbanBoardController } from './kanban/KanbanBoardController';
 import { RowOrderController } from './row-sort/RowOrderController';
 import { MagicMigrationController } from './MagicMigrationController';
-
+import { initializeGalleryFilters } from './gallery/initGalleryFilters';
+import { installTableViewGridF2Keybinding } from './TableViewKeymap';
 const logger = getLogger('table-view:setup');
-
 export function initializeTableView(view: TableView): void {
 	logger.info(t('tableViewSetup.constructorStart'));
 	logger.debug('leaf', view.leaf);
+
+	installTableViewGridF2Keybinding(view);
 
 	view.refreshCoordinator = new TableRefreshCoordinator(view);
 	view.configManager = new TableConfigManager();
@@ -49,6 +52,11 @@ export function initializeTableView(view: TableView): void {
 		getFilterViewState: () => view.filterViewState,
 		getTagGroupState: () => view.tagGroupState,
 		getCopyTemplate: () => view.copyTemplate ?? null,
+		isCopyTemplateLoaded: () => view.copyTemplateLoaded,
+		getPersistedCopyTemplate: (filePath) => {
+			const plugin = getPluginContext();
+			return plugin ? plugin.getSettingsService().getCopyTemplateForFile(filePath) : null;
+		},
 		getBackupManager: () => getPluginContext()?.getBackupManager() ?? null,
 		getViewPreference: () => view.activeViewMode,
 		getKanbanConfig: () => ({
@@ -61,12 +69,17 @@ export function initializeTableView(view: TableView): void {
 		}),
 		getKanbanBoards: () => view.kanbanBoardStore.getState(),
 		getSlideConfig: () => view.slideConfig ?? null,
-		getGlobalSlideConfig: () => getPluginContext()?.getDefaultSlideConfig() ?? null,
-		markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
-		shouldAllowSave: () => view.hasUserMutations(),
-		onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),
-		getSaveDelayMs: () => (view.refreshCoordinator.hasSiblingForTrackedFile() ? 120 : 500)
-	});
+			getGalleryConfig: () => view.galleryConfig ?? null,
+			getGalleryViews: () => view.galleryViewStore.getState(),
+			getGlobalSlideConfig: () => getPluginContext()?.getDefaultSlideConfig() ?? null,
+			getGlobalGalleryConfig: () => getPluginContext()?.getDefaultGalleryConfig() ?? null,
+			getGalleryFilterViewState: () => view.galleryFilterViewState,
+			getGalleryTagGroupState: () => view.galleryTagGroupState,
+			markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
+			shouldAllowSave: () => view.hasUserMutations(),
+			onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),
+			getSaveDelayMs: () => (view.refreshCoordinator.hasSiblingForTrackedFile() ? 120 : 500)
+		});
 	view.columnInteractionController = new ColumnInteractionController({
 		app: view.app,
 		dataStore: view.dataStore,
@@ -81,13 +94,8 @@ export function initializeTableView(view: TableView): void {
 		getSchema: () => view.schema,
 		getFocusedField: () => view.gridAdapter?.getFocusedCell?.()?.field ?? null,
 		refreshGridData: () => view.filterOrchestrator.refresh(),
-		focusRow: (rowIndex, field) => {
-			view.focusManager.focusRow(rowIndex, field ?? null);
-		},
-		scheduleSave: () => {
-			view.markUserMutation('row-interaction');
-			view.persistenceService.scheduleSave();
-		},
+		focusRow: (rowIndex, field) => view.focusManager.focusRow(rowIndex, field ?? null),
+		scheduleSave: () => { view.markUserMutation('row-interaction'); view.persistenceService.scheduleSave(); },
 		getActiveFilterPrefills: () => getActiveFilterPrefills(view),
 		history: view.historyManager
 	});
@@ -113,6 +121,7 @@ export function initializeTableView(view: TableView): void {
 		getBlocks: () => view.blocks,
 		getTemplate: () => view.copyTemplate,
 		setTemplate: (template) => {
+			view.copyTemplateLoaded = true;
 			view.copyTemplate = template;
 		},
 		persistTemplate: () => view.persistenceService.saveConfig()
@@ -125,38 +134,27 @@ export function initializeTableView(view: TableView): void {
 		getFile: () => view.file,
 		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
 		refreshGrid: () => view.filterOrchestrator.refresh(),
-		scheduleSave: () => {
-			view.markUserMutation('paragraph-promotion');
-			view.persistenceService.scheduleSave();
-		}
+		scheduleSave: () => { view.markUserMutation('paragraph-promotion'); view.persistenceService.scheduleSave(); }
 	});
-	view.tableCreationController = new TableCreationController({
-		app: view.app,
-		getCurrentFile: () => view.file
-	});
-	view.fileDuplicationController = new TableFileDuplicationController({
-		app: view.app,
-		configManager: view.configManager,
-		persistence: view.persistenceService,
-		getCurrentFile: () => view.file,
-		getOwnerDocument: () => view.containerEl.ownerDocument ?? document
-	});
+	view.tableCreationController = new TableCreationController({ app: view.app, getCurrentFile: () => view.file });
+	view.fileDuplicationController = new TableFileDuplicationController({ app: view.app, configManager: view.configManager, persistence: view.persistenceService, getCurrentFile: () => view.file, getOwnerDocument: () => view.containerEl.ownerDocument ?? document });
 	view.magicMigrationController = new MagicMigrationController(view);
-	view.kanbanBoardController = new KanbanBoardController({
-		app: view.app,
-		view,
-		store: view.kanbanBoardStore
-	});
-	view.globalQuickFilterController = new GlobalQuickFilterController({
-		getGridAdapter: () => view.gridAdapter,
-		quickFilterManager: view.globalQuickFilterManager
-	});
+	view.kanbanBoardController = new KanbanBoardController({ app: view.app, view, store: view.kanbanBoardStore });
+	view.globalQuickFilterController = new GlobalQuickFilterController({ getGridAdapter: () => view.gridAdapter, quickFilterManager: view.globalQuickFilterManager });
+	view.galleryQuickFilterController = new GlobalQuickFilterController({ getGridAdapter: () => null, quickFilterManager: view.galleryQuickFilterManager });
 	view.filterOrchestrator = new FilterViewOrchestrator({
 		dataStore: view.dataStore,
 		getFilterViewState: () => view.filterViewState,
 		getGridAdapter: () => view.gridAdapter,
 		getSchemaColumns: () => view.schema?.columnNames ?? null,
 		reapplyGlobalQuickFilter: () => view.globalQuickFilterController.reapply(),
+		emitFormulaLimitNotice: (limit) => {
+			new Notice(t('tableViewSetup.formulaLimitNotice', { limit: String(limit) }));
+		}
+	});
+	view.galleryFilterOrchestrator = new GalleryFilterOrchestrator({
+		dataStore: view.dataStore,
+		getFilterViewState: () => view.galleryFilterViewState,
 		emitFormulaLimitNotice: (limit) => {
 			new Notice(t('tableViewSetup.formulaLimitNotice', { limit: String(limit) }));
 		}
@@ -225,11 +223,12 @@ export function initializeTableView(view: TableView): void {
 		persist: () => persistTagGroups(view),
 		isStatusBaselineSeeded: () => view.filterStateStore.isStatusBaselineSeeded(),
 		markStatusBaselineSeeded: () => view.filterStateStore.markStatusBaselineSeeded(),
-		cloneFilterView: (filterView, options) => view.filterViewController.cloneFilterView(filterView.id, options)
-	});
+			cloneFilterView: (filterView, options) => view.filterViewController.cloneFilterView(filterView.id, options)
+		});
+		initializeGalleryFilters(view);
 
-	logger.info(t('tableViewSetup.constructorComplete'));
-}
+		logger.info(t('tableViewSetup.constructorComplete'));
+	}
 function collectUniqueFieldValues(view: TableView, field: string, limit: number): string[] {
 	const rows = view.dataStore.extractRowData();
 	const seen = new Set<string>();
@@ -252,4 +251,3 @@ function collectUniqueFieldValues(view: TableView, field: string, limit: number)
 	}
 	return result;
 }
-

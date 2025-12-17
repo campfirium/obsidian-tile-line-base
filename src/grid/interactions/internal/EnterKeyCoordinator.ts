@@ -41,6 +41,10 @@ export class EnterKeyCoordinator {
 			return false;
 		}
 
+		if (keyEvent.shiftKey) {
+			return false;
+		}
+
 		const callback = this.getEnterAtLastRowCallback();
 		if (!callback) {
 			return false;

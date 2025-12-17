@@ -250,7 +250,7 @@ export class SlideThumbnailPanel {
             bodyBlock.style.fontWeight = String(slide.textLayout.fontWeight);
             bodyBlock.style.textAlign = slide.textLayout.align;
             const markdown = buildSlideMarkdown(slide.textBlocks);
-            renderMarkdownBlock(this.app, markdown, bodyBlock, this.sourcePath, this.markdownComponents);
+            void renderMarkdownBlock(this.app, markdown, bodyBlock, this.sourcePath, this.markdownComponents);
             textEl.appendChild(bodyBlock);
             slideEl.appendChild(textEl);
         }
@@ -262,7 +262,7 @@ export class SlideThumbnailPanel {
                 const imageBlock = this.ownerDocument.createElement('div');
                 imageBlock.className = 'tlb-slide-full__block tlb-slide-full__block--image tlb-slide-thumb__block--image';
                 imageBlock.style.textAlign = slide.imageLayout.align;
-                renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
+                void renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
                 imageEl.appendChild(imageBlock);
             }
             slideEl.appendChild(imageEl);

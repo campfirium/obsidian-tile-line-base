@@ -5,10 +5,28 @@ import { MagicMigrationModal, type MagicMigrationPreview } from './MagicMigratio
 import { getLogger } from '../utils/logger';
 import { SchemaBuilder } from './SchemaBuilder';
 import { TableDataStore } from './TableDataStore';
-import type { H2Block } from './MarkdownBlockParser';
+import type { H2Block, InvalidH2Section, StrayContentSection } from './MarkdownBlockParser';
 import { getPluginContext } from '../pluginContext';
+import { TABLE_VIEW_TYPE } from '../TableView';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
 import { getCurrentLocalDateTime } from '../utils/datetime';
+import { MalformedH2Modal } from './MalformedH2Modal';
+import {
+	buildColumnNames,
+	buildRecordUnits,
+	buildRegex,
+	countPlaceholders,
+	normalizeCapturedValue
+} from './magicMigrationPatterns';
+import {
+	buildTargetFileName,
+	extractSample,
+	mergeFrontmatter,
+	resolveTargetPath,
+	sliceFromSample,
+	splitFrontmatter,
+	stripFrontmatter
+} from './magicMigrationContent';
 
 interface MagicMigrationContext {
 	container?: HTMLElement;
@@ -32,6 +50,7 @@ const COLUMN_LABEL_BASE = 'Column';
 export class MagicMigrationController {
 	private readonly logger = getLogger('table-view:magic-migration');
 	private activeModal: MagicMigrationModal | null = null;
+	private activeMalformedModal: MalformedH2Modal | null = null;
 	private readonly templateCache = new Map<string, string>();
 	private readonly sampleCache = new Map<string, string>();
 	private readonly columnCache = new Map<string, string[]>();
@@ -44,6 +63,55 @@ export class MagicMigrationController {
 		}
 		this.renderInlinePrompt(context.container, context.content, context.file);
 	}
+
+	handleMalformedH2Sections(context: {
+		file: TFile;
+		content: string;
+		sections: InvalidH2Section[];
+		straySections: StrayContentSection[];
+		convertibleCount: number;
+		onApplied?: () => void;
+		onIgnore?: () => Promise<void> | void;
+	}): boolean {
+		const allSections = [...context.sections, ...context.straySections].sort((a, b) => a.startLine - b.startLine);
+		if (this.activeMalformedModal || allSections.length === 0) {
+			return false;
+		}
+		const plugin = getPluginContext();
+		const canToggle =
+			plugin && typeof (plugin as { toggleLeafView?: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView === 'function';
+		const startedInTable = this.view.leaf.view?.getViewType?.() === TABLE_VIEW_TYPE;
+		const shouldReturnToTable = startedInTable && Boolean(canToggle);
+		if (startedInTable && canToggle) {
+			void (plugin as { toggleLeafView: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView(this.view.leaf);
+		}
+		this.activeMalformedModal = new MalformedH2Modal({
+			app: this.view.app,
+			sections: allSections,
+			convertibleCount: context.convertibleCount,
+			onApply: async (edits) => {
+				await this.applySectionEdits(context.file, context.content, edits);
+				context.onApplied?.();
+				if (shouldReturnToTable && this.view.leaf.view?.getViewType?.() !== TABLE_VIEW_TYPE && canToggle) {
+					void (plugin as { toggleLeafView: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView(this.view.leaf);
+				}
+			},
+			onIgnore: async () => {
+				const clearEdits = allSections.map((section) => ({ section, text: '' }));
+				await this.applySectionEdits(context.file, context.content, clearEdits);
+				await context.onIgnore?.();
+				if (shouldReturnToTable && this.view.leaf.view?.getViewType?.() !== TABLE_VIEW_TYPE && canToggle) {
+					void (plugin as { toggleLeafView: (leaf: TableView['leaf']) => Promise<void> | void }).toggleLeafView(this.view.leaf);
+				}
+			},
+			onClose: () => {
+				this.activeMalformedModal = null;
+			}
+		});
+		this.activeMalformedModal.open();
+		return true;
+	}
+
 
 	resetPromptState(): void {
 		if (this.activeModal) {
@@ -74,6 +142,39 @@ export class MagicMigrationController {
 		});
 	}
 
+	private async applySectionEdits(
+		file: TFile,
+		originalContent: string,
+		edits: Array<{ section: { startLine: number; endLine: number }; text: string }>
+	): Promise<void> {
+		let baseContent = originalContent;
+		try {
+			baseContent = await this.view.app.vault.read(file);
+		} catch (error) {
+			this.logger.warn('Failed to read latest content before applying malformed edits', { error });
+		}
+		const updated = this.replaceMalformedSections(baseContent, edits);
+		try {
+			await this.view.app.vault.modify(file, updated);
+			new Notice(t('magicMigration.malformedSaveSuccess'));
+		} catch (error) {
+			this.logger.error('Failed to save malformed H2 edits', { error });
+			new Notice(t('magicMigration.malformedSaveError'));
+		}
+	}
+
+	private replaceMalformedSections(content: string, edits: Array<{ section: { startLine: number; endLine: number }; text: string }>): string {
+		const lines = content.split('\n');
+		const sorted = [...edits].sort((a, b) => b.section.startLine - a.section.startLine);
+		for (const edit of sorted) {
+			const replacement = edit.text.replace(/\r\n/g, '\n').split('\n');
+			const start = Math.max(0, edit.section.startLine);
+			const end = Math.max(edit.section.startLine, edit.section.endLine);
+			lines.splice(start, end - start + 1, ...replacement);
+		}
+		return lines.join('\n');
+	}
+
 	private openWizard(context: MagicMigrationContext): void {
 		if (this.activeModal) {
 			return;
@@ -86,7 +187,7 @@ export class MagicMigrationController {
 			initialSample,
 			initialColumns,
 			sourceContent: context.content,
-			targetFileName: this.buildTargetFileName(context.file),
+			targetFileName: buildTargetFileName(context.file),
 			computePreview: (template, sample, columnNames) =>
 				this.buildPreview(template, sample, context.content, columnNames),
 			onSubmit: async (template, sample, columnNames) => {
@@ -142,7 +243,7 @@ export class MagicMigrationController {
 			};
 		}
 
-		const placeholderCount = this.countPlaceholders(normalizedTemplate);
+		const placeholderCount = countPlaceholders(normalizedTemplate);
 		if (placeholderCount === 0) {
 			return {
 				columns: [],
@@ -154,9 +255,9 @@ export class MagicMigrationController {
 			};
 		}
 
-		const columns = this.buildColumnNames(placeholderCount, columnNames);
-		const normalizedContent = this.stripFrontmatter(content).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-		const contentSlice = this.sliceFromSample(normalizedContent, sample);
+		const columns = buildColumnNames(placeholderCount, columnNames);
+		const normalizedContent = stripFrontmatter(content).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+		const contentSlice = sliceFromSample(normalizedContent, sample);
 		if (!contentSlice) {
 			return {
 				columns,
@@ -173,8 +274,8 @@ export class MagicMigrationController {
 		let truncated = false;
 
 		const isSingleStar = normalizedTemplate === '*';
-		const units = this.buildRecordUnits(contentSlice, sample, isSingleStar, normalizedTemplate);
-		const regex = this.buildRegex(normalizedTemplate);
+		const units = buildRecordUnits(contentSlice, sample, isSingleStar, normalizedTemplate);
+		const regex = buildRegex(normalizedTemplate, placeholderCount, this.logger);
 		if (!regex) {
 			return {
 				columns,
@@ -193,7 +294,7 @@ export class MagicMigrationController {
 			}
 			const captures = match
 				.slice(1, placeholderCount + 1)
-				.map((value) => this.normalizeCapturedValue(value ?? ''));
+				.map((value) => normalizeCapturedValue(value ?? ''));
 			if (captures.every((value) => value.length === 0)) {
 				continue;
 			}
@@ -250,9 +351,9 @@ export class MagicMigrationController {
 				return false;
 			}
 			const markdownBody = this.blocksToMarkdown(blocks);
-			const { frontmatter } = this.splitFrontmatter(content);
-			const markdown = this.mergeFrontmatter(frontmatter, markdownBody);
-			const targetPath = await this.resolveTargetPath(file, this.buildTargetFileName(file));
+			const { frontmatter } = splitFrontmatter(content);
+			const markdown = mergeFrontmatter(frontmatter, markdownBody);
+			const targetPath = await resolveTargetPath(this.view.app.vault, file, buildTargetFileName(file));
 			const newFile = await this.view.app.vault.create(targetPath, markdown);
 			TableRefreshCoordinator.requestRefreshForPath(newFile.path, {
 				source: 'table-operation',
@@ -311,7 +412,7 @@ export class MagicMigrationController {
 		if (cached && cached.trim().length > 0) {
 			return cached;
 		}
-		return this.extractSample(context.content);
+		return extractSample(context.content);
 	}
 
 	private getInitialSample(context: MagicMigrationContext): string {
@@ -319,235 +420,18 @@ export class MagicMigrationController {
 		if (cached && cached.trim().length > 0) {
 			return cached;
 		}
-		return this.extractSample(context.content);
+		return extractSample(context.content);
 	}
 
 	private getInitialColumns(context: MagicMigrationContext, template: string): string[] {
-		const placeholderCount = Math.max(this.countPlaceholders(template.trim()), 1);
+		const placeholderCount = Math.max(countPlaceholders(template.trim()), 1);
 		const cached = this.columnCache.get(context.file.path);
 		if (cached && cached.length > 0) {
-			return this.buildColumnNames(placeholderCount, cached);
+			return buildColumnNames(placeholderCount, cached);
 		}
-		return this.buildColumnNames(placeholderCount, []);
+		return buildColumnNames(placeholderCount, []);
 	}
 
-	private extractSample(content: string): string {
-		const withoutFrontmatter = this.stripFrontmatter(content);
-		const segments = withoutFrontmatter.split(/\n\s*\n/);
-		for (const segment of segments) {
-			const normalized = segment
-				.split('\n')
-				.map((line) => line.trim())
-				.filter((line) => line.length > 0)
-				.join('\n');
-			if (this.isTopHeadingOnly(normalized)) {
-				continue;
-			}
-			if (normalized.length > 0) {
-				return this.truncateTemplate(normalized);
-			}
-		}
-
-		const firstLine = withoutFrontmatter
-			.split('\n')
-			.map((line) => line.trim())
-			.find((line) => line.length > 0 && !/^#\s+/.test(line));
-		return this.truncateTemplate(firstLine ?? '');
-	}
-
-	private truncateTemplate(raw: string): string {
-		const limit = 320;
-		if (raw.length <= limit) {
-			return raw;
-		}
-		return `${raw.slice(0, limit)}...`;
-	}
-
-	private stripFrontmatter(content: string): string {
-		return this.splitFrontmatter(content).body;
-	}
-
-	private splitFrontmatter(content: string): { frontmatter: string | null; body: string } {
-		if (!content.startsWith('---')) {
-			return { frontmatter: null, body: content };
-		}
-		const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/u.exec(content);
-		if (!match) {
-			return { frontmatter: null, body: content };
-		}
-		return {
-			frontmatter: match[0],
-			body: content.slice(match[0].length)
-		};
-	}
-
-	private mergeFrontmatter(frontmatter: string | null, markdown: string): string {
-		if (!frontmatter) {
-			return markdown;
-		}
-		const normalized = frontmatter.endsWith('\n') ? frontmatter : `${frontmatter}\n`;
-		const needsBlankLine = /(\r?\n){2}$/.test(normalized);
-		const spacer = needsBlankLine ? '' : '\n';
-		return `${normalized}${spacer}${markdown}`;
-	}
-
-	private isTopHeadingOnly(text: string): boolean {
-		if (!text.trim()) {
-			return false;
-		}
-		const lines = text.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
-		if (lines.length === 0) {
-			return false;
-		}
-		return lines.every((line) => /^#\s+/.test(line) && !/^##/.test(line));
-	}
-
-	private buildTargetFileName(file: TFile): string {
-		const base = `${file.basename}_tlb`;
-		return this.sanitizeFileName(base) || t('magicMigration.defaultFileName');
-	}
-
-	private async resolveTargetPath(file: TFile, baseName: string): Promise<string> {
-		const folder = file.parent?.path ?? '';
-		let candidate = folder ? `${folder}/${baseName}.md` : `${baseName}.md`;
-		const vault = this.view.app.vault;
-		if (!vault.getAbstractFileByPath(candidate)) {
-			return candidate;
-		}
-		let counter = 2;
-		while (counter < 500) {
-			const nextBase = `${baseName} ${counter}`;
-			candidate = folder ? `${folder}/${nextBase}.md` : `${nextBase}.md`;
-			if (!vault.getAbstractFileByPath(candidate)) {
-				return candidate;
-			}
-			counter += 1;
-		}
-		return folder ? `${folder}/${baseName} ${Date.now()}.md` : `${baseName} ${Date.now()}.md`;
-	}
-
-	private sanitizeFileName(raw: string): string {
-		return raw
-			.replace(/[\\/:*?"<>|#]/g, ' ')
-			.replace(/\s+/g, ' ')
-			.trim()
-			.replace(/[. ]+$/g, '');
-	}
-
-	private sliceFromSample(content: string, sample: string): string | null {
-		const trimmedSample = sample.trim();
-		if (!trimmedSample) {
-			return content;
-		}
-		const anchorIndex = content.indexOf(trimmedSample);
-		if (anchorIndex === -1) {
-			return null;
-		}
-		return content.slice(anchorIndex);
-	}
-
-	private buildRegex(template: string): RegExp | null {
-		const trimmed = template.trim();
-		const placeholderCount = this.countPlaceholders(trimmed);
-		if (placeholderCount === 0) {
-			return null;
-		}
-
-		const tokens = trimmed.split('*');
-		const parts: string[] = [];
-		parts.push('^');
-
-		for (let index = 0; index < placeholderCount; index++) {
-			const literal = tokens[index] ?? '';
-			if (literal.length > 0) {
-				parts.push(this.escapeLiteral(literal, false));
-			}
-			const isLast = index === placeholderCount - 1;
-			parts.push(isLast ? '([\\s\\S]+)' : '([\\s\\S]+?)');
-		}
-
-		const tailLiteral = tokens[placeholderCount] ?? '';
-		if (tailLiteral.length > 0) {
-			parts.push(this.escapeLiteral(tailLiteral, false));
-		}
-		parts.push('$');
-
-		try {
-			return new RegExp(parts.join(''), 'u');
-		} catch (error) {
-			this.logger.warn('Failed to compile star template', error);
-			return null;
-		}
-	}
-
-	private escapeLiteral(literal: string, allowFlexibleWhitespace: boolean): string {
-		if (!allowFlexibleWhitespace) {
-			return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-		}
-		return literal
-			.split(/(\s+)/)
-			.map((part) => {
-				if (/^\s+$/.test(part)) {
-					return '\\s+';
-				}
-				return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			})
-			.join('');
-	}
-
-	public runExtractionForTest(
-		template: string,
-		sample: string,
-		content: string,
-		columnNames: string[] = []
-	): ExtractionResult {
-		return this.extractMatches(template, sample, content, MATCH_LIMIT, columnNames);
-	}
-
-	private buildRecordUnits(content: string, sample: string, isSingleStar: boolean, template: string): string[] {
-		if (isSingleStar) {
-			if (sample.includes('\n')) {
-				return content
-					.split(/\n\s*\n/)
-					.map((block) => block.trim())
-					.filter((block) => block.length > 0);
-			}
-			return content
-				.split(/\n+/)
-				.map((line) => line.trim())
-				.filter((line) => line.length > 0);
-		}
-
-		if (template.includes('\n')) {
-			return content
-				.split(/\n\s*\n/)
-				.map((block) => block.trim())
-				.filter((block) => block.length > 0);
-		}
-
-		return content
-			.split(/\n+/)
-			.map((line) => line.trim())
-			.filter((line) => line.length > 0);
-	}
-
-	private countPlaceholders(template: string): number {
-		return (template.match(/\*/g) ?? []).length;
-	}
-
-	private buildColumnNames(placeholderCount: number, columnNames: string[]): string[] {
-		const columns: string[] = [];
-		const count = Math.max(placeholderCount, 1);
-		for (let index = 0; index < count; index++) {
-			const override = (columnNames[index] ?? '').trim();
-			columns.push(override || `${COLUMN_LABEL_BASE} ${index + 1}`);
-		}
-		return columns;
-	}
-
-	private normalizeCapturedValue(raw: string): string {
-		return raw.replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
-	}
 
 	private async openFileInTableView(file: TFile): Promise<void> {
 		const plugin = getPluginContext();

@@ -1,12 +1,39 @@
 import type { BorderColorMode, StripeColorMode } from '../types/appearance';
 
 type RgbColor = { r: number; g: number; b: number };
+type ResolvedCssColor = { rgb: RgbColor; alpha: number };
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
+const COLOR_RESOLVER_ELEMENTS = new WeakMap<Document, HTMLElement>();
+
+const getColorResolverElement = (ownerDocument: Document): HTMLElement | null => {
+	const cached = COLOR_RESOLVER_ELEMENTS.get(ownerDocument);
+	if (cached && cached.isConnected) {
+		return cached;
+	}
+	if (!ownerDocument.body) {
+		return null;
+	}
+	const el = ownerDocument.createElement('span');
+	el.classList.add('tlb-color-resolver');
+	ownerDocument.body.appendChild(el);
+	COLOR_RESOLVER_ELEMENTS.set(ownerDocument, el);
+	return el;
+};
+
+// Prevent hover overlays from fully replacing the base background when themes supply opaque values.
+const clampHoverWeight = (value: number | null, isDarkMode: boolean): number => {
+	const maxHoverWeight = isDarkMode ? 0.24 : 0.18;
+	const fallbackWeight = isDarkMode ? 0.16 : 0.1;
+	if (value === null || Number.isNaN(value)) { return fallbackWeight; }
+	return clamp(value, 0, maxHoverWeight);
+};
+
 const parseRgb = (value: string | null | undefined): RgbColor | null => {
 	if (!value) { return null; }
-	const hex = value.trim().replace('#', '');
+	const trimmed = value.trim();
+	const hex = trimmed.replace('#', '');
 	if (/^[0-9a-f]{3}$/i.test(hex)) {
 		const r = parseInt(hex[0] + hex[0], 16);
 		const g = parseInt(hex[1] + hex[1], 16);
@@ -19,12 +46,74 @@ const parseRgb = (value: string | null | undefined): RgbColor | null => {
 		const b = parseInt(hex.slice(4, 6), 16);
 		return { r, g, b };
 	}
-	const numeric = value.match(/[\d.]+/g);
+	const lower = trimmed.toLowerCase();
+	if (!lower.startsWith('rgb(') && !lower.startsWith('rgba(')) {
+		return null;
+	}
+	const numeric = trimmed.match(/[\d.]+/g);
 	if (numeric && numeric.length >= 3) {
-		const [r, g, b] = numeric.map((n) => Number(n));
+		const [r, g, b] = numeric.slice(0, 3).map((n) => Number(n));
 		if ([r, g, b].every((v) => Number.isFinite(v))) { return { r, g, b }; }
 	}
 	return null;
+};
+
+const parseAlpha = (value: string | null | undefined): number | null => {
+	if (!value) {
+		return null;
+	}
+	const trimmed = value.trim().toLowerCase();
+	if (!trimmed.startsWith('rgb(') && !trimmed.startsWith('rgba(')) {
+		return null;
+	}
+	const numeric = trimmed.match(/[\d.]+/g);
+	if (!numeric || numeric.length < 4) {
+		return null;
+	}
+	const alpha = Number(numeric[3]);
+	if (!Number.isFinite(alpha)) {
+		return null;
+	}
+	return clamp(alpha, 0, 1);
+};
+
+const resolveCssColor = (ownerDocument: Document, value: string | null | undefined): ResolvedCssColor | null => {
+	if (!value) {
+		return null;
+	}
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return null;
+	}
+
+	const parsed = parseRgb(trimmed);
+	if (parsed) {
+		return {
+			rgb: parsed,
+			alpha: parseAlpha(trimmed) ?? 1
+		};
+	}
+
+	const resolver = getColorResolverElement(ownerDocument);
+	const view = ownerDocument.defaultView;
+	if (!resolver || !view) {
+		return null;
+	}
+	if (view.CSS?.supports && !view.CSS.supports('color', trimmed)) {
+		return null;
+	}
+
+	resolver.style.setProperty('--tlb-color-resolver-color', trimmed);
+
+	const computed = view.getComputedStyle(resolver).color;
+	const computedParsed = parseRgb(computed);
+	if (!computedParsed) {
+		return null;
+	}
+	return {
+		rgb: computedParsed,
+		alpha: parseAlpha(computed) ?? 1
+	};
 };
 
 const rgbToHsl = (rgb: RgbColor): { h: number; s: number; l: number } => {
@@ -73,29 +162,21 @@ const hslToRgb = (hsl: { h: number; s: number; l: number }): RgbColor => {
 	return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
 };
 
-const normalizeColorInput = (value: string | null | undefined): string | null => {
-	const parsed = parseRgb(value);
-	if (!parsed) { return null; }
-	const rounded: RgbColor = {
-		r: Math.max(0, Math.min(255, Math.round(parsed.r))),
-		g: Math.max(0, Math.min(255, Math.round(parsed.g))),
-		b: Math.max(0, Math.min(255, Math.round(parsed.b)))
-	};
-	return toRgbString(rounded);
-};
-
 const adjustLightness = (color: RgbColor, delta: number): RgbColor => {
 	const hsl = rgbToHsl(color);
 	const next = { h: hsl.h, s: hsl.s, l: clamp(hsl.l + delta, 0, 1) };
 	return hslToRgb(next);
 };
 
-const resolveColorOrFallback = (value: string | null | undefined, fallback: string): RgbColor => {
-	const normalized = normalizeColorInput(value);
-	const parsed = parseRgb(normalized);
-	if (parsed) { return parsed; }
-	const fallbackParsed = parseRgb(fallback);
-	if (fallbackParsed) { return fallbackParsed; }
+const resolveColorOrFallback = (ownerDocument: Document, value: string | null | undefined, fallback: string): RgbColor => {
+	const resolved = resolveCssColor(ownerDocument, value);
+	if (resolved) {
+		return resolved.rgb;
+	}
+	const fallbackResolved = resolveCssColor(ownerDocument, fallback);
+	if (fallbackResolved) {
+		return fallbackResolved.rgb;
+	}
 	return { r: 0, g: 0, b: 0 };
 };
 
@@ -109,29 +190,24 @@ const mixColors = (base: RgbColor, overlay: RgbColor, overlayWeight: number): Rg
 	};
 };
 
-const resolveHoverColor = (options: { hoverValue: string; base: RgbColor; accent: RgbColor; isDarkMode: boolean }): RgbColor => {
-	const { hoverValue, base, accent, isDarkMode } = options;
-	const normalized = normalizeColorInput(hoverValue);
-	const parsed = parseRgb(normalized);
-	if (parsed) {
-		const numeric = hoverValue.match(/[\d.]+/g);
-		const alphaValue = numeric && numeric.length >= 4 ? Number(numeric[3]) : null;
-		const alpha = typeof alphaValue === 'number' && Number.isFinite(alphaValue) ? clamp(alphaValue, 0, 1) : null;
-		if (alpha !== null) {
-			return mixColors(base, parsed, alpha);
-		}
-		return parsed;
+const resolveHoverColor = (options: { ownerDocument: Document; hoverValue: string; base: RgbColor; accent: RgbColor; isDarkMode: boolean }): RgbColor => {
+	const { ownerDocument, hoverValue, base, accent, isDarkMode } = options;
+	const resolved = resolveCssColor(ownerDocument, hoverValue);
+	if (resolved) {
+		const overlayWeight = resolved.alpha < 1 ? clampHoverWeight(resolved.alpha, isDarkMode) : clampHoverWeight(null, isDarkMode);
+		return mixColors(base, resolved.rgb, overlayWeight);
 	}
-	const weight = isDarkMode ? 0.12 : 0.08;
-	return mixColors(base, accent, weight);
+	const overlayWeight = clampHoverWeight(null, isDarkMode);
+	return mixColors(base, accent, overlayWeight);
 };
 
-const applyGridThemePalette = (options: { container: HTMLElement; docStyles: CSSStyleDeclaration | null; isDarkMode: boolean }): void => {
-	const { container, docStyles, isDarkMode } = options;
-	const background = resolveColorOrFallback(docStyles?.getPropertyValue('--background-primary'), isDarkMode ? '#1f1f1f' : '#ffffff');
-	const foreground = resolveColorOrFallback(docStyles?.getPropertyValue('--text-normal'), isDarkMode ? '#dadada' : '#2e3338');
-	const accent = resolveColorOrFallback(docStyles?.getPropertyValue('--interactive-accent'), '#6aa5ff');
+const applyGridThemePalette = (options: { container: HTMLElement; ownerDocument: Document; docStyles: CSSStyleDeclaration | null; isDarkMode: boolean }): RgbColor => {
+	const { container, ownerDocument, docStyles, isDarkMode } = options;
+	const background = resolveColorOrFallback(ownerDocument, docStyles?.getPropertyValue('--background-primary'), isDarkMode ? '#1f1f1f' : '#ffffff');
+	const foreground = resolveColorOrFallback(ownerDocument, docStyles?.getPropertyValue('--text-normal'), isDarkMode ? '#dadada' : '#2e3338');
+	const accent = resolveColorOrFallback(ownerDocument, docStyles?.getPropertyValue('--interactive-accent'), '#6aa5ff');
 	const hover = resolveHoverColor({
+		ownerDocument,
 		hoverValue: docStyles?.getPropertyValue('--background-modifier-hover')?.trim() ?? '',
 		base: background,
 		accent,
@@ -148,6 +224,7 @@ const applyGridThemePalette = (options: { container: HTMLElement; docStyles: CSS
 	container.style.setProperty('--tlb-grid-surface-raised-resolved', toRgbString(raisedSurface));
 	container.style.setProperty('--tlb-grid-row-hover-resolved', toRgbString(hover));
 	container.style.setProperty('--tlb-grid-selected-row-resolved', toRgbString(selectedRow));
+	return background;
 };
 
 export const computeRecommendedStripeColor = (primaryColor: string, isDarkMode: boolean): string => {
@@ -215,15 +292,16 @@ export function applyStripeStyles(options: StripeStyleOptions): void {
 	} = options;
 	const isDarkMode = options.isDarkMode ?? ownerDocument.body.classList.contains('theme-dark');
 	const docStyles = ownerDocument.defaultView ? ownerDocument.defaultView.getComputedStyle(ownerDocument.body) : null;
-	applyGridThemePalette({
+	const background = applyGridThemePalette({
 		container,
+		ownerDocument,
 		docStyles,
 		isDarkMode
 	});
-	const primary = docStyles?.getPropertyValue('--background-primary')?.trim() ?? '';
-	const primaryColor = primary || '#000000';
-	const recommendedStripe = computeRecommendedStripeColor(primaryColor, isDarkMode);
-	const normalizedCustomStripe = normalizeColorInput(stripeCustomColor);
+	const recommendedStripe = toHexString(adjustLightness(background, isDarkMode ? 0.04 : -0.04));
+	const primaryColor = toHexString(background);
+	const customStripe = resolveCssColor(ownerDocument, stripeCustomColor);
+	const normalizedCustomStripe = customStripe ? toRgbString(customStripe.rgb) : null;
 
 	let stripeColor = recommendedStripe;
 	let stripeEnabled = true;
@@ -245,7 +323,8 @@ export function applyStripeStyles(options: StripeStyleOptions): void {
 	const normalizedBorderContrast = clamp(borderContrast, 0, 1);
 	container.style.setProperty('--tlb-border-contrast', String(normalizedBorderContrast));
 	if (borderColorMode === 'custom') {
-		const normalizedCustomBorder = normalizeColorInput(borderCustomColor);
+		const customBorder = resolveCssColor(ownerDocument, borderCustomColor);
+		const normalizedCustomBorder = customBorder ? toRgbString(customBorder.rgb) : null;
 		if (normalizedCustomBorder) {
 			const borderColor = buildBorderColor(normalizedCustomBorder, normalizedBorderContrast);
 			container.style.setProperty('--ag-border-color', borderColor, 'important');

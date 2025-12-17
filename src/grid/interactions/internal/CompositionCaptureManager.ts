@@ -31,6 +31,7 @@ export class CompositionCaptureManager {
 	private container: HTMLElement | null = null;
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
 	private readonly proxies = new Set<CompositionProxy>();
+	private readonly lastArmedTargets = new WeakMap<Document, { rowIndex: number; colId: string }>();
 	private pendingCaptureCancel?: (reason?: string) => void;
 	private proxyRealignTimer: number | null = null;
 
@@ -113,6 +114,7 @@ export class CompositionCaptureManager {
 		}
 
 		const rect = cellEl.getBoundingClientRect();
+		this.lastArmedTargets.set(doc, { rowIndex: coords.rowIndex, colId: coords.colId });
 		const proxy = this.getProxy(doc);
 
 		this.cancelPendingCapture('rearm');
@@ -173,6 +175,38 @@ export class CompositionCaptureManager {
 		this.armProxyForCurrentCell();
 	}
 
+	startEditingFromShortcut(source: string): boolean {
+		const gridApi = this.getGridApi();
+		if (!gridApi) {
+			this.debug('composition:startEditingFromShortcut:noApi', { source });
+			return false;
+		}
+
+		if (this.focus.isEditing()) {
+			if (this.hasActiveGridEditor(gridApi)) {
+				this.debug('composition:startEditingFromShortcut:alreadyEditing', { source });
+				return false;
+			}
+			this.debug('composition:startEditingFromShortcut:resetEditingFlag', { source });
+			this.focus.setEditing(false);
+		}
+
+		const doc = this.focus.getDocument() ?? this.container?.ownerDocument ?? document;
+		const target = this.resolveEditingTarget(gridApi, doc);
+		if (!target) {
+			this.debug('composition:startEditingFromShortcut:noTarget', { source });
+			return false;
+		}
+
+		if (!this.isTargetEditable(gridApi, target.rowIndex, target.colId)) {
+			this.debug('composition:startEditingFromShortcut:notEditable', { source, colId: target.colId });
+			return false;
+		}
+
+		void this.startEditingPreservingValue(doc, target.rowIndex, target.colId);
+		return true;
+	}
+
 	handleLayoutInvalidated(): void {
 		this.debug('composition:onLayoutInvalidated');
 		this.armProxyForCurrentCell();
@@ -204,6 +238,11 @@ export class CompositionCaptureManager {
 		}
 
 		switch (event.key) {
+			case 'F2':
+				event.preventDefault?.();
+				event.stopPropagation?.();
+				this.startEditingFromShortcut('proxy');
+				break;
 			case 'Enter':
 				event.preventDefault?.();
 				event.stopPropagation?.();
@@ -247,6 +286,105 @@ export class CompositionCaptureManager {
 			default:
 				break;
 		}
+	}
+
+	private resolveEditingTarget(
+		gridApi: GridApi,
+		doc: Document
+	): { rowIndex: number; colId: string } | null {
+		const coords = this.focus.getCoordinates();
+		if (coords.rowIndex != null && coords.colId) {
+			return { rowIndex: coords.rowIndex, colId: coords.colId };
+		}
+
+		const focusedCell = typeof gridApi.getFocusedCell === 'function' ? gridApi.getFocusedCell() : null;
+		const focusedColId = focusedCell?.column?.getColId?.() ?? null;
+		if (focusedCell && typeof focusedCell.rowIndex === 'number' && focusedColId) {
+			return {
+				rowIndex: focusedCell.rowIndex,
+				colId: focusedColId
+			};
+		}
+
+		const root = (this.container ?? doc) as Document | Element;
+		const focusedEl = (root as any).querySelector?.('.ag-cell-focus[col-id]') as HTMLElement | null;
+		if (!focusedEl) {
+			const lastArmed = this.lastArmedTargets.get(doc);
+			if (lastArmed) {
+				return {
+					rowIndex: lastArmed.rowIndex,
+					colId: lastArmed.colId
+				};
+			}
+			return null;
+		}
+
+		const colId = focusedEl.getAttribute('col-id');
+		if (!colId) {
+			return null;
+		}
+
+		const rowIndexHolder = (focusedEl.closest('[row-index]') as HTMLElement | null) ?? focusedEl;
+		const rowIndexValue = rowIndexHolder?.getAttribute('row-index') ?? null;
+		if (!rowIndexValue) {
+			return null;
+		}
+
+		const parsed = parseInt(rowIndexValue, 10);
+		if (Number.isNaN(parsed)) {
+			return null;
+		}
+
+		return {
+			rowIndex: parsed,
+			colId
+		};
+	}
+
+	private hasActiveGridEditor(gridApi: GridApi): boolean {
+		const editorInstances = (gridApi as any).getCellEditorInstances?.();
+		if (Array.isArray(editorInstances)) {
+			return editorInstances.length > 0;
+		}
+
+		const editingCells = (gridApi as any).getEditingCells?.();
+		if (Array.isArray(editingCells)) {
+			return editingCells.length > 0;
+		}
+
+		return false;
+	}
+
+	private isTargetEditable(gridApi: GridApi, rowIndex: number, colId: string): boolean {
+		const column = typeof gridApi.getColumn === 'function' ? gridApi.getColumn(colId) : null;
+		const colDef = column?.getColDef?.() as { editable?: boolean } | null;
+		if (colDef?.editable === false) {
+			return false;
+		}
+
+		if (colDef && typeof (colDef as any).editable === 'function') {
+			const rowNode =
+				typeof gridApi.getDisplayedRowAtIndex === 'function'
+					? gridApi.getDisplayedRowAtIndex(rowIndex)
+					: null;
+			const data = (rowNode?.data as any) ?? null;
+			if (rowNode && data) {
+				const editableResult = (colDef as any).editable({
+					api: gridApi,
+					column,
+					colDef,
+					context: (gridApi as any)?.context,
+					data,
+					node: rowNode,
+					value: data[colId]
+				} as any);
+				if (!editableResult) {
+					return false;
+				}
+			}
+		}
+
+		return true;
 	}
 
 	destroy(): void {
@@ -336,7 +474,61 @@ export class CompositionCaptureManager {
 			})
 			.catch((err) => {
 				logger.warn(this.translate('agGrid.editorInputMissing'), err);
+				this.recoverFromMissingEditor(gridApi);
 			});
+	}
+
+	private startEditingPreservingValue(
+		doc: Document,
+		rowIndex: number,
+		colKey: string
+	): Promise<void> {
+		const gridApi = this.getGridApi();
+		if (!gridApi) {
+			return Promise.resolve();
+		}
+
+		this.focus.setEditing(true);
+		this.focus.setCoordinates(rowIndex, colKey);
+		this.cancelPendingCapture('editing-started');
+		this.getProxy(doc).setKeyHandler(undefined);
+
+		if (typeof (gridApi as any).ensureIndexVisible === 'function') {
+			(gridApi as any).ensureIndexVisible(rowIndex, 'middle');
+		}
+		if (typeof (gridApi as any).ensureColumnVisible === 'function') {
+			(gridApi as any).ensureColumnVisible(colKey);
+		}
+
+		gridApi.setFocusedCell(rowIndex, colKey);
+		gridApi.startEditingCell({ rowIndex, colKey });
+
+		return this.waitForEditorInput(doc)
+			.then((input) => {
+				try {
+					const len = input.value.length;
+					input.setSelectionRange(len, len);
+				} catch {
+					// ignore caret placement errors for non-text controls
+				}
+				input.focus();
+			})
+			.catch((err) => {
+				logger.warn(this.translate('agGrid.editorInputMissing'), err);
+				this.recoverFromMissingEditor(gridApi);
+			});
+	}
+
+	private recoverFromMissingEditor(gridApi: GridApi): void {
+		const editorInstances = (gridApi as any).getCellEditorInstances?.();
+		const hasEditorInstances = Array.isArray(editorInstances) && editorInstances.length > 0;
+		const editingCells = (gridApi as any).getEditingCells?.();
+		const hasEditingCells = Array.isArray(editingCells) && editingCells.length > 0;
+		const hasSignal = Array.isArray(editorInstances) || Array.isArray(editingCells);
+		if (hasSignal && !hasEditorInstances && !hasEditingCells) {
+			this.focus.setEditing(false);
+			this.armProxyForCurrentCell();
+		}
 	}
 
 	private waitForEditorInput(doc: Document): Promise<HTMLInputElement | HTMLTextAreaElement> {

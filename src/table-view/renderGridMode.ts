@@ -6,6 +6,7 @@ import { handleColumnResize, handleColumnOrderChange, handleHeaderEditEvent } fr
 import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
 import { handleCellLinkOpen } from './LinkNavigation';
 import { applyStripeStyles } from './stripeStyles';
+import { syncGridContainerTheme } from '../grid/themeSync';
 
 interface RenderGridModeOptions {
 	view: TableView;
@@ -37,9 +38,8 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 		})
 	];
 
-	const isDarkMode = ownerDoc.body.classList.contains('theme-dark');
-	const themeClass = isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
-	const tableContainer = container.createDiv({ cls: `tlb-table-container ${themeClass}` });
+	const tableContainer = container.createDiv({ cls: 'tlb-table-container' });
+	const { isDarkMode } = syncGridContainerTheme(tableContainer, { ownerDocument: ownerDoc });
 	const stripeColorMode = plugin?.getStripeColorMode?.() ?? 'recommended';
 	const stripeCustomColor = plugin?.getStripeCustomColor?.() ?? null;
 	const borderColorMode = plugin?.getBorderColorMode?.() ?? 'recommended';

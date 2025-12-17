@@ -5,6 +5,7 @@ import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
 import { applyStripeStyles } from './table-view/stripeStyles';
+import { syncGridContainerTheme, syncGridPopupRoot } from './grid/themeSync';
 import type { BorderColorMode, StripeColorMode } from './types/appearance';
 import {
 	applyLoggingConfig,
@@ -207,6 +208,11 @@ export default class TileLineBasePlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.viewActionManager.refreshAll();
+			})
+		);
+		this.registerEvent(
+			this.app.workspace.on('css-change', () => {
+				this.refreshTableVisualVars();
 			})
 		);
 		// Register file-menu handler once (avoid duplicate registration per window)
@@ -542,8 +548,12 @@ export default class TileLineBasePlugin extends Plugin {
 		this.windowContextManager.forEachWindowContext((context) => {
 			const doc = context.window?.document;
 			if (!doc) return;
-			const isDarkMode = doc.body.classList.contains('theme-dark');
-			doc.querySelectorAll<HTMLElement>('.tlb-table-container').forEach((el) => {
+			const containers = Array.from(doc.querySelectorAll<HTMLElement>('.tlb-table-container'));
+			if (containers.length === 0) {
+				return;
+			}
+			containers.forEach((el) => {
+				const { isDarkMode } = syncGridContainerTheme(el, { ownerDocument: doc });
 				applyStripeStyles({
 					container: el,
 					ownerDocument: doc,
@@ -554,6 +564,7 @@ export default class TileLineBasePlugin extends Plugin {
 					borderContrast: border,
 					isDarkMode
 				});
+				syncGridPopupRoot(el, { ownerDocument: doc, isDarkMode });
 			});
 		});
 	}

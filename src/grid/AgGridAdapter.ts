@@ -1,4 +1,3 @@
-﻿/* eslint-disable max-lines */
 /**
  * AgGridAdapter - AG Grid Community 适配器实现
  *
@@ -23,6 +22,7 @@ import {
 	RowDragEndPayload,
 	SortModelEntry
 } from './GridAdapter';
+import { syncGridContainerTheme, syncGridPopupRoot } from './themeSync';
 import { t } from '../i18n';
 import { AgGridColumnService } from './column/AgGridColumnService';
 import { AgGridInteractionController } from './interactions/AgGridInteractionController';
@@ -35,22 +35,6 @@ import { SideBarController } from './sidebar/SideBarController';
 import { OverflowTooltipController } from './tooltip/OverflowTooltipController';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
-
-const POPUP_THEME_VARS = [
-	'--ag-background-color',
-	'--ag-foreground-color',
-	'--ag-border-color',
-	'--ag-popup-shadow',
-	'--ag-wrapper-border-radius',
-	'--ag-active-color',
-	'--ag-input-focus-border-color',
-	'--ag-input-focus-box-shadow',
-	'--ag-selected-row-background-color',
-	'--background-primary',
-	'--background-secondary',
-	'--text-normal',
-	'--text-on-accent'
-];
 
 export class AgGridAdapter implements GridAdapter {
 	private cellEditCallback?: (event: CellEditEvent) => void;
@@ -340,36 +324,7 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	private ensurePopupParent(doc: Document, container: HTMLElement): HTMLElement {
-		const className = 'tlb-grid-popup-root';
-		const existing = doc.body.querySelector<HTMLElement>(`.${className}`);
-		const root = existing ?? (() => {
-			const el = doc.createElement('div');
-			el.classList.add(className);
-			doc.body.appendChild(el);
-			return el;
-		})();
-
-		// sync theme classes
-		root.classList.remove('theme-dark', 'theme-light');
-		root.classList.forEach(cls => {
-			if (cls.startsWith('ag-theme')) {
-				root.classList.remove(cls);
-			}
-		});
-		const isDark = container.closest('.theme-dark') !== null || doc.body.classList.contains('theme-dark');
-		root.classList.add(isDark ? 'theme-dark' : 'theme-light');
-		const containerThemes = Array.from(container.classList).filter(cls => cls.startsWith('ag-theme'));
-		const themesToApply = containerThemes.length > 0 ? containerThemes : [isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'];
-		root.classList.add(...themesToApply);
-
-		// propagate key CSS variables from the table container
-		const computed = getComputedStyle(container);
-		for (const key of POPUP_THEME_VARS) {
-			const value = computed.getPropertyValue(key);
-			if (value) {
-				root.style.setProperty(key, value.trim());
-			}
-		}
-		return root;
+		const { isDarkMode } = syncGridContainerTheme(container, { ownerDocument: doc });
+		return syncGridPopupRoot(container, { ownerDocument: doc, isDarkMode });
 	}
 }

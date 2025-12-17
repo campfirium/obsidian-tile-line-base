@@ -3902,6 +3902,19 @@
   color-scheme: var(--tlb-color-scheme, dark);
 }
 
+/* Internal helper: resolves theme color tokens to computed rgb() */
+.tlb-color-resolver {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  color: var(--tlb-color-resolver-color, transparent);
+}
+
 /* Tooltip restyle: align popup styling with product tour tips */
 .tlb-grid-popup-root .ag-tooltip {
 	max-width: none;

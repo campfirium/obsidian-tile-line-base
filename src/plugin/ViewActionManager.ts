@@ -105,7 +105,7 @@ export class ViewActionManager {
 		}
 
 		const label = t('kanbanView.actions.openFromMarkdown');
-		const button = view.addAction('layout-kanban', label, async (evt) => {
+		const button = view.addAction('columns-3', label, async (evt) => {
 			const file = view.file;
 			if (!file) {
 				logger.warn('Markdown view header kanban action triggered without file');
@@ -137,8 +137,12 @@ export class ViewActionManager {
 		});
 
 		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
-		setIcon(iconEl, 'layout-kanban');
-		const svg = iconEl?.querySelector?.('svg');
+		setIcon(iconEl, 'columns-3');
+		let svg = iconEl?.querySelector?.('svg');
+		if (!svg) {
+			setIcon(iconEl, 'layout-kanban');
+			svg = iconEl?.querySelector?.('svg');
+		}
 		if (!svg) {
 			setIcon(iconEl, 'layout-grid');
 		}
@@ -203,7 +207,7 @@ export class ViewActionManager {
 		}
 
 		const label = t('galleryView.actions.openFromMarkdown');
-		const button = view.addAction('images', label, async (evt) => {
+		const button = view.addAction('layout-grid', label, async (evt) => {
 			const file = view.file;
 			if (!file) {
 				logger.warn('Markdown view header gallery action triggered without file');
@@ -235,7 +239,11 @@ export class ViewActionManager {
 		});
 
 		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
-		setIcon(iconEl, 'images');
+		setIcon(iconEl, 'layout-grid');
+		const svg = iconEl?.querySelector?.('svg');
+		if (!svg) {
+			setIcon(iconEl, 'images');
+		}
 
 		button.setAttribute(this.actionAttribute, this.galleryActionId);
 		button.setAttribute('aria-label', label);

@@ -576,7 +576,7 @@
 .tlb-icon-picker__trigger {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 0;
   padding: 0;
   border-radius: 6px;
@@ -607,7 +607,7 @@
   height: 18px;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   flex: 0 0 auto;
   border-radius: 6px;
   background: transparent;
@@ -834,9 +834,10 @@
 .tlb-filter-view-icon-match {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   width: var(--tlb-filter-view-icon-cell-size, 32px);
   height: var(--tlb-filter-view-icon-cell-size, 32px);
+  padding: 0;
   border-radius: var(--radius-s);
   border: 1px solid color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
   background: color-mix(in srgb, var(--background-primary) 94%, transparent);
@@ -859,7 +860,7 @@
   height: var(--tlb-filter-view-icon-size, 18px);
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .tlb-filter-view-icon-match__icon svg {
@@ -900,7 +901,7 @@
 .tlb-filter-view-icon-nav {
 	display: inline-flex;
 	align-items: center;
-	justify-content: flex-start;
+	justify-content: center;
 	width: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
 	height: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
 	border-radius: var(--radius-s);

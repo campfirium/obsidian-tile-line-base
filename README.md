@@ -21,11 +21,11 @@ _Click the preview above to watch in higher quality on YouTube._
 
 Create structured data tables directly within your Markdown notes, flexibly supporting various scenarios.
 
-#### Flexible Views: Table, Kanban & Slides
+#### Flexible Views: Table, Kanban, Gallery & Slides
 
-One set of records, three powerful ways to interact:
+One set of records, four powerful ways to interact:
 
-- **Filtered Table:** Freely combine **Filter** and **Sort** rules into saved views. Slice your data by project, status, or any custom condition.
+- **Filtered Table:** Freely combine **Filter** and **Sort** rules into saved views. Slice your data by project or status, and enjoy full **multiline text editing** support.
 
 ![TileLineBase table mode view](docs/assets/table-view.jpg)
 
@@ -33,9 +33,16 @@ One set of records, three powerful ways to interact:
 
 ![TileLineBase kanban mode view](docs/assets/kanban-view.jpg)
 
+- **Gallery View (Beta):** Visualize your notes as cards with **16:9 covers**. Perfect for browsing image-heavy collections. Supports **View Groups** for organized filtering and **Right-click actions** for quick edits.
+
+![TileLineBase gallery mode view](docs/assets/gallery-view.jpg)
+
 - **Slide View:** Turn rows into focused slides—perfect for distraction-free thinking or simple presentations. Easily **customize layouts**, with built-in support for **inline images** and **live previews**.
 
 ![TileLineBase slide mode view](docs/assets/slides-view.jpg)
+
+
+
 
 #### Smart Fields
 

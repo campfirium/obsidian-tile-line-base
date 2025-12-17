@@ -1,6 +1,6 @@
 {
   "name": "obsidian-tile-line-base",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "TileLineBase - A federated paragraph database for Obsidian.",
   "main": "dist/main.js",
   "scripts": {
@@ -32,17 +32,17 @@
     "@typescript-eslint/parser": "8.46.2",
     "builtin-modules": "3.3.0",
     "esbuild": "0.17.3",
-		"eslint": "9.39.0",
-		"eslint-import-resolver-typescript": "3.10.1",
-		"eslint-plugin-import": "2.32.0",
-		"eslint-plugin-obsidianmd": "0.1.6",
-		"jsonc-eslint-parser": "2.4.1",
-		"terser": "5.44.1",
-		"obsidian": "1.10.0",
-		"ts-node": "10.9.2",
-		"tslib": "2.8.1",
-		"typescript": "5.9.3",
-		"typescript-eslint": "8.46.2"
+    "eslint": "9.39.0",
+    "eslint-import-resolver-typescript": "3.10.1",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-obsidianmd": "0.1.6",
+    "jsonc-eslint-parser": "2.4.1",
+    "terser": "5.44.1",
+    "obsidian": "1.10.0",
+    "ts-node": "10.9.2",
+    "tslib": "2.8.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.2"
   },
   "dependencies": {
     "ag-grid-community": "34.2.0",

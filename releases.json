@@ -1,4 +1,18 @@
 {
+  "0.9.0": {
+    "date": "2025-12-17",
+    "info": "Major UX update across Gallery/Slide workflows, editor ergonomics, and localization coverage.",
+    "new": [
+      "Gallery view mode (beta) with toolbar controls, grouping, and template-based cards."
+    ],
+    "improved": [
+      "Malformed H2 assistant redesigned with a clearer validation flow and faster Gallery rendering (card reuse/virtualization)."
+    ],
+    "fixed": [
+      "Cell editing now supports F2 to enter edit mode and Shift+Enter for newlines, with more reliable multiline tooltip/fenced-field handling."
+    ],
+    "changed": []
+  },
   "0.8.3": {
     "date": "2025-12-07",
     "info": "",

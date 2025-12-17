@@ -33,7 +33,7 @@ One set of records, four powerful ways to interact:
 
 ![TileLineBase kanban mode view](docs/assets/kanban-view.jpg)
 
-- **Gallery View (Beta):** Visualize your notes as cards with **16:9 covers**. Perfect for browsing image-heavy collections. Supports **View Groups** for organized filtering and **Right-click actions** for quick edits.
+- **Gallery View (Beta):** Visualize notes as fully customizable cards. **Design custom layouts** with the **Template Engine**, and streamline organization via **View Groups** and **Right-click actions**.
 
 ![TileLineBase gallery mode view](docs/assets/gallery-view.jpg)
 

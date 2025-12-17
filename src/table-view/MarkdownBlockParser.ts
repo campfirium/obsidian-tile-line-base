@@ -1,5 +1,6 @@
 import type { DateFormatPreset, TimeFormatPreset } from '../utils/datetime';
 import { parseColumnDefinition as parseColumnDefinitionLine } from './MarkdownColumnConfigParser';
+import { buildInvalidSection, isRuntimeConfigBlock, resolveColonIndex } from './MarkdownParseHelpers';
 import type { FormulaFormatPreset } from './formulaFormatPresets';
 import {
 	isCollapsedDataLine,
@@ -36,8 +37,12 @@ export interface InvalidH2Section {
 	reason: 'missingColon' | 'invalidField';
 }
 export interface StrayContentSection { startLine: number; endLine: number; text: string; }
-export interface H2ParseResult { blocks: H2Block[]; invalidSections: InvalidH2Section[]; straySections: StrayContentSection[]; }
-const FULL_WIDTH_COLON = '\uFF1A';
+export interface H2ParseResult {
+	blocks: H2Block[];
+	invalidSections: InvalidH2Section[];
+	straySections: StrayContentSection[];
+	leadingHeading?: string | null;
+}
 const COLLAPSED_COMMENT_PREFIX = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}`, 'i');
 const LIST_OR_QUOTE_PREFIX = /^(?:[-*+]\s|\d+\.\s|>\s?)/;
 const HEADING_PREFIX = /^#{1,6}\s/;
@@ -49,7 +54,7 @@ export class MarkdownBlockParser {
 		while ((match = blockRegex.exec(content)) !== null) {
 			const blockContent = match[1];
 			const blockStartIndex = match.index ?? 0;
-			if (this.isRuntimeConfigBlock(content, blockStartIndex, blockContent)) {
+			if (isRuntimeConfigBlock(content, blockStartIndex, blockContent)) {
 				continue;
 			}
 			const lines = blockContent.split(/\r?\n/);
@@ -73,6 +78,7 @@ export class MarkdownBlockParser {
 	parseH2(content: string): H2ParseResult {
 		const lines = content.split('\n');
 		const blocks: H2Block[] = []; const straySections: StrayContentSection[] = []; const invalidSections: InvalidH2Section[] = [];
+		let leadingHeading: string | null = null;
 		let currentBlock: H2Block | null = null;
 		let inCodeBlock = false;
 		let strayStart = -1;
@@ -100,9 +106,18 @@ export class MarkdownBlockParser {
 				continue;
 			}
 			if (inCodeBlock) continue;
-			if (!skippedFirstH1 && /^#\s/.test(trimmed)) {
-				skippedFirstH1 = true;
-				continue;
+			if (!skippedFirstH1) {
+				if (/^#\s/.test(trimmed)) {
+					skippedFirstH1 = true;
+					leadingHeading = line;
+					continue;
+				}
+				if (lines[index + 1] !== undefined && /^=+$/.test(lines[index + 1].trim()) && trimmed.length > 0) {
+					skippedFirstH1 = true;
+					leadingHeading = `${line}\n${lines[index + 1]}`;
+					skipUntil = Math.max(skipUntil, index + 1);
+					continue;
+				}
 			}
 			if (trimmed.length === 0) {
 				if (strayStart != -1) appendStray(index, line);
@@ -114,7 +129,7 @@ export class MarkdownBlockParser {
 				const titleText = trimmed.replace(/^##\s*/, '').trim();
 				const colonIndex = resolveColonIndex(titleText);
 				if (colonIndex <= 0) {
-					const invalid = this.buildInvalidSection(lines, index, 'missingColon');
+					const invalid = buildInvalidSection(lines, index, 'missingColon');
 					invalidSections.push(invalid);
 					skipUntil = Math.max(skipUntil, invalid.endLine);
 					currentBlock = null;
@@ -122,7 +137,7 @@ export class MarkdownBlockParser {
 				}
 				const parsedHeadingField = this.extractField(titleText, colonIndex);
 				if (!parsedHeadingField || !parsedHeadingField.key || !parsedHeadingField.value) {
-					const invalid = this.buildInvalidSection(lines, index, 'invalidField');
+					const invalid = buildInvalidSection(lines, index, 'invalidField');
 					invalidSections.push(invalid);
 					skipUntil = Math.max(skipUntil, invalid.endLine);
 					currentBlock = null;
@@ -172,9 +187,9 @@ ${section.text}`;
 					merged.push({ ...section });
 				}
 			}
-			return { blocks, invalidSections, straySections: merged };
+			return { blocks, invalidSections, straySections: merged, leadingHeading };
 		}
-		return { blocks, invalidSections, straySections };
+		return { blocks, invalidSections, straySections, leadingHeading };
 	}
 	parseH2Blocks(content: string): H2Block[] { return this.parseH2(content).blocks; }
 	hasStructuredH2Blocks(blocks: H2Block[]): boolean {
@@ -237,64 +252,5 @@ ${section.text}`;
 		}
 		return true;
 	}
-	private isRuntimeConfigBlock(content: string, blockStartIndex: number, blockContent: string): boolean {
-		const preceding = content.slice(0, blockStartIndex).replace(/\r/g, '');
-		let headingLine = '';
-		const lastHeadingStart = preceding.lastIndexOf('\n## ');
-		if (lastHeadingStart >= 0) {
-			const headingStart = lastHeadingStart + 1;
-			const headingEnd = preceding.indexOf('\n', headingStart);
-			headingLine = preceding
-				.slice(headingStart, headingEnd === -1 ? preceding.length : headingEnd)
-				.trim();
-		} else if (preceding.startsWith('## ')) {
-			const firstLineEnd = preceding.indexOf('\n');
-			headingLine = (firstLineEnd === -1 ? preceding : preceding.slice(0, firstLineEnd)).trim();
-		}
-		const runtimeHeadingPattern = /^##\s+tlb\s+[A-Za-z0-9-]{4,}\s+\d+$/;
-		if (headingLine && runtimeHeadingPattern.test(headingLine)) {
-			return true;
-		}
-		const firstContentLine = blockContent
-			.split(/\r?\n/)
-			.map((line) => line.trim())
-			.find((line) => line.length > 0 && !line.startsWith('#'));
-		if (!firstContentLine) {
-			return false;
-		}
-		const runtimeKeyPattern = /^(filterViews|columnWidths|viewPreference|__meta__)\b/i;
-		return runtimeKeyPattern.test(firstContentLine);
-	}
-	private buildInvalidSection(lines: string[], headingIndex: number, reason: InvalidH2Section['reason']): InvalidH2Section {
-		let endIndex = headingIndex;
-		let probeInCodeBlock = false;
-		for (let i = headingIndex + 1; i < lines.length; i++) {
-			const trimmed = lines[i].trim();
-			if (trimmed.startsWith('```')) {
-				probeInCodeBlock = !probeInCodeBlock;
-			}
-			if (!probeInCodeBlock && /^##(?!#)/.test(trimmed)) {
-				break;
-			}
-			endIndex = i;
-		}
-		return {
-			startLine: headingIndex,
-			endLine: endIndex,
-			text: lines.slice(headingIndex, endIndex + 1).join('\n'),
-			heading: lines[headingIndex] ?? '',
-			reason
-		};
-	}
 }
-function resolveColonIndex(text: string): number {
-	const asciiIndex = text.indexOf(':');
-	const fullWidthIndex = text.indexOf(FULL_WIDTH_COLON);
-	if (asciiIndex === -1) {
-		return fullWidthIndex;
-	}
-	if (fullWidthIndex === -1) {
-		return asciiIndex;
-	}
-	return Math.min(asciiIndex, fullWidthIndex);
-}
+

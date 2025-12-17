@@ -48,11 +48,10 @@ export class TableDataStore {
 	private blocks: H2Block[] = [];
 	private schema: Schema | null = null;
 	private hiddenSortableFields: Set<string> = new Set();
-	private schemaDirty = false;
-	private sparseCleanupRequired = false;
+	private schemaDirty = false; private sparseCleanupRequired = false;
 	private readonly formulaState: FormulaState = createFormulaState();
-	private frontmatter: string | null = null;
-	private frontmatterPadding = '';
+	private frontmatter: string | null = null; private frontmatterPadding = '';
+	private leadingHeading: string | null = null;
 
 	constructor(private readonly formulaOptions: FormulaOptions) {}
 
@@ -63,7 +62,7 @@ export class TableDataStore {
 	initialise(
 		result: SchemaBuildResult,
 		columnConfigs: ColumnConfig[] | null,
-		options?: { frontmatter?: string | null; frontmatterPadding?: string | null }
+		options?: { frontmatter?: string | null; frontmatterPadding?: string | null; leadingHeading?: string | null }
 	): void {
 		this.blocks = result.blocks;
 		this.schema = result.schema;
@@ -71,6 +70,7 @@ export class TableDataStore {
 		this.schemaDirty = result.schemaDirty;
 		this.sparseCleanupRequired = result.sparseCleanupRequired;
 		this.setFrontmatter(options?.frontmatter ?? null, options?.frontmatterPadding ?? null);
+		this.leadingHeading = options?.leadingHeading ?? null;
 		prepareFormulaColumns(this.formulaState, this.schema, columnConfigs ?? null);
 	}
 
@@ -183,9 +183,10 @@ export class TableDataStore {
 
 	blocksToMarkdown(): string {
 		const body = blocksToMarkdownInternal(this.schema, this.blocks, this.hiddenSortableFields);
-		if (!this.frontmatter) { return body; }
+		const heading = this.leadingHeading ? `${this.leadingHeading}\n` : '';
+		if (!this.frontmatter) { return `${heading}${body}`; }
 		const padding = this.normaliseFrontmatterPadding(this.frontmatterPadding);
-		return `${this.frontmatter.trimEnd()}${padding}${body}`;
+		return `${this.frontmatter.trimEnd()}${padding}${heading}${body}`;
 	}
 
 	updateCell(rowIndex: number, field: string, newValue: string): boolean {

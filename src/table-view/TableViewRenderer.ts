@@ -52,8 +52,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.copyTemplate = null; view.copyTemplateLoaded = false;
 		const content = await view.app.vault.read(view.file);
 		view.captureConversionBaseline(content);
-		const parsedFrontmatter = extractFrontmatter(content);
-		const configBlock = await view.persistenceService.loadConfig();
+		const parsedFrontmatter = extractFrontmatter(content); const configBlock = await view.persistenceService.loadConfig();
 		const plugin = getPluginContext();
 		view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
 		if (configBlock) {
@@ -190,7 +189,8 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	const schemaResult = view.schemaBuilder.buildSchema(view.blocks, columnConfigs ?? null);
 	view.dataStore.initialise(schemaResult, columnConfigs ?? null, {
 		frontmatter: parsedFrontmatter.frontmatter,
-		frontmatterPadding: parsedFrontmatter.padding
+		frontmatterPadding: parsedFrontmatter.padding,
+		leadingHeading: h2ParseResult.leadingHeading ?? null
 	});
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();

@@ -174,6 +174,10 @@ private readonly focusAccess: FocusStateAccess;
 		if (!keyEvent) {
 			return false;
 		}
+
+		if (this.editing && keyEvent.key === 'Enter' && keyEvent.shiftKey) {
+			return true;
+		}
 		const handled = this.enterCoordinator.handleEnterAtLastRow(
 			params.api,
 			params.column?.getColId?.() ?? null,

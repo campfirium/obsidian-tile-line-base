@@ -337,7 +337,64 @@
 
 .tlb-gallery-container {
 	display: block;
+	position: relative;
 	width: 100%;
+	min-height: 120px;
+}
+
+.tlb-gallery-surface {
+	width: 100%;
+	min-height: 100%;
+}
+
+.tlb-gallery-processing {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.16s ease-in-out;
+	z-index: 1;
+}
+
+.tlb-gallery-processing.is-active {
+	opacity: 1;
+}
+
+.tlb-gallery-processing__bubble {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--background-primary) 82%, var(--background-primary-alt, #111111) 18%);
+	box-shadow: 0 8px 22px color-mix(in srgb, var(--background-primary) 70%, #000000 22%);
+	color: var(--text-normal);
+}
+
+.tlb-gallery-processing__spinner {
+	width: 16px;
+	height: 16px;
+	border: 2px solid color-mix(in srgb, var(--text-faint) 70%, transparent);
+	border-top-color: var(--text-normal);
+	border-radius: 50%;
+	animation: tlb-gallery-spinner 0.9s linear infinite;
+}
+
+.tlb-gallery-processing__label {
+	font-weight: 700;
+	color: var(--text-normal);
+}
+
+@keyframes tlb-gallery-spinner {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .tlb-gallery-grid {

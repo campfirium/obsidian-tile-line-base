@@ -33,6 +33,7 @@ type LocaleAliasMap = Partial<Record<string, LocaleCode>>;
 type ExtraTranslationKeys =
 	| 'tableView.mode.gallery'
 	| 'galleryView.emptyState'
+	| 'galleryView.processingHint'
 	| 'galleryView.actions.openFromMarkdown'
 	| 'galleryView.actions.switchToGallery'
 	| 'commands.openGalleryView'

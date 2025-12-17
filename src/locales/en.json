@@ -15,6 +15,7 @@
   },
   "galleryView": {
     "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
+    "processingHint": "Preparing gallery cards...",
     "actions": {
       "openFromMarkdown": "Open TileLineBase gallery view",
       "switchToGallery": "Switch to gallery view"

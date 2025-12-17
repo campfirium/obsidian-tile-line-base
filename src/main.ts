@@ -813,20 +813,20 @@ class NavigatorCompatModal extends Modal {
 	onOpen(): void {
 		const { contentEl, titleEl } = this;
 		contentEl.empty();
-		titleEl.setText('TileLineBase Compatibility Notice');
+		titleEl.setText(t('settings.navigatorCompatModalTitle'));
 
-		const header = contentEl.createEl('h2', { text: 'Notebook Navigator Compatibility Enabled' });
+		const header = contentEl.createEl('h2', { text: t('settings.navigatorCompatModalHeading') });
 		header.addClass('tlb-compat-title');
 
 		const body = contentEl.createDiv({ cls: 'tlb-compat-body' });
 		body.createEl('p', {
-			text: 'Notebook Navigator is detected. Its reload mechanism causes severe flickering and view switching in TileLineBase views. To ensure normal usage, TileLineBase has automatically enabled instance-level isolation.'
+			text: t('settings.navigatorCompatModalBody1')
 		});
 		body.createEl('p', {
-			text: 'This protection is locally scoped to TileLineBase views and does not affect other scenarios.'
+			text: t('settings.navigatorCompatModalBody2')
 		});
 		body.createEl('p', {
-			text: 'You can turn this off anytime in TileLineBase settings under Compatibility.'
+			text: t('settings.navigatorCompatModalBody3')
 		}).addClass('mod-muted');
 	}
 

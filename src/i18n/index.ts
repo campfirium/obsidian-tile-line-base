@@ -28,21 +28,9 @@ const locales = {
 
 type LocaleMap = typeof locales;
 export type LocaleCode = keyof LocaleMap;
-type LocaleTree = LocaleMap[LocaleCode];
 type LocaleAliasMap = Partial<Record<string, LocaleCode>>;
-type ExtraTranslationKeys =
-	| 'tableView.mode.gallery'
-	| 'galleryView.emptyState'
-	| 'galleryView.processingHint'
-	| 'galleryView.actions.openFromMarkdown'
-	| 'galleryView.actions.switchToGallery'
-	| 'commands.openGalleryView'
-	| 'settings.navigatorPinnedWarning'
-	| 'settings.navigatorPinnedModalTitle'
-	| 'settings.navigatorPinnedModalHeading'
-	| 'settings.navigatorPinnedModalBody1'
-	| 'settings.navigatorPinnedModalBody2'
-	| 'settings.navigatorPinnedModalAction';
+type LocaleTree = LocaleMap[LocaleCode];
+type TranslationTree = typeof en;
 
 type LeafPaths<T, Prefix extends string = ''> =
 	T extends string
@@ -56,7 +44,7 @@ type LeafPaths<T, Prefix extends string = ''> =
 				}[Extract<keyof T, string>]
 			: never;
 
-export type TranslationKey = Exclude<LeafPaths<LocaleTree>, ''> | ExtraTranslationKeys;
+export type TranslationKey = Exclude<LeafPaths<TranslationTree>, ''>;
 
 const FALLBACK_LOCALE: LocaleCode = 'en';
 const LOCALE_ALIASES: LocaleAliasMap = {

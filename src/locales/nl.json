@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Overschakelen naar diaweergave",
+      "switchToSlide": "Dia",
       "openTemplate": "Dia-template bewerken",
       "enterFullscreen": "Volledig scherm openen",
       "exitFullscreen": "Volledig scherm afsluiten"
@@ -94,16 +94,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Overschakelen naar TileLineBase-tabelweergave",
-    "openMarkdownView": "Terugschakelen naar Markdown-editor",
-    "switchViewMenu": "Weergave wisselen (huidig: {{mode}})"
+    "openTableView": "Tabel",
+    "openMarkdownView": "Bewerken",
+    "switchViewMenu": "Weergave: {{mode}}"
   },
   "galleryView": {
     "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
     "processingHint": "Galerijkaarten worden voorbereid...",
     "actions": {
-      "openFromMarkdown": "TileLineBase-galerijweergave openen",
-      "switchToGallery": "Schakel naar galerijweergave"
+      "openFromMarkdown": "Galerij",
+      "switchToGallery": "Galerij"
     },
     "toolbar": {
       "title": "Galerij",
@@ -156,9 +156,9 @@
       "name": "Statusboard"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase-kanbanweergave openen",
-      "switchToKanban": "Overschakelen naar kanbanweergave",
-      "switchToTable": "Overschakelen naar tabelweergave"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabel"
     },
     "laneActions": {
       "addCard": "Kaart toevoegen aan \"{{lane}}\""

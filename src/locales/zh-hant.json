@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "切換至 TileLineBase 表格視圖",
-    "openMarkdownView": "切換回 Markdown 編輯器",
-    "switchViewMenu": "切換視圖（當前：{{mode}}）"
+    "openTableView": "表格",
+    "openMarkdownView": "編輯",
+    "switchViewMenu": "視圖: {{mode}}"
   },
   "galleryView": {
     "emptyState": "尚無卡片。可在表格視圖新增行以填充此畫廊。",
     "processingHint": "正在準備畫廊卡片...",
     "actions": {
-      "openFromMarkdown": "開啟 TileLineBase 畫廊視圖",
-      "switchToGallery": "切換至畫廊視圖"
+      "openFromMarkdown": "畫廊",
+      "switchToGallery": "畫廊"
     },
     "toolbar": {
       "title": "畫廊",
@@ -71,9 +71,9 @@
       "name": "預設狀態看板"
     },
     "actions": {
-      "openFromMarkdown": "開啟 TileLineBase 看板視圖",
-      "switchToKanban": "切換到看板視圖",
-      "switchToTable": "切換回表格視圖"
+      "openFromMarkdown": "看板",
+      "switchToKanban": "看板",
+      "switchToTable": "表格"
     },
     "laneActions": {
       "addCard": "將卡片加入「{{lane}}」"
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "切換到投影片視圖",
+      "switchToSlide": "投影片",
       "openTemplate": "編輯投影片模板",
       "enterFullscreen": "進入全屏",
       "exitFullscreen": "退出全屏"

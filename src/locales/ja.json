@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "スライドビューに切り替える",
+      "switchToSlide": "スライド",
       "openTemplate": "スライドテンプレートを編集",
       "enterFullscreen": "全画面表示にする",
       "exitFullscreen": "全画面表示を終了"
@@ -94,16 +94,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "TileLineBase テーブルビューに切り替える",
-    "openMarkdownView": "Markdown エディターに戻る",
-    "switchViewMenu": "ビューを切り替え (現在: {{mode}})"
+    "openTableView": "テーブル",
+    "openMarkdownView": "編集",
+    "switchViewMenu": "ビュー: {{mode}}"
   },
   "galleryView": {
     "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
     "processingHint": "ギャラリーカードを準備しています...",
     "actions": {
-      "openFromMarkdown": "TileLineBase のギャラリービューを開く",
-      "switchToGallery": "ギャラリービューに切り替える"
+      "openFromMarkdown": "ギャラリー",
+      "switchToGallery": "ギャラリー"
     },
     "toolbar": {
       "title": "ギャラリー",
@@ -156,9 +156,9 @@
       "name": "ステータスボード"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase のカンバンビューを開く",
-      "switchToKanban": "カンバンビューに切り替える",
-      "switchToTable": "テーブルビューに切り替える"
+      "openFromMarkdown": "カンバン",
+      "switchToKanban": "カンバン",
+      "switchToTable": "テーブル"
     },
     "laneActions": {
       "addCard": "「{{lane}}」にカードを追加"

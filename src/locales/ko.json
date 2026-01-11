@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "슬라이드 보기로 전환",
+      "switchToSlide": "슬라이드",
       "openTemplate": "슬라이드 템플릿 편집",
       "enterFullscreen": "전체 화면으로 전환",
       "exitFullscreen": "전체 화면 종료"
@@ -94,16 +94,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "TileLineBase 테이블 보기로 전환",
-    "openMarkdownView": "Markdown 편집기로 돌아가기",
-    "switchViewMenu": "보기 전환 (현재: {{mode}})"
+    "openTableView": "테이블",
+    "openMarkdownView": "편집",
+    "switchViewMenu": "보기: {{mode}}"
   },
   "galleryView": {
     "emptyState": "아직 카드가 없습니다. 테이블 보기에서 행을 추가해 이 갤러리를 채우세요.",
     "processingHint": "갤러리 카드를 준비하는 중...",
     "actions": {
-      "openFromMarkdown": "TileLineBase 갤러리 보기 열기",
-      "switchToGallery": "갤러리 보기로 전환"
+      "openFromMarkdown": "갤러리",
+      "switchToGallery": "갤러리"
     },
     "toolbar": {
       "title": "갤러리",
@@ -156,9 +156,9 @@
       "name": "상태 보드"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase 칸반 보기 열기",
-      "switchToKanban": "칸반 보기로 전환",
-      "switchToTable": "테이블 보기로 전환"
+      "openFromMarkdown": "칸반",
+      "switchToKanban": "칸반",
+      "switchToTable": "테이블"
     },
     "laneActions": {
       "addCard": "\"{{lane}}\"에 카드 추가"

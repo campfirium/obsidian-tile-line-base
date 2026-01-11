@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Cambiar a la vista de tabla de TileLineBase",
-    "openMarkdownView": "Volver al editor de Markdown",
-    "switchViewMenu": "Cambiar vista (actual: {{mode}})"
+    "openTableView": "Tabla",
+    "openMarkdownView": "Editar",
+    "switchViewMenu": "Vista: {{mode}}"
   },
   "galleryView": {
     "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
     "processingHint": "Preparando tarjetas de la galería...",
     "actions": {
-      "openFromMarkdown": "Abrir la vista de galería de TileLineBase",
-      "switchToGallery": "Cambiar a la vista de galería"
+      "openFromMarkdown": "Galería",
+      "switchToGallery": "Galería"
     },
     "toolbar": {
       "title": "Galería",
@@ -71,9 +71,9 @@
       "name": "Tablero de estado"
     },
     "actions": {
-      "openFromMarkdown": "Abrir la vista Kanban de TileLineBase",
-      "switchToKanban": "Cambiar a la vista Kanban",
-      "switchToTable": "Cambiar a la vista de tabla"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabla"
     },
     "laneActions": {
       "addCard": "Añadir tarjeta a \"{{lane}}\""
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Cambiar a la vista de diapositivas",
+      "switchToSlide": "Diapositivas",
       "openTemplate": "Editar plantilla de diapositivas",
       "enterFullscreen": "Entrar en pantalla completa",
       "exitFullscreen": "Salir de pantalla completa"

@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Switch to TileLineBase table view",
-    "openMarkdownView": "Switch back to Markdown editor",
-    "switchViewMenu": "Switch view (current: {{mode}})"
+    "openTableView": "Table",
+    "openMarkdownView": "Edit",
+    "switchViewMenu": "View: {{mode}}"
   },
   "galleryView": {
     "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
     "processingHint": "Preparing gallery cards...",
     "actions": {
-      "openFromMarkdown": "Open TileLineBase gallery view",
-      "switchToGallery": "Switch to gallery view"
+      "openFromMarkdown": "Gallery",
+      "switchToGallery": "Gallery"
     },
     "toolbar": {
       "title": "Gallery",
@@ -71,9 +71,9 @@
       "name": "Status board"
     },
     "actions": {
-      "openFromMarkdown": "Open TileLineBase kanban view",
-      "switchToKanban": "Switch to kanban view",
-      "switchToTable": "Switch to table view"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Table"
     },
     "laneActions": {
       "addCard": "Add card to \"{{lane}}\""
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Switch to slide view",
+      "switchToSlide": "Slide",
       "openTemplate": "Edit slide template",
       "enterFullscreen": "Enter fullscreen",
       "exitFullscreen": "Exit fullscreen"

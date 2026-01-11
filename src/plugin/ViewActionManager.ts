@@ -89,7 +89,6 @@ export class ViewActionManager {
 
 			button.setAttribute(this.actionAttribute, this.markdownActionId);
 			button.setAttribute('aria-label', label);
-			button.setAttribute('title', label);
 		}
 
 		this.ensureKanbanAction(leaf, view);
@@ -149,7 +148,6 @@ export class ViewActionManager {
 
 		button.setAttribute(this.actionAttribute, this.kanbanActionId);
 		button.setAttribute('aria-label', label);
-		button.setAttribute('title', label);
 	}
 
 	private ensureSlideAction(leaf: WorkspaceLeaf, view: MarkdownView): void {
@@ -196,7 +194,6 @@ export class ViewActionManager {
 
 		button.setAttribute(this.actionAttribute, this.slideActionId);
 		button.setAttribute('aria-label', label);
-		button.setAttribute('title', label);
 	}
 
 	private ensureGalleryAction(leaf: WorkspaceLeaf, view: MarkdownView): void {
@@ -247,6 +244,5 @@ export class ViewActionManager {
 
 		button.setAttribute(this.actionAttribute, this.galleryActionId);
 		button.setAttribute('aria-label', label);
-		button.setAttribute('title', label);
 	}
 }

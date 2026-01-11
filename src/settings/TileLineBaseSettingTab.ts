@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, setIcon } from 'obsidian';
 import { t, getAvailableLocales, getLocaleCode, setLocale } from '../i18n';
 import { computeRecommendedStripeColor } from '../table-view/stripeStyles';
 import type { BorderColorMode, StripeColorMode } from '../types/appearance';
@@ -32,6 +32,15 @@ type SidebarSettingHost = Plugin & {
 	getLocalizedLocalePreference(): LocaleCode;
 	useLocalizedLocalePreference(): Promise<void>;
 	getResolvedLocale(): LocaleCode;
+};
+
+type QuickLinkVariant = 'primary' | 'quiet';
+type QuickLinkButtonOptions = {
+	labelKey: TranslationKey;
+	tooltipKey: TranslationKey;
+	icon: string;
+	url: string;
+	variant?: QuickLinkVariant;
 };
 
 const LOG_LEVEL_OPTIONS: LogLevelName[] = ['error', 'warn', 'info', 'debug', 'trace'];
@@ -83,9 +92,43 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		setLocale(resolvedLocale);
 		this.logger.info('render', { locale: getLocaleCode(), heading: t('settings.generalHeading') });
 
+		this.renderQuickLinks(containerEl);
 		this.renderGeneralSection(containerEl);
 		this.renderLoggingSection(containerEl);
 		this.renderBackupSection(containerEl);
+	}
+
+	private renderQuickLinks(containerEl: HTMLElement): void {
+		const root = containerEl.createDiv({ cls: 'tlb-settings-quick-links' });
+		const info = root.createDiv({ cls: 'tlb-settings-quick-links__info' });
+		info.createDiv({ cls: 'tlb-settings-quick-links__title', text: t('settings.quickLinksTitle') });
+		const description = t('settings.quickLinksDesc');
+		if (description.trim().length > 0) {
+			info.createDiv({ cls: 'tlb-settings-quick-links__desc', text: description });
+		}
+
+		const actions = root.createDiv({ cls: 'tlb-settings-quick-links__actions' });
+
+		this.createQuickLinkButton(actions, {
+			labelKey: 'settings.quickLinksFeedbackLabel',
+			tooltipKey: 'settings.quickLinksFeedbackTooltip',
+			icon: 'message-circle',
+			url: 'https://github.com/campfirium/obsidian-tile-line-base/issues/new/choose',
+			variant: 'primary'
+		});
+		this.createQuickLinkButton(actions, {
+			labelKey: 'settings.quickLinksVideosLabel',
+			tooltipKey: 'settings.quickLinksVideosTooltip',
+			icon: 'play',
+			url: 'https://youtu.be/8uoVBkD2--A'
+		});
+		this.createQuickLinkButton(actions, {
+			labelKey: 'settings.quickLinksStarLabel',
+			tooltipKey: 'settings.quickLinksStarTooltip',
+			icon: 'star',
+			url: 'https://github.com/campfirium/obsidian-tile-line-base',
+			variant: 'quiet'
+		});
 	}
 
 	private renderGeneralSection(containerEl: HTMLElement): void {
@@ -304,8 +347,51 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					text.setValue(String(updated));
 				}
 				});
-			});
+		});
 
+	}
+
+	private createQuickLinkButton(actionsEl: HTMLElement, options: QuickLinkButtonOptions): void {
+		const button = actionsEl.createEl('button', { cls: 'tlb-settings-quick-links__button' });
+		if (options.variant) {
+			button.addClass(`tlb-settings-quick-links__button--${options.variant}`);
+		}
+		button.setAttribute('type', 'button');
+
+		const tooltip = t(options.tooltipKey);
+		button.setAttribute('aria-label', tooltip);
+		button.setAttribute('data-tooltip-position', 'top');
+		button.setAttribute('data-tooltip', tooltip);
+
+		const iconEl = button.createSpan({ cls: 'tlb-settings-quick-links__icon' });
+		iconEl.setAttribute('aria-hidden', 'true');
+		setIcon(iconEl, options.icon);
+
+		button.createSpan({ cls: 'tlb-settings-quick-links__label', text: t(options.labelKey) });
+
+		button.addEventListener('click', (event) => {
+			event.preventDefault();
+			this.openExternal(options.url);
+		});
+	}
+
+	private openExternal(url: string): void {
+		try {
+			const electron = (window as unknown as { require?: (module: string) => any }).require?.('electron');
+			const shell = electron?.shell as { openExternal?: (target: string) => Promise<void> | void } | undefined;
+			if (shell?.openExternal) {
+				const result = shell.openExternal(url);
+				if (result && typeof (result as Promise<void>).catch === 'function') {
+					(result as Promise<void>).catch((error) => {
+						this.logger.error('Failed to open quick link', { error, url });
+					});
+				}
+				return;
+			}
+			window.open(url, '_blank', 'noopener');
+		} catch (error) {
+			this.logger.error('Failed to open quick link', { error, url });
+		}
 	}
 
 	private normalizeStripeMode(value: string | null | undefined): StripeColorMode {

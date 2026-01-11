@@ -1,8 +1,12 @@
+import { Component, MarkdownRenderer } from 'obsidian';
+import { getPluginContext } from '../pluginContext';
+
 interface TooltipState {
 	container: HTMLElement;
 	currentTarget: HTMLElement | null;
 	hideTimer: number | null;
 	width: number;
+	markdownComponent?: Component;
 }
 
 const TOOLTIP_MIN_WIDTH = 420;
@@ -41,6 +45,19 @@ function resolveWidth(columnWidth: number, view: Window): number {
 function applyWidth(container: HTMLElement, width: number): void {
 	const value = `${width}px`;
 	container.style.setProperty('--tlb-tooltip-width', value);
+}
+
+function clearTooltipContent(state: TooltipState): void {
+	if (state.markdownComponent) {
+		try {
+			state.markdownComponent.unload();
+		} catch {
+			// ignore tooltip cleanup failures
+		}
+		state.markdownComponent = undefined;
+	}
+	state.container.textContent = '';
+	state.container.classList.remove('markdown-rendered');
 }
 
 function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Window): void {
@@ -87,11 +104,25 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 	const width = resolveWidth(columnWidth, view);
 
 	state.currentTarget = target;
-	state.container.textContent = content;
 	state.container.hidden = false;
 	state.container.classList.remove('is-visible');
 	state.width = width;
 	applyWidth(state.container, width);
+	clearTooltipContent(state);
+
+	const plugin = getPluginContext();
+	const sourcePath = plugin?.app.workspace.getActiveFile()?.path ?? '';
+	let renderPromise: Promise<void> | null = null;
+	if (plugin) {
+		state.container.classList.add('markdown-rendered');
+		const component = new Component();
+		state.markdownComponent = component;
+		renderPromise = MarkdownRenderer.render(plugin.app, content, state.container, sourcePath, component).catch(() => {
+			state.container.textContent = content;
+		});
+	} else {
+		state.container.textContent = content;
+	}
 
 	view.requestAnimationFrame(() => {
 		if (state.currentTarget !== target) {
@@ -100,6 +131,17 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 		positionTooltip(state.container, target.getBoundingClientRect(), view);
 		state.container.classList.add('is-visible');
 	});
+
+	if (renderPromise) {
+		renderPromise
+			.then(() => {
+				if (state.currentTarget !== target) {
+					return;
+				}
+				positionTooltip(state.container, target.getBoundingClientRect(), view);
+			})
+			.catch(() => undefined);
+	}
 }
 
 export function hideOverflowTooltip(target: HTMLElement): void {
@@ -112,7 +154,7 @@ export function hideOverflowTooltip(target: HTMLElement): void {
 
 	state.hideTimer = view.setTimeout(() => {
 		state.container.hidden = true;
-		state.container.textContent = '';
+		clearTooltipContent(state);
 		state.container.classList.remove('is-visible');
 		state.currentTarget = null;
 		state.hideTimer = null;

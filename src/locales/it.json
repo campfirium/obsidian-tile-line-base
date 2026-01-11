@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Passa alla vista tabella TileLineBase",
-    "openMarkdownView": "Torna all'editor Markdown",
-    "switchViewMenu": "Cambia visualizzazione (attuale: {{mode}})"
+    "openTableView": "Tabella",
+    "openMarkdownView": "Modifica",
+    "switchViewMenu": "Vista: {{mode}}"
   },
   "galleryView": {
     "emptyState": "Ancora nessuna scheda. Aggiungi righe dalla vista tabella per popolare questa galleria.",
     "processingHint": "Preparazione delle schede della galleria...",
     "actions": {
-      "openFromMarkdown": "Apri la vista galleria di TileLineBase",
-      "switchToGallery": "Passa alla vista galleria"
+      "openFromMarkdown": "Galleria",
+      "switchToGallery": "Galleria"
     },
     "toolbar": {
       "title": "Galleria",
@@ -71,9 +71,9 @@
       "name": "Bacheca stato"
     },
     "actions": {
-      "openFromMarkdown": "Apri la vista kanban TileLineBase",
-      "switchToKanban": "Passa alla vista kanban",
-      "switchToTable": "Torna alla vista tabella"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabella"
     },
     "laneActions": {
       "addCard": "Aggiungi scheda a \"{{lane}}\""
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Passa alla vista diapositive",
+      "switchToSlide": "Diapositiva",
       "openTemplate": "Modifica modello di diapositiva",
       "enterFullscreen": "Entra in schermo intero",
       "exitFullscreen": "Esci da schermo intero"

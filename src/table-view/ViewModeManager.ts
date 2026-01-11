@@ -43,7 +43,6 @@ export class ViewModeManager {
 			}
 			button.setAttribute('data-tlb-action', this.actionIds[mode]);
 			button.setAttribute('aria-label', label);
-			button.setAttribute('title', label);
 			this.buttons[mode] = button;
 		});
 		this.updateButtons();

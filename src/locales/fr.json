@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Basculer vers la vue tableau TileLineBase",
-    "openMarkdownView": "Revenir à l'éditeur Markdown",
-    "switchViewMenu": "Changer de vue (actuelle : {{mode}})"
+    "openTableView": "Tableau",
+    "openMarkdownView": "Modifier",
+    "switchViewMenu": "Vue: {{mode}}"
   },
   "galleryView": {
     "emptyState": "Aucune carte pour le moment. Ajoutez des lignes depuis la vue tableau pour alimenter cette galerie.",
     "processingHint": "Préparation des cartes de la galerie...",
     "actions": {
-      "openFromMarkdown": "Ouvrir la vue galerie TileLineBase",
-      "switchToGallery": "Passer à la vue galerie"
+      "openFromMarkdown": "Galerie",
+      "switchToGallery": "Galerie"
     },
     "toolbar": {
       "title": "Galerie",
@@ -71,9 +71,9 @@
       "name": "Tableau des statuts"
     },
     "actions": {
-      "openFromMarkdown": "Ouvrir la vue kanban TileLineBase",
-      "switchToKanban": "Passer en vue kanban",
-      "switchToTable": "Revenir à la vue tableau"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tableau"
     },
     "laneActions": {
       "addCard": "Ajouter une carte à \"{{lane}}\""
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Passer en vue diapositive",
+      "switchToSlide": "Diapositive",
       "openTemplate": "Modifier le modèle de diapositive",
       "enterFullscreen": "Passer en plein écran",
       "exitFullscreen": "Quitter le plein écran"

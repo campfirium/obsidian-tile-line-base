@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Zur TileLineBase-Tabellenansicht wechseln",
-    "openMarkdownView": "Zurück zum Markdown-Editor wechseln",
-    "switchViewMenu": "Ansicht wechseln (aktuell: {{mode}})"
+    "openTableView": "Tabelle",
+    "openMarkdownView": "Bearbeiten",
+    "switchViewMenu": "Ansicht: {{mode}}"
   },
   "galleryView": {
     "emptyState": "Noch keine Karten. Füge Zeilen aus der Tabellenansicht hinzu, um diese Galerie zu füllen.",
     "processingHint": "Galeriekarten werden vorbereitet...",
     "actions": {
-      "openFromMarkdown": "TileLineBase-Galerieansicht öffnen",
-      "switchToGallery": "Zur Galerieansicht wechseln"
+      "openFromMarkdown": "Galerie",
+      "switchToGallery": "Galerie"
     },
     "toolbar": {
       "title": "Galerie",
@@ -71,9 +71,9 @@
       "name": "Statusboard"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase-Kanban-Ansicht öffnen",
-      "switchToKanban": "Zur Kanban-Ansicht wechseln",
-      "switchToTable": "Zur Tabellenansicht wechseln"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabelle"
     },
     "laneActions": {
       "addCard": "Karte zu \"{{lane}}\" hinzufügen"
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Zur Folienansicht wechseln",
+      "switchToSlide": "Folie",
       "openTemplate": "Folienvorlage bearbeiten",
       "enterFullscreen": "Vollbildmodus starten",
       "exitFullscreen": "Vollbildmodus verlassen"

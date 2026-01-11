@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Przełącz na widok slajdów",
+      "switchToSlide": "Slajd",
       "openTemplate": "Edytuj szablon slajdu",
       "enterFullscreen": "Włącz pełny ekran",
       "exitFullscreen": "Wyłącz pełny ekran"
@@ -94,16 +94,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Przełącz na widok tabeli TileLineBase",
-    "openMarkdownView": "Wróć do edytora Markdown",
-    "switchViewMenu": "Zmień widok (obecny: {{mode}})"
+    "openTableView": "Tabela",
+    "openMarkdownView": "Edytuj",
+    "switchViewMenu": "Widok: {{mode}}"
   },
   "galleryView": {
     "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
     "processingHint": "Przygotowywanie kart galerii...",
     "actions": {
-      "openFromMarkdown": "Otwórz widok galerii TileLineBase",
-      "switchToGallery": "Przełącz na widok galerii"
+      "openFromMarkdown": "Galeria",
+      "switchToGallery": "Galeria"
     },
     "toolbar": {
       "title": "Galeria",
@@ -156,9 +156,9 @@
       "name": "Tablica statusów"
     },
     "actions": {
-      "openFromMarkdown": "Otwórz widok kanban TileLineBase",
-      "switchToKanban": "Przełącz na widok kanban",
-      "switchToTable": "Przełącz na widok tabeli"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabela"
     },
     "laneActions": {
       "addCard": "Dodaj kartę do \"{{lane}}\""

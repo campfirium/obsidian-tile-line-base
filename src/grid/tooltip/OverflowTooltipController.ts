@@ -114,7 +114,7 @@ export class OverflowTooltipController {
 		const preferred = cell.querySelector<HTMLElement>('.tlb-link-cell__text');
 		const fallback = cell.querySelector<HTMLElement>('.ag-cell-value');
 		const anchor = preferred ?? fallback ?? null;
-		const text = anchor?.textContent?.trim() ?? null;
+		const text = anchor?.textContent ?? null;
 		return { anchor, text };
 	}
 

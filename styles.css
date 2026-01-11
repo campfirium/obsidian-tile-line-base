@@ -4021,6 +4021,14 @@
 	z-index: 9999;
 }
 
+.tlb-overflow-tooltip.markdown-rendered {
+	white-space: normal;
+}
+
+.tlb-overflow-tooltip.markdown-rendered pre {
+	white-space: pre-wrap;
+}
+
 .tlb-overflow-tooltip.is-visible {
 	opacity: 1;
 	pointer-events: auto;

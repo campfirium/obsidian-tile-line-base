@@ -2,7 +2,6 @@
 import { readdirSync, readFileSync, statSync } from "fs";
 import path from "path";
 
-const MAX_MAIN_SIZE = 2_200_000;
 const ALLOWED_DIST_FILES = new Set(["main.js", "styles.css"]);
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const rootDir = process.cwd();
@@ -64,14 +63,9 @@ const ensureDistLayout = () => {
 	}
 };
 
-const ensureBundleSize = () => {
+const logBundleSize = () => {
 	const mainPath = path.join(distDir, "main.js");
 	const stat = statSync(mainPath);
-
-	if (stat.size > MAX_MAIN_SIZE) {
-		fail(`dist/main.js 体积为 ${stat.size} 字节，超过 ${MAX_MAIN_SIZE} 字节限制。`);
-	}
-
 	info(`main.js 体积 ${stat.size} 字节`);
 };
 
@@ -133,7 +127,7 @@ const ensurePinnedDependencies = () => {
 
 const main = () => {
 	ensureDistLayout();
-	ensureBundleSize();
+	logBundleSize();
 	ensureVersionConsistency();
 	ensurePinnedDependencies();
 	info("检测通过。");

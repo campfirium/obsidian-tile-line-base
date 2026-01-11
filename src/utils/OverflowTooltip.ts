@@ -13,6 +13,11 @@ const TOOLTIP_MIN_WIDTH = 420;
 const TOOLTIP_MARGIN = 10;
 const MIN_CELL_WIDTH = 160;
 
+const TOOLTIP_HALF_BLANK_CLASS = 'tlb-overflow-tooltip--half-blank';
+const TOOLTIP_SPACER_CLASS = 'tlb-overflow-tooltip__spacer';
+const TOOLTIP_BLANK_LINE_TOKEN = '&nbsp;';
+const NBSP = '\u00a0';
+
 const STATE_BY_DOCUMENT = new WeakMap<Document, TooltipState>();
 
 function getOrCreateState(doc: Document): TooltipState {
@@ -47,6 +52,51 @@ function applyWidth(container: HTMLElement, width: number): void {
 	container.style.setProperty('--tlb-tooltip-width', value);
 }
 
+function normalizeTooltipMarkdown(content: string): string {
+	const lines = content.replace(/\r\n?/g, '\n').split('\n');
+	const normalized: string[] = [];
+	let blankRun = 0;
+
+	for (const line of lines) {
+		if (line.trim().length === 0) {
+			blankRun += 1;
+			continue;
+		}
+		if (blankRun > 0) {
+			normalized.push(TOOLTIP_BLANK_LINE_TOKEN);
+		}
+		blankRun = 0;
+		normalized.push(line);
+	}
+
+	return normalized.join('\n');
+}
+
+function markTooltipBlankLines(container: HTMLElement): void {
+	const paragraphs = Array.from(container.querySelectorAll<HTMLElement>('p'));
+	for (const paragraph of paragraphs) {
+		const rawText = paragraph.textContent ?? '';
+		if (rawText.trim().length === 0 && rawText.includes(NBSP)) {
+			paragraph.classList.add(TOOLTIP_SPACER_CLASS);
+		}
+	}
+}
+
+function replaceTooltipLineBreaks(container: HTMLElement): void {
+	const breaks = Array.from(container.querySelectorAll('br'));
+	for (const br of breaks) {
+		const prev = br.previousSibling;
+		const prevIsSpacer = prev instanceof HTMLElement && prev.classList.contains(TOOLTIP_SPACER_CLASS);
+		const prevIsBr = prev?.nodeName === 'BR';
+		if (!prevIsBr && !prevIsSpacer) {
+			continue;
+		}
+		const spacer = container.ownerDocument.createElement('span');
+		spacer.className = TOOLTIP_SPACER_CLASS;
+		br.replaceWith(spacer);
+	}
+}
+
 function clearTooltipContent(state: TooltipState): void {
 	if (state.markdownComponent) {
 		try {
@@ -58,6 +108,7 @@ function clearTooltipContent(state: TooltipState): void {
 	}
 	state.container.textContent = '';
 	state.container.classList.remove('markdown-rendered');
+	state.container.classList.remove(TOOLTIP_HALF_BLANK_CLASS);
 }
 
 function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Window): void {
@@ -114,10 +165,18 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 	const sourcePath = plugin?.app.workspace.getActiveFile()?.path ?? '';
 	let renderPromise: Promise<void> | null = null;
 	if (plugin) {
+		const normalizedContent = normalizeTooltipMarkdown(content);
 		state.container.classList.add('markdown-rendered');
+		state.container.classList.add(TOOLTIP_HALF_BLANK_CLASS);
 		const component = new Component();
 		state.markdownComponent = component;
-		renderPromise = MarkdownRenderer.render(plugin.app, content, state.container, sourcePath, component).catch(() => {
+		renderPromise = MarkdownRenderer.render(
+			plugin.app,
+			normalizedContent,
+			state.container,
+			sourcePath,
+			component
+		).catch(() => {
 			state.container.textContent = content;
 		});
 	} else {
@@ -138,6 +197,8 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 				if (state.currentTarget !== target) {
 					return;
 				}
+				replaceTooltipLineBreaks(state.container);
+				markTooltipBlankLines(state.container);
 				positionTooltip(state.container, target.getBoundingClientRect(), view);
 			})
 			.catch(() => undefined);

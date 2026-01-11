@@ -20,7 +20,7 @@ export class OverflowTooltipController {
 			return;
 		}
 		const related = (event as MouseEvent).relatedTarget as HTMLElement | null;
-		if (related && cell.contains(related)) {
+		if (related && (cell.contains(related) || related.closest('.tlb-overflow-tooltip'))) {
 			return;
 		}
 		this.handleLeave(cell);
@@ -40,7 +40,7 @@ export class OverflowTooltipController {
 			return;
 		}
 		const related = event.relatedTarget as HTMLElement | null;
-		if (related && cell.contains(related)) {
+		if (related && (cell.contains(related) || related.closest('.tlb-overflow-tooltip'))) {
 			return;
 		}
 		this.handleLeave(cell);

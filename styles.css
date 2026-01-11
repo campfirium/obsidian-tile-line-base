@@ -4098,6 +4098,9 @@
 	width: var(--tlb-tooltip-width, auto);
 	min-width: var(--tlb-tooltip-width, 420px);
 	max-width: var(--tlb-tooltip-width, 420px);
+	max-height: var(--tlb-tooltip-max-height, calc(100vh - 20px));
+	overflow: auto;
+	overscroll-behavior: contain;
 	padding: 10px 12px;
 	border-radius: 8px;
 	font-size: calc(var(--ag-font-size, 13px) + 2px);

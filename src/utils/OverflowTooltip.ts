@@ -6,6 +6,9 @@ interface TooltipState {
 	currentTarget: HTMLElement | null;
 	hideTimer: number | null;
 	width: number;
+	maxHeight: number;
+	wheelHandler: ((event: WheelEvent) => void) | null;
+	wheelHandlerActive: boolean;
 	markdownComponent?: Component;
 }
 
@@ -35,7 +38,10 @@ function getOrCreateState(doc: Document): TooltipState {
 		container,
 		currentTarget: null,
 		hideTimer: null,
-		width: TOOLTIP_MIN_WIDTH
+		width: TOOLTIP_MIN_WIDTH,
+		maxHeight: 0,
+		wheelHandler: null,
+		wheelHandlerActive: false
 	};
 	STATE_BY_DOCUMENT.set(doc, state);
 	return state;
@@ -50,6 +56,42 @@ function resolveWidth(columnWidth: number, view: Window): number {
 function applyWidth(container: HTMLElement, width: number): void {
 	const value = `${width}px`;
 	container.style.setProperty('--tlb-tooltip-width', value);
+}
+
+function resolveMaxHeight(view: Window): number {
+	return Math.max(TOOLTIP_MARGIN * 2, view.innerHeight - TOOLTIP_MARGIN * 2);
+}
+
+function applyMaxHeight(container: HTMLElement, maxHeight: number): void {
+	container.style.setProperty('--tlb-tooltip-max-height', `${Math.round(maxHeight)}px`);
+}
+
+function ensureWheelLock(state: TooltipState, doc: Document): void {
+	if (state.wheelHandlerActive) {
+		return;
+	}
+	if (!state.wheelHandler) {
+		state.wheelHandler = (event: WheelEvent) => {
+			if (state.container.hidden) {
+				return;
+			}
+			const target = event.target as HTMLElement | null;
+			if (target && state.container.contains(target)) {
+				return;
+			}
+			event.preventDefault();
+		};
+	}
+	doc.addEventListener('wheel', state.wheelHandler, { capture: true, passive: false });
+	state.wheelHandlerActive = true;
+}
+
+function releaseWheelLock(state: TooltipState, doc: Document): void {
+	if (!state.wheelHandlerActive || !state.wheelHandler) {
+		return;
+	}
+	doc.removeEventListener('wheel', state.wheelHandler, { capture: true });
+	state.wheelHandlerActive = false;
 }
 
 function normalizeTooltipMarkdown(content: string): string {
@@ -153,13 +195,17 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 	const rect = target.getBoundingClientRect();
 	const columnWidth = Math.max(MIN_CELL_WIDTH, Math.round(options?.columnWidth ?? rect.width ?? target.clientWidth));
 	const width = resolveWidth(columnWidth, view);
+	const maxHeight = resolveMaxHeight(view);
 
 	state.currentTarget = target;
 	state.container.hidden = false;
 	state.container.classList.remove('is-visible');
 	state.width = width;
+	state.maxHeight = maxHeight;
 	applyWidth(state.container, width);
+	applyMaxHeight(state.container, maxHeight);
 	clearTooltipContent(state);
+	ensureWheelLock(state, doc);
 
 	const plugin = getPluginContext();
 	const sourcePath = plugin?.app.workspace.getActiveFile()?.path ?? '';
@@ -219,5 +265,6 @@ export function hideOverflowTooltip(target: HTMLElement): void {
 		state.container.classList.remove('is-visible');
 		state.currentTarget = null;
 		state.hideTimer = null;
+		releaseWheelLock(state, doc);
 	}, 50);
 }

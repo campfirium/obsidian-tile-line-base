@@ -5,6 +5,7 @@ import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
 import { TableCreationController } from './table-view/TableCreationController';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './table-view/TableCsvController';
 import { applyStripeStyles } from './table-view/stripeStyles';
+import { notifyNavigatorFocus } from './table-view/NavigatorDebugProbe';
 import { syncGridContainerTheme, syncGridPopupRoot } from './grid/themeSync';
 import type { BorderColorMode, StripeColorMode } from './types/appearance';
 import {
@@ -172,6 +173,11 @@ export default class TileLineBasePlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
 			this.viewActionManager.ensureActionsForLeaf(leaf ?? null);
 			this.applyRightSidebarForLeaf(leaf ?? null);
+
+			const tableView = leaf?.view instanceof TableView ? leaf.view : null;
+			if (tableView?.file && this.getNavigatorCompatibilityEnabled()) {
+				notifyNavigatorFocus(this.app, tableView.file);
+			}
 
 			const markdownView = leaf?.view instanceof MarkdownView ? leaf.view : null;
 			const file = markdownView?.file ?? null;

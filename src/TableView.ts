@@ -61,7 +61,6 @@ import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
 import { RowOrderController } from "./table-view/row-sort/RowOrderController";
 import type { MagicMigrationController } from "./table-view/MagicMigrationController";
 import { getPluginContext } from "./pluginContext";
-import { showNavigatorPinnedModal } from "./table-view/NavigatorPinnedModal";
 export const TABLE_VIEW_TYPE = "tile-line-base-table"; const logger = getLogger("view:table");
 export interface TableViewState extends Record<string, unknown> { filePath: string; }
 export class TableView extends ItemView {
@@ -119,7 +118,7 @@ export class TableView extends ItemView {
 	public galleryViewStore = new GalleryViewStore(null); public activeGalleryViewId: string | null = null; public galleryViewsLoaded = false;
 	private viewModeManager!: ViewModeManager; public previousNonSlideMode: 'table' | 'kanban' | 'gallery' = 'table';
 	private readonly renderScheduler = new RenderScheduler(() => this.renderInternal());
-	private disposeNavigatorProbe: (() => void) | null = null; private navigatorPinnedNoticeShown = false;
+	private disposeNavigatorProbe: (() => void) | null = null;
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		this.navigation = true; initializeTableView(this);
@@ -129,11 +128,6 @@ export class TableView extends ItemView {
 	getDisplayText(): string { return buildTableViewTabTitle({ file: this.file, filePath: this.file?.path ?? null }); }
 	public refreshDisplayText(): void { refreshTableViewDisplayText(this); }
 	private syncQuickFilterContext(file: TFile | null): void { this.globalQuickFilterManager.setContext(file?.path ?? null); this.galleryQuickFilterManager.setContext(file?.path ?? null); }
-	private maybeShowNavigatorPinnedNotice(): void {
-		if (this.navigatorPinnedNoticeShown) { return; }
-		const pluginManager = this.leaf?.getViewState?.()?.pinned ? (this.app as any)?.plugins : null;
-		if (pluginManager?.enabledPlugins?.has?.('notebook-navigator')) { this.navigatorPinnedNoticeShown = true; showNavigatorPinnedModal(this.app); }
-	}
 	async setState(state: TableViewState, _result: unknown): Promise<void> {
 		logger.debug("setState", state);
 		try {
@@ -196,8 +190,7 @@ export class TableView extends ItemView {
 	async onOpen(): Promise<void> {
 		ensureMarkdownToggle(this);
 		this.viewModeManager.ensureActions();
-		this.viewModeManager.updateButtons(); this.maybeShowNavigatorPinnedNotice();
-		this.registerEvent(this.app.workspace.on('layout-change', () => this.maybeShowNavigatorPinnedNotice()));
+		this.viewModeManager.updateButtons();
 		if (!this.disposeNavigatorProbe) {
 			const plugin = getPluginContext();
 			const compatEnabled = plugin?.getNavigatorCompatibilityEnabled?.() ?? false;

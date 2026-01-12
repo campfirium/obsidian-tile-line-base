@@ -184,6 +184,9 @@ export default class TileLineBasePlugin extends Plugin {
 			if (!file) {
 				return;
 			}
+			if (this.getNavigatorCompatibilityEnabled()) {
+				notifyNavigatorFocus(this.app, file);
+			}
 
 			const suppressUntil = this.suppressAutoSwitchUntil.get(file.path);
 			if (suppressUntil && suppressUntil > Date.now()) {

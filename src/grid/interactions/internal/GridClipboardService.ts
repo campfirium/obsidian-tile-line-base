@@ -36,7 +36,13 @@ export class GridClipboardService {
 
 		if (cellEvent) {
 			const colId = cellEvent.column?.getColId?.() ?? null;
+			const target = cellEvent.event?.target as HTMLElement | null;
+			const targetCell = target?.closest?.('.ag-cell') as HTMLElement | null;
+			const targetColId = targetCell?.getAttribute('col-id') ?? null;
 			if (colId === '#') {
+				if (targetColId && targetColId !== '#') {
+					return;
+				}
 				const rowData = cellEvent.node?.data as RowData | undefined;
 				if (rowData) {
 					const blockIndex = parseInt(String(rowData[ROW_ID_FIELD]), 10);

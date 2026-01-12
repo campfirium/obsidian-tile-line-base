@@ -88,11 +88,19 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 			return;
 		}
 		if (event.key === 'c' || event.key === 'C') {
+			const resolveColId = (element: HTMLElement | null): string | null => {
+				const cell = element?.closest('.ag-cell') as HTMLElement | null;
+				return cell?.getAttribute('col-id') ?? null;
+			};
+			const targetColId = resolveColId(target) ?? resolveColId(activeElement);
+			if (targetColId && targetColId !== '#') {
+				return;
+			}
 			const focusedCell = gridAdapter?.getFocusedCell?.() ?? null;
 			if (focusedCell?.field === '#') {
 				event.preventDefault();
 				event.stopPropagation();
-				const blockIndex = focusedCell.rowIndex ?? (selectedRows.length > 0 ? selectedRows[0] : null);
+				const blockIndex = focusedCell?.rowIndex ?? (selectedRows.length > 0 ? selectedRows[0] : null);
 				if (blockIndex !== null && blockIndex !== undefined) {
 					void context.copySectionAsTemplate(blockIndex);
 				}

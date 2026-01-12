@@ -22,6 +22,18 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 	const ownerDoc = container.ownerDocument;
 	const target = event.target as HTMLElement | null;
 	const activeElement = ownerDoc.activeElement as HTMLElement | null;
+	const isQuickFilterInput = (element: HTMLElement | null): boolean => {
+		if (!element) {
+			return false;
+		}
+		if (element.classList.contains('tlb-filter-view-search__input')) {
+			return true;
+		}
+		return Boolean(element.closest('.tlb-filter-view-search__input'));
+	};
+	if (isQuickFilterInput(target) || isQuickFilterInput(activeElement)) {
+		return;
+	}
 	const targetInside = target ? context.isElementWithinGrid(target, container) : false;
 	const activeInside = activeElement ? context.isElementWithinGrid(activeElement, container) : false;
 	if (!targetInside && !activeInside) {

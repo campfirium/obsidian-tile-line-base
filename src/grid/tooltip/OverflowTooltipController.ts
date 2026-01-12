@@ -110,6 +110,10 @@ export class OverflowTooltipController {
 		this.hideCurrentTooltip();
 	}
 
+	hide(): void {
+		this.hideCurrentTooltip();
+	}
+
 	private extractTooltipTarget(cell: HTMLElement): { anchor: HTMLElement | null; text: string | null } {
 		const preferred = cell.querySelector<HTMLElement>('.tlb-link-cell__text');
 		const fallback = cell.querySelector<HTMLElement>('.ag-cell-value');

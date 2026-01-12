@@ -172,6 +172,10 @@ export class KanbanViewController {
 		this.rootEl.empty();
 	}
 
+	public hideTooltips(): void {
+		this.tooltipManager.hide();
+	}
+
 	public setHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);
 		if (this.heightMode === normalized) {

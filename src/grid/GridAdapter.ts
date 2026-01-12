@@ -181,6 +181,11 @@ export interface GridAdapter {
 	 */
 	setQuickFilter?(value: string | null): void;
 
+	/**
+	 * Hide transient tooltip popups if the adapter renders any.
+	 */
+	hideTooltips?(): void;
+
 	setSideBarVisible?(visible: boolean): void;
 
 	/**

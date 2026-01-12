@@ -65,7 +65,7 @@
       "backToFormLabel": "Terug naar formulier",
       "yamlViewLabel": "Dia-template YAML",
       "yamlViewDesc": "Kopieer of plak YAML om deze dia-template te migreren of hergebruiken.",
-      "presetsLabel": "Presets",
+      "presetsLabel": "Voorinstellingen",
       "setDefaultLabel": "Instellen als globale standaard",
       "resetToGlobalDefaultLabel": "Globale standaard laden",
       "resetToBuiltInDefaultLabel": "Ingebouwde standaard laden",
@@ -283,9 +283,9 @@
     "generalHeading": "Algemeen",
     "quickLinksTitle": "Snelle links",
     "quickLinksDesc": "",
-    "quickLinksFeedbackLabel": "Feedback",
+    "quickLinksFeedbackLabel": "Terugkoppeling",
     "quickLinksVideosLabel": "Video's",
-    "quickLinksStarLabel": "Star",
+    "quickLinksStarLabel": "Ster",
     "quickLinksFeedbackTooltip": "Meld bugs of vraag functies aan (GitHub-sjablonen)",
     "quickLinksVideosTooltip": "Intro nu, meer video's later (YouTube)",
     "quickLinksStarTooltip": "Als dit helpt, betekent een GitHub-star veel",
@@ -345,7 +345,7 @@
     "backupCapacityDesc": "Wanneer de totale grootte deze limiet overschrijdt, worden de oudste snapshots verwijderd. Standaard: 200 MB."
   },
   "readingView": {
-    "configBlockTitle": "TLB CONFIG BLOCK"
+    "configBlockTitle": "TLB CONFIGURATIEBLOK"
   },
   "formula": {
     "errors": {

@@ -283,9 +283,9 @@
     "generalHeading": "Allgemein",
     "quickLinksTitle": "Schnelllinks",
     "quickLinksDesc": "",
-    "quickLinksFeedbackLabel": "Feedback",
+    "quickLinksFeedbackLabel": "Rückmeldung",
     "quickLinksVideosLabel": "Videos",
-    "quickLinksStarLabel": "Star",
+    "quickLinksStarLabel": "Stern",
     "quickLinksFeedbackTooltip": "Fehler melden oder Features anfragen (GitHub-Vorlagen)",
     "quickLinksVideosTooltip": "Intro jetzt, mehr Videos später (YouTube)",
     "quickLinksStarTooltip": "Wenn das hilft, bedeutet ein GitHub-Star viel",
@@ -345,7 +345,7 @@
     "backupCapacityDesc": "Sobald die Gesamtgröße diesen Wert überschreitet, werden die ältesten Schnappschüsse gelöscht. Standard: 200 MB."
   },
   "readingView": {
-    "configBlockTitle": "TLB CONFIG BLOCK"
+    "configBlockTitle": "TLB KONFIGURATIONSBLOCK"
   },
   "formula": {
     "errors": {

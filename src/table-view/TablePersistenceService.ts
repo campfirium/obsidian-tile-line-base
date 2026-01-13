@@ -163,9 +163,11 @@ export class TablePersistenceService {
 					: undefined;
 		}
 		const schema = this.deps.dataStore.getSchema();
-		const columnConfigs = schema?.columnConfigs
+		const serializedColumnConfigs = schema?.columnConfigs
 			?.filter((config) => this.deps.dataStore.hasColumnConfigContent(config))
 			?.map((config) => this.deps.dataStore.serializeColumnConfig(config));
+		const columnConfigs =
+			serializedColumnConfigs && serializedColumnConfigs.length > 0 ? serializedColumnConfigs : null;
 
 		const viewPreference = this.deps.getViewPreference?.() ?? 'table';
 		const kanbanConfig = this.deps.getKanbanConfig?.();

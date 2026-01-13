@@ -44,10 +44,23 @@ export function mergeFrontmatter(frontmatter: string | null, markdown: string): 
 	return `${normalized}${spacer}${markdown}`;
 }
 
+const INVISIBLE_CHARS = /\u200B|\u200C|\u200D|\u2060|\uFEFF/g;
+
+export function normalizeContentText(text: string): string {
+	return text.replace(INVISIBLE_CHARS, '').replace(/\u00A0/g, ' ');
+}
+
+export function isEffectivelyEmpty(text: string): boolean {
+	return normalizeContentText(text).trim().length === 0;
+}
+
 export function isTopHeadingOnly(text: string): boolean {
-	if (!text.trim()) return false;
-	const lines = text.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
-	return lines.length > 0 && lines.every((line) => /^#\s+/.test(line) && !/^##/.test(line));
+	if (isEffectivelyEmpty(text)) return false;
+	const lines = normalizeContentText(text)
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0);
+	return lines.length > 0 && lines.every((line) => /^#(?!#)\s*/.test(line));
 }
 
 export function buildTargetFileName(file: TFile): string {

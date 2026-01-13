@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Menu } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, Menu } from "obsidian";
 import type { ColumnState } from "ag-grid-community";
 import type { GridAdapter } from "./grid/GridAdapter";
 import { getLogger } from "./utils/logger";
@@ -57,7 +57,6 @@ import { refreshTableViewDisplayText } from "./table-view/viewDisplayText";
 import type { SlideViewConfig } from "./types/slide";
 import { normalizeSlideViewConfig } from "./types/slide";
 import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
-import { populateMoreOptionsMenu } from "./table-view/TableViewMenu";
 import { RowOrderController } from "./table-view/row-sort/RowOrderController";
 import type { MagicMigrationController } from "./table-view/MagicMigrationController";
 import { getPluginContext } from "./pluginContext";
@@ -259,7 +258,16 @@ export class TableView extends ItemView {
 			this.disposeNavigatorProbe = null;
 		}
 	}
-	onMoreOptions(menu: Menu): void { populateMoreOptionsMenu(this, menu); }
+	onPaneMenu(menu: Menu, source: "more-options" | "tab-header" | string): void {
+		if (source && source !== "more-options") { return; }
+		const markdownLeaf = this.app.workspace.getLeavesOfType("markdown")
+			.find((leaf) => (leaf.view as MarkdownView).file?.path === this.file?.path)
+			?? this.app.workspace.getLeavesOfType("markdown")[0];
+		const markdownView = markdownLeaf?.view instanceof MarkdownView ? markdownLeaf.view : null;
+		if (markdownView) { markdownView.onPaneMenu(menu, source); return; }
+		super.onPaneMenu(menu, source);
+		if (this.file) { (this.app.workspace as any).trigger?.("file-menu", menu, this.file, source, this.leaf); }
+	}
 	public setKanbanHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);
 		if (this.kanbanHeightMode === normalized) {

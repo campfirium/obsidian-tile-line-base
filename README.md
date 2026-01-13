@@ -89,6 +89,12 @@ Supports **CSV import/export**, compatible with mainstream spreadsheet software,
 
 Uses a **clear, self-contained plain-text format** that can interact seamlessly with **Large Language Models (LLM)** without additional processing
 
+## Safety & Architecture
+
+*   **Isolation:** The plugin **only** processes the specific file where you switch to the TileLineBase view. It never scans your other notes.
+*   **Decoupling:** Your data stays in the `.md` file. View settings stay in the plugin. Your notes remain standard Markdown, even if you uninstall the plugin.
+*   **Protection:** Built-in auto-backup keeps a history of file snapshots, preventing accidental data loss.
+
 ## Installation
 
 TileLineBase is currently in **Early Beta** and is not yet available via Obsidian's Community Plugins list. You can install it via **BRAT** or manually:
@@ -108,7 +114,9 @@ TileLineBase is currently in **Early Beta** and is not yet available via Obsidia
 
 </details>
 
+## Tips & Tweaks
 
+- [Status Icon and Row Background Customization](docs/status-snippet-guide.md)
 
 ## Feedback & Discussion
 

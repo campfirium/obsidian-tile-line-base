@@ -1719,6 +1719,15 @@
   transition: all 0.2s ease-in-out;
 }
 
+.tlb-status-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+
 .tlb-visually-hidden {
   position: absolute;
   width: 1px;

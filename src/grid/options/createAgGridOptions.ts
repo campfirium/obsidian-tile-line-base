@@ -131,11 +131,13 @@ export function createAgGridOptions({
 		enableCellTextSelection: true,
 		suppressAnimationFrame: false,
 		suppressColumnVirtualisation: false,
-		rowClassRules: {
-			'tlb-row-completed': params => {
-				const status = normalizeStatus(params.data?.status);
-				return status === 'done' || status === 'canceled';
+		getRowClass: params => {
+			const status = normalizeStatus(params.data?.status);
+			const classes = [`tlb-row-status-${status}`];
+			if (status === 'done' || status === 'canceled') {
+				classes.push('tlb-row-completed');
 			}
+			return classes;
 		}
 	};
 }

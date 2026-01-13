@@ -197,13 +197,18 @@ export class StatusCellRenderer implements ICellRendererComp {
 		while (this.eGui.firstChild) {
 			this.eGui.removeChild(this.eGui.firstChild);
 		}
-		setIcon(this.eGui, iconId);
+		this.eGui.setAttribute('data-status', status);
+
+		const doc = this.eGui.ownerDocument || document;
+		const iconContainer = doc.createElement('span');
+		iconContainer.className = 'tlb-status-icon';
+		this.eGui.appendChild(iconContainer);
+		setIcon(iconContainer, iconId);
 
 		// ��ӿɷ�����֧��?
 		if (this.srLabelElement && this.srLabelElement.isConnected) {
 			this.srLabelElement.remove();
 		}
-		const doc = this.eGui.ownerDocument || document;
 		const srLabel = doc.createElement('span');
 		srLabel.textContent = label;
 		srLabel.className = 'tlb-visually-hidden';

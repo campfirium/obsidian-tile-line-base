@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "将卡片添加到“{{lane}}”"
     },
-    "laneActions": {
-      "addCard": "将卡片添加到“{{lane}}”"
-    },
+    
     "fieldModal": {
       "title": "选择看板列",
       "description": "请选择要作为泳道的列，列中的不同值会生成不同泳道。",

@@ -164,9 +164,7 @@
     "laneActions": {
       "addCard": "「{{lane}}」にカードを追加"
     },
-    "laneActions": {
-      "addCard": "「{{lane}}」にカードを追加"
-    },
+    
     "fieldModal": {
       "title": "カンバン列を選択",
       "description": "カンバンボードのレーンを構成する列を選んでください。",

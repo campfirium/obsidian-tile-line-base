@@ -164,9 +164,7 @@
     "laneActions": {
       "addCard": "Dodaj kartę do \"{{lane}}\""
     },
-    "laneActions": {
-      "addCard": "Dodaj kartę do \"{{lane}}\""
-    },
+    
     "fieldModal": {
       "title": "Wybierz kolumnę kanban",
       "description": "Wskaż kolumnę, której wartości utworzą kolumny w tablicy kanban.",

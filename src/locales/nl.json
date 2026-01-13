@@ -164,9 +164,7 @@
     "laneActions": {
       "addCard": "Kaart toevoegen aan \"{{lane}}\""
     },
-    "laneActions": {
-      "addCard": "Kaart toevoegen aan \"{{lane}}\""
-    },
+    
     "fieldModal": {
       "title": "Kanbankolom selecteren",
       "description": "Kies de kolom waarvan de waarden de kolommen in het kanbanbord vormen.",

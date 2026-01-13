@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "Adicionar cartão a \"{{lane}}\""
     },
-    "laneActions": {
-      "addCard": "Adicionar cartão a \"{{lane}}\""
-    },
+    
     "fieldModal": {
       "title": "Selecionar coluna Kanban",
       "description": "Escolha a coluna cujos valores formarão as raias do quadro Kanban.",

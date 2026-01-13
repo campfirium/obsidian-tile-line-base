@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "Ajouter une carte à \"{{lane}}\""
     },
-    "laneActions": {
-      "addCard": "Ajouter une carte à \"{{lane}}\""
-    },
+    
     "fieldModal": {
       "title": "Sélectionner une colonne kanban",
       "description": "Choisissez la colonne dont les valeurs formeront les colonnes du tableau kanban.",

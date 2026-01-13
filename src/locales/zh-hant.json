@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "將卡片加入「{{lane}}」"
     },
-    "laneActions": {
-      "addCard": "將卡片加入「{{lane}}」"
-    },
+    
     "fieldModal": {
       "title": "選擇看板欄",
       "description": "請選擇要作為泳道的欄位，不同欄值會產生不同泳道。",

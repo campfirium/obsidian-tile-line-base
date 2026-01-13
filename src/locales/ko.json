@@ -164,9 +164,7 @@
     "laneActions": {
       "addCard": "\"{{lane}}\"에 카드 추가"
     },
-    "laneActions": {
-      "addCard": "\"{{lane}}\"에 카드 추가"
-    },
+    
     "fieldModal": {
       "title": "칸반 열 선택",
       "description": "칸반 보드 레인을 구성할 값을 가진 열을 선택하세요.",

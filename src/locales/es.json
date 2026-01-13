@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "Añadir tarjeta a \"{{lane}}\""
     },
-    "laneActions": {
-      "addCard": "Añadir tarjeta a \"{{lane}}\""
-    },
+    
     "fieldModal": {
       "title": "Seleccionar columna de Kanban",
       "description": "Elige la columna cuyos valores deben formar las vías en el tablero Kanban.",

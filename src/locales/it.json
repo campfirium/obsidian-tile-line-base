@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "Aggiungi scheda a \"{{lane}}\""
     },
-    "laneActions": {
-      "addCard": "Aggiungi scheda a \"{{lane}}\""
-    },
+    
     "fieldModal": {
       "title": "Seleziona la colonna kanban",
       "description": "Scegli la colonna i cui valori formeranno le colonne della bacheca kanban.",

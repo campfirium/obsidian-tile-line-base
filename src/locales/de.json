@@ -79,9 +79,7 @@
     "laneActions": {
       "addCard": "Karte zu \"{{lane}}\" hinzufügen"
     },
-    "laneActions": {
-      "addCard": "Karte zu \"{{lane}}\" hinzufügen"
-    },
+    
     "fieldModal": {
       "title": "Kanban-Spalte auswählen",
       "description": "Die Spalte wählen, deren Werte die Spuren im Kanban-Board bilden sollen.",

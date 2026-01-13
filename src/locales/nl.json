@@ -135,43 +135,7 @@
       "manageGroupsButton": "Filtergroepen beheren"
     }
   },
-  "galleryView": {
-    "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
-    "processingHint": "Galerijkaarten worden voorbereid...",
-    "actions": {
-      "openFromMarkdown": "TileLineBase-galerijweergave openen",
-      "switchToGallery": "Schakel naar galerijweergave"
-    },
-    "toolbar": {
-      "title": "Galerij",
-      "addCardButtonAriaLabel": "Galerijkaart toevoegen",
-      "settingsMenuAriaLabel": "Galerij-instellingen",
-      "editTemplate": "Galerijsjabloon bewerken",
-      "addGalleryButtonAriaLabel": "Galerijweergave toevoegen",
-      "unnamedGalleryLabel": "Naamloze galerij",
-      "editGalleryLabel": "Galerij bewerken",
-      "duplicateGalleryLabel": "Galerij dupliceren",
-      "deleteGalleryLabel": "Galerij verwijderen",
-      "cannotDeleteLastGallery": "Houd minstens één galerijweergave."
-    },
-    "templateModal": {
-      "title": "Galerijsjabloon",
-      "cardSizeLabel": "Kaartinstellingen",
-      "widthLabel": "Breedte (px)",
-      "heightLabel": "Hoogte (px)",
-      "groupFieldTitle": "Groepsveld",
-      "groupFieldLabel": "Gebruik veld",
-      "groupFieldNone": "Geen",
-      "filterSectionTitle": "Filters en sortering",
-      "filterSectionActive": "Actief filter: {{name}}",
-      "filterSectionEmpty": "Nog geen filterweergave. Maak er een om deze galerij te beperken.",
-      "filterPickerLabel": "Filterweergave",
-      "filterAllLabel": "Alle items",
-      "newFilterButton": "Nieuwe filterweergave",
-      "editFilterButton": "Filter/sortering bewerken",
-      "manageGroupsButton": "Filtergroepen beheren"
-    }
-  },
+  
   "kanbanView": {
     "schemaUnavailable": "Kanbanweergave vereist een geldig tabelschema. Laad de notitie opnieuw en probeer het opnieuw.",
     "missingLaneField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig. Voeg hem toe in de tabelweergave of schakel terug.",

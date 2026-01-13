@@ -50,43 +50,7 @@
       "manageGroupsButton": "Gestisci gruppi di filtri"
     }
   },
-  "galleryView": {
-    "emptyState": "Ancora nessuna scheda. Aggiungi righe dalla vista tabella per popolare questa galleria.",
-    "processingHint": "Preparazione delle schede della galleria...",
-    "actions": {
-      "openFromMarkdown": "Apri la vista galleria di TileLineBase",
-      "switchToGallery": "Passa alla vista galleria"
-    },
-    "toolbar": {
-      "title": "Galleria",
-      "addCardButtonAriaLabel": "Aggiungi scheda alla galleria",
-      "settingsMenuAriaLabel": "Impostazioni galleria",
-      "editTemplate": "Modifica template della galleria",
-      "addGalleryButtonAriaLabel": "Aggiungi vista galleria",
-      "unnamedGalleryLabel": "Galleria senza titolo",
-      "editGalleryLabel": "Modifica galleria",
-      "duplicateGalleryLabel": "Duplica galleria",
-      "deleteGalleryLabel": "Elimina galleria",
-      "cannotDeleteLastGallery": "Mantieni almeno una vista galleria."
-    },
-    "templateModal": {
-      "title": "Template galleria",
-      "cardSizeLabel": "Impostazioni scheda",
-      "widthLabel": "Larghezza (px)",
-      "heightLabel": "Altezza (px)",
-      "groupFieldTitle": "Campo di raggruppamento",
-      "groupFieldLabel": "Usa campo",
-      "groupFieldNone": "Nessuno",
-      "filterSectionTitle": "Filtri e ordinamento",
-      "filterSectionActive": "Filtro attivo: {{name}}",
-      "filterSectionEmpty": "Nessuna vista filtro ancora. Creane una per limitare questa galleria.",
-      "filterPickerLabel": "Vista filtro",
-      "filterAllLabel": "Tutte le voci",
-      "newFilterButton": "Nuova vista filtro",
-      "editFilterButton": "Modifica filtro/ordinamento",
-      "manageGroupsButton": "Gestisci gruppi di filtri"
-    }
-  },
+  
   "kanbanView": {
     "schemaUnavailable": "La vista kanban richiede uno schema di tabella valido. Ricarica la nota e riprova.",
     "missingLaneField": "La vista kanban necessita della colonna \"{{field}}\". Aggiungila nella vista tabella oppure torna indietro.",

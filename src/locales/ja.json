@@ -135,43 +135,7 @@
       "manageGroupsButton": "フィルターグループを管理"
     }
   },
-  "galleryView": {
-    "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
-    "processingHint": "ギャラリーカードを準備しています...",
-    "actions": {
-      "openFromMarkdown": "TileLineBase のギャラリービューを開く",
-      "switchToGallery": "ギャラリービューに切り替える"
-    },
-    "toolbar": {
-      "title": "ギャラリー",
-      "addCardButtonAriaLabel": "ギャラリーカードを追加",
-      "settingsMenuAriaLabel": "ギャラリー設定",
-      "editTemplate": "ギャラリーテンプレートを編集",
-      "addGalleryButtonAriaLabel": "ギャラリービューを追加",
-      "unnamedGalleryLabel": "無題のギャラリー",
-      "editGalleryLabel": "ギャラリーを編集",
-      "duplicateGalleryLabel": "ギャラリーを複製",
-      "deleteGalleryLabel": "ギャラリーを削除",
-      "cannotDeleteLastGallery": "少なくとも 1 つのギャラリービューを残してください。"
-    },
-    "templateModal": {
-      "title": "ギャラリーテンプレート",
-      "cardSizeLabel": "カード設定",
-      "widthLabel": "幅 (px)",
-      "heightLabel": "高さ (px)",
-      "groupFieldTitle": "グループ化フィールド",
-      "groupFieldLabel": "フィールドを使用",
-      "groupFieldNone": "なし",
-      "filterSectionTitle": "フィルターと並び替え",
-      "filterSectionActive": "有効なフィルター: {{name}}",
-      "filterSectionEmpty": "フィルタービューがまだありません。作成してこのギャラリーの範囲を絞り込んでください。",
-      "filterPickerLabel": "フィルタービュー",
-      "filterAllLabel": "すべての項目",
-      "newFilterButton": "新しいフィルタービュー",
-      "editFilterButton": "フィルター/並び替えを編集",
-      "manageGroupsButton": "フィルターグループを管理"
-    }
-  },
+  
   "kanbanView": {
     "schemaUnavailable": "カンバン表示には有効なテーブルスキーマが必要です。ノートを再読み込みしてからもう一度お試しください。",
     "missingLaneField": "カンバン表示には「{{field}}」列が必要です。テーブルビューで追加するか元の表示に戻ってください。",

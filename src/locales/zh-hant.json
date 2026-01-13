@@ -50,6 +50,43 @@
       "manageGroupsButton": "管理篩選群組"
     }
   },
+  "galleryView": {
+    "emptyState": "尚無卡片。可在表格視圖新增行以填充此畫廊。",
+    "processingHint": "正在準備畫廊卡片...",
+    "actions": {
+      "openFromMarkdown": "開啟 TileLineBase 畫廊視圖",
+      "switchToGallery": "切換至畫廊視圖"
+    },
+    "toolbar": {
+      "title": "畫廊",
+      "addCardButtonAriaLabel": "新增畫廊卡片",
+      "settingsMenuAriaLabel": "畫廊設定",
+      "editTemplate": "編輯畫廊模板",
+      "addGalleryButtonAriaLabel": "新增畫廊視圖",
+      "unnamedGalleryLabel": "未命名畫廊",
+      "editGalleryLabel": "編輯畫廊",
+      "duplicateGalleryLabel": "複製畫廊",
+      "deleteGalleryLabel": "刪除畫廊",
+      "cannotDeleteLastGallery": "請至少保留一個畫廊視圖。"
+    },
+    "templateModal": {
+      "title": "畫廊模板",
+      "cardSizeLabel": "卡片設定",
+      "widthLabel": "寬度（px）",
+      "heightLabel": "高度（px）",
+      "groupFieldTitle": "分組欄位",
+      "groupFieldLabel": "使用欄位",
+      "groupFieldNone": "無",
+      "filterSectionTitle": "篩選與排序",
+      "filterSectionActive": "目前篩選：{{name}}",
+      "filterSectionEmpty": "尚無篩選視圖。建立一個以限制此畫廊的範圍。",
+      "filterPickerLabel": "篩選視圖",
+      "filterAllLabel": "所有項目",
+      "newFilterButton": "新增篩選視圖",
+      "editFilterButton": "編輯篩選/排序",
+      "manageGroupsButton": "管理篩選群組"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "看板視圖需要有效的表格結構，請重新載入後再試。",
     "missingLaneField": "看板視圖需要「{{field}}」欄，請在表格視圖新增該欄或切換回表格。",
@@ -74,6 +111,9 @@
       "openFromMarkdown": "看板",
       "switchToKanban": "看板",
       "switchToTable": "表格"
+    },
+    "laneActions": {
+      "addCard": "將卡片加入「{{lane}}」"
     },
     "laneActions": {
       "addCard": "將卡片加入「{{lane}}」"

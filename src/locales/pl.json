@@ -135,6 +135,43 @@
       "manageGroupsButton": "Zarządzaj grupami filtrów"
     }
   },
+  "galleryView": {
+    "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
+    "processingHint": "Przygotowywanie kart galerii...",
+    "actions": {
+      "openFromMarkdown": "Otwórz widok galerii TileLineBase",
+      "switchToGallery": "Przełącz na widok galerii"
+    },
+    "toolbar": {
+      "title": "Galeria",
+      "addCardButtonAriaLabel": "Dodaj kartę do galerii",
+      "settingsMenuAriaLabel": "Ustawienia galerii",
+      "editTemplate": "Edytuj szablon galerii",
+      "addGalleryButtonAriaLabel": "Dodaj widok galerii",
+      "unnamedGalleryLabel": "Galeria bez tytułu",
+      "editGalleryLabel": "Edytuj galerię",
+      "duplicateGalleryLabel": "Duplikuj galerię",
+      "deleteGalleryLabel": "Usuń galerię",
+      "cannotDeleteLastGallery": "Zachowaj co najmniej jeden widok galerii."
+    },
+    "templateModal": {
+      "title": "Szablon galerii",
+      "cardSizeLabel": "Ustawienia karty",
+      "widthLabel": "Szerokość (px)",
+      "heightLabel": "Wysokość (px)",
+      "groupFieldTitle": "Pole grupowania",
+      "groupFieldLabel": "Użyj pola",
+      "groupFieldNone": "Brak",
+      "filterSectionTitle": "Filtry i sortowanie",
+      "filterSectionActive": "Aktywny filtr: {{name}}",
+      "filterSectionEmpty": "Brak widoku filtrów. Utwórz go, aby zawęzić tę galerię.",
+      "filterPickerLabel": "Widok filtrów",
+      "filterAllLabel": "Wszystkie wpisy",
+      "newFilterButton": "Nowy widok filtrów",
+      "editFilterButton": "Edytuj filtr/sortowanie",
+      "manageGroupsButton": "Zarządzaj grupami filtrów"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "Widok kanban wymaga prawidłowego schematu tabeli. Wczytaj notatkę ponownie i spróbuj jeszcze raz.",
     "missingLaneField": "Widok kanban potrzebuje kolumny \"{{field}}\". Dodaj ją w widoku tabeli albo wróć.",
@@ -159,6 +196,9 @@
       "openFromMarkdown": "Kanban",
       "switchToKanban": "Kanban",
       "switchToTable": "Tabela"
+    },
+    "laneActions": {
+      "addCard": "Dodaj kartę do \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Dodaj kartę do \"{{lane}}\""

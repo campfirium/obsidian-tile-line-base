@@ -50,6 +50,43 @@
       "manageGroupsButton": "Gerenciar grupos de filtros"
     }
   },
+  "galleryView": {
+    "emptyState": "Ainda não há cartões. Adicione linhas da visualização de tabela para preencher esta galeria.",
+    "processingHint": "Preparando cartões da galeria...",
+    "actions": {
+      "openFromMarkdown": "Abrir visualização de galeria do TileLineBase",
+      "switchToGallery": "Alternar para a visualização de galeria"
+    },
+    "toolbar": {
+      "title": "Galeria",
+      "addCardButtonAriaLabel": "Adicionar cartão à galeria",
+      "settingsMenuAriaLabel": "Configurações da galeria",
+      "editTemplate": "Editar modelo da galeria",
+      "addGalleryButtonAriaLabel": "Adicionar visualização de galeria",
+      "unnamedGalleryLabel": "Galeria sem título",
+      "editGalleryLabel": "Editar galeria",
+      "duplicateGalleryLabel": "Duplicar galeria",
+      "deleteGalleryLabel": "Excluir galeria",
+      "cannotDeleteLastGallery": "Mantenha pelo menos uma visualização de galeria."
+    },
+    "templateModal": {
+      "title": "Modelo da galeria",
+      "cardSizeLabel": "Configurações do cartão",
+      "widthLabel": "Largura (px)",
+      "heightLabel": "Altura (px)",
+      "groupFieldTitle": "Campo de agrupamento",
+      "groupFieldLabel": "Usar campo",
+      "groupFieldNone": "Nenhum",
+      "filterSectionTitle": "Filtros e ordenação",
+      "filterSectionActive": "Filtro ativo: {{name}}",
+      "filterSectionEmpty": "Ainda não há visualização de filtro. Crie uma para limitar esta galeria.",
+      "filterPickerLabel": "Visualização de filtro",
+      "filterAllLabel": "Todas as entradas",
+      "newFilterButton": "Nova visualização de filtro",
+      "editFilterButton": "Editar filtro/ordenação",
+      "manageGroupsButton": "Gerenciar grupos de filtros"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "A visualização Kanban requer um esquema de tabela válido. Recarregue a nota e tente novamente.",
     "missingLaneField": "A visualização Kanban precisa da coluna \"{{field}}\". Adicione-a na visualização em tabela ou volte para lá.",
@@ -74,6 +111,9 @@
       "openFromMarkdown": "Kanban",
       "switchToKanban": "Kanban",
       "switchToTable": "Tabela"
+    },
+    "laneActions": {
+      "addCard": "Adicionar cartão a \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Adicionar cartão a \"{{lane}}\""

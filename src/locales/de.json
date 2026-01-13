@@ -50,6 +50,43 @@
       "manageGroupsButton": "Filtergruppen verwalten"
     }
   },
+  "galleryView": {
+    "emptyState": "Noch keine Karten. Füge Zeilen aus der Tabellenansicht hinzu, um diese Galerie zu füllen.",
+    "processingHint": "Galeriekarten werden vorbereitet...",
+    "actions": {
+      "openFromMarkdown": "TileLineBase-Galerieansicht öffnen",
+      "switchToGallery": "Zur Galerieansicht wechseln"
+    },
+    "toolbar": {
+      "title": "Galerie",
+      "addCardButtonAriaLabel": "Galeriekarte hinzufügen",
+      "settingsMenuAriaLabel": "Galerieeinstellungen",
+      "editTemplate": "Galerievorlage bearbeiten",
+      "addGalleryButtonAriaLabel": "Galerieansicht hinzufügen",
+      "unnamedGalleryLabel": "Unbenannte Galerie",
+      "editGalleryLabel": "Galerie bearbeiten",
+      "duplicateGalleryLabel": "Galerie duplizieren",
+      "deleteGalleryLabel": "Galerie löschen",
+      "cannotDeleteLastGallery": "Mindestens eine Galerieansicht behalten."
+    },
+    "templateModal": {
+      "title": "Galerievorlage",
+      "cardSizeLabel": "Karteneinstellungen",
+      "widthLabel": "Breite (px)",
+      "heightLabel": "Höhe (px)",
+      "groupFieldTitle": "Gruppierungsfeld",
+      "groupFieldLabel": "Feld verwenden",
+      "groupFieldNone": "Keine",
+      "filterSectionTitle": "Filter & Sortierung",
+      "filterSectionActive": "Aktiver Filter: {{name}}",
+      "filterSectionEmpty": "Noch keine Filteransicht. Erstelle eine, um diese Galerie einzugrenzen.",
+      "filterPickerLabel": "Filteransicht",
+      "filterAllLabel": "Alle Einträge",
+      "newFilterButton": "Neue Filteransicht",
+      "editFilterButton": "Filter/Sortierung bearbeiten",
+      "manageGroupsButton": "Filtergruppen verwalten"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "Die Kanban-Ansicht benötigt ein gültiges Tabellenschema. Notiz neu laden und erneut versuchen.",
     "missingLaneField": "Die Kanban-Ansicht benötigt die Spalte \"{{field}}\". In der Tabelle hinzufügen oder zurückwechseln.",
@@ -74,6 +111,9 @@
       "openFromMarkdown": "Kanban",
       "switchToKanban": "Kanban",
       "switchToTable": "Tabelle"
+    },
+    "laneActions": {
+      "addCard": "Karte zu \"{{lane}}\" hinzufügen"
     },
     "laneActions": {
       "addCard": "Karte zu \"{{lane}}\" hinzufügen"

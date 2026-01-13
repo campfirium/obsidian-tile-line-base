@@ -50,6 +50,43 @@
       "manageGroupsButton": "Gérer les groupes de filtres"
     }
   },
+  "galleryView": {
+    "emptyState": "Aucune carte pour le moment. Ajoutez des lignes depuis la vue tableau pour alimenter cette galerie.",
+    "processingHint": "Préparation des cartes de la galerie...",
+    "actions": {
+      "openFromMarkdown": "Ouvrir la vue galerie TileLineBase",
+      "switchToGallery": "Passer à la vue galerie"
+    },
+    "toolbar": {
+      "title": "Galerie",
+      "addCardButtonAriaLabel": "Ajouter une carte à la galerie",
+      "settingsMenuAriaLabel": "Paramètres de la galerie",
+      "editTemplate": "Modifier le modèle de galerie",
+      "addGalleryButtonAriaLabel": "Ajouter une vue galerie",
+      "unnamedGalleryLabel": "Galerie sans titre",
+      "editGalleryLabel": "Modifier la galerie",
+      "duplicateGalleryLabel": "Dupliquer la galerie",
+      "deleteGalleryLabel": "Supprimer la galerie",
+      "cannotDeleteLastGallery": "Conservez au moins une vue galerie."
+    },
+    "templateModal": {
+      "title": "Modèle de galerie",
+      "cardSizeLabel": "Paramètres de carte",
+      "widthLabel": "Largeur (px)",
+      "heightLabel": "Hauteur (px)",
+      "groupFieldTitle": "Champ de regroupement",
+      "groupFieldLabel": "Utiliser le champ",
+      "groupFieldNone": "Aucun",
+      "filterSectionTitle": "Filtres et tri",
+      "filterSectionActive": "Filtre actif : {{name}}",
+      "filterSectionEmpty": "Aucune vue de filtre pour le moment. Créez-en une pour limiter cette galerie.",
+      "filterPickerLabel": "Vue de filtre",
+      "filterAllLabel": "Toutes les entrées",
+      "newFilterButton": "Nouvelle vue de filtre",
+      "editFilterButton": "Modifier filtre/tri",
+      "manageGroupsButton": "Gérer les groupes de filtres"
+    }
+  },
   "kanbanView": {
     "schemaUnavailable": "La vue kanban nécessite un schéma de table valide. Rechargez la note et réessayez.",
     "missingLaneField": "La vue kanban a besoin de la colonne \"{{field}}\". Ajoutez-la dans la vue tableau ou revenez en arrière.",
@@ -74,6 +111,9 @@
       "openFromMarkdown": "Kanban",
       "switchToKanban": "Kanban",
       "switchToTable": "Tableau"
+    },
+    "laneActions": {
+      "addCard": "Ajouter une carte à \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Ajouter une carte à \"{{lane}}\""

@@ -2,6 +2,7 @@ import { App, Menu, TFile, Workspace, WorkspaceLeaf } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from '../TableView';
 import { MarkdownBlockParser } from '../table-view/MarkdownBlockParser';
 import { MagicMigrationController } from '../table-view/MagicMigrationController';
+import { isEffectivelyEmpty, isTopHeadingOnly, stripFrontmatter } from '../table-view/magicMigrationContent';
 import { getLogger } from '../utils/logger';
 import type { SettingsService } from '../services/SettingsService';
 import type { WindowContext, WindowContextManager } from './WindowContextManager';
@@ -428,6 +429,10 @@ export class ViewSwitchCoordinator {
 		const blocks = this.markdownParser.parseH2Blocks(content);
 		const hasStructuredBlocks = this.markdownParser.hasStructuredH2Blocks(blocks);
 		if (hasStructuredBlocks) {
+			return false;
+		}
+		const body = stripFrontmatter(content);
+		if (isEffectivelyEmpty(body) || isTopHeadingOnly(body)) {
 			return false;
 		}
 		if (trigger !== 'manual') {

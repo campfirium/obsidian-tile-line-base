@@ -1,4 +1,23 @@
 {
+"0.9.1": {
+    "date": "2026-01-13",
+    "info": "Backup restore workflow, tooltip polish, and NN compatibility improvements.",
+    "new": [
+      "Backup restore list now includes richer entries for recovery actions.",
+      "Added pre-review checks and settings quick links to speed up QA and navigation."
+    ],
+    "improved": [
+      "Notebook Navigator compatibility: sync focus on table activation and remove pinned-view warning.",
+      "Overflow tooltips now render Markdown for richer previews.",
+      "View toolbar tooltips are unified for consistency."
+    ],
+    "fixed": [
+      "Quick filter keydown no longer steals focus in grid.",
+      "Tooltips now hide on tab switch and avoid flicker/blank spacing.",
+      "Ctrl+C copy behavior is corrected in the grid."
+    ],
+    "changed": []
+  },
 "0.9.0": {
     "date": "2025-12-17",
     "info": "Major update: Gallery View (Beta), Multiline Editing, and Theme Fixes.",

@@ -67,6 +67,15 @@ export class TableCreationController {
 		this.activeModal = modal;
 	}
 
+	buildDefaultMarkdown(tableName: string): string {
+		const sanitizedName = this.sanitiseName(tableName) || t('tableCreation.defaultTableName');
+		return this.buildMarkdown({
+			tableName: sanitizedName,
+			rows: DEFAULT_ROW_COUNT,
+			columns: DEFAULT_COLUMN_COUNT
+		});
+	}
+
 	private async handleSubmit(params: TableCreationParams): Promise<void> {
 		this.activeModal = null;
 		try {

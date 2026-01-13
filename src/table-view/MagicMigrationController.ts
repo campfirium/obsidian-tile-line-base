@@ -22,6 +22,8 @@ import {
 	buildTargetFileName,
 	extractSample,
 	mergeFrontmatter,
+	isEffectivelyEmpty,
+	isTopHeadingOnly,
 	resolveTargetPath,
 	sliceFromSample,
 	splitFrontmatter,
@@ -54,11 +56,17 @@ export class MagicMigrationController {
 	private readonly templateCache = new Map<string, string>();
 	private readonly sampleCache = new Map<string, string>();
 	private readonly columnCache = new Map<string, string[]>();
+	private readonly autoConversionInFlight = new Set<string>();
 
 	constructor(private readonly view: TableView) {}
 
 	handleNonStandardFile(context: MagicMigrationContext): void {
 		if (!context.container) {
+			return;
+		}
+		const { frontmatter, body } = splitFrontmatter(context.content);
+		if (isEffectivelyEmpty(body) || isTopHeadingOnly(body)) {
+			void this.convertEmptyNote({ ...context, frontmatter, container: context.container });
 			return;
 		}
 		this.renderInlinePrompt(context.container, context.content, context.file);
@@ -140,6 +148,29 @@ export class MagicMigrationController {
 			}
 			this.openWizard({ content, file });
 		});
+	}
+
+	private async convertEmptyNote(
+		context: MagicMigrationContext & { frontmatter: string | null; container: HTMLElement }
+	): Promise<void> {
+		const filePath = context.file.path;
+		if (this.autoConversionInFlight.has(filePath)) {
+			return;
+		}
+		this.autoConversionInFlight.add(filePath);
+		try {
+			const tableName = context.file.basename.trim() || t('tableCreation.defaultTableName');
+			const markdown = this.view.tableCreationController.buildDefaultMarkdown(tableName);
+			const merged = mergeFrontmatter(context.frontmatter, markdown);
+			await this.view.app.vault.modify(context.file, merged);
+			this.view.markUserMutation('auto-default-table');
+		} catch (error) {
+			this.logger.error('empty-note-conversion-failed', error);
+			new Notice(t('tableCreation.failureNotice'));
+			this.renderInlinePrompt(context.container, context.content, context.file);
+		} finally {
+			this.autoConversionInFlight.delete(filePath);
+		}
 	}
 
 	private async applySectionEdits(

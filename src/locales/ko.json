@@ -135,43 +135,7 @@
       "manageGroupsButton": "필터 그룹 관리"
     }
   },
-  "galleryView": {
-    "emptyState": "아직 카드가 없습니다. 테이블 보기에서 행을 추가해 이 갤러리를 채우세요.",
-    "processingHint": "갤러리 카드를 준비하는 중...",
-    "actions": {
-      "openFromMarkdown": "TileLineBase 갤러리 보기 열기",
-      "switchToGallery": "갤러리 보기로 전환"
-    },
-    "toolbar": {
-      "title": "갤러리",
-      "addCardButtonAriaLabel": "갤러리 카드 추가",
-      "settingsMenuAriaLabel": "갤러리 설정",
-      "editTemplate": "갤러리 템플릿 편집",
-      "addGalleryButtonAriaLabel": "갤러리 보기 추가",
-      "unnamedGalleryLabel": "제목 없는 갤러리",
-      "editGalleryLabel": "갤러리 편집",
-      "duplicateGalleryLabel": "갤러리 복제",
-      "deleteGalleryLabel": "갤러리 삭제",
-      "cannotDeleteLastGallery": "갤러리 보기는 최소 1개 이상 유지하세요."
-    },
-    "templateModal": {
-      "title": "갤러리 템플릿",
-      "cardSizeLabel": "카드 설정",
-      "widthLabel": "너비 (px)",
-      "heightLabel": "높이 (px)",
-      "groupFieldTitle": "그룹 필드",
-      "groupFieldLabel": "필드 사용",
-      "groupFieldNone": "없음",
-      "filterSectionTitle": "필터 및 정렬",
-      "filterSectionActive": "활성 필터: {{name}}",
-      "filterSectionEmpty": "아직 필터 보기가 없습니다. 이 갤러리를 범위로 제한하려면 하나를 만드세요.",
-      "filterPickerLabel": "필터 보기",
-      "filterAllLabel": "모든 항목",
-      "newFilterButton": "새 필터 보기",
-      "editFilterButton": "필터/정렬 편집",
-      "manageGroupsButton": "필터 그룹 관리"
-    }
-  },
+  
   "kanbanView": {
     "schemaUnavailable": "칸반 보기를 사용하려면 유효한 테이블 스키마가 필요합니다. 노트를 다시 불러온 뒤 다시 시도하세요.",
     "missingLaneField": "칸반 보기에는 \"{{field}}\" 열이 필요합니다. 테이블 보기에서 추가하거나 테이블로 돌아가세요.",

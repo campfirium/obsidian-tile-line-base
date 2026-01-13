@@ -50,43 +50,7 @@
       "manageGroupsButton": "Gestionar grupos de filtros"
     }
   },
-  "galleryView": {
-    "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
-    "processingHint": "Preparando tarjetas de la galería...",
-    "actions": {
-      "openFromMarkdown": "Abrir la vista de galería de TileLineBase",
-      "switchToGallery": "Cambiar a la vista de galería"
-    },
-    "toolbar": {
-      "title": "Galería",
-      "addCardButtonAriaLabel": "Añadir tarjeta a la galería",
-      "settingsMenuAriaLabel": "Configuración de la galería",
-      "editTemplate": "Editar plantilla de la galería",
-      "addGalleryButtonAriaLabel": "Añadir vista de galería",
-      "unnamedGalleryLabel": "Galería sin título",
-      "editGalleryLabel": "Editar galería",
-      "duplicateGalleryLabel": "Duplicar galería",
-      "deleteGalleryLabel": "Eliminar galería",
-      "cannotDeleteLastGallery": "Mantén al menos una vista de galería."
-    },
-    "templateModal": {
-      "title": "Plantilla de galería",
-      "cardSizeLabel": "Ajustes de tarjeta",
-      "widthLabel": "Ancho (px)",
-      "heightLabel": "Alto (px)",
-      "groupFieldTitle": "Campo de agrupación",
-      "groupFieldLabel": "Usar campo",
-      "groupFieldNone": "Ninguno",
-      "filterSectionTitle": "Filtros y ordenación",
-      "filterSectionActive": "Filtro activo: {{name}}",
-      "filterSectionEmpty": "Aún no hay vista de filtros. Crea una para acotar esta galería.",
-      "filterPickerLabel": "Vista de filtros",
-      "filterAllLabel": "Todas las entradas",
-      "newFilterButton": "Nueva vista de filtros",
-      "editFilterButton": "Editar filtro/orden",
-      "manageGroupsButton": "Gestionar grupos de filtros"
-    }
-  },
+  
   "kanbanView": {
     "schemaUnavailable": "La vista Kanban requiere un esquema de tabla válido. Recarga la nota e inténtalo de nuevo.",
     "missingLaneField": "La vista Kanban necesita la columna \"{{field}}\". Agrégala en la vista de tabla o vuelve atrás.",

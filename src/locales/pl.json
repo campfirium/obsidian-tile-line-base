@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "Nie udało się przywrócić kopii. Sprawdź konsolę, aby uzyskać szczegóły.",
     "restoreCancelButton": "Anuluj",
     "sizeLabel": "Rozmiar: {{size}}",
+    "changePreviewInitial": "Początkowa migawka",
+    "listHeaderRow": "Wiersz",
     "exportButton": "Eksportuj",
     "exportButtonAria": "Eksportuj kopię z {{timestamp}} jako nowy plik",
     "noticeExportSuccess": "Wyeksportowano kopię do {{file}}.",

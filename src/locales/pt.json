@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "Falha ao restaurar o backup. Verifique o console para detalhes.",
     "restoreCancelButton": "Cancelar",
     "sizeLabel": "Tamanho: {{size}}",
+    "changePreviewInitial": "Instantâneo inicial",
+    "listHeaderRow": "Linha",
     "exportButton": "Exportar",
     "exportButtonAria": "Exportar backup de {{timestamp}} como um novo arquivo",
     "noticeExportSuccess": "Backup exportado para {{file}}.",

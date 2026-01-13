@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "Impossibile ripristinare il backup. Controlla la console per i dettagli.",
     "restoreCancelButton": "Annulla",
     "sizeLabel": "Dimensione: {{size}}",
+    "changePreviewInitial": "Snapshot iniziale",
+    "listHeaderRow": "Riga",
     "exportButton": "Esporta",
     "exportButtonAria": "Esporta il backup del {{timestamp}} come nuovo file",
     "noticeExportSuccess": "Backup esportato in {{file}}.",

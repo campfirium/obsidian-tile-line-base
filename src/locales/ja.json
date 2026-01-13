@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "バックアップの復元に失敗しました。詳細はコンソールを確認してください。",
     "restoreCancelButton": "キャンセル",
     "sizeLabel": "サイズ: {{size}}",
+    "changePreviewInitial": "初期スナップショット",
+    "listHeaderRow": "行",
     "exportButton": "エクスポート",
     "exportButtonAria": "{{timestamp}} のバックアップを新しいファイルとしてエクスポート",
     "noticeExportSuccess": "バックアップを {{file}} にエクスポートしました。",

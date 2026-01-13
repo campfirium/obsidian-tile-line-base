@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "백업을 복원하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
     "restoreCancelButton": "취소",
     "sizeLabel": "크기: {{size}}",
+    "changePreviewInitial": "초기 스냅샷",
+    "listHeaderRow": "행",
     "exportButton": "내보내기",
     "exportButtonAria": "{{timestamp}} 백업을 새 파일로 내보내기",
     "noticeExportSuccess": "백업을 {{file}}에 내보냈습니다.",

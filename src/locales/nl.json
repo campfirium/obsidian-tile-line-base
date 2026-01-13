@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "Back-up herstellen mislukt. Controleer de console voor details.",
     "restoreCancelButton": "Annuleren",
     "sizeLabel": "Grootte: {{size}}",
+    "changePreviewInitial": "Eerste momentopname",
+    "listHeaderRow": "Rij",
     "exportButton": "Exporteren",
     "exportButtonAria": "Back-up van {{timestamp}} exporteren als nieuw bestand",
     "noticeExportSuccess": "Back-up geëxporteerd naar {{file}}.",

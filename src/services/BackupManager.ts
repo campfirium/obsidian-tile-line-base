@@ -21,6 +21,8 @@ import {
 import { BUCKET_RULES, collectCandidates, resolveCategory, selectBucket } from './backupRetention';
 import { migrateLegacyEntry } from './backupMigration';
 import { computeBackupHash } from './backupHash';
+import { parseBackupIndex } from './backupIndexParser';
+import { computeChangeSummary } from './backupPreview';
 
 const logger = getLogger('service:backup');
 
@@ -31,6 +33,7 @@ const INDEX_VERSION = 1;
 const LATEST_KEEP_COUNT = 3;
 const MAX_CAPACITY_MB = 10_240; // Avoid unbounded JSON size if user inputs huge value
 const INITIAL_BACKUP_GRACE_MS = 7 * 24 * 60 * 60 * 1000; // Keep initial snapshot for at least 7 days
+const CHANGE_PREVIEW_LENGTH = 20;
 
 interface BackupManagerOptions {
 	plugin: Plugin;
@@ -49,7 +52,6 @@ export class BackupManager {
 	private queue: Promise<void> = Promise.resolve();
 	private initialized = false;
 	private initPromise: Promise<void> | null = null;
-
 	constructor(options: BackupManagerOptions) {
 		this.plugin = options.plugin;
 		this.getSettings = options.getSettings;
@@ -58,7 +60,6 @@ export class BackupManager {
 		this.backupsDir = normalizePath(`${this.pluginDir}/${BACKUP_DIR_NAME}`);
 		this.indexPath = normalizePath(`${this.backupsDir}/${INDEX_FILE_NAME}`);
 	}
-
 	async initialize(): Promise<void> {
 		if (this.initialized) {
 			return;
@@ -86,7 +87,6 @@ export class BackupManager {
 		}
 		return this.initPromise;
 	}
-
 	async ensureBackup(file: TFile, content: string): Promise<boolean> {
 		await this.initialize();
 		const settings = this.getSettings();
@@ -94,7 +94,6 @@ export class BackupManager {
 			logger.debug('Backups disabled, skip ensureBackup', { path: file.path });
 			return false;
 		}
-
 		return this.runExclusive(async () => {
 			return this.createBackupUnsafe(file.path, content);
 		});
@@ -106,7 +105,6 @@ export class BackupManager {
 			logger.debug('Backups disabled, skip ensureInitialBackup', { path: file.path });
 			return false;
 		}
-
 		return this.runExclusive(async () => {
 			const record = this.getOrCreateRecord(file.path);
 			if (record.entries.some((entry) => entry.isInitial)) {
@@ -116,7 +114,6 @@ export class BackupManager {
 			return this.createBackupUnsafe(file.path, content, { isInitial: true });
 		});
 	}
-
 	async listBackups(file: TFile | string): Promise<BackupDescriptor[]> {
 		await this.initialize();
 		const filePath = typeof file === 'string' ? file : file.path;
@@ -131,11 +128,12 @@ export class BackupManager {
 				createdAt: entry.createdAt,
 				size: entry.size,
 				category: resolveCategory(index, entry, now, LATEST_KEEP_COUNT, BUCKET_RULES),
-				isInitial: entry.isInitial === true
+				isInitial: entry.isInitial === true,
+								changePreview: entry.changePreview,
+				primaryFieldValue: entry.primaryFieldValue
 			}));
 		});
 	}
-
 	async restoreBackup(file: TFile, entryId: string): Promise<void> {
 		await this.initialize();
 		await this.runExclusive(async () => {
@@ -147,7 +145,6 @@ export class BackupManager {
 			if (!target) {
 				throw new Error(`Backup entry ${entryId} not found for ${file.path}`);
 			}
-
 			const backupPath = this.getEntryPath(file.path, target);
 			let backupContent: string | null = null;
 			try {
@@ -156,18 +153,15 @@ export class BackupManager {
 				logger.error('Failed to read backup file', { path: backupPath, error });
 				throw error;
 			}
-
 			try {
 				const currentContent = await this.plugin.app.vault.read(file);
 				await this.createBackupUnsafe(file.path, currentContent);
 			} catch (error) {
 				logger.warn('Failed to create safety backup before restore', error);
 			}
-
 			await this.plugin.app.vault.modify(file, backupContent);
 		});
 	}
-
 	async readBackupContent(file: TFile, entryId: string): Promise<string> {
 		await this.initialize();
 		return this.runExclusive(async () => {
@@ -188,7 +182,6 @@ export class BackupManager {
 			}
 		});
 	}
-
 	async enforceCapacity(): Promise<void> {
 		await this.initialize();
 		await this.runExclusive(async () => {
@@ -198,7 +191,6 @@ export class BackupManager {
 			}
 		});
 	}
-
 	private async createBackupUnsafe(
 		filePath: string,
 		content: string,
@@ -212,28 +204,47 @@ export class BackupManager {
 		if (latest && latest.hash === hash) {
 			return false;
 		}
-
 		const timestamp = Date.now();
 		const id = this.generateEntryId(record, timestamp);
+		const summary = await this.buildChangeSummary(filePath, content, record.entries[0]);
 		const entry: StoredBackupEntry = {
 			id,
 			createdAt: timestamp,
 			size,
 			hash,
-			isInitial: options?.isInitial ? true : undefined
+			isInitial: options?.isInitial ? true : undefined,
+			changePreview: summary.preview === null ? undefined : summary.preview,
+			primaryFieldValue: summary.primaryFieldValue ?? undefined
 		};
 		const entryPath = this.getEntryPath(filePath, entry);
 		await this.adapter.write(entryPath, content);
 		record.entries.unshift(entry);
 		record.totalSize += size;
 		this.index.totalSize += size;
-
 		await this.applyRetentionForFile(filePath, record);
 		await this.enforceCapacityUnsafe();
 		await this.persistIndex();
 		return true;
 	}
-
+	private async buildChangeSummary(
+		filePath: string,
+		content: string,
+		previousEntry?: StoredBackupEntry
+	): Promise<{ preview: string | null; primaryFieldValue: string | null }> {
+		if (!previousEntry) {
+			return { preview: null, primaryFieldValue: null };
+		}
+		const previousPath = this.getEntryPath(filePath, previousEntry);
+		let previousContent: string | null = null;
+		try {
+			previousContent = await this.adapter.read(previousPath);
+		} catch (error) {
+			logger.warn('Failed to read previous backup content for preview', { path: previousPath, error });
+			return { preview: null, primaryFieldValue: null };
+		}
+		const summary = computeChangeSummary(previousContent, content, CHANGE_PREVIEW_LENGTH);
+		return { preview: summary.preview, primaryFieldValue: summary.primaryValue };
+	}
 	private async applyRetentionForFile(filePath: string, record: FileBackupRecord): Promise<boolean> {
 		if (record.entries.length <= LATEST_KEEP_COUNT) {
 			return false;
@@ -243,7 +254,6 @@ export class BackupManager {
 		const keep = new Map<string, StoredBackupEntry>();
 		const bucketUsage = new Set<string>();
 		let modified = false;
-
 		for (let index = 0; index < sorted.length; index++) {
 			const entry = sorted[index];
 			if (this.isInitialProtected(entry, now)) {
@@ -264,14 +274,12 @@ export class BackupManager {
 				modified = true;
 			}
 		}
-
 		if (modified || keep.size !== record.entries.length) {
 			record.entries = sorted.filter((entry) => keep.has(entry.id));
 			return true;
 		}
 		return modified;
 	}
-
 	private async enforceCapacityUnsafe(): Promise<boolean> {
 		const settings = this.getSettings();
 		let limit = settings.maxSizeMB;
@@ -283,11 +291,9 @@ export class BackupManager {
 		if (this.index.totalSize <= byteLimit) {
 			return false;
 		}
-
 		const now = Date.now();
 		let modified = false;
 		const priority: BackupCategory[] = ['archive', 'weekly', 'daily', 'hourly', 'recent', 'latest'];
-
 		const removeByPriority = async (skipInitial: boolean): Promise<void> => {
 			for (const category of priority) {
 				if (this.index.totalSize <= byteLimit) {
@@ -309,15 +315,12 @@ export class BackupManager {
 				}
 			}
 		};
-
 		await removeByPriority(true);
 		if (this.index.totalSize > byteLimit) {
 			await removeByPriority(false);
 		}
-
 		return modified;
 	}
-
 	private async deleteEntry(filePath: string, record: FileBackupRecord, entry: StoredBackupEntry): Promise<boolean> {
 		const index = record.entries.findIndex((candidate) => candidate.id === entry.id);
 		if (index === -1) {
@@ -326,7 +329,6 @@ export class BackupManager {
 		record.entries.splice(index, 1);
 		record.totalSize = Math.max(0, record.totalSize - entry.size);
 		this.index.totalSize = Math.max(0, this.index.totalSize - entry.size);
-
 		const entryPath = this.getEntryPath(filePath, entry);
 		try {
 			await this.adapter.remove(entryPath);
@@ -346,13 +348,11 @@ export class BackupManager {
 				}
 			}
 		}
-
 		if (record.entries.length === 0) {
 			delete this.index.files[filePath];
 		}
 		return true;
 	}
-
 	private generateEntryId(record: FileBackupRecord, timestamp: number): string {
 		const base = this.formatTimestamp(timestamp);
 		const existing = new Set(record.entries.map((entry) => entry.id));
@@ -367,7 +367,6 @@ export class BackupManager {
 		}
 		return candidate;
 	}
-
 	private getOrCreateRecord(filePath: string): FileBackupRecord {
 		const record = this.index.files[filePath];
 		if (record) {
@@ -377,60 +376,23 @@ export class BackupManager {
 		this.index.files[filePath] = created;
 		return created;
 	}
-
 	private getPluginDir(): string {
 		return normalizePath(`${this.plugin.app.vault.configDir}/plugins/${this.plugin.manifest.id}`);
 	}
-
 	private getEntryPath(filePath: string, entry: StoredBackupEntry): string {
 		const fileName = buildBackupFileName(filePath, entry.id, BACKUP_EXTENSION);
 		return normalizePath(`${this.backupsDir}/${fileName}`);
 	}
-
 	private async loadIndex(): Promise<void> {
 		try {
 			const raw = await this.adapter.read(this.indexPath);
-			const parsed = JSON.parse(raw) as BackupIndex;
-			if (!parsed || typeof parsed !== 'object' || parsed.version !== INDEX_VERSION) {
+			const parsed = parseBackupIndex(raw, INDEX_VERSION);
+			if (!parsed) {
 				logger.warn('Backup index version mismatch, resetting');
 				this.index = { version: INDEX_VERSION, totalSize: 0, files: {} };
 				return;
 			}
-
-			this.index = {
-				version: INDEX_VERSION,
-				totalSize: typeof parsed.totalSize === 'number' && parsed.totalSize >= 0 ? parsed.totalSize : 0,
-				files: {}
-			};
-			for (const [filePath, record] of Object.entries(parsed.files ?? {})) {
-				if (!record || typeof record !== 'object') {
-					continue;
-				}
-				const entries = Array.isArray(record.entries) ? record.entries : [];
-				const sanitizedEntries: StoredBackupEntry[] = [];
-				for (const entry of entries) {
-					if (!entry || typeof entry !== 'object') {
-						continue;
-					}
-					const id = typeof entry.id === 'string' ? entry.id : null;
-					const createdAt = typeof entry.createdAt === 'number' ? entry.createdAt : null;
-					const size = typeof entry.size === 'number' ? entry.size : null;
-					const hash = typeof entry.hash === 'string' ? entry.hash : null;
-					if (!id || !createdAt || createdAt <= 0 || !size || size < 0 || !hash) {
-						continue;
-					}
-					sanitizedEntries.push({ id, createdAt, size, hash });
-				}
-				if (sanitizedEntries.length === 0) {
-					continue;
-				}
-				sanitizedEntries.sort((a, b) => b.createdAt - a.createdAt);
-				this.index.files[filePath] = {
-					entries: sanitizedEntries,
-					totalSize: sanitizedEntries.reduce((sum, entry) => sum + entry.size, 0)
-				};
-			}
-			this.index.totalSize = Object.values(this.index.files).reduce((sum, record) => sum + record.totalSize, 0);
+			this.index = parsed;
 		} catch (error) {
 			if (this.isNotFoundError(error)) {
 				this.index = { version: INDEX_VERSION, totalSize: 0, files: {} };
@@ -440,7 +402,6 @@ export class BackupManager {
 			this.index = { version: INDEX_VERSION, totalSize: 0, files: {} };
 		}
 	}
-
 	private async reconcileIndexWithFilesystem(): Promise<boolean> {
 		let mutated = false;
 		let totalSize = 0;

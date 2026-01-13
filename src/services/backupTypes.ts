@@ -6,6 +6,8 @@ export interface StoredBackupEntry {
 	size: number;
 	hash: string;
 	isInitial?: boolean;
+	changePreview?: string;
+	primaryFieldValue?: string;
 }
 
 export interface FileBackupRecord {
@@ -25,6 +27,8 @@ export interface BackupDescriptor {
 	size: number;
 	category: BackupCategory;
 	isInitial?: boolean;
+	changePreview?: string;
+	primaryFieldValue?: string;
 }
 
 export interface BucketRule {

@@ -528,7 +528,16 @@ export class MagicMigrationModal extends Modal {
 		const prefix = this.sourcePlainText.slice(0, start);
 		const middle = this.sourcePlainText.slice(start, end);
 		const suffix = this.sourcePlainText.slice(end);
-		this.sourceContentEl.innerHTML = `${this.escapeHtml(prefix)}<span class="tlb-source-inline-highlight">${this.escapeHtml(middle)}</span>${this.escapeHtml(suffix)}`;
+		while (this.sourceContentEl.firstChild) {
+			this.sourceContentEl.removeChild(this.sourceContentEl.firstChild);
+		}
+		const ownerDoc = this.sourceContentEl.ownerDocument ?? document;
+		this.sourceContentEl.append(ownerDoc.createTextNode(prefix));
+		const highlight = ownerDoc.createElement('span');
+		highlight.className = 'tlb-source-inline-highlight';
+		highlight.textContent = middle;
+		this.sourceContentEl.append(highlight);
+		this.sourceContentEl.append(ownerDoc.createTextNode(suffix));
 	}
 
 	private rangeToOffsets(range: Range): [number, number] | null {
@@ -560,12 +569,4 @@ export class MagicMigrationModal extends Modal {
 		return null;
 	}
 
-	private escapeHtml(value: string): string {
-		return value
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#39;');
-	}
 }

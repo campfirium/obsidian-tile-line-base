@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "슬라이드 보기로 전환",
+      "switchToSlide": "슬라이드",
       "openTemplate": "슬라이드 템플릿 편집",
       "enterFullscreen": "전체 화면으로 전환",
       "exitFullscreen": "전체 화면 종료"
@@ -94,9 +94,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "TileLineBase 테이블 보기로 전환",
-    "openMarkdownView": "Markdown 편집기로 돌아가기",
-    "switchViewMenu": "보기 전환 (현재: {{mode}})"
+    "openTableView": "테이블",
+    "openMarkdownView": "편집",
+    "switchViewMenu": "보기: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "아직 카드가 없습니다. 테이블 보기에서 행을 추가해 이 갤러리를 채우세요.",
+    "processingHint": "갤러리 카드를 준비하는 중...",
+    "actions": {
+      "openFromMarkdown": "갤러리",
+      "switchToGallery": "갤러리"
+    },
+    "toolbar": {
+      "title": "갤러리",
+      "addCardButtonAriaLabel": "갤러리 카드 추가",
+      "settingsMenuAriaLabel": "갤러리 설정",
+      "editTemplate": "갤러리 템플릿 편집",
+      "addGalleryButtonAriaLabel": "갤러리 보기 추가",
+      "unnamedGalleryLabel": "제목 없는 갤러리",
+      "editGalleryLabel": "갤러리 편집",
+      "duplicateGalleryLabel": "갤러리 복제",
+      "deleteGalleryLabel": "갤러리 삭제",
+      "cannotDeleteLastGallery": "갤러리 보기는 최소 1개 이상 유지하세요."
+    },
+    "templateModal": {
+      "title": "갤러리 템플릿",
+      "cardSizeLabel": "카드 설정",
+      "widthLabel": "너비 (px)",
+      "heightLabel": "높이 (px)",
+      "groupFieldTitle": "그룹 필드",
+      "groupFieldLabel": "필드 사용",
+      "groupFieldNone": "없음",
+      "filterSectionTitle": "필터 및 정렬",
+      "filterSectionActive": "활성 필터: {{name}}",
+      "filterSectionEmpty": "아직 필터 보기가 없습니다. 이 갤러리를 범위로 제한하려면 하나를 만드세요.",
+      "filterPickerLabel": "필터 보기",
+      "filterAllLabel": "모든 항목",
+      "newFilterButton": "새 필터 보기",
+      "editFilterButton": "필터/정렬 편집",
+      "manageGroupsButton": "필터 그룹 관리"
+    }
   },
   "galleryView": {
     "emptyState": "아직 카드가 없습니다. 테이블 보기에서 행을 추가해 이 갤러리를 채우세요.",
@@ -156,9 +193,12 @@
       "name": "상태 보드"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase 칸반 보기 열기",
-      "switchToKanban": "칸반 보기로 전환",
-      "switchToTable": "테이블 보기로 전환"
+      "openFromMarkdown": "칸반",
+      "switchToKanban": "칸반",
+      "switchToTable": "테이블"
+    },
+    "laneActions": {
+      "addCard": "\"{{lane}}\"에 카드 추가"
     },
     "laneActions": {
       "addCard": "\"{{lane}}\"에 카드 추가"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "일반",
+    "quickLinksTitle": "빠른 링크",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "피드백",
+    "quickLinksVideosLabel": "영상",
+    "quickLinksStarLabel": "스타",
+    "quickLinksFeedbackTooltip": "버그 신고 또는 기능 요청 (GitHub 템플릿)",
+    "quickLinksVideosTooltip": "지금은 소개, 더 많은 영상은 나중에 (YouTube)",
+    "quickLinksStarTooltip": "도움이 되었다면 GitHub Star는 큰 힘이 됩니다",
     "interfaceLanguageLabel": "인터페이스 언어",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Obsidian 언어 따르기",
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "백업을 복원하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
     "restoreCancelButton": "취소",
     "sizeLabel": "크기: {{size}}",
+    "changePreviewInitial": "초기 스냅샷",
+    "listHeaderRow": "행",
     "exportButton": "내보내기",
     "exportButtonAria": "{{timestamp}} 백업을 새 파일로 내보내기",
     "noticeExportSuccess": "백업을 {{file}}에 내보냈습니다.",

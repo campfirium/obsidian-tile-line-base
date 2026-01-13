@@ -9,9 +9,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "Basculer vers la vue tableau TileLineBase",
-    "openMarkdownView": "Revenir à l'éditeur Markdown",
-    "switchViewMenu": "Changer de vue (actuelle : {{mode}})"
+    "openTableView": "Tableau",
+    "openMarkdownView": "Modifier",
+    "switchViewMenu": "Vue: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "Aucune carte pour le moment. Ajoutez des lignes depuis la vue tableau pour alimenter cette galerie.",
+    "processingHint": "Préparation des cartes de la galerie...",
+    "actions": {
+      "openFromMarkdown": "Galerie",
+      "switchToGallery": "Galerie"
+    },
+    "toolbar": {
+      "title": "Galerie",
+      "addCardButtonAriaLabel": "Ajouter une carte à la galerie",
+      "settingsMenuAriaLabel": "Paramètres de la galerie",
+      "editTemplate": "Modifier le modèle de galerie",
+      "addGalleryButtonAriaLabel": "Ajouter une vue galerie",
+      "unnamedGalleryLabel": "Galerie sans titre",
+      "editGalleryLabel": "Modifier la galerie",
+      "duplicateGalleryLabel": "Dupliquer la galerie",
+      "deleteGalleryLabel": "Supprimer la galerie",
+      "cannotDeleteLastGallery": "Conservez au moins une vue galerie."
+    },
+    "templateModal": {
+      "title": "Modèle de galerie",
+      "cardSizeLabel": "Paramètres de carte",
+      "widthLabel": "Largeur (px)",
+      "heightLabel": "Hauteur (px)",
+      "groupFieldTitle": "Champ de regroupement",
+      "groupFieldLabel": "Utiliser le champ",
+      "groupFieldNone": "Aucun",
+      "filterSectionTitle": "Filtres et tri",
+      "filterSectionActive": "Filtre actif : {{name}}",
+      "filterSectionEmpty": "Aucune vue de filtre pour le moment. Créez-en une pour limiter cette galerie.",
+      "filterPickerLabel": "Vue de filtre",
+      "filterAllLabel": "Toutes les entrées",
+      "newFilterButton": "Nouvelle vue de filtre",
+      "editFilterButton": "Modifier filtre/tri",
+      "manageGroupsButton": "Gérer les groupes de filtres"
+    }
   },
   "galleryView": {
     "emptyState": "Aucune carte pour le moment. Ajoutez des lignes depuis la vue tableau pour alimenter cette galerie.",
@@ -71,9 +108,12 @@
       "name": "Tableau des statuts"
     },
     "actions": {
-      "openFromMarkdown": "Ouvrir la vue kanban TileLineBase",
-      "switchToKanban": "Passer en vue kanban",
-      "switchToTable": "Revenir à la vue tableau"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tableau"
+    },
+    "laneActions": {
+      "addCard": "Ajouter une carte à \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Ajouter une carte à \"{{lane}}\""
@@ -171,7 +211,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Passer en vue diapositive",
+      "switchToSlide": "Diapositive",
       "openTemplate": "Modifier le modèle de diapositive",
       "enterFullscreen": "Passer en plein écran",
       "exitFullscreen": "Quitter le plein écran"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "Général",
+    "quickLinksTitle": "Liens rapides",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Retours",
+    "quickLinksVideosLabel": "Vidéos",
+    "quickLinksStarLabel": "Étoile",
+    "quickLinksFeedbackTooltip": "Signalez des bugs ou demandez des fonctionnalités (modèles GitHub)",
+    "quickLinksVideosTooltip": "Intro maintenant, plus de vidéos plus tard (YouTube)",
+    "quickLinksStarTooltip": "Si cela vous aide, une étoile sur GitHub compte beaucoup",
     "interfaceLanguageLabel": "Langue de l’interface",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Suivre la langue d’Obsidian",
@@ -663,7 +711,7 @@
     "exportSuccessNotice": "Fichier exporté : {{fileName}}",
     "exportFailureNotice": "Impossible d'exporter le fichier. Réessayez plus tard.",
     "copyNameSuffix": "copie",
-    "exportNameSuffix": "export",
+    "exportNameSuffix": "exportation",
     "fallbackName": "Note copiée",
     "exportFallbackName": "Note exportée"
   },
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "Impossible de restaurer la sauvegarde. Consultez la console pour plus de détails.",
     "restoreCancelButton": "Annuler",
     "sizeLabel": "Taille : {{size}}",
+    "changePreviewInitial": "Instantané initial",
+    "listHeaderRow": "Ligne",
     "exportButton": "Exporter",
     "exportButtonAria": "Exporter la sauvegarde du {{timestamp}} comme nouveau fichier",
     "noticeExportSuccess": "Sauvegarde exportée vers {{file}}.",

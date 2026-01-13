@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "スライドビューに切り替える",
+      "switchToSlide": "スライド",
       "openTemplate": "スライドテンプレートを編集",
       "enterFullscreen": "全画面表示にする",
       "exitFullscreen": "全画面表示を終了"
@@ -94,9 +94,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "TileLineBase テーブルビューに切り替える",
-    "openMarkdownView": "Markdown エディターに戻る",
-    "switchViewMenu": "ビューを切り替え (現在: {{mode}})"
+    "openTableView": "テーブル",
+    "openMarkdownView": "編集",
+    "switchViewMenu": "ビュー: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
+    "processingHint": "ギャラリーカードを準備しています...",
+    "actions": {
+      "openFromMarkdown": "ギャラリー",
+      "switchToGallery": "ギャラリー"
+    },
+    "toolbar": {
+      "title": "ギャラリー",
+      "addCardButtonAriaLabel": "ギャラリーカードを追加",
+      "settingsMenuAriaLabel": "ギャラリー設定",
+      "editTemplate": "ギャラリーテンプレートを編集",
+      "addGalleryButtonAriaLabel": "ギャラリービューを追加",
+      "unnamedGalleryLabel": "無題のギャラリー",
+      "editGalleryLabel": "ギャラリーを編集",
+      "duplicateGalleryLabel": "ギャラリーを複製",
+      "deleteGalleryLabel": "ギャラリーを削除",
+      "cannotDeleteLastGallery": "少なくとも 1 つのギャラリービューを残してください。"
+    },
+    "templateModal": {
+      "title": "ギャラリーテンプレート",
+      "cardSizeLabel": "カード設定",
+      "widthLabel": "幅 (px)",
+      "heightLabel": "高さ (px)",
+      "groupFieldTitle": "グループ化フィールド",
+      "groupFieldLabel": "フィールドを使用",
+      "groupFieldNone": "なし",
+      "filterSectionTitle": "フィルターと並び替え",
+      "filterSectionActive": "有効なフィルター: {{name}}",
+      "filterSectionEmpty": "フィルタービューがまだありません。作成してこのギャラリーの範囲を絞り込んでください。",
+      "filterPickerLabel": "フィルタービュー",
+      "filterAllLabel": "すべての項目",
+      "newFilterButton": "新しいフィルタービュー",
+      "editFilterButton": "フィルター/並び替えを編集",
+      "manageGroupsButton": "フィルターグループを管理"
+    }
   },
   "galleryView": {
     "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
@@ -156,9 +193,12 @@
       "name": "ステータスボード"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase のカンバンビューを開く",
-      "switchToKanban": "カンバンビューに切り替える",
-      "switchToTable": "テーブルビューに切り替える"
+      "openFromMarkdown": "カンバン",
+      "switchToKanban": "カンバン",
+      "switchToTable": "テーブル"
+    },
+    "laneActions": {
+      "addCard": "「{{lane}}」にカードを追加"
     },
     "laneActions": {
       "addCard": "「{{lane}}」にカードを追加"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "一般",
+    "quickLinksTitle": "クイックリンク",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "フィードバック",
+    "quickLinksVideosLabel": "動画",
+    "quickLinksStarLabel": "スター",
+    "quickLinksFeedbackTooltip": "バグ報告や機能リクエスト（GitHub テンプレート）",
+    "quickLinksVideosTooltip": "今はイントロ、後でさらに動画（YouTube）",
+    "quickLinksStarTooltip": "役に立ったら GitHub の Star をお願いします",
     "interfaceLanguageLabel": "インターフェースの言語",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Obsidian の言語に合わせる",
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "バックアップの復元に失敗しました。詳細はコンソールを確認してください。",
     "restoreCancelButton": "キャンセル",
     "sizeLabel": "サイズ: {{size}}",
+    "changePreviewInitial": "初期スナップショット",
+    "listHeaderRow": "行",
     "exportButton": "エクスポート",
     "exportButtonAria": "{{timestamp}} のバックアップを新しいファイルとしてエクスポート",
     "noticeExportSuccess": "バックアップを {{file}} にエクスポートしました。",

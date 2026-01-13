@@ -170,6 +170,11 @@ export class AgGridAdapter implements GridAdapter {
 		this.state.setQuickFilter(value);
 	}
 
+	hideTooltips(): void {
+		this.overflowTooltip.hide();
+		this.hideGridTooltips();
+	}
+
 	setSideBarVisible(visible: boolean): void {
 		if (this.sideBarVisible === visible) {
 			return;
@@ -258,6 +263,18 @@ export class AgGridAdapter implements GridAdapter {
 
 	onRowDragEnd(callback: (event: RowDragEndPayload) => void): void {
 		this.rowDragEndCallback = callback;
+	}
+
+	private hideGridTooltips(): void {
+		const ownerDocument = this.containerEl?.ownerDocument ?? document;
+		const popupRoot = ownerDocument.querySelector('.tlb-grid-popup-root');
+		if (!popupRoot) {
+			return;
+		}
+		const tooltips = popupRoot.querySelectorAll('.ag-tooltip');
+		for (const tooltip of Array.from(tooltips)) {
+			tooltip.remove();
+		}
 	}
 
 	private handleCellEdit(event: CellEditingStoppedEvent): void {

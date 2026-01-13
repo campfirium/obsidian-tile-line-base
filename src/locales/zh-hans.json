@@ -9,9 +9,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "切换到 TileLineBase 表格视图",
-    "openMarkdownView": "切换回 Markdown 编辑器",
-    "switchViewMenu": "切换视图（当前：{{mode}}）"
+    "openTableView": "表格",
+    "openMarkdownView": "编辑",
+    "switchViewMenu": "视图: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "还没有卡片。可在表格视图中新增行来填充此画廊。",
+    "processingHint": "正在准备画廊卡片...",
+    "actions": {
+      "openFromMarkdown": "画廊",
+      "switchToGallery": "画廊"
+    },
+    "toolbar": {
+      "title": "画廊",
+      "addCardButtonAriaLabel": "新增画廊卡片",
+      "settingsMenuAriaLabel": "画廊设置",
+      "editTemplate": "编辑画廊模板",
+      "addGalleryButtonAriaLabel": "新增画廊视图",
+      "unnamedGalleryLabel": "未命名画廊",
+      "editGalleryLabel": "编辑画廊",
+      "duplicateGalleryLabel": "复制画廊",
+      "deleteGalleryLabel": "删除画廊",
+      "cannotDeleteLastGallery": "请至少保留一个画廊视图。"
+    },
+    "templateModal": {
+      "title": "画廊模板",
+      "cardSizeLabel": "卡片设置",
+      "widthLabel": "宽度（px）",
+      "heightLabel": "高度（px）",
+      "groupFieldTitle": "分组字段",
+      "groupFieldLabel": "使用字段",
+      "groupFieldNone": "无",
+      "filterSectionTitle": "筛选与排序",
+      "filterSectionActive": "当前筛选：{{name}}",
+      "filterSectionEmpty": "还没有筛选视图。创建一个以限定此画廊的范围。",
+      "filterPickerLabel": "筛选视图",
+      "filterAllLabel": "所有条目",
+      "newFilterButton": "新建筛选视图",
+      "editFilterButton": "编辑筛选/排序",
+      "manageGroupsButton": "管理筛选分组"
+    }
   },
   "galleryView": {
     "emptyState": "还没有卡片。可在表格视图中新增行来填充此画廊。",
@@ -71,9 +108,12 @@
       "name": "默认状态看板"
     },
     "actions": {
-      "openFromMarkdown": "打开 TileLineBase 看板视图",
-      "switchToKanban": "切换到看板视图",
-      "switchToTable": "切换回表格视图"
+      "openFromMarkdown": "看板",
+      "switchToKanban": "看板",
+      "switchToTable": "表格"
+    },
+    "laneActions": {
+      "addCard": "将卡片添加到“{{lane}}”"
     },
     "laneActions": {
       "addCard": "将卡片添加到“{{lane}}”"
@@ -171,7 +211,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "切换到幻灯片视图",
+      "switchToSlide": "幻灯片",
       "openTemplate": "编辑幻灯片模板",
       "enterFullscreen": "进入全屏",
       "exitFullscreen": "退出全屏"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "常规",
+    "quickLinksTitle": "快速链接",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "反馈",
+    "quickLinksVideosLabel": "视频",
+    "quickLinksStarLabel": "星标",
+    "quickLinksFeedbackTooltip": "报告问题或提交功能请求（GitHub 模板）",
+    "quickLinksVideosTooltip": "先看入门，更多视频稍后（YouTube）",
+    "quickLinksStarTooltip": "如果有帮助，GitHub 上点个 Star 很重要",
     "interfaceLanguageLabel": "界面语言",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "跟随 Obsidian 语言",
@@ -680,6 +728,8 @@
     "noticeRestoreFailed": "恢复备份失败，详见控制台。",
     "restoreCancelButton": "取消",
     "sizeLabel": "大小：{{size}}",
+    "changePreviewInitial": "初始快照",
+    "listHeaderRow": "行",
     "exportButton": "导出",
     "exportButtonAria": "将 {{timestamp}} 的备份导出为新文件",
     "noticeExportSuccess": "已将备份导出到 {{file}}。",

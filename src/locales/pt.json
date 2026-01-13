@@ -9,9 +9,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "Alternar para a visualização em tabela do TileLineBase",
-    "openMarkdownView": "Voltar para o editor Markdown",
-    "switchViewMenu": "Alternar visualização (atual: {{mode}})"
+    "openTableView": "Tabela",
+    "openMarkdownView": "Editar",
+    "switchViewMenu": "Vista: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "Ainda não há cartões. Adicione linhas da visualização de tabela para preencher esta galeria.",
+    "processingHint": "Preparando cartões da galeria...",
+    "actions": {
+      "openFromMarkdown": "Galeria",
+      "switchToGallery": "Galeria"
+    },
+    "toolbar": {
+      "title": "Galeria",
+      "addCardButtonAriaLabel": "Adicionar cartão à galeria",
+      "settingsMenuAriaLabel": "Configurações da galeria",
+      "editTemplate": "Editar modelo da galeria",
+      "addGalleryButtonAriaLabel": "Adicionar visualização de galeria",
+      "unnamedGalleryLabel": "Galeria sem título",
+      "editGalleryLabel": "Editar galeria",
+      "duplicateGalleryLabel": "Duplicar galeria",
+      "deleteGalleryLabel": "Excluir galeria",
+      "cannotDeleteLastGallery": "Mantenha pelo menos uma visualização de galeria."
+    },
+    "templateModal": {
+      "title": "Modelo da galeria",
+      "cardSizeLabel": "Configurações do cartão",
+      "widthLabel": "Largura (px)",
+      "heightLabel": "Altura (px)",
+      "groupFieldTitle": "Campo de agrupamento",
+      "groupFieldLabel": "Usar campo",
+      "groupFieldNone": "Nenhum",
+      "filterSectionTitle": "Filtros e ordenação",
+      "filterSectionActive": "Filtro ativo: {{name}}",
+      "filterSectionEmpty": "Ainda não há visualização de filtro. Crie uma para limitar esta galeria.",
+      "filterPickerLabel": "Visualização de filtro",
+      "filterAllLabel": "Todas as entradas",
+      "newFilterButton": "Nova visualização de filtro",
+      "editFilterButton": "Editar filtro/ordenação",
+      "manageGroupsButton": "Gerenciar grupos de filtros"
+    }
   },
   "galleryView": {
     "emptyState": "Ainda não há cartões. Adicione linhas da visualização de tabela para preencher esta galeria.",
@@ -71,9 +108,12 @@
       "name": "Quadro de status"
     },
     "actions": {
-      "openFromMarkdown": "Abrir a visualização Kanban do TileLineBase",
-      "switchToKanban": "Alternar para a visualização Kanban",
-      "switchToTable": "Alternar para a visualização em tabela"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabela"
+    },
+    "laneActions": {
+      "addCard": "Adicionar cartão a \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Adicionar cartão a \"{{lane}}\""
@@ -171,7 +211,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Alternar para a visualização de slides",
+      "switchToSlide": "Slides",
       "openTemplate": "Editar modelo de slide",
       "enterFullscreen": "Entrar em tela cheia",
       "exitFullscreen": "Sair da tela cheia"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "Geral",
+    "quickLinksTitle": "Links rápidos",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Comentários",
+    "quickLinksVideosLabel": "Vídeos",
+    "quickLinksStarLabel": "Estrela",
+    "quickLinksFeedbackTooltip": "Relate bugs ou peça recursos (modelos do GitHub)",
+    "quickLinksVideosTooltip": "Intro agora, mais vídeos depois (YouTube)",
+    "quickLinksStarTooltip": "Se isso ajudar, uma estrela no GitHub significa muito",
     "interfaceLanguageLabel": "Idioma da interface",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Seguir o idioma do Obsidian",
@@ -663,7 +711,7 @@
     "exportSuccessNotice": "Arquivo exportado: {{fileName}}",
     "exportFailureNotice": "Falha ao exportar o arquivo. Tente novamente mais tarde.",
     "copyNameSuffix": "cópia",
-    "exportNameSuffix": "export",
+    "exportNameSuffix": "exportação",
     "fallbackName": "Nota copiada",
     "exportFallbackName": "Nota exportada"
   },
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "Falha ao restaurar o backup. Verifique o console para detalhes.",
     "restoreCancelButton": "Cancelar",
     "sizeLabel": "Tamanho: {{size}}",
+    "changePreviewInitial": "Instantâneo inicial",
+    "listHeaderRow": "Linha",
     "exportButton": "Exportar",
     "exportButtonAria": "Exportar backup de {{timestamp}} como um novo arquivo",
     "noticeExportSuccess": "Backup exportado para {{file}}.",

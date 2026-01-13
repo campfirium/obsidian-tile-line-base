@@ -9,16 +9,16 @@
     }
   },
   "viewControls": {
-    "openTableView": "Switch to TileLineBase table view",
-    "openMarkdownView": "Switch back to Markdown editor",
-    "switchViewMenu": "Switch view (current: {{mode}})"
+    "openTableView": "Table",
+    "openMarkdownView": "Edit",
+    "switchViewMenu": "View: {{mode}}"
   },
   "galleryView": {
     "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
     "processingHint": "Preparing gallery cards...",
     "actions": {
-      "openFromMarkdown": "Open TileLineBase gallery view",
-      "switchToGallery": "Switch to gallery view"
+      "openFromMarkdown": "Gallery",
+      "switchToGallery": "Gallery"
     },
     "toolbar": {
       "title": "Gallery",
@@ -71,9 +71,9 @@
       "name": "Status board"
     },
     "actions": {
-      "openFromMarkdown": "Open TileLineBase kanban view",
-      "switchToKanban": "Switch to kanban view",
-      "switchToTable": "Switch to table view"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Table"
     },
     "laneActions": {
       "addCard": "Add card to \"{{lane}}\""
@@ -171,7 +171,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Switch to slide view",
+      "switchToSlide": "Slide",
       "openTemplate": "Edit slide template",
       "enterFullscreen": "Enter fullscreen",
       "exitFullscreen": "Exit fullscreen"
@@ -281,6 +281,14 @@
   },
   "settings": {
     "generalHeading": "General",
+    "quickLinksTitle": "Quick links",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Feedback",
+    "quickLinksVideosLabel": "Videos",
+    "quickLinksStarLabel": "Star",
+    "quickLinksFeedbackTooltip": "Report bugs or request features (GitHub templates)",
+    "quickLinksVideosTooltip": "Intro now, more videos later (YouTube)",
+    "quickLinksStarTooltip": "If this helps, a GitHub star means a lot",
     "interfaceLanguageLabel": "Interface language",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Follow Obsidian language",
@@ -327,9 +335,9 @@
     "navigatorPinnedWarning": "Notebook Navigator is enabled. To avoid conflicts, do not pin TileLineBase views in Obsidian.",
     "navigatorPinnedModalTitle": "TileLineBase Compatibility Notice",
     "navigatorPinnedModalHeading": "Pinned View Conflict with Notebook Navigator",
-    "navigatorPinnedModalBody1": "Due to the refresh mechanisms in Notebook Navigator and Obsidian, pinning a TileLineBase view causes an infinite reload loop. This results in screen flickering, focus jumping, and unintended new tabs.",
-    "navigatorPinnedModalBody2": "We are currently coordinating with the Notebook Navigator author to fix this.",
-    "navigatorPinnedModalAction": "In the meantime, please unpin this tab to restore normal functionality. Avoid pinning TileLineBase views until this is resolved.",
+    "navigatorPinnedModalBody1": "Due to the refresh mechanisms in Notebook Navigator and Obsidian, pinning a TileLineBase view triggers an infinite reload loop. This leads to screen flicker, focus jumps, and unintended new tabs.",
+    "navigatorPinnedModalBody2": "We are coordinating with the Notebook Navigator author to fix this.",
+    "navigatorPinnedModalAction": "Until then, unpin this tab to restore normal behavior. Avoid pinning TileLineBase views until this is resolved.",
     "backupHeading": "Backups",
     "backupEnableLabel": "Enable automatic backups",
     "backupEnableDesc": "Capture a snapshot before writing Markdown so you can roll back accidental changes.",
@@ -684,6 +692,15 @@
     "noticeRestoreFailed": "Failed to restore backup. Check the console for details.",
     "restoreCancelButton": "Cancel",
     "sizeLabel": "Size: {{size}}",
+    "listHeaderTimestamp": "Time",
+    "listHeaderRow": "Row",
+    "listHeaderFields": "Fields",
+    "listHeaderChanges": "Changes",
+    "listHeaderActions": "Actions",
+    "detailUnavailable": "Unavailable",
+    "changePreviewNoChanges": "No changes",
+    "changePreviewInitial": "Initial snapshot",
+    "changePreviewUnavailable": "Preview unavailable",
     "exportButton": "Export",
     "exportButtonAria": "Export backup from {{timestamp}} as a new file",
     "noticeExportSuccess": "Exported backup to {{file}}.",

@@ -22,6 +22,18 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 	const ownerDoc = container.ownerDocument;
 	const target = event.target as HTMLElement | null;
 	const activeElement = ownerDoc.activeElement as HTMLElement | null;
+	const isQuickFilterInput = (element: HTMLElement | null): boolean => {
+		if (!element) {
+			return false;
+		}
+		if (element.classList.contains('tlb-filter-view-search__input')) {
+			return true;
+		}
+		return Boolean(element.closest('.tlb-filter-view-search__input'));
+	};
+	if (isQuickFilterInput(target) || isQuickFilterInput(activeElement)) {
+		return;
+	}
 	const targetInside = target ? context.isElementWithinGrid(target, container) : false;
 	const activeInside = activeElement ? context.isElementWithinGrid(activeElement, container) : false;
 	if (!targetInside && !activeInside) {
@@ -88,11 +100,19 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 			return;
 		}
 		if (event.key === 'c' || event.key === 'C') {
+			const resolveColId = (element: HTMLElement | null): string | null => {
+				const cell = element?.closest('.ag-cell') as HTMLElement | null;
+				return cell?.getAttribute('col-id') ?? null;
+			};
+			const targetColId = resolveColId(target) ?? resolveColId(activeElement);
+			if (targetColId && targetColId !== '#') {
+				return;
+			}
 			const focusedCell = gridAdapter?.getFocusedCell?.() ?? null;
 			if (focusedCell?.field === '#') {
 				event.preventDefault();
 				event.stopPropagation();
-				const blockIndex = focusedCell.rowIndex ?? (selectedRows.length > 0 ? selectedRows[0] : null);
+				const blockIndex = focusedCell?.rowIndex ?? (selectedRows.length > 0 ? selectedRows[0] : null);
 				if (blockIndex !== null && blockIndex !== undefined) {
 					void context.copySectionAsTemplate(blockIndex);
 				}

@@ -219,6 +219,8 @@ export class TableRefreshCoordinator {
 		}
 		this.isActive = nowActive;
 		if (!nowActive) {
+			this.view.gridAdapter?.hideTooltips?.();
+			this.view.kanbanController?.hideTooltips?.();
 			return;
 		}
 		if (!this.dirtyWhileInactive) {

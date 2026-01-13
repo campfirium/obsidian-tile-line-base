@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Overschakelen naar diaweergave",
+      "switchToSlide": "Dia",
       "openTemplate": "Dia-template bewerken",
       "enterFullscreen": "Volledig scherm openen",
       "exitFullscreen": "Volledig scherm afsluiten"
@@ -65,7 +65,7 @@
       "backToFormLabel": "Terug naar formulier",
       "yamlViewLabel": "Dia-template YAML",
       "yamlViewDesc": "Kopieer of plak YAML om deze dia-template te migreren of hergebruiken.",
-      "presetsLabel": "Presets",
+      "presetsLabel": "Voorinstellingen",
       "setDefaultLabel": "Instellen als globale standaard",
       "resetToGlobalDefaultLabel": "Globale standaard laden",
       "resetToBuiltInDefaultLabel": "Ingebouwde standaard laden",
@@ -94,9 +94,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "Overschakelen naar TileLineBase-tabelweergave",
-    "openMarkdownView": "Terugschakelen naar Markdown-editor",
-    "switchViewMenu": "Weergave wisselen (huidig: {{mode}})"
+    "openTableView": "Tabel",
+    "openMarkdownView": "Bewerken",
+    "switchViewMenu": "Weergave: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
+    "processingHint": "Galerijkaarten worden voorbereid...",
+    "actions": {
+      "openFromMarkdown": "Galerij",
+      "switchToGallery": "Galerij"
+    },
+    "toolbar": {
+      "title": "Galerij",
+      "addCardButtonAriaLabel": "Galerijkaart toevoegen",
+      "settingsMenuAriaLabel": "Galerij-instellingen",
+      "editTemplate": "Galerijsjabloon bewerken",
+      "addGalleryButtonAriaLabel": "Galerijweergave toevoegen",
+      "unnamedGalleryLabel": "Naamloze galerij",
+      "editGalleryLabel": "Galerij bewerken",
+      "duplicateGalleryLabel": "Galerij dupliceren",
+      "deleteGalleryLabel": "Galerij verwijderen",
+      "cannotDeleteLastGallery": "Houd minstens één galerijweergave."
+    },
+    "templateModal": {
+      "title": "Galerijsjabloon",
+      "cardSizeLabel": "Kaartinstellingen",
+      "widthLabel": "Breedte (px)",
+      "heightLabel": "Hoogte (px)",
+      "groupFieldTitle": "Groepsveld",
+      "groupFieldLabel": "Gebruik veld",
+      "groupFieldNone": "Geen",
+      "filterSectionTitle": "Filters en sortering",
+      "filterSectionActive": "Actief filter: {{name}}",
+      "filterSectionEmpty": "Nog geen filterweergave. Maak er een om deze galerij te beperken.",
+      "filterPickerLabel": "Filterweergave",
+      "filterAllLabel": "Alle items",
+      "newFilterButton": "Nieuwe filterweergave",
+      "editFilterButton": "Filter/sortering bewerken",
+      "manageGroupsButton": "Filtergroepen beheren"
+    }
   },
   "galleryView": {
     "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
@@ -156,9 +193,12 @@
       "name": "Statusboard"
     },
     "actions": {
-      "openFromMarkdown": "TileLineBase-kanbanweergave openen",
-      "switchToKanban": "Overschakelen naar kanbanweergave",
-      "switchToTable": "Overschakelen naar tabelweergave"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabel"
+    },
+    "laneActions": {
+      "addCard": "Kaart toevoegen aan \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Kaart toevoegen aan \"{{lane}}\""
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "Algemeen",
+    "quickLinksTitle": "Snelle links",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Terugkoppeling",
+    "quickLinksVideosLabel": "Video's",
+    "quickLinksStarLabel": "Ster",
+    "quickLinksFeedbackTooltip": "Meld bugs of vraag functies aan (GitHub-sjablonen)",
+    "quickLinksVideosTooltip": "Intro nu, meer video's later (YouTube)",
+    "quickLinksStarTooltip": "Als dit helpt, betekent een GitHub-star veel",
     "interfaceLanguageLabel": "Taal van de interface",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Volg de Obsidian-taal",
@@ -337,7 +385,7 @@
     "backupCapacityDesc": "Wanneer de totale grootte deze limiet overschrijdt, worden de oudste snapshots verwijderd. Standaard: 200 MB."
   },
   "readingView": {
-    "configBlockTitle": "TLB CONFIG BLOCK"
+    "configBlockTitle": "TLB CONFIGURATIEBLOK"
   },
   "formula": {
     "errors": {
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "Back-up herstellen mislukt. Controleer de console voor details.",
     "restoreCancelButton": "Annuleren",
     "sizeLabel": "Grootte: {{size}}",
+    "changePreviewInitial": "Eerste momentopname",
+    "listHeaderRow": "Rij",
     "exportButton": "Exporteren",
     "exportButtonAria": "Back-up van {{timestamp}} exporteren als nieuw bestand",
     "noticeExportSuccess": "Back-up geëxporteerd naar {{file}}.",

@@ -9,9 +9,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "Cambiar a la vista de tabla de TileLineBase",
-    "openMarkdownView": "Volver al editor de Markdown",
-    "switchViewMenu": "Cambiar vista (actual: {{mode}})"
+    "openTableView": "Tabla",
+    "openMarkdownView": "Editar",
+    "switchViewMenu": "Vista: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
+    "processingHint": "Preparando tarjetas de la galería...",
+    "actions": {
+      "openFromMarkdown": "Galería",
+      "switchToGallery": "Galería"
+    },
+    "toolbar": {
+      "title": "Galería",
+      "addCardButtonAriaLabel": "Añadir tarjeta a la galería",
+      "settingsMenuAriaLabel": "Configuración de la galería",
+      "editTemplate": "Editar plantilla de la galería",
+      "addGalleryButtonAriaLabel": "Añadir vista de galería",
+      "unnamedGalleryLabel": "Galería sin título",
+      "editGalleryLabel": "Editar galería",
+      "duplicateGalleryLabel": "Duplicar galería",
+      "deleteGalleryLabel": "Eliminar galería",
+      "cannotDeleteLastGallery": "Mantén al menos una vista de galería."
+    },
+    "templateModal": {
+      "title": "Plantilla de galería",
+      "cardSizeLabel": "Ajustes de tarjeta",
+      "widthLabel": "Ancho (px)",
+      "heightLabel": "Alto (px)",
+      "groupFieldTitle": "Campo de agrupación",
+      "groupFieldLabel": "Usar campo",
+      "groupFieldNone": "Ninguno",
+      "filterSectionTitle": "Filtros y ordenación",
+      "filterSectionActive": "Filtro activo: {{name}}",
+      "filterSectionEmpty": "Aún no hay vista de filtros. Crea una para acotar esta galería.",
+      "filterPickerLabel": "Vista de filtros",
+      "filterAllLabel": "Todas las entradas",
+      "newFilterButton": "Nueva vista de filtros",
+      "editFilterButton": "Editar filtro/orden",
+      "manageGroupsButton": "Gestionar grupos de filtros"
+    }
   },
   "galleryView": {
     "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
@@ -71,9 +108,12 @@
       "name": "Tablero de estado"
     },
     "actions": {
-      "openFromMarkdown": "Abrir la vista Kanban de TileLineBase",
-      "switchToKanban": "Cambiar a la vista Kanban",
-      "switchToTable": "Cambiar a la vista de tabla"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabla"
+    },
+    "laneActions": {
+      "addCard": "Añadir tarjeta a \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Añadir tarjeta a \"{{lane}}\""
@@ -171,7 +211,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Cambiar a la vista de diapositivas",
+      "switchToSlide": "Diapositivas",
       "openTemplate": "Editar plantilla de diapositivas",
       "enterFullscreen": "Entrar en pantalla completa",
       "exitFullscreen": "Salir de pantalla completa"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "General",
+    "quickLinksTitle": "Enlaces rápidos",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Comentarios",
+    "quickLinksVideosLabel": "Vídeos",
+    "quickLinksStarLabel": "Estrella",
+    "quickLinksFeedbackTooltip": "Reporta errores o solicita funciones (plantillas de GitHub)",
+    "quickLinksVideosTooltip": "Intro ahora, más videos más adelante (YouTube)",
+    "quickLinksStarTooltip": "Si esto ayuda, una estrella en GitHub significa mucho",
     "interfaceLanguageLabel": "Idioma de la interfaz",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Usar idioma de Obsidian",
@@ -663,7 +711,7 @@
     "exportSuccessNotice": "Archivo exportado: {{fileName}}",
     "exportFailureNotice": "No se pudo exportar el archivo. Inténtalo de nuevo más tarde.",
     "copyNameSuffix": "copia",
-    "exportNameSuffix": "export",
+    "exportNameSuffix": "exportación",
     "fallbackName": "Nota copiada",
     "exportFallbackName": "Nota exportada"
   },
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "No se pudo restaurar la copia de seguridad. Revisa la consola para obtener detalles.",
     "restoreCancelButton": "Cancelar",
     "sizeLabel": "Tamaño: {{size}}",
+    "changePreviewInitial": "Instantánea inicial",
+    "listHeaderRow": "Fila",
     "exportButton": "Exportar",
     "exportButtonAria": "Exportar la copia de {{timestamp}} como archivo nuevo",
     "noticeExportSuccess": "Se exportó la copia de seguridad a {{file}}.",

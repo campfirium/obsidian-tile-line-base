@@ -9,9 +9,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "Passa alla vista tabella TileLineBase",
-    "openMarkdownView": "Torna all'editor Markdown",
-    "switchViewMenu": "Cambia visualizzazione (attuale: {{mode}})"
+    "openTableView": "Tabella",
+    "openMarkdownView": "Modifica",
+    "switchViewMenu": "Vista: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "Ancora nessuna scheda. Aggiungi righe dalla vista tabella per popolare questa galleria.",
+    "processingHint": "Preparazione delle schede della galleria...",
+    "actions": {
+      "openFromMarkdown": "Galleria",
+      "switchToGallery": "Galleria"
+    },
+    "toolbar": {
+      "title": "Galleria",
+      "addCardButtonAriaLabel": "Aggiungi scheda alla galleria",
+      "settingsMenuAriaLabel": "Impostazioni galleria",
+      "editTemplate": "Modifica template della galleria",
+      "addGalleryButtonAriaLabel": "Aggiungi vista galleria",
+      "unnamedGalleryLabel": "Galleria senza titolo",
+      "editGalleryLabel": "Modifica galleria",
+      "duplicateGalleryLabel": "Duplica galleria",
+      "deleteGalleryLabel": "Elimina galleria",
+      "cannotDeleteLastGallery": "Mantieni almeno una vista galleria."
+    },
+    "templateModal": {
+      "title": "Template galleria",
+      "cardSizeLabel": "Impostazioni scheda",
+      "widthLabel": "Larghezza (px)",
+      "heightLabel": "Altezza (px)",
+      "groupFieldTitle": "Campo di raggruppamento",
+      "groupFieldLabel": "Usa campo",
+      "groupFieldNone": "Nessuno",
+      "filterSectionTitle": "Filtri e ordinamento",
+      "filterSectionActive": "Filtro attivo: {{name}}",
+      "filterSectionEmpty": "Nessuna vista filtro ancora. Creane una per limitare questa galleria.",
+      "filterPickerLabel": "Vista filtro",
+      "filterAllLabel": "Tutte le voci",
+      "newFilterButton": "Nuova vista filtro",
+      "editFilterButton": "Modifica filtro/ordinamento",
+      "manageGroupsButton": "Gestisci gruppi di filtri"
+    }
   },
   "galleryView": {
     "emptyState": "Ancora nessuna scheda. Aggiungi righe dalla vista tabella per popolare questa galleria.",
@@ -71,9 +108,12 @@
       "name": "Bacheca stato"
     },
     "actions": {
-      "openFromMarkdown": "Apri la vista kanban TileLineBase",
-      "switchToKanban": "Passa alla vista kanban",
-      "switchToTable": "Torna alla vista tabella"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabella"
+    },
+    "laneActions": {
+      "addCard": "Aggiungi scheda a \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Aggiungi scheda a \"{{lane}}\""
@@ -171,7 +211,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Passa alla vista diapositive",
+      "switchToSlide": "Diapositiva",
       "openTemplate": "Modifica modello di diapositiva",
       "enterFullscreen": "Entra in schermo intero",
       "exitFullscreen": "Esci da schermo intero"
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "Generale",
+    "quickLinksTitle": "Link rapidi",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Segnalazioni",
+    "quickLinksVideosLabel": "Video",
+    "quickLinksStarLabel": "Stella",
+    "quickLinksFeedbackTooltip": "Segnala bug o richiedi funzionalità (template GitHub)",
+    "quickLinksVideosTooltip": "Intro ora, altri video più avanti (YouTube)",
+    "quickLinksStarTooltip": "Se ti è utile, una stella su GitHub significa molto",
     "interfaceLanguageLabel": "Lingua dell'interfaccia",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Usa la lingua di Obsidian",
@@ -663,7 +711,7 @@
     "exportSuccessNotice": "File esportato: {{fileName}}",
     "exportFailureNotice": "Impossibile esportare il file. Riprova più tardi.",
     "copyNameSuffix": "copia",
-    "exportNameSuffix": "export",
+    "exportNameSuffix": "esportazione",
     "fallbackName": "Nota copiata",
     "exportFallbackName": "Nota esportata"
   },
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "Impossibile ripristinare il backup. Controlla la console per i dettagli.",
     "restoreCancelButton": "Annulla",
     "sizeLabel": "Dimensione: {{size}}",
+    "changePreviewInitial": "Snapshot iniziale",
+    "listHeaderRow": "Riga",
     "exportButton": "Esporta",
     "exportButtonAria": "Esporta il backup del {{timestamp}} come nuovo file",
     "noticeExportSuccess": "Backup esportato in {{file}}.",

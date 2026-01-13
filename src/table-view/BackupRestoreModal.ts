@@ -1,5 +1,4 @@
-import { Modal, Notice, Setting, normalizePath } from 'obsidian';
-import type { ButtonComponent } from 'obsidian';
+import { ButtonComponent, Modal, Notice, Setting, normalizePath } from 'obsidian';
 import type { TableView } from '../TableView';
 import { getPluginContext } from '../pluginContext';
 import { t } from '../i18n';
@@ -40,14 +39,16 @@ class BackupRestoreModal extends Modal {
 		const fileName = this.view.file?.basename ?? '';
 		this.titleEl.setText(t('backup.modalTitle', { file: fileName }));
 		this.contentEl.empty();
-		this.contentEl.addClass('tlb-backup-modal');
+		this.modalEl.addClass('tlb-backup-modal');
+		this.contentEl.addClass('tlb-backup-modal__content');
 		this.listEl = this.contentEl.createDiv({ cls: 'tlb-backup-modal__list' });
 		await this.renderEntries();
 	}
 
 	onClose(): void {
 		this.contentEl.empty();
-		this.contentEl.removeClass('tlb-backup-modal');
+		this.modalEl.removeClass('tlb-backup-modal');
+		this.contentEl.removeClass('tlb-backup-modal__content');
 		this.listEl = null;
 	}
 
@@ -77,40 +78,68 @@ class BackupRestoreModal extends Modal {
 			return;
 		}
 
+		this.renderHeader(container);
+
 		for (const entry of entries) {
-			const timestampText = this.formatTimestamp(entry.createdAt);
-			const isInitial = entry.isInitial === true;
-			const name = isInitial ? `${t('backup.initialEntryLabel')} · ${timestampText}` : timestampText;
-			const setting = new Setting(container)
-				.setName(name)
-				.setDesc(t('backup.sizeLabel', { size: this.formatSize(entry.size) }));
-			setting.addButton((button) => {
-				button
-					.setButtonText(t('backup.restoreButton'))
-					.setTooltip(
-						isInitial
-							? t('backup.restoreInitialTooltip', { timestamp: timestampText })
-							: t('backup.restoreButtonAria', { timestamp: timestampText })
-					)
-					.setCta()
-					.onClick(() => {
-						void this.handleRestore(entry);
-					});
-				const ariaLabel = isInitial
-					? t('backup.restoreInitialTooltip', { timestamp: timestampText })
-					: t('backup.restoreButtonAria', { timestamp: timestampText });
-				button.buttonEl.setAttribute('aria-label', ariaLabel);
-			});
-			setting.addButton((button) => {
-				button
-					.setButtonText(t('backup.exportButton'))
-					.setTooltip(t('backup.exportButtonAria', { timestamp: timestampText }))
-					.onClick(() => {
-						void this.handleExport(entry);
-					});
-				button.buttonEl.setAttribute('aria-label', t('backup.exportButtonAria', { timestamp: timestampText }));
-			});
+			this.renderEntryRow(container, entry);
 		}
+	}
+
+	private renderHeader(container: HTMLElement): void {
+		const header = container.createDiv({ cls: 'tlb-backup-modal__header' });
+		header.createDiv({ cls: 'tlb-backup-modal__cell', text: t('backup.listHeaderTimestamp') });
+		header.createDiv({ cls: 'tlb-backup-modal__cell', text: t('backup.listHeaderRow') });
+		header.createDiv({ cls: 'tlb-backup-modal__cell', text: t('backup.listHeaderChanges') });
+		header.createDiv({ cls: 'tlb-backup-modal__cell tlb-backup-modal__cell--actions', text: t('backup.listHeaderActions') });
+	}
+
+	private renderEntryRow(container: HTMLElement, entry: BackupDescriptor): void {
+		const row = container.createDiv({ cls: 'tlb-backup-modal__row' });
+		const timestampText = this.formatTimestamp(entry.createdAt);
+		const isInitial = entry.isInitial === true;
+		const name = isInitial ? `${t('backup.initialEntryLabel')} · ${timestampText}` : timestampText;
+
+		const timeCell = row.createDiv({ cls: 'tlb-backup-modal__cell tlb-backup-modal__cell--time' });
+		timeCell.createDiv({ cls: 'tlb-backup-modal__time', text: name });
+		timeCell.createDiv({ cls: 'tlb-backup-modal__meta', text: t('backup.sizeLabel', { size: this.formatSize(entry.size) }) });
+
+		const primaryCell = row.createDiv({ cls: 'tlb-backup-modal__cell tlb-backup-modal__cell--primary' });
+		const primaryFieldValue = entry.primaryFieldValue?.trim() || t('backup.detailUnavailable');
+		primaryCell.createDiv({ cls: 'tlb-backup-modal__primary-name', text: primaryFieldValue });
+
+		const changeCell = row.createDiv({ cls: 'tlb-backup-modal__cell tlb-backup-modal__cell--changes' });
+		const changePreview = this.resolveChangePreview(entry);
+		const previewEl = changeCell.createDiv({ cls: 'tlb-backup-modal__change-preview tlb-backup-modal__clamp', text: changePreview });
+		if (changePreview.length > 0) {
+			previewEl.setAttribute('title', changePreview);
+		}
+
+		const actionsCell = row.createDiv({ cls: 'tlb-backup-modal__cell tlb-backup-modal__cell--actions' });
+		const restoreButton = new ButtonComponent(actionsCell);
+		restoreButton
+			.setButtonText(t('backup.restoreButton'))
+			.setTooltip(
+				isInitial
+					? t('backup.restoreInitialTooltip', { timestamp: timestampText })
+					: t('backup.restoreButtonAria', { timestamp: timestampText })
+			)
+			.setCta()
+			.onClick(() => {
+				void this.handleRestore(entry);
+			});
+		const restoreLabel = isInitial
+			? t('backup.restoreInitialTooltip', { timestamp: timestampText })
+			: t('backup.restoreButtonAria', { timestamp: timestampText });
+		restoreButton.buttonEl.setAttribute('aria-label', restoreLabel);
+
+		const exportButton = new ButtonComponent(actionsCell);
+		exportButton
+			.setButtonText(t('backup.exportButton'))
+			.setTooltip(t('backup.exportButtonAria', { timestamp: timestampText }))
+			.onClick(() => {
+				void this.handleExport(entry);
+			});
+		exportButton.buttonEl.setAttribute('aria-label', t('backup.exportButtonAria', { timestamp: timestampText }));
 	}
 
 	private renderMessage(message: string): void {
@@ -120,6 +149,19 @@ class BackupRestoreModal extends Modal {
 		}
 		clearElement(container);
 		container.createEl('p', { cls: 'tlb-backup-modal__empty', text: message });
+	}
+
+	private resolveChangePreview(entry: BackupDescriptor): string {
+		if (entry.isInitial) {
+			return t('backup.changePreviewInitial');
+		}
+		if (entry.changePreview === undefined) {
+			return t('backup.changePreviewUnavailable');
+		}
+		if (entry.changePreview.trim().length === 0) {
+			return t('backup.changePreviewNoChanges');
+		}
+		return entry.changePreview;
 	}
 
 	private async handleRestore(entry: BackupDescriptor): Promise<void> {

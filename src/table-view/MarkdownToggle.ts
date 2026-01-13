@@ -27,6 +27,5 @@ export function ensureMarkdownToggle(view: TableView): void {
 	});
 	button.setAttribute('data-tlb-action', 'open-markdown-view');
 	button.setAttribute('aria-label', label);
-	button.setAttribute('title', label);
 	view.markdownToggleButton = button;
 }

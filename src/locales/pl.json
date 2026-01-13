@@ -10,7 +10,7 @@
   },
   "slideView": {
     "actions": {
-      "switchToSlide": "Przełącz na widok slajdów",
+      "switchToSlide": "Slajd",
       "openTemplate": "Edytuj szablon slajdu",
       "enterFullscreen": "Włącz pełny ekran",
       "exitFullscreen": "Wyłącz pełny ekran"
@@ -94,9 +94,46 @@
     }
   },
   "viewControls": {
-    "openTableView": "Przełącz na widok tabeli TileLineBase",
-    "openMarkdownView": "Wróć do edytora Markdown",
-    "switchViewMenu": "Zmień widok (obecny: {{mode}})"
+    "openTableView": "Tabela",
+    "openMarkdownView": "Edytuj",
+    "switchViewMenu": "Widok: {{mode}}"
+  },
+  "galleryView": {
+    "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
+    "processingHint": "Przygotowywanie kart galerii...",
+    "actions": {
+      "openFromMarkdown": "Galeria",
+      "switchToGallery": "Galeria"
+    },
+    "toolbar": {
+      "title": "Galeria",
+      "addCardButtonAriaLabel": "Dodaj kartę do galerii",
+      "settingsMenuAriaLabel": "Ustawienia galerii",
+      "editTemplate": "Edytuj szablon galerii",
+      "addGalleryButtonAriaLabel": "Dodaj widok galerii",
+      "unnamedGalleryLabel": "Galeria bez tytułu",
+      "editGalleryLabel": "Edytuj galerię",
+      "duplicateGalleryLabel": "Duplikuj galerię",
+      "deleteGalleryLabel": "Usuń galerię",
+      "cannotDeleteLastGallery": "Zachowaj co najmniej jeden widok galerii."
+    },
+    "templateModal": {
+      "title": "Szablon galerii",
+      "cardSizeLabel": "Ustawienia karty",
+      "widthLabel": "Szerokość (px)",
+      "heightLabel": "Wysokość (px)",
+      "groupFieldTitle": "Pole grupowania",
+      "groupFieldLabel": "Użyj pola",
+      "groupFieldNone": "Brak",
+      "filterSectionTitle": "Filtry i sortowanie",
+      "filterSectionActive": "Aktywny filtr: {{name}}",
+      "filterSectionEmpty": "Brak widoku filtrów. Utwórz go, aby zawęzić tę galerię.",
+      "filterPickerLabel": "Widok filtrów",
+      "filterAllLabel": "Wszystkie wpisy",
+      "newFilterButton": "Nowy widok filtrów",
+      "editFilterButton": "Edytuj filtr/sortowanie",
+      "manageGroupsButton": "Zarządzaj grupami filtrów"
+    }
   },
   "galleryView": {
     "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
@@ -156,9 +193,12 @@
       "name": "Tablica statusów"
     },
     "actions": {
-      "openFromMarkdown": "Otwórz widok kanban TileLineBase",
-      "switchToKanban": "Przełącz na widok kanban",
-      "switchToTable": "Przełącz na widok tabeli"
+      "openFromMarkdown": "Kanban",
+      "switchToKanban": "Kanban",
+      "switchToTable": "Tabela"
+    },
+    "laneActions": {
+      "addCard": "Dodaj kartę do \"{{lane}}\""
     },
     "laneActions": {
       "addCard": "Dodaj kartę do \"{{lane}}\""
@@ -281,6 +321,14 @@
   },
   "settings": {
     "generalHeading": "Ogólne",
+    "quickLinksTitle": "Szybkie linki",
+    "quickLinksDesc": "",
+    "quickLinksFeedbackLabel": "Opinie",
+    "quickLinksVideosLabel": "Wideo",
+    "quickLinksStarLabel": "Gwiazdka",
+    "quickLinksFeedbackTooltip": "Zgłoś błędy lub poproś o funkcje (szablony GitHub)",
+    "quickLinksVideosTooltip": "Intro teraz, więcej filmów później (YouTube)",
+    "quickLinksStarTooltip": "Jeśli to pomaga, gwiazdka na GitHub wiele znaczy",
     "interfaceLanguageLabel": "Język interfejsu",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "Użyj języka Obsidian",
@@ -684,6 +732,8 @@
     "noticeRestoreFailed": "Nie udało się przywrócić kopii. Sprawdź konsolę, aby uzyskać szczegóły.",
     "restoreCancelButton": "Anuluj",
     "sizeLabel": "Rozmiar: {{size}}",
+    "changePreviewInitial": "Początkowa migawka",
+    "listHeaderRow": "Wiersz",
     "exportButton": "Eksportuj",
     "exportButtonAria": "Eksportuj kopię z {{timestamp}} jako nowy plik",
     "noticeExportSuccess": "Wyeksportowano kopię do {{file}}.",

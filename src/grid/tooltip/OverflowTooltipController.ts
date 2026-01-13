@@ -20,7 +20,7 @@ export class OverflowTooltipController {
 			return;
 		}
 		const related = (event as MouseEvent).relatedTarget as HTMLElement | null;
-		if (related && cell.contains(related)) {
+		if (related && (cell.contains(related) || related.closest('.tlb-overflow-tooltip'))) {
 			return;
 		}
 		this.handleLeave(cell);
@@ -40,7 +40,7 @@ export class OverflowTooltipController {
 			return;
 		}
 		const related = event.relatedTarget as HTMLElement | null;
-		if (related && cell.contains(related)) {
+		if (related && (cell.contains(related) || related.closest('.tlb-overflow-tooltip'))) {
 			return;
 		}
 		this.handleLeave(cell);
@@ -110,11 +110,15 @@ export class OverflowTooltipController {
 		this.hideCurrentTooltip();
 	}
 
+	hide(): void {
+		this.hideCurrentTooltip();
+	}
+
 	private extractTooltipTarget(cell: HTMLElement): { anchor: HTMLElement | null; text: string | null } {
 		const preferred = cell.querySelector<HTMLElement>('.tlb-link-cell__text');
 		const fallback = cell.querySelector<HTMLElement>('.ag-cell-value');
 		const anchor = preferred ?? fallback ?? null;
-		const text = anchor?.textContent?.trim() ?? null;
+		const text = anchor?.textContent ?? null;
 		return { anchor, text };
 	}
 

@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "No se pudo restaurar la copia de seguridad. Revisa la consola para obtener detalles.",
     "restoreCancelButton": "Cancelar",
     "sizeLabel": "Tamaño: {{size}}",
+    "changePreviewInitial": "Instantánea inicial",
+    "listHeaderRow": "Fila",
     "exportButton": "Exportar",
     "exportButtonAria": "Exportar la copia de {{timestamp}} como archivo nuevo",
     "noticeExportSuccess": "Se exportó la copia de seguridad a {{file}}.",

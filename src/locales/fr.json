@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "Impossible de restaurer la sauvegarde. Consultez la console pour plus de détails.",
     "restoreCancelButton": "Annuler",
     "sizeLabel": "Taille : {{size}}",
+    "changePreviewInitial": "Instantané initial",
+    "listHeaderRow": "Ligne",
     "exportButton": "Exporter",
     "exportButtonAria": "Exporter la sauvegarde du {{timestamp}} comme nouveau fichier",
     "noticeExportSuccess": "Sauvegarde exportée vers {{file}}.",

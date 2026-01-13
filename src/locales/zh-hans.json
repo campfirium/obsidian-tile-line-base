@@ -688,6 +688,8 @@
     "noticeRestoreFailed": "恢复备份失败，详见控制台。",
     "restoreCancelButton": "取消",
     "sizeLabel": "大小：{{size}}",
+    "changePreviewInitial": "初始快照",
+    "listHeaderRow": "行",
     "exportButton": "导出",
     "exportButtonAria": "将 {{timestamp}} 的备份导出为新文件",
     "noticeExportSuccess": "已将备份导出到 {{file}}。",

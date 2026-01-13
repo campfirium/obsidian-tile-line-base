@@ -692,6 +692,8 @@
     "noticeRestoreFailed": "Backup konnte nicht wiederhergestellt werden. Details siehe Konsole.",
     "restoreCancelButton": "Abbrechen",
     "sizeLabel": "Größe: {{size}}",
+    "changePreviewInitial": "Erster Schnappschuss",
+    "listHeaderRow": "Zeile",
     "exportButton": "Exportieren",
     "exportButtonAria": "Backup vom {{timestamp}} als neue Datei exportieren",
     "noticeExportSuccess": "Backup nach {{file}} exportiert.",

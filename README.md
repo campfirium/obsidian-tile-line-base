@@ -6,7 +6,7 @@
 
 ![TileLineBase hero banner](docs/assets/hero-banner.jpg)
 
-Build advanced tables right inside your Markdown notes, all from plain text. **Zero Frontmatter. Zero code.**
+Build **multidimensional tables** right inside your Markdown notes. **Zero Frontmatter. Zero code.**
 
 ## Quick Preview
 

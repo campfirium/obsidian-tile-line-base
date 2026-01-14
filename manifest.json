@@ -1,9 +1,9 @@
 {
   "id": "tile-line-base",
   "name": "TileLineBase",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "minAppVersion": "1.0.0",
-  "description": "Build advanced Tables, Kanban, and Slides directly from plain text. Zero Frontmatter. Zero code.",
+  "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "author": "Campfirium",
   "authorUrl": "https://github.com/campfirium",
   "isDesktopOnly": true

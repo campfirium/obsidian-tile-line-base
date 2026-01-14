@@ -259,7 +259,7 @@ export class TableView extends ItemView {
 			this.disposeNavigatorProbe = null;
 		}
 	}
-	onPaneMenu(menu: Menu, source: "more-options" | "tab-header" | string): void {
+	onPaneMenu(menu: Menu, source: string): void {
 
 		if (source && source !== "more-options") { return; }
 		const markdownLeaf = this.app.workspace.getLeavesOfType("markdown")

@@ -390,12 +390,6 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				}
 				return;
 			}
-
-						this.logger.error('Failed to open quick link', { error, url });
-					});
-				}
-				return;
-			}
 			window.open(url, '_blank', 'noopener');
 		} catch (error) {
 			this.logger.error('Failed to open quick link', { error, url });

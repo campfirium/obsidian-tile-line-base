@@ -8,6 +8,7 @@ import type { BackupManager, BackupDescriptor } from '../services/BackupManager'
 const logger = getLogger('table-view:backup-restore');
 
 export function openBackupRestoreModal(view: TableView): void {
+
 	if (!view.file) {
 		new Notice(t('backup.errorNoFile'));
 		return;
@@ -165,6 +166,7 @@ class BackupRestoreModal extends Modal {
 	}
 
 	private handleRestore(entry: BackupDescriptor): void {
+
 		if (!this.view.file) {
 			new Notice(t('backup.errorNoFile'));
 			return;

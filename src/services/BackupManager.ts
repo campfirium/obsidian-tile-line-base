@@ -115,7 +115,6 @@ export class BackupManager {
 			return this.createBackupUnsafe(file.path, content, { isInitial: true });
 		});
 	}
-
 	async listBackups(file: TFile | string): Promise<BackupDescriptor[]> {
 		await this.initialize();
 		const filePath = typeof file === 'string' ? file : file.path;
@@ -133,11 +132,11 @@ export class BackupManager {
 				category: resolveCategory(index, entry, now, LATEST_KEEP_COUNT, BUCKET_RULES),
 				isInitial: entry.isInitial === true,
 				changePreview: entry.changePreview,
+
 				primaryFieldValue: entry.primaryFieldValue
 			}));
 		});
 	}
-
 	async restoreBackup(file: TFile, entryId: string): Promise<void> {
 		await this.initialize();
 		await this.runExclusive(async () => {

@@ -378,13 +378,19 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 	private openExternal(url: string): void {
 		try {
 			const electronRequire = (window as Window & { require?: (module: string) => { shell?: { openExternal?: (target: string) => Promise<void> | void } } }).require;
-			const electron = electronRequire?.('electron');
+			const electron = electronRequire?.("electron");
 			const shell = electron?.shell;
 			if (shell?.openExternal) {
 				const result = shell.openExternal(url);
 				const resultPromise = result instanceof Promise ? result : null;
 				if (resultPromise) {
 					resultPromise.catch((error) => {
+						this.logger.error("Failed to open quick link", { error, url });
+					});
+				}
+				return;
+			}
+
 						this.logger.error('Failed to open quick link', { error, url });
 					});
 				}

@@ -259,7 +259,8 @@ export class TableView extends ItemView {
 			this.disposeNavigatorProbe = null;
 		}
 	}
-	onPaneMenu(menu: Menu, source: string): void {
+	onPaneMenu(menu: Menu, source: "more-options" | "tab-header" | string): void {
+
 		if (source && source !== "more-options") { return; }
 		const markdownLeaf = this.app.workspace.getLeavesOfType("markdown")
 			.find((leaf) => (leaf.view as MarkdownView).file?.path === this.file?.path)
@@ -268,11 +269,12 @@ export class TableView extends ItemView {
 		if (markdownView) { markdownView.onPaneMenu(menu, source); return; }
 		super.onPaneMenu(menu, source);
 		if (this.file) {
-		const workspaceWithTrigger = this.app.workspace as typeof this.app.workspace & {
-			trigger?: (event: string, ...args: unknown[]) => void;
-		};
-		workspaceWithTrigger.trigger?.("file-menu", menu, this.file, source, this.leaf);
-	}
+			const workspaceWithTrigger = this.app.workspace as typeof this.app.workspace & {
+				trigger?: (event: string, ...args: unknown[]) => void;
+			};
+			workspaceWithTrigger.trigger?.("file-menu", menu, this.file, source, this.leaf);
+		}
+
 	}
 	public setKanbanHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);

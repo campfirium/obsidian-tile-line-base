@@ -1,7 +1,7 @@
 {
   "name": "obsidian-tile-line-base",
   "version": "0.9.3",
-  "description": "TileLineBase - A federated paragraph database for Obsidian.",
+  "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code."
   "main": "dist/main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

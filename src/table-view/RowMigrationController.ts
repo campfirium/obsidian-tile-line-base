@@ -294,7 +294,7 @@ export class RowMigrationController {
 
 		try {
 
-			const { path, fileName } = await this.resolveAvailableFilePath(folderPath, baseName);
+			const { path, fileName } = this.resolveAvailableFilePath(folderPath, baseName);
 
 			newFile = await this.deps.app.vault.create(path, blockMarkdown);
 
@@ -786,13 +786,13 @@ export class RowMigrationController {
 
 
 
-	private async resolveAvailableFilePath(
+	private resolveAvailableFilePath(
 
 		folderPath: string,
 
 		baseName: string
 
-	): Promise<{ path: string; fileName: string }> {
+	): { path: string; fileName: string } {
 
 		const sanitizedBase = this.sanitizeFileName(baseName) || t('rowMigration.defaultFileName');
 

@@ -112,7 +112,7 @@ export class RightSidebarController {
 	private toggleViaCommand(): boolean {
 		const beforeSplit = this.getRightSplit();
 		const before = beforeSplit ? this.isCollapsed(beforeSplit) : undefined;
-		const commandManager = (this.app as any).commands;
+		const commandManager = (this.app as { commands?: { executeCommandById?: (commandId: string) => boolean } }).commands;
 		const executed = typeof commandManager?.executeCommandById === 'function'
 			? commandManager.executeCommandById('workspace:toggle-right-sidebar')
 			: false;

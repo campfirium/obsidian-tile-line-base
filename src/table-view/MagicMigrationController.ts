@@ -384,7 +384,7 @@ export class MagicMigrationController {
 			const markdownBody = this.blocksToMarkdown(blocks);
 			const { frontmatter } = splitFrontmatter(content);
 			const markdown = mergeFrontmatter(frontmatter, markdownBody);
-			const targetPath = await resolveTargetPath(this.view.app.vault, file, buildTargetFileName(file));
+			const targetPath = resolveTargetPath(this.view.app.vault, file, buildTargetFileName(file));
 			const newFile = await this.view.app.vault.create(targetPath, markdown);
 			TableRefreshCoordinator.requestRefreshForPath(newFile.path, {
 				source: 'table-operation',
@@ -466,8 +466,8 @@ export class MagicMigrationController {
 
 	private async openFileInTableView(file: TFile): Promise<void> {
 		const plugin = getPluginContext();
-		if (plugin && typeof (plugin as any).openFileInTableView === 'function') {
-			await (plugin as any).openFileInTableView(file);
+		if (plugin) {
+			await plugin.openFileInTableView(file);
 			return;
 		}
 		await this.view.app.workspace.openLinkText(file.path, '', true);

@@ -12,8 +12,10 @@ export function handleCellLinkOpen(view: TableView, context: CellLinkClickContex
 
 	if (context.link.type === 'external') {
 		try {
-			const electron = (window as unknown as { require?: (module: string) => any }).require?.('electron');
-			const shell = electron?.shell as { openExternal?: (url: string) => Promise<void> | void } | undefined;
+			type ElectronModule = { shell?: { openExternal?: (url: string) => Promise<void> | void } };
+			const electron = (window as unknown as { require?: (module: string) => ElectronModule | null })
+				.require?.('electron');
+			const shell = electron?.shell;
 			if (shell?.openExternal) {
 				void shell.openExternal(target);
 			} else {

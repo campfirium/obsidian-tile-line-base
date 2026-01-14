@@ -408,7 +408,7 @@ export class MagicMigrationModal extends Modal {
 			const input = th.createEl('input', {
 				attr: { type: 'text' },
 				cls: 'tlb-conversion-column-input'
-			}) as HTMLInputElement;
+			});
 			input.value = this.columnNames[index] ?? '';
 			input.placeholder = `${DEFAULT_COLUMN_BASE} ${index + 1}`;
 			input.addEventListener('input', () => {

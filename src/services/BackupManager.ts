@@ -98,6 +98,7 @@ export class BackupManager {
 			return this.createBackupUnsafe(file.path, content);
 		});
 	}
+
 	async ensureInitialBackup(file: TFile, content: string): Promise<boolean> {
 		await this.initialize();
 		const settings = this.getSettings();
@@ -118,6 +119,7 @@ export class BackupManager {
 		await this.initialize();
 		const filePath = typeof file === 'string' ? file : file.path;
 		return this.runExclusive(async () => {
+			await Promise.resolve();
 			const record = this.index.files[filePath];
 			if (!record) {
 				return [];
@@ -129,7 +131,8 @@ export class BackupManager {
 				size: entry.size,
 				category: resolveCategory(index, entry, now, LATEST_KEEP_COUNT, BUCKET_RULES),
 				isInitial: entry.isInitial === true,
-								changePreview: entry.changePreview,
+				changePreview: entry.changePreview,
+
 				primaryFieldValue: entry.primaryFieldValue
 			}));
 		});

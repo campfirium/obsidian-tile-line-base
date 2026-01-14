@@ -216,9 +216,9 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				activeGroup: view.galleryTagGroupStore.getActiveGroup(),
 				filterViews: view.galleryFilterViewState?.views ?? []
 			}),
-		onSaveRow: async (row, values) => {
+		onSaveRow: (row, values) => {
 			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
-			if (rowIndex == null) return;
+			if (rowIndex == null) return Promise.resolve();
 			for (const [field, value] of Object.entries(values)) {
 				view.dataStore.updateCell(rowIndex, field, value);
 			}
@@ -226,7 +226,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			view.persistenceService.scheduleSave();
 			view.filterOrchestrator.refresh();
 			view.galleryFilterOrchestrator.refresh();
-			return view.galleryFilterOrchestrator.getVisibleRows();
+			return Promise.resolve(view.galleryFilterOrchestrator.getVisibleRows());
 		},
 		onTemplateChange: () => {
 			view.galleryTemplateTouched = true;

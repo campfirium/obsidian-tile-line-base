@@ -1,4 +1,4 @@
-import { GridApi } from 'ag-grid-community';
+import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
 import { CompositionProxy } from '../../utils/CompositionProxy';
 import { getLogger } from '../../../utils/logger';
 import { GridClipboardService } from './GridClipboardService';
@@ -306,8 +306,8 @@ export class CompositionCaptureManager {
 			};
 		}
 
-		const root = (this.container ?? doc) as Document | Element;
-		const focusedEl = (root as any).querySelector?.('.ag-cell-focus[col-id]') as HTMLElement | null;
+		const root = this.container ?? doc;
+		const focusedEl = root.querySelector<HTMLElement>('.ag-cell-focus[col-id]');
 		if (!focusedEl) {
 			const lastArmed = this.lastArmedTargets.get(doc);
 			if (lastArmed) {
@@ -324,7 +324,7 @@ export class CompositionCaptureManager {
 			return null;
 		}
 
-		const rowIndexHolder = (focusedEl.closest('[row-index]') as HTMLElement | null) ?? focusedEl;
+		const rowIndexHolder = focusedEl.closest<HTMLElement>('[row-index]') ?? focusedEl;
 		const rowIndexValue = rowIndexHolder?.getAttribute('row-index') ?? null;
 		if (!rowIndexValue) {
 			return null;
@@ -342,12 +342,13 @@ export class CompositionCaptureManager {
 	}
 
 	private hasActiveGridEditor(gridApi: GridApi): boolean {
-		const editorInstances = (gridApi as any).getCellEditorInstances?.();
+		const gridApiWithEditors = gridApi as GridApi & { getCellEditorInstances?: () => unknown[]; getEditingCells?: () => unknown[] };
+		const editorInstances = gridApiWithEditors.getCellEditorInstances?.();
 		if (Array.isArray(editorInstances)) {
 			return editorInstances.length > 0;
 		}
 
-		const editingCells = (gridApi as any).getEditingCells?.();
+		const editingCells = gridApiWithEditors.getEditingCells?.();
 		if (Array.isArray(editingCells)) {
 			return editingCells.length > 0;
 		}
@@ -357,27 +358,27 @@ export class CompositionCaptureManager {
 
 	private isTargetEditable(gridApi: GridApi, rowIndex: number, colId: string): boolean {
 		const column = typeof gridApi.getColumn === 'function' ? gridApi.getColumn(colId) : null;
-		const colDef = column?.getColDef?.() as { editable?: boolean } | null;
+		const colDef = column?.getColDef?.() as { editable?: boolean | ((params: EditableCallbackParams<Record<string, unknown>, unknown, unknown>) => boolean) } | null;
 		if (colDef?.editable === false) {
 			return false;
 		}
 
-		if (colDef && typeof (colDef as any).editable === 'function') {
+		if (colDef && typeof colDef.editable === 'function' && column) {
 			const rowNode =
 				typeof gridApi.getDisplayedRowAtIndex === 'function'
 					? gridApi.getDisplayedRowAtIndex(rowIndex)
 					: null;
-			const data = (rowNode?.data as any) ?? null;
-			if (rowNode && data) {
-				const editableResult = (colDef as any).editable({
+			const data = rowNode?.data;
+			if (rowNode && data && typeof data === 'object') {
+				const record = data as Record<string, unknown>;
+				const editableResult = colDef.editable({
 					api: gridApi,
 					column,
 					colDef,
-					context: (gridApi as any)?.context,
-					data,
+					context: (gridApi as GridApi & { context?: unknown }).context,
+					data: record,
 					node: rowNode,
-					value: data[colId]
-				} as any);
+				});
 				if (!editableResult) {
 					return false;
 				}
@@ -413,7 +414,7 @@ export class CompositionCaptureManager {
 	}
 
 	private getCellElementFor(rowIndex: number, colKey: string, doc: Document): HTMLElement | null {
-		const root = (this.container ?? doc) as Document | Element;
+		const root = this.container ?? doc;
 		const gridApi = this.getGridApi();
 		const column = gridApi?.getColumn(colKey);
 		const pinned = column?.getPinned?.() ?? column?.isPinned?.();
@@ -428,7 +429,7 @@ export class CompositionCaptureManager {
 
 		for (const container of containers) {
 			const selector = `${container} [row-index="${rowIndex}"] [col-id="${colKey}"]`;
-			const match = (root as any).querySelector?.(selector) as HTMLElement | null;
+			const match = root.querySelector<HTMLElement>(selector);
 			if (match) {
 				return match;
 			}
@@ -437,7 +438,7 @@ export class CompositionCaptureManager {
 		const fallbackContainers = ['.ag-pinned-left-cols-container', '.ag-pinned-right-cols-container'];
 		for (const container of fallbackContainers) {
 			const selector = `${container} [row-index="${rowIndex}"] [col-id="${colKey}"]`;
-			const match = (root as any).querySelector?.(selector) as HTMLElement | null;
+			const match = root.querySelector<HTMLElement>(selector);
 			if (match) {
 				return match;
 			}
@@ -493,11 +494,12 @@ export class CompositionCaptureManager {
 		this.cancelPendingCapture('editing-started');
 		this.getProxy(doc).setKeyHandler(undefined);
 
-		if (typeof (gridApi as any).ensureIndexVisible === 'function') {
-			(gridApi as any).ensureIndexVisible(rowIndex, 'middle');
+		const gridApiWithEnsure = gridApi as GridApi & { ensureIndexVisible?: (rowIndex: number, position?: string) => void; ensureColumnVisible?: (colKey: string) => void };
+		if (typeof gridApiWithEnsure.ensureIndexVisible === 'function') {
+			gridApiWithEnsure.ensureIndexVisible(rowIndex, 'middle');
 		}
-		if (typeof (gridApi as any).ensureColumnVisible === 'function') {
-			(gridApi as any).ensureColumnVisible(colKey);
+		if (typeof gridApiWithEnsure.ensureColumnVisible === 'function') {
+			gridApiWithEnsure.ensureColumnVisible(colKey);
 		}
 
 		gridApi.setFocusedCell(rowIndex, colKey);
@@ -520,9 +522,10 @@ export class CompositionCaptureManager {
 	}
 
 	private recoverFromMissingEditor(gridApi: GridApi): void {
-		const editorInstances = (gridApi as any).getCellEditorInstances?.();
+		const gridApiWithEditors = gridApi as GridApi & { getCellEditorInstances?: () => unknown[]; getEditingCells?: () => unknown[] };
+		const editorInstances = gridApiWithEditors.getCellEditorInstances?.();
 		const hasEditorInstances = Array.isArray(editorInstances) && editorInstances.length > 0;
-		const editingCells = (gridApi as any).getEditingCells?.();
+		const editingCells = gridApiWithEditors.getEditingCells?.();
 		const hasEditingCells = Array.isArray(editingCells) && editingCells.length > 0;
 		const hasSignal = Array.isArray(editorInstances) || Array.isArray(editingCells);
 		if (hasSignal && !hasEditorInstances && !hasEditingCells) {
@@ -536,7 +539,7 @@ export class CompositionCaptureManager {
 			'.ag-cell-editor input, .ag-cell-editor textarea, .ag-cell-inline-editing input, .ag-cell-inline-editing textarea, .ag-cell-edit-input';
 		return new Promise((resolve, reject) => {
 			const lookup = () =>
-				doc.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement | null;
+				doc.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector);
 			const immediate = lookup();
 			if (immediate) {
 				resolve(immediate);

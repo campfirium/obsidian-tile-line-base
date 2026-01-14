@@ -205,7 +205,8 @@ export class AgGridInteractionController {
 		return handled;
 	}
 	handleCellFocused(event: CellFocusedEvent): void {
-		const columnId = (event as any).column?.getColId?.() ?? (event as any).columnId ?? null;
+		const column = event.column as { getColId?: () => string } | undefined;
+const columnId = column?.getColId?.() ?? (event as { columnId?: string | null }).columnId ?? null;
 		this.debug('handleCellFocused', {
 			rowIndex: event.rowIndex,
 			columnId
@@ -251,7 +252,8 @@ export class AgGridInteractionController {
 			this.debug('stopEditing:noApi', { reason });
 			return 'noApi';
 		}
-		const getEditors = (api as any).getCellEditorInstances?.bind(api);
+		const apiWithEditors = api as GridApi & { getCellEditorInstances?: () => unknown[] };
+		const getEditors = apiWithEditors.getCellEditorInstances?.bind(api);
 		const editorInstances = getEditors ? getEditors() : [];
 		const hasEditor = Array.isArray(editorInstances) && editorInstances.length > 0;
 		if (!this.editing && !hasEditor) {

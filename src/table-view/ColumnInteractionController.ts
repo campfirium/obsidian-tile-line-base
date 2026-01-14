@@ -1,7 +1,6 @@
 import { App, Menu, Notice } from 'obsidian';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
 import { isDisplayedSystemColumn, isReservedColumnId } from '../grid/systemColumnUtils';
-import type { ColumnConfig } from './MarkdownBlockParser';
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
@@ -305,7 +304,7 @@ export class ColumnInteractionController {
 			activeField = targetName;
 		}
 
-		const existingConfigs = (schema.columnConfigs ?? []) as ColumnConfig[];
+		const existingConfigs = schema.columnConfigs ?? [];
 		const previousConfig = existingConfigs.find((item) => item.name === activeField) ?? null;
 		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
 		let config = nextConfigs.find((item) => item.name === activeField);
@@ -438,7 +437,7 @@ export class ColumnInteractionController {
 			return;
 		}
 
-		const existingConfigs = (schema.columnConfigs ?? []) as ColumnConfig[];
+		const existingConfigs = schema.columnConfigs ?? [];
 		const nextConfigs = existingConfigs.map((config) => ({ ...config }));
 		let config = nextConfigs.find((item) => item.name === target);
 

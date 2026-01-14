@@ -1,4 +1,5 @@
 import { normalizeTimeInput } from '../../utils/datetime';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 const NUMERIC_PATTERN = /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i;
 const ISO_TIME_PATTERN = /^\d{2}:\d{2}:\d{2}$/;
@@ -65,7 +66,7 @@ export function tryParseNumber(value: unknown): number | null {
 	if (value == null) {
 		return null;
 	}
-	const text = String(value).trim();
+	const text = formatUnknownValue(value).trim();
 	if (text.length === 0) {
 		return null;
 	}
@@ -84,7 +85,7 @@ export function tryParseDate(value: unknown): number | null {
 	if (value == null) {
 		return null;
 	}
-	const text = String(value).trim();
+	const text = formatUnknownValue(value).trim();
 	if (text.length === 0) {
 		return null;
 	}
@@ -142,7 +143,7 @@ export function tryParseTime(value: unknown): number | null {
 	if (value == null) {
 		return null;
 	}
-	const text = String(value).trim();
+	const text = formatUnknownValue(value).trim();
 	if (text.length === 0) {
 		return null;
 	}

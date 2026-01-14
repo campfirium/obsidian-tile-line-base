@@ -1,4 +1,7 @@
 import type { TranslationKey } from '../i18n';
+import { getLogger } from './logger';
+
+const logger = getLogger('utils:timeFormats');
 
 export type TimeFormatPreset =
 	| 'hh_mm'
@@ -36,7 +39,7 @@ export function normalizeTimeFormatPreset(value: string | null | undefined): Tim
 		return 'hh_mm';
 	}
 	const normalized = trimmed.toLowerCase().replace(/[\s-]+/g, '_');
-	return isKnownTimeFormat(normalized) ? (normalized as TimeFormatPreset) : 'hh_mm';
+	return isKnownTimeFormat(normalized) ? normalized : 'hh_mm';
 }
 
 export function normalizeTimeInput(value: string): string {
@@ -83,7 +86,7 @@ export function formatTimeForDisplay(
 	try {
 		return definition.formatter(parts, locale);
 	} catch (error) {
-		console.error('[TileLineBase] Failed to format time', { format, value, error });
+		logger.error('[TileLineBase] Failed to format time', { format, value, error });
 		return formatIsoTime(parts);
 	}
 }
@@ -143,7 +146,7 @@ const TIME_FORMAT_DEFINITIONS: Record<TimeFormatPreset, TimeFormatDefinition> = 
 };
 
 function isKnownTimeFormat(value: string): value is TimeFormatPreset {
-	return (TIME_FORMAT_PRESETS as readonly string[]).includes(value);
+	return TIME_FORMAT_PRESETS.some((preset) => preset === value);
 }
 
 function getTimeDefinition(format: TimeFormatPreset): TimeFormatDefinition {

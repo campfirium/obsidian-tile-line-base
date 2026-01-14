@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import type { App } from 'obsidian';
 import { Menu, Modal, Notice, parseYaml, setIcon } from 'obsidian';
 import { t, type TranslationKey } from '../../i18n';
@@ -192,7 +191,7 @@ export class SlideTemplateModal extends Modal {
 		this.contentEl.addClass('tlb-slide-template');
 		this.modalEl.addClass('tlb-slide-template-modal');
 		const titleKey = this.titleKey ?? 'slideView.templateModal.title';
-		this.titleEl.setText(t(titleKey as TranslationKey));
+		this.titleEl.setText(t(titleKey));
 		this.enforceConstraints();
 		if (this.renderIntroSection) {
 			this.renderIntroSection(this.contentEl);
@@ -449,12 +448,10 @@ export class SlideTemplateModal extends Modal {
 		try {
 			const nextTemplate = sanitizeSlideTemplateConfig(this.template);
 			const maybePromise = this.onSaveDefault(nextTemplate, this.getCardSizePayload());
-			if (maybePromise && typeof (maybePromise as Promise<void>).catch === 'function') {
-				void maybePromise.catch((error: unknown) => {
+			void Promise.resolve(maybePromise).catch((error: unknown) => {
 					console.error('[SlideTemplateModal] Failed to save global default', error);
 					new Notice(t('slideView.templateModal.setDefaultError'));
 				});
-			}
 		} catch (error) {
 			console.error('[SlideTemplateModal] Failed to save global default', error);
 			new Notice(t('slideView.templateModal.setDefaultError'));
@@ -568,7 +565,7 @@ export class SlideTemplateModal extends Modal {
 		const input = container.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--title',
 			attr: { rows: '3' }
-		}) as HTMLTextAreaElement;
+		});
 		input.value = titleValue;
 		this.registerFocusTracking(input);
 		input.addEventListener('input', () => onChange({ title: input.value, body: bodyValue }));
@@ -581,7 +578,7 @@ export class SlideTemplateModal extends Modal {
 		const textarea = container.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body',
 			attr: { rows: '4' }
-		}) as HTMLTextAreaElement;
+		});
 		textarea.value = bodyValue;
 		this.registerFocusTracking(textarea);
 		textarea.addEventListener('input', () => onChange({ title: input.value, body: textarea.value }));
@@ -634,7 +631,7 @@ export class SlideTemplateModal extends Modal {
 		const textarea = cell.createEl('textarea', {
 			cls: 'tlb-slide-template__textarea tlb-slide-template__textarea--body tlb-slide-template__textarea--image',
 			attr: { rows: '2' }
-		}) as HTMLTextAreaElement;
+		});
 		textarea.value = value;
 		this.registerFocusTracking(textarea);
 		textarea.addEventListener('input', () => onChange(textarea.value));
@@ -793,7 +790,7 @@ export class SlideTemplateModal extends Modal {
 			const input = field.createEl('input', {
 				attr: { type: 'number', min: '40', max: '2000', step: '10' },
 				cls: 'tlb-slide-template__layout-number'
-			}) as HTMLInputElement;
+			});
 			input.value = String(value);
 			input.addEventListener('input', () => {
 				const next = Number(input.value);
@@ -829,7 +826,7 @@ export class SlideTemplateModal extends Modal {
 		const picker = colorGroup.createEl('input', {
 			attr: { type: 'color', value: colorInputValue },
 			cls: 'tlb-slide-template__color-picker'
-		}) as HTMLInputElement;
+		});
 
 		const applyPickerValue = (value: string, allowFallback = false) => {
 			const parsedHex = toHexColor(value);

@@ -3,9 +3,11 @@ import type {
 	CellEditingStoppedEvent,
 	CellFocusedEvent,
 	CellKeyDownEvent,
+	ColumnHeaderContextMenuEvent,
 	GridOptions,
 	RowDragEndEvent,
-	PasteEndEvent
+	PasteEndEvent,
+	SuppressKeyboardEventParams
 } from 'ag-grid-community';
 import { normalizeStatus } from '../../renderers/StatusCellRenderer';
 import { createTextCellEditor } from '../editors/TextCellEditor';
@@ -104,10 +106,12 @@ export function createAgGridOptions({
 			}
 			context?.onCopyH2Section?.(blockIndex);
 		},
-		onColumnHeaderContextMenu: (params: any) => {
+		onColumnHeaderContextMenu: (params: ColumnHeaderContextMenuEvent) => {
 			const column = params?.column ?? null;
-			const field = column && typeof column.getColId === 'function' ? column.getColId() : null;
-			const domEvent = (params?.event ?? params?.mouseEvent) as MouseEvent | undefined;
+			const columnWithId = column as { getColId?: () => string } | null;
+			const field = columnWithId?.getColId?.() ?? null;
+			const paramsWithEvent = params as { event?: MouseEvent; mouseEvent?: MouseEvent };
+			const domEvent = paramsWithEvent.event ?? paramsWithEvent.mouseEvent;
 			if (!field || !domEvent) {
 				return;
 			}
@@ -124,7 +128,7 @@ export function createAgGridOptions({
 			filter: false,
 			resizable: true,
 			cellEditor: createTextCellEditor(),
-			suppressKeyboardEvent: (params: any) => {
+			suppressKeyboardEvent: (params: SuppressKeyboardEventParams) => {
 				return interaction.handleSuppressKeyboardEvent(params);
 			}
 		},

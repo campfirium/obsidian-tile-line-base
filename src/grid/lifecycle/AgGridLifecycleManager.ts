@@ -1,5 +1,5 @@
 import { createGrid, GridApi, GridOptions } from 'ag-grid-community';
-import type { ColDef, ModelUpdatedEvent, RowDataUpdatedEvent } from 'ag-grid-community';
+import type { ColDef, GridReadyEvent, ModelUpdatedEvent, RowDataUpdatedEvent } from 'ag-grid-community';
 import { getLogger } from '../../utils/logger';
 import type { Logger } from '../../utils/logger';
 
@@ -60,33 +60,31 @@ export class AgGridLifecycleManager {
 			rowData
 		};
 
-		// eslint-disable-next-line @typescript-eslint/unbound-method
-		const originalOnGridReady = mergedOptions.onGridReady;
-		mergedOptions.onGridReady = (event: any) => {
+		const originalOnGridReady = mergedOptions.onGridReady?.bind(undefined);
+		mergedOptions.onGridReady = (event: GridReadyEvent) => {
 			this.gridApi = event.api;
-			this.columnApi = event.columnApi ?? null;
+			const eventWithColumnApi = event as GridReadyEvent & { columnApi?: unknown };
+			this.columnApi = eventWithColumnApi.columnApi ?? null;
 			try {
-				originalOnGridReady?.call(event.api, event);
+				originalOnGridReady?.(event);
 			} finally {
 				this.flushReadyHandlers();
 			}
 		};
 
-		// eslint-disable-next-line @typescript-eslint/unbound-method
-		const originalOnModelUpdated = mergedOptions.onModelUpdated;
+		const originalOnModelUpdated = mergedOptions.onModelUpdated?.bind(undefined);
 		mergedOptions.onModelUpdated = (event: ModelUpdatedEvent) => {
 			try {
-				originalOnModelUpdated?.call(event.api, event);
+				originalOnModelUpdated?.(event);
 			} finally {
 				this.flushModelUpdatedHandlers();
 			}
 		};
 
-		// eslint-disable-next-line @typescript-eslint/unbound-method
-		const originalOnRowDataUpdated = mergedOptions.onRowDataUpdated;
+		const originalOnRowDataUpdated = mergedOptions.onRowDataUpdated?.bind(undefined);
 		mergedOptions.onRowDataUpdated = (event: RowDataUpdatedEvent) => {
 			try {
-				originalOnRowDataUpdated?.call(event.api, event);
+				originalOnRowDataUpdated?.(event);
 			} finally {
 				this.flushModelUpdatedHandlers();
 			}

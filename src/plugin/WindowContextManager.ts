@@ -28,7 +28,7 @@ export class WindowContextManager {
 			return existing;
 		}
 
-		const winApp = (win as any).app as App | undefined;
+		const winApp = (win as Window & { app?: App }).app;
 		const resolvedApp = winApp ?? this.app;
 		if (!resolvedApp) {
 			logger.warn('registerWindow: app not found', this.describeWindow(win));

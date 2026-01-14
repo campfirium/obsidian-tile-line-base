@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- pending refactor to smaller helpers */
 import type { TableView } from '../TableView';
 import type { H2Block } from './MarkdownBlockParser';
 import { getLogger } from '../utils/logger';

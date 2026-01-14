@@ -2,6 +2,11 @@ import { TFile, type WorkspaceLeaf } from 'obsidian';
 import { buildTableViewTabTitle } from '../utils/viewTitle';
 import type { TableView } from '../TableView';
 
+type ExplorerView = {
+	revealFile?: (file: TFile) => void;
+	revealInFolder?: (file: TFile) => void;
+};
+
 export function refreshTableViewDisplayText(view: TableView): void {
 	const tabTitle = buildTableViewTabTitle({
 		file: view.file,
@@ -19,7 +24,7 @@ function setElementText(element: HTMLElement | null | undefined, text: string): 
 	if (!element) {
 		return;
 	}
-	const setText = (element as any).setText;
+	const setText = (element as { setText?: (text: string) => void }).setText;
 	if (typeof setText === 'function') {
 		setText.call(element, text);
 		return;
@@ -109,7 +114,7 @@ function clearElement(element: HTMLElement): void {
 function handleBreadcrumbActivate(view: TableView, targetPath: string, _isFile: boolean): void {
 	const target = view.app.vault.getAbstractFileByPath(targetPath);
 	if (target) {
-		const explorer = view.app.workspace.getLeavesOfType('file-explorer')[0]?.view as any;
+		const explorer = view.app.workspace.getLeavesOfType('file-explorer')[0]?.view as ExplorerView | null;
 		const reveal =
 			typeof explorer?.revealFile === 'function'
 				? explorer.revealFile

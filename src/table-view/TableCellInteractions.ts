@@ -1,5 +1,5 @@
 import { normalizeStatus, type TaskStatus } from '../renderers/StatusCellRenderer';
-import type { CellEditEvent } from '../grid/GridAdapter';
+import type { CellEditEvent, GridAdapter } from '../grid/GridAdapter';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import { getLogger } from '../utils/logger';
@@ -72,21 +72,30 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 		return;
 	}
 
-	const gridApi = (view.gridAdapter as any).gridApi;
-	if (gridApi) {
-		const rowNodes = [];
+	type RowNodeLike = { setDataValue?: (field: string, value: unknown) => void };
+	type GridApiLike = {
+		getRowNode?: (id: string) => RowNodeLike | null;
+		redrawRows?: (params: { rowNodes: RowNodeLike[] }) => void;
+	};
+	const adapterWithApi = view.gridAdapter as GridAdapter & { gridApi?: GridApiLike };
+	const gridApi = adapterWithApi.gridApi;
+	const getRowNode = gridApi?.getRowNode;
+	const redrawRows = gridApi?.redrawRows;
+	if (typeof getRowNode === 'function' && typeof redrawRows === 'function') {
+		const rowNodes: RowNodeLike[] = [];
 		for (const index of changedIndexes) {
-			const rowNode = gridApi.getRowNode(String(index));
-			if (rowNode) {
+			const rowNode = getRowNode(String(index));
+			if (rowNode && typeof rowNode.setDataValue === 'function') {
 				rowNode.setDataValue('status', newStatus);
 				rowNode.setDataValue('statusChanged', timestamp);
 				rowNodes.push(rowNode);
 			}
 		}
 		if (rowNodes.length > 0) {
-			gridApi.redrawRows({ rowNodes });
+			redrawRows({ rowNodes });
 		}
 	}
+
 
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();

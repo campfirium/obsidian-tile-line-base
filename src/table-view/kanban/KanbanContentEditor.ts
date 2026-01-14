@@ -72,15 +72,15 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 		}
 		const inputWrapper = group.createDiv({ cls: 'tlb-kanban-content-settings__input-wrapper' });
 		const inputEl = config.multiline
-			? (inputWrapper.createEl('textarea', {
+				? inputWrapper.createEl('textarea', {
 					cls: 'tlb-kanban-content-settings__input tlb-kanban-content-settings__input--multiline',
 					placeholder: config.placeholder
-				}) as HTMLTextAreaElement)
-			: (inputWrapper.createEl('input', {
+				})
+				: inputWrapper.createEl('input', {
 					cls: 'tlb-kanban-content-settings__input',
 					type: 'text',
 					placeholder: config.placeholder
-				}) as HTMLInputElement);
+				});
 		if (config.multiline && config.rows) {
 			(inputEl as HTMLTextAreaElement).rows = config.rows;
 			(inputEl as HTMLTextAreaElement).wrap = 'off';

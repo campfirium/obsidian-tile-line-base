@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import type { Plugin } from 'obsidian';
 import type {
 	FileFilterViewState,
@@ -155,25 +154,25 @@ export class SettingsService {
 
 	async load(): Promise<TileLineBaseSettings> {
 		const data = await this.plugin.loadData();
-		const merged = Object.assign({}, DEFAULT_SETTINGS, data);
+		const merged = Object.assign({}, DEFAULT_SETTINGS, data) as TileLineBaseSettings & { rowStripeStrength?: unknown };
 		merged.fileViewPrefs = { ...DEFAULT_SETTINGS.fileViewPrefs, ...(merged.fileViewPrefs ?? {}) };
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
 		merged.tagGroups = { ...DEFAULT_SETTINGS.tagGroups, ...(merged.tagGroups ?? {}) };
-		merged.galleryFilterViews = { ...DEFAULT_SETTINGS.galleryFilterViews, ...(merged as TileLineBaseSettings).galleryFilterViews ?? {} };
-		merged.galleryTagGroups = { ...DEFAULT_SETTINGS.galleryTagGroups, ...(merged as TileLineBaseSettings).galleryTagGroups ?? {} };
+		merged.galleryFilterViews = { ...DEFAULT_SETTINGS.galleryFilterViews, ...(merged.galleryFilterViews ?? {}) };
+		merged.galleryTagGroups = { ...DEFAULT_SETTINGS.galleryTagGroups, ...(merged.galleryTagGroups ?? {}) };
 		merged.kanbanBoards = { ...DEFAULT_SETTINGS.kanbanBoards, ...(merged.kanbanBoards ?? {}) };
 		merged.columnConfigs = { ...DEFAULT_SETTINGS.columnConfigs, ...(merged.columnConfigs ?? {}) };
 		merged.copyTemplates = { ...DEFAULT_SETTINGS.copyTemplates, ...(merged.copyTemplates ?? {}) };
 		merged.kanbanPreferences = { ...DEFAULT_SETTINGS.kanbanPreferences, ...(merged.kanbanPreferences ?? {}) };
 		merged.slidePreferences = { ...DEFAULT_SETTINGS.slidePreferences, ...(merged.slidePreferences ?? {}) };
 		merged.galleryPreferences = { ...DEFAULT_SETTINGS.galleryPreferences, ...(merged.galleryPreferences ?? {}) };
-		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultSlideConfig);
-		merged.defaultGalleryConfig = this.sanitizeDefaultSlideConfig((merged as TileLineBaseSettings).defaultGalleryConfig);
+		merged.defaultSlideConfig = this.sanitizeDefaultSlideConfig(merged.defaultSlideConfig);
+		merged.defaultGalleryConfig = this.sanitizeDefaultSlideConfig(merged.defaultGalleryConfig);
 		const defaultGalleryCardSize = this.sanitizeDefaultCardSize(
 			{
-				width: (merged as TileLineBaseSettings).defaultGalleryCardWidth,
-				height: (merged as TileLineBaseSettings).defaultGalleryCardHeight
+				width: merged.defaultGalleryCardWidth,
+				height: merged.defaultGalleryCardHeight
 			},
 			false
 		);
@@ -183,19 +182,19 @@ export class SettingsService {
 			merged.defaultGalleryCardWidth = null;
 			merged.defaultGalleryCardHeight = null;
 		}
-		merged.hideRightSidebar = typeof (merged as TileLineBaseSettings).hideRightSidebar === 'boolean'
-			? (merged as TileLineBaseSettings).hideRightSidebar
+		merged.hideRightSidebar = typeof merged.hideRightSidebar === 'boolean'
+			? merged.hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
-		const borderCandidate = Number((merged as TileLineBaseSettings).borderContrast);
+		const borderCandidate = Number(merged.borderContrast);
 		merged.borderContrast =
 			Number.isFinite(borderCandidate) && borderCandidate >= 0 && borderCandidate <= 1
 				? borderCandidate
 				: DEFAULT_SETTINGS.borderContrast;
-		const legacyStripe = Number((merged as any).rowStripeStrength);
-		const stripeColorMode = (merged as TileLineBaseSettings).stripeColorMode;
-		const stripeCustomColor = (merged as TileLineBaseSettings).stripeCustomColor;
-		const borderColorMode = (merged as TileLineBaseSettings).borderColorMode;
-		const borderCustomColor = (merged as TileLineBaseSettings).borderCustomColor;
+		const legacyStripe = Number(merged.rowStripeStrength);
+		const stripeColorMode = merged.stripeColorMode;
+		const stripeCustomColor = merged.stripeCustomColor;
+		const borderColorMode = merged.borderColorMode;
+		const borderCustomColor = merged.borderCustomColor;
 		merged.stripeColorMode =
 			stripeColorMode === 'primary' || stripeColorMode === 'recommended' || stripeColorMode === 'custom'
 				? stripeColorMode
@@ -206,26 +205,26 @@ export class SettingsService {
 				? borderColorMode
 				: DEFAULT_SETTINGS.borderColorMode;
 		merged.borderCustomColor = this.sanitizeColorValue(borderCustomColor);
-		merged.logging = this.sanitizeLoggingConfig((merged as TileLineBaseSettings).logging);
+		merged.logging = this.sanitizeLoggingConfig(merged.logging);
 		merged.navigatorCompatibilityEnabled =
-			typeof (merged as TileLineBaseSettings).navigatorCompatibilityEnabled === 'boolean'
-				? (merged as TileLineBaseSettings).navigatorCompatibilityEnabled
+			typeof merged.navigatorCompatibilityEnabled === 'boolean'
+				? merged.navigatorCompatibilityEnabled
 				: DEFAULT_SETTINGS.navigatorCompatibilityEnabled;
-		merged.backups = this.sanitizeBackupSettings((merged as TileLineBaseSettings).backups);
-		merged.onboarding = this.sanitizeOnboardingState((merged as TileLineBaseSettings).onboarding);
-		const localeCandidate = typeof (merged as TileLineBaseSettings).locale === 'string'
-			? (merged as TileLineBaseSettings).locale
+		merged.backups = this.sanitizeBackupSettings(merged.backups);
+		merged.onboarding = this.sanitizeOnboardingState(merged.onboarding);
+		const localeCandidate = typeof merged.locale === 'string'
+			? merged.locale
 			: null;
 		merged.locale = normalizeLocaleCode(localeCandidate);
-		const localizedCandidate = typeof (merged as TileLineBaseSettings).localizedLocale === 'string'
-			? (merged as TileLineBaseSettings).localizedLocale
+		const localizedCandidate = typeof merged.localizedLocale === 'string'
+			? merged.localizedLocale
 			: null;
 		merged.localizedLocale = normalizeLocaleCode(localizedCandidate) ?? DEFAULT_SETTINGS.localizedLocale;
 		merged.navigatorCompatNoticeShown =
-			typeof (merged as TileLineBaseSettings).navigatorCompatNoticeShown === 'boolean'
-				? (merged as TileLineBaseSettings).navigatorCompatNoticeShown
+			typeof merged.navigatorCompatNoticeShown === 'boolean'
+				? merged.navigatorCompatNoticeShown
 				: DEFAULT_SETTINGS.navigatorCompatNoticeShown;
-		merged.pendingDeletions = this.sanitizePendingDeletionRecords((merged as TileLineBaseSettings).pendingDeletions);
+		merged.pendingDeletions = this.sanitizePendingDeletionRecords(merged.pendingDeletions);
 
 		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
 		if (Array.isArray(legacyList)) {
@@ -436,7 +435,7 @@ export class SettingsService {
 	}
 
 	getGalleryFilterViewsForFile(filePath: string): FileFilterViewState {
-		const stored = (this.settings as TileLineBaseSettings).galleryFilterViews[filePath];
+		const stored = this.settings.galleryFilterViews[filePath];
 		if (!stored) {
 			return { views: [], activeViewId: null, metadata: {} };
 		}
@@ -453,7 +452,7 @@ export class SettingsService {
 			views: state.views.map((view) => this.cloneFilterViewDefinition(view)),
 			metadata: this.cloneFilterViewMetadata(state.metadata)
 		};
-		(this.settings as TileLineBaseSettings).galleryFilterViews[filePath] = sanitized;
+		this.settings.galleryFilterViews[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
 	}
@@ -471,13 +470,13 @@ export class SettingsService {
 	}
 
 	getGalleryTagGroupsForFile(filePath: string): FileTagGroupState {
-		const stored = (this.settings as TileLineBaseSettings).galleryTagGroups[filePath];
+		const stored = this.settings.galleryTagGroups[filePath];
 		return cloneTagGroupState(stored ?? null);
 	}
 
 	async saveGalleryTagGroupsForFile(filePath: string, state: FileTagGroupState): Promise<FileTagGroupState> {
 		const sanitized = cloneTagGroupState(state);
-		(this.settings as TileLineBaseSettings).galleryTagGroups[filePath] = sanitized;
+		this.settings.galleryTagGroups[filePath] = sanitized;
 		await this.persist();
 		return sanitized;
 	}
@@ -636,8 +635,8 @@ export class SettingsService {
 			migrate(this.settings.columnLayouts);
 			migrate(this.settings.filterViews);
 			migrate(this.settings.tagGroups);
-			migrate((this.settings as TileLineBaseSettings).galleryFilterViews);
-			migrate((this.settings as TileLineBaseSettings).galleryTagGroups);
+			migrate(this.settings.galleryFilterViews);
+			migrate(this.settings.galleryTagGroups);
 			migrate(this.settings.kanbanBoards);
 			migrate(this.settings.columnConfigs);
 			migrate(this.settings.copyTemplates);
@@ -728,11 +727,9 @@ export class SettingsService {
 	}
 
 	private cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {
-		const rawSortRules = Array.isArray((source as any).sortRules)
-			? (source as any).sortRules
-			: [];
+		const rawSortRules = Array.isArray(source.sortRules) ? source.sortRules : [];
 		const sortRules: SortRule[] = rawSortRules
-			.map((rule: any) => {
+			.map((rule) => {
 				const column = typeof rule?.column === 'string' ? rule.column : '';
 				if (!column) {
 					return null;
@@ -906,10 +903,10 @@ export class SettingsService {
 		pruneStore(this.settings.columnLayouts);
 		pruneStore(this.settings.filterViews);
 		pruneStore(this.settings.tagGroups);
-		pruneStore((this.settings as TileLineBaseSettings).galleryFilterViews);
-		pruneStore((this.settings as TileLineBaseSettings).galleryTagGroups);
-		pruneStore((this.settings as TileLineBaseSettings).galleryFilterViews);
-		pruneStore((this.settings as TileLineBaseSettings).galleryTagGroups);
+		pruneStore(this.settings.galleryFilterViews);
+		pruneStore(this.settings.galleryTagGroups);
+		pruneStore(this.settings.galleryFilterViews);
+		pruneStore(this.settings.galleryTagGroups);
 		pruneStore(this.settings.kanbanBoards);
 		pruneStore(this.settings.columnConfigs);
 		pruneStore(this.settings.copyTemplates);
@@ -1080,7 +1077,7 @@ export class SettingsService {
 		};
 	}
 
-	private sanitizePendingDeletionRecords(raw: PendingDeletionRecord[] | unknown): PendingDeletionRecord[] {
+	private sanitizePendingDeletionRecords(raw: unknown): PendingDeletionRecord[] {
 		if (!Array.isArray(raw)) {
 			return [];
 		}

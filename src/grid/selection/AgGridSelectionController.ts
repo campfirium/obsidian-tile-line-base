@@ -1,6 +1,7 @@
 import type { GridApi, IRowNode } from 'ag-grid-community';
 import type { RowData } from '../GridAdapter';
 import { ROW_ID_FIELD } from '../GridAdapter';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 interface SelectionControllerDeps {
 	getGridApi(): GridApi | null;
@@ -159,7 +160,7 @@ export class AgGridSelectionController {
 		if (value === null || value === undefined) {
 			return null;
 		}
-		const parsed = parseInt(String(value), 10);
+		const parsed = parseInt(formatUnknownValue(value), 10);
 		return Number.isNaN(parsed) ? null : parsed;
 	}
 }

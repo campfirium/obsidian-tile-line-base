@@ -160,8 +160,8 @@ export class AgGridColumnService {
 			gridApi.setColumnWidths([{ key: colId, newWidth: clamped }]);
 		}
 
-		const colDef = event.column.getColDef() as any;
-		const context = colDef.context ?? {};
+		const colDef = event.column.getColDef();
+		const context = (colDef.context ?? {}) as Record<string, unknown>;
 		context.tlbStoredWidth = clamped;
 		context.tlbWidthSource = 'manual';
 		colDef.context = context;

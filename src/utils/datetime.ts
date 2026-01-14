@@ -48,6 +48,10 @@ const DATE_FORMAT_ALIASES: Record<LegacyDateFormatKey, DateFormatPreset> = {
 	chinese_long: 'localized_long'
 };
 
+function isLegacyDateFormatKey(value: string): value is LegacyDateFormatKey {
+	return Object.prototype.hasOwnProperty.call(DATE_FORMAT_ALIASES, value);
+}
+
 type DateFormatFormatter = (parts: DateParts, locale: string) => string;
 
 interface DateFormatDefinition {
@@ -83,11 +87,11 @@ export function normalizeDateFormatPreset(value: string | null | undefined): Dat
 		return 'iso';
 	}
 	const normalized = trimmed.toLowerCase().replace(/[\s-]+/g, '_');
-	const alias = DATE_FORMAT_ALIASES[normalized as LegacyDateFormatKey];
+	const alias = isLegacyDateFormatKey(normalized) ? DATE_FORMAT_ALIASES[normalized] : undefined;
 	if (alias) {
 		return alias;
 	}
-	return isKnownDateFormat(normalized) ? (normalized as DateFormatPreset) : 'iso';
+	return isKnownDateFormat(normalized) ? normalized : 'iso';
 }
 
 interface DateParts {
@@ -290,7 +294,7 @@ const DATE_FORMAT_DEFINITIONS: Record<DateFormatPreset, DateFormatDefinition> = 
 };
 
 function isKnownDateFormat(value: string): value is DateFormatPreset {
-	return (DATE_FORMAT_OPTION_PRESETS as readonly string[]).includes(value);
+	return DATE_FORMAT_OPTION_PRESETS.some((preset) => preset === value);
 }
 
 function getDefinition(format: DateFormatPreset): DateFormatDefinition {

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const GLOBAL_STORAGE_KEY = '__TILE_LINE_BASE_LOG_CONFIG__';
 const CONSOLE_BRIDGE_KEY = 'TileLineBaseLogger';
 const PREFIX = '[TileLineBase]';
@@ -122,7 +121,12 @@ function shouldLog(scope: string, level: LogLevelName): boolean {
 
 function makePrinter(scope: string, level: LogLevelName): (...args: unknown[]) => void {
 	const method = LOG_METHOD[level];
-	const consoleMethod = console[method] ? console[method].bind(console) : console.log.bind(console);
+	const globalConsole = typeof globalThis === 'undefined' ? null : globalThis.console;
+	const consoleMethod = globalConsole && typeof globalConsole[method] === 'function'
+		? globalConsole[method].bind(globalConsole)
+		: globalConsole && typeof globalConsole.log === 'function'
+			? globalConsole.log.bind(globalConsole)
+			: () => {};
 	if (__LOG_PROD__ && (level === 'info' || level === 'debug' || level === 'trace')) {
 		return (...args: unknown[]) => {
 			if (shouldLog(scope, level)) {

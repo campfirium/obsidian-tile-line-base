@@ -68,7 +68,7 @@ export function buildTargetFileName(file: TFile): string {
 	return sanitizeFileName(base) || t('magicMigration.defaultFileName');
 }
 
-export async function resolveTargetPath(vault: Vault, file: TFile, baseName: string): Promise<string> {
+export function resolveTargetPath(vault: Vault, file: TFile, baseName: string): string {
 	const folder = file.parent?.path ?? '';
 	let candidate = folder ? `${folder}/${baseName}.md` : `${baseName}.md`;
 	if (!vault.getAbstractFileByPath(candidate)) return candidate;

@@ -1,3 +1,4 @@
+import { formatUnknownValue } from '../../utils/valueFormat';
 export interface CollapsedFieldEntry {
 	name: string;
 	value: string;
@@ -119,14 +120,17 @@ function parseCollapsedBody(body: string): CollapsedFieldEntry[] {
 function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 	try {
 		const parsed = JSON.parse(raw);
-		if (!parsed || typeof parsed !== 'object') {
+		if (!isRecord(parsed)) {
 			return [];
 		}
 
-		if ((parsed as any).fields && Array.isArray((parsed as any).fields)) {
-			const legacyFields = (parsed as any).fields as Array<Record<string, unknown>>;
+		const fieldsValue = parsed.fields;
+		if (Array.isArray(fieldsValue)) {
 			const results: CollapsedFieldEntry[] = [];
-			for (const field of legacyFields) {
+			for (const field of fieldsValue) {
+				if (!isRecord(field)) {
+					continue;
+				}
 				const name = typeof field.name === 'string' ? field.name : '';
 				if (!name) {
 					continue;
@@ -143,7 +147,7 @@ function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 		}
 
 		const fields: CollapsedFieldEntry[] = [];
-		for (const [name, value] of Object.entries(parsed as Record<string, unknown>)) {
+		for (const [name, value] of Object.entries(parsed)) {
 			if (!name || name === 'version') {
 				continue;
 			}
@@ -159,6 +163,10 @@ function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 	}
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
 function normalizeValue(value: unknown): string {
 	if (value === null || value === undefined) {
 		return '';
@@ -169,7 +177,7 @@ function normalizeValue(value: unknown): string {
 	try {
 		return JSON.stringify(value);
 	} catch {
-		return String(value);
+		return formatUnknownValue(value);
 	}
 }
 

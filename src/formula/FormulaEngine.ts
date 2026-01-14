@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import { formatUnknownValue } from '../utils/valueFormat';
 
 export type Operator = '+' | '-' | '*' | '/';
 
@@ -109,7 +110,7 @@ export function evaluateFormula(
 			if (raw === null || raw === undefined) {
 				return { value: '', error: null, kind: 'string' };
 			}
-			return { value: String(raw), error: null, kind: 'string' };
+			return { value: formatUnknownValue(raw), error: null, kind: 'string' };
 		}
 		if (soleToken.type === 'number') {
 			return {
@@ -411,7 +412,7 @@ function coerceNumber(value: unknown): number {
 	if (typeof value === 'number') {
 		return Number.isFinite(value) ? value : 0;
 	}
-	const str = String(value).trim();
+	const str = formatUnknownValue(value).trim();
 	if (str.length === 0) {
 		return 0;
 	}
@@ -523,7 +524,7 @@ function toStringValue(value: FormulaStackValue): string {
 			if (typeof raw === 'number') {
 				return formatResult(raw);
 			}
-			return String(raw);
+			return formatUnknownValue(raw);
 		}
 		default:
 			return '';

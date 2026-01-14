@@ -26,11 +26,12 @@ export function applyQuickFilter(gridApi: GridApi | null, quickFilterText: strin
 				continue;
 			}
 
+			const columnWithId = column as Column & { getId?: () => string };
 			const colId =
 				typeof column.getColId === 'function'
 					? column.getColId()
-					: typeof (column as any).getId === 'function'
-						? (column as any).getId()
+					: typeof columnWithId.getId === 'function'
+						? columnWithId.getId()
 						: null;
 			if (!colId) {
 				continue;

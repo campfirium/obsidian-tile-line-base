@@ -46,7 +46,7 @@ export class ColumnLayoutManager {
 				continue;
 			}
 
-			const colDef = (column.getColDef() ?? {}) as any;
+			const colDef = column.getColDef() ?? {};
 			const context = (colDef.context ?? {}) as Record<string, unknown>;
 			const stored = context.tlbStoredWidth;
 			const explicit = colDef.width;
@@ -130,7 +130,8 @@ export class ColumnLayoutManager {
 			return [];
 		}
 
-		const autoSizeColumns = (gridApi as any).autoSizeColumns;
+		const gridApiWithAutoSize = gridApi as GridApi & { autoSizeColumns?: (keys: string[], skipHeader?: boolean) => void };
+		const autoSizeColumns = gridApiWithAutoSize.autoSizeColumns;
 		if (typeof autoSizeColumns === 'function') {
 			autoSizeColumns.call(gridApi, keys, false);
 		}
@@ -158,7 +159,7 @@ export class ColumnLayoutManager {
 	}
 
 	private storeMeasuredWidth(column: Column, width: number): void {
-		const colDef = (column.getColDef() ?? {}) as any;
+		const colDef = column.getColDef() ?? {};
 		const context = (colDef.context ?? {}) as Record<string, unknown>;
 		context.tlbStoredWidth = width;
 		context.tlbWidthSource = 'auto';
@@ -173,7 +174,7 @@ export class ColumnLayoutManager {
 				continue;
 			}
 
-			const colDef = (column.getColDef() ?? {}) as any;
+			const colDef = column.getColDef() ?? {};
 			const context = (colDef.context ?? {}) as Record<string, unknown>;
 			const widthSource = typeof context.tlbWidthSource === 'string' ? context.tlbWidthSource : null;
 			const clampMax = widthSource === 'manual' ? false : true;
@@ -231,7 +232,7 @@ export class ColumnLayoutManager {
 			if (autoSizedKeys) {
 				return autoSizedKeys.has(colId);
 			}
-			const colDef = (column.getColDef() ?? {}) as any;
+			const colDef = column.getColDef() ?? {};
 			const context = (colDef.context ?? {}) as Record<string, unknown>;
 			const widthSource = typeof context.tlbWidthSource === 'string' ? context.tlbWidthSource : null;
 			if (widthSource === 'manual' && !overrideManual) {
@@ -282,7 +283,7 @@ export class ColumnLayoutManager {
 			updates.push({ key: colId, newWidth });
 			remainingExtra = Math.max(0, remainingExtra - appliedIncrement);
 
-			const colDef = (column.getColDef() ?? {}) as any;
+			const colDef = column.getColDef() ?? {};
 			const context = (colDef.context ?? {}) as Record<string, unknown>;
 			context.tlbStoredWidth = newWidth;
 			context.tlbWidthSource = 'auto';

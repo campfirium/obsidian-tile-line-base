@@ -5,29 +5,13 @@ import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
 import jsoncParser from 'jsonc-eslint-parser';
 import importPlugin from 'eslint-plugin-import';
+import eslintCommentsPlugin from 'eslint-plugin-eslint-comments';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const CORE_COORDINATION_FILES = [
-	'src/TableView.ts',
-	'src/table-view/BaseTableView.ts',
-	'src/table-view/GridController.ts',
-	'src/table-view/GridInteractionController.ts',
-	'src/table-view/TableViewRenderer.ts',
-	'src/table-view/TableViewInteractions.ts',
-	'src/table-view/TableViewSetup.ts',
-	'src/table-view/TableConfigManager.ts',
-	'src/table-view/TableDataStore.ts',
-	'src/table-view/SchemaBuilder.ts',
-	'src/table-view/MarkdownBlockParser.ts',
-	'src/grid/AgGridAdapter.ts',
-	'src/grid/column/AgGridColumnService.ts',
-	'src/grid/interactions/AgGridInteractionController.ts',
-];
 
 let obsidianFlatConfigs = [];
-let hasObsidianPlugin = false;
 try {
 	// eslint-plugin-obsidianmd uses a hybrid config object to support both legacy and flat configs.
 	// We translate the hybrid structure into pure flat configs manually to keep control over overrides.
@@ -81,17 +65,10 @@ try {
 
 		obsidianFlatConfigs = flattenHybridConfig(Array.from(recommended));
 	}
-	hasObsidianPlugin = obsidianFlatConfigs.length > 0;
 } catch {
 	obsidianFlatConfigs = [];
 }
 
-
-const OBSIDIAN_RULE_OVERRIDES = hasObsidianPlugin ? {
-	'obsidianmd/ui/sentence-case': 'off',
-	'obsidianmd/ui/sentence-case-json': 'off',
-	'obsidianmd/ui/sentence-case-locale-module': 'off',
-} : {};
 
 export default [
 	{
@@ -106,12 +83,24 @@ export default [
 				...globals.node,
 			},
 		},
+		linterOptions: {
+			reportUnusedDisableDirectives: 'error',
+		},
+	},
+	{
+		plugins: {
+			'eslint-comments': eslintCommentsPlugin,
+		},
+		rules: {
+			'eslint-comments/disable-enable-pair': ['error', { allowWholeFile: false }],
+			'eslint-comments/no-restricted-disable': ['error', 'no-console', 'obsidianmd/no-static-styles-assignment'],
+			'eslint-comments/no-unused-disable': 'error',
+			'eslint-comments/require-description': 'error',
+		},
 	},
 	...obsidianFlatConfigs,
 	{
 		rules: {
-			...OBSIDIAN_RULE_OVERRIDES,
-			'max-lines': ['error', { max: 520, skipBlankLines: true, skipComments: true }],
 			'@microsoft/sdl/no-inner-html': 'off',
 		},
 	},
@@ -137,17 +126,17 @@ export default [
 		},
 		rules: {
 			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-			'@typescript-eslint/no-explicit-any': 'off',
+			'@typescript-eslint/no-explicit-any': 'error',
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
 			'@typescript-eslint/no-unsafe-assignment': 'off',
 			'@typescript-eslint/no-unsafe-member-access': 'off',
 			'@typescript-eslint/no-unsafe-call': 'off',
 			'@typescript-eslint/no-unsafe-return': 'off',
 			'@typescript-eslint/no-unsafe-argument': 'off',
-			'@typescript-eslint/no-base-to-string': 'off',
-			'@typescript-eslint/no-unnecessary-type-assertion': 'off',
-			'@typescript-eslint/no-redundant-type-constituents': 'off',
-			'@typescript-eslint/require-await': 'off',
+			'@typescript-eslint/no-base-to-string': 'error',
+			'@typescript-eslint/no-unnecessary-type-assertion': 'error',
+			'@typescript-eslint/no-redundant-type-constituents': 'error',
+			'@typescript-eslint/require-await': 'error',
 			'import/no-unused-modules': ['error', { unusedExports: true }],
 		},
 	},
@@ -158,18 +147,6 @@ export default [
 		},
 		rules: {
 			'max-lines': 'off',
-		},
-	},
-	{
-		files: CORE_COORDINATION_FILES,
-		rules: {
-			'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
-		},
-	},
-	{
-		files: ['src/table-view/filter/FilterViewModals.ts'],
-		rules: {
-			'max-lines': ['error', { max: 900, skipBlankLines: true, skipComments: true }],
 		},
 	},
 	{

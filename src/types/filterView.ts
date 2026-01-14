@@ -1,3 +1,5 @@
+import type { ColumnState } from 'ag-grid-community';
+
 // 过滤运算符
 export type FilterOperator =
 	| 'equals'        // 等于
@@ -36,7 +38,7 @@ export interface FilterViewDefinition {
 	name: string;
 	filterRule: FilterRule | null;  // 改用自定义过滤规则
 	sortRules: SortRule[];
-	columnState?: any[] | null;
+	columnState?: ColumnState[] | null;
 	quickFilter?: string | null;
 	icon?: string | null;           // 可选 Lucide 图标 ID
 }

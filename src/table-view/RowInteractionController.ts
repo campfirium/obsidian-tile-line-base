@@ -374,7 +374,7 @@ export class RowInteractionController {
 		if (hasFullDisplayedOrder && sourceIndex !== null) {
 			const sourceId =
 				event.draggedRow && Object.prototype.hasOwnProperty.call(event.draggedRow, ROW_ID_FIELD)
-					? String((event.draggedRow as any)[ROW_ID_FIELD])
+					? String(event.draggedRow[ROW_ID_FIELD])
 					: String(sourceIndex);
 			const destination = displayedOrder
 				.map((value) => parseInt(String(value), 10))

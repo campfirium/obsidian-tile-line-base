@@ -1,5 +1,6 @@
 import { ROW_ID_FIELD, type GridAdapter, type RowData } from '../grid/GridAdapter';
 import { getLogger } from '../utils/logger';
+import { formatUnknownValue } from '../utils/valueFormat';
 import type { Schema } from './SchemaBuilder';
 
 const logger = getLogger('table-view:focus');
@@ -170,8 +171,21 @@ export class FocusManager {
 		const targetField = request.field && request.field !== ROW_ID_FIELD ? request.field : fallbackField;
 		const targetRowId = String(request.rowIndex);
 
-		const adapter: any = gridAdapter;
-		const api = adapter.gridApi;
+		type RowNodeLike = {
+			data?: Record<string, unknown>;
+			rowIndex?: number | null;
+			setSelected?: (newValue: boolean, clearSelection?: boolean) => void;
+		};
+		type GridApiLike = {
+			getRowNode?: (id: string) => RowNodeLike | null;
+			forEachNodeAfterFilterAndSort?: (callback: (node: RowNodeLike) => void) => void;
+			getFocusedCell?: () => { rowIndex?: number | null; column?: { getColId?: () => string; getId?: () => string; colId?: string } } | null;
+			ensureNodeVisible?: (node: RowNodeLike, position?: string) => void;
+			ensureIndexVisible?: (index: number, position?: string) => void;
+			setFocusedCell?: (rowIndex: number, colKey: string) => void;
+		};
+		const adapterWithApi = gridAdapter as GridAdapter & { gridApi?: GridApiLike };
+		const api = adapterWithApi.gridApi;
 		if (!api) {
 			logger.trace('[FocusDebug]', 'attemptFocus: grid API unavailable', {
 				rowIndex: request.rowIndex,
@@ -183,17 +197,17 @@ export class FocusManager {
 			return;
 		}
 
-		let targetNode: any = null;
+		let targetNode: RowNodeLike | null = null;
 		if (typeof api.getRowNode === 'function') {
 			targetNode = api.getRowNode(targetRowId);
 		}
 
 		if (!targetNode && typeof api.forEachNodeAfterFilterAndSort === 'function') {
-			api.forEachNodeAfterFilterAndSort((node: any) => {
+			api.forEachNodeAfterFilterAndSort((node: RowNodeLike) => {
 				if (targetNode) {
 					return;
 				}
-				const nodeId = String(node?.data?.[ROW_ID_FIELD] ?? '');
+				const nodeId = formatUnknownValue(node?.data?.[ROW_ID_FIELD]);
 				if (nodeId === targetRowId) {
 					targetNode = node;
 				}
@@ -214,7 +228,7 @@ export class FocusManager {
 		const visibleRows = this.deps.getVisibleRows();
 		const displayedIndex = typeof targetNode.rowIndex === 'number' ? targetNode.rowIndex : null;
 		const effectiveIndex = displayedIndex ?? visibleRows.findIndex(
-			(row) => String(row?.[ROW_ID_FIELD]) === targetRowId
+			(row) => formatUnknownValue(row?.[ROW_ID_FIELD]) === targetRowId
 		);
 
 		if (effectiveIndex === -1 || effectiveIndex === null) {

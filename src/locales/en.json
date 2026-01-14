@@ -11,6 +11,7 @@
   "viewControls": {
     "openTableView": "Table",
     "openMarkdownView": "Edit",
+    "openTableViewFromFileMenu": "Open in TileLineBase view",
     "switchViewMenu": "View: {{mode}}"
   },
   "galleryView": {

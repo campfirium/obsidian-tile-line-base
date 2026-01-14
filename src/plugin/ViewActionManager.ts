@@ -135,7 +135,8 @@ export class ViewActionManager {
 			evt?.stopPropagation();
 		});
 
-		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
+		const buttonEl = button as HTMLElement & { iconEl?: HTMLElement | null; containerEl?: HTMLElement | null };
+const iconEl = buttonEl.iconEl ?? buttonEl.containerEl ?? buttonEl;
 		setIcon(iconEl, 'columns-3');
 		let svg = iconEl?.querySelector?.('svg');
 		if (!svg) {
@@ -189,7 +190,8 @@ export class ViewActionManager {
 			evt?.stopPropagation();
 		});
 
-		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
+		const buttonEl = button as HTMLElement & { iconEl?: HTMLElement | null; containerEl?: HTMLElement | null };
+const iconEl = buttonEl.iconEl ?? buttonEl.containerEl ?? buttonEl;
 		setIcon(iconEl, 'presentation');
 
 		button.setAttribute(this.actionAttribute, this.slideActionId);
@@ -235,7 +237,8 @@ export class ViewActionManager {
 			evt?.stopPropagation();
 		});
 
-		const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
+		const buttonEl = button as HTMLElement & { iconEl?: HTMLElement | null; containerEl?: HTMLElement | null };
+const iconEl = buttonEl.iconEl ?? buttonEl.containerEl ?? buttonEl;
 		setIcon(iconEl, 'layout-grid');
 		const svg = iconEl?.querySelector?.('svg');
 		if (!svg) {

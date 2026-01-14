@@ -4,13 +4,14 @@
  * ���ܣ�
  * - ��Ⱦ 6 ������״̬ͼ�꣨todo, done, inprogress, onhold, someday, canceled��
  * - ���������� todo ? done ֮���л�
- * - �Ҽ��������ʾȫ��״̬�Ĳ˵�?
+ * - �Ҽ��������ʾȫ��״̬�Ĳ˵�?
  * - ֧�ֿɷ����ԣ�title, aria-label��
  */
 
 import { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
 import { setIcon } from 'obsidian';
 import { t, type TranslationKey } from '../i18n';
+import { formatUnknownValue } from '../utils/valueFormat';
 import { getLogger } from '../utils/logger';
 
 const logger = getLogger('renderer:status-cell');
@@ -22,8 +23,8 @@ export const ALL_TASK_STATUSES: readonly TaskStatus[] = ['todo', 'done', 'inprog
 /**
  * ״̬�淶���������ֱ���ͳһΪ��׼״ֵ̬
  */
-export function normalizeStatus(value: any): TaskStatus {
-	const str = String(value || 'todo').toLowerCase().trim();
+export function normalizeStatus(value: unknown): TaskStatus {
+	const str = formatUnknownValue(value ?? 'todo').toLowerCase().trim();
 	const normalized = str.replace(/[\s_/-]+/g, '');
 
 	// done �ı���
@@ -41,7 +42,7 @@ export function normalizeStatus(value: any): TaskStatus {
 		return 'onhold';
 	}
 
-	// someday 的别�?
+	// someday 的别�?
 	if (
 		normalized === 'someday' ||
 		normalized === 'later' ||
@@ -70,7 +71,7 @@ export function getStatusIcon(status: TaskStatus): string {
 		'inprogress': 'loader-circle',  // Use spinning loader to indicate work in progress
 		'onhold': 'pause-circle',   // ? ��ͣͼ��
 		'someday': 'circle-dashed',   // Use dashed circle to express deferred/undecided status
-		'canceled': 'x-square'      // ? ��ŷ���?
+		'canceled': 'x-square'      // ? ��ŷ���?
 	};
 	return icons[status] || icons['todo'];
 }
@@ -186,14 +187,14 @@ export class StatusCellRenderer implements ICellRendererComp {
 	}
 
 	/**
-	 * ��Ⱦͼ��Ϳɷ���������?
+	 * ��Ⱦͼ��Ϳɷ���������?
 	 */
 	private renderIcon(): void {
 		const status = normalizeStatus(this.params.data?.status);
 		const iconId = getStatusIcon(status);
 		const label = getStatusLabel(status);
 
-		// ������ݣ�ʹ��?Obsidian �� Lucide ͼ��
+		// ������ݣ�ʹ��?Obsidian �� Lucide ͼ��
 		while (this.eGui.firstChild) {
 			this.eGui.removeChild(this.eGui.firstChild);
 		}
@@ -205,7 +206,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.appendChild(iconContainer);
 		setIcon(iconContainer, iconId);
 
-		// ��ӿɷ�����֧��?
+		// ��ӿɷ�����֧��?
 		if (this.srLabelElement && this.srLabelElement.isConnected) {
 			this.srLabelElement.remove();
 		}
@@ -237,7 +238,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		} else if (currentStatus === 'done') {
 			newStatus = 'todo';
 		} else {
-			// inprogress, onhold, canceled �����ͳһ���?done
+			// inprogress, onhold, canceled �����ͳһ���?done
 			newStatus = 'done';
 		}
 
@@ -311,7 +312,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		const viewportWidth = defaultView.innerWidth;
 		const viewportHeight = defaultView.innerHeight;
 
-		// ��ʱ��ӵ�?DOM �Ի�ȡ�ߴ�
+		// ��ʱ��ӵ�?DOM �Ի�ȡ�ߴ�
 		ownerDoc.body.appendChild(menu);
 		const menuRect = menu.getBoundingClientRect();
 
@@ -397,17 +398,17 @@ export class StatusCellRenderer implements ICellRendererComp {
 			this.focusMenuItem(focusIndex);
 		}
 
-		// ����ⲿ���ز˵�?
+		// ����ⲿ���ز˵�?
 		this.documentClickHandler = (e: MouseEvent) => {
 			// �������ڲ˵��ڲ���������
 			if (this.contextMenu && this.contextMenu.contains(e.target as Node)) {
 				return;
 			}
-			// ����ⲿ���Ҽ������ز˵�?
+			// ����ⲿ���Ҽ������ز˵�?
 			this.hideContextMenu();
 		};
 
-		// �ӳ���Ӽ����������⵱ǰ�Ҽ��¼���������?
+		// �ӳ���Ӽ����������⵱ǰ�Ҽ��¼���������?
 		setTimeout(() => {
 			if (this.documentClickHandler) {
 				ownerDoc.addEventListener('click', this.documentClickHandler, { capture: true });
@@ -432,7 +433,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui?.setAttribute('aria-expanded', 'false');
 		this.menuKeydownHandler = undefined;
 
-		// �Ƴ� document �ĵ��������?
+		// �Ƴ� document �ĵ��������?
 		if (this.documentClickHandler) {
 			const ownerDoc = this.eGui?.ownerDocument || document;
 			ownerDoc.removeEventListener('click', this.documentClickHandler);
@@ -501,7 +502,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 			return;
 		}
 
-		// ͨ���ص�֪ͨ TableView ����״̬���?
+		// ͨ���ص�֪ͨ TableView ����״̬���?
 		if (this.params.context?.onStatusChange) {
 			this.params.context.onStatusChange(rowId, newStatus);
 		} else {

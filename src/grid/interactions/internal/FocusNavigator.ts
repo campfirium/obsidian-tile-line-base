@@ -1,4 +1,4 @@
-import { GridApi } from 'ag-grid-community';
+import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
 import { InteractionControllerDeps } from '../types';
 import { FocusStateAccess, NavigationCallbacks, DebugLogger } from '../types';
 import { ROW_ID_FIELD, RowData } from '../../GridAdapter';
@@ -94,15 +94,16 @@ export class FocusNavigator {
 		if (!data) return;
 
 		if (colDef && typeof colDef.editable === 'function') {
-			const editableResult = colDef.editable({
+			const gridApiWithContext = gridApi as GridApi & { context?: unknown };
+			const editableParams: EditableCallbackParams<RowData, string, unknown> = {
 				api: gridApi,
 				column: focusedCell.column,
 				colDef,
-				context: (gridApi as any)?.context,
+				context: gridApiWithContext.context,
 				data,
 				node: rowNode,
-				value: data[field]
-			} as any);
+			};
+			const editableResult = colDef.editable(editableParams);
 			if (!editableResult) {
 				this.debug('navigator:handleDeleteKey:nonEditableFn', {
 					rowIndex: focusedCell.rowIndex,

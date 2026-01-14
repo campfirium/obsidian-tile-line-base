@@ -1,7 +1,8 @@
 import type { ColumnState, GridApi } from 'ag-grid-community';
-import type { SortModelEntry } from '../GridAdapter';
+import type { FilterModel, SortModelEntry } from '../GridAdapter';
 import type { AgGridColumnService } from '../column/AgGridColumnService';
 import { deepClone } from '../utils/deepClone';
+
 
 interface StateServiceDeps {
 	getGridApi(): GridApi | null;
@@ -16,7 +17,7 @@ export class AgGridStateService {
 		this.deps = deps;
 	}
 
-	getFilterModel(): any | null {
+	getFilterModel(): FilterModel {
 		const gridApi = this.deps.getGridApi();
 		if (!gridApi || typeof gridApi.getFilterModel !== 'function') {
 			return null;
@@ -24,7 +25,7 @@ export class AgGridStateService {
 		return deepClone(gridApi.getFilterModel());
 	}
 
-	setFilterModel(model: any | null): void {
+	setFilterModel(model: FilterModel): void {
 		this.deps.runWhenReady(() => {
 			const gridApi = this.deps.getGridApi();
 			if (!gridApi || typeof gridApi.setFilterModel !== 'function') {

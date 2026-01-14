@@ -18,7 +18,7 @@ export function buildSortState(sortModel: SortModelEntry[]): ColumnState[] {
 		.filter((item) => typeof item?.field === 'string' && item.field.length > 0)
 		.map((item, index) => ({
 			colId: item.field,
-			sort: (item.direction === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc',
+			sort: item.direction === 'desc' ? 'desc' : 'asc',
 			sortIndex: index
 		}));
 }

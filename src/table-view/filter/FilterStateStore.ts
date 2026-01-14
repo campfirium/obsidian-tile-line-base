@@ -51,17 +51,13 @@ export class FilterStateStore {
 			return this.state;
 		}
 		const stored = this.scope === 'gallery'
-			? (typeof (plugin as any).getGalleryFilterViewsForFile === 'function'
-				? (plugin as any).getGalleryFilterViewsForFile(this.filePath)
-				: null)
-			: (typeof plugin.getFilterViewsForFile === 'function'
-				? plugin.getFilterViewsForFile(this.filePath)
-				: null);
+			? plugin.getGalleryFilterViewsForFile(this.filePath)
+			: plugin.getFilterViewsForFile(this.filePath);
 		if (!stored) {
 			this.resetState();
 			return this.state;
 		}
-		const storedState = stored as FileFilterViewState;
+		const storedState = stored;
 		const availableIds = new Set(storedState.views.map((view) => view.id));
 		const activeId = storedState.activeViewId && availableIds.has(storedState.activeViewId)
 			? storedState.activeViewId
@@ -83,11 +79,7 @@ export class FilterStateStore {
 			return;
 		}
 		if (this.scope === 'gallery') {
-			const saver = (plugin as any).saveGalleryFilterViewsForFile;
-			if (typeof saver !== 'function') {
-				return;
-			}
-			await saver.call(plugin, this.filePath, this.state);
+			await plugin.saveGalleryFilterViewsForFile(this.filePath, this.state);
 			return;
 		}
 		if (typeof plugin.saveFilterViewsForFile !== 'function') {

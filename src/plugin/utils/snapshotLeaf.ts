@@ -17,8 +17,9 @@ export function snapshotLeaf(
 	}
 
 	const leafWindow = manager.getLeafWindow(leaf);
+	const leafWithId = leaf as WorkspaceLeaf & { id?: string };
 	return {
-		id: (leaf as any).id ?? undefined,
+		id: leafWithId.id ?? undefined,
 		type,
 		window: manager.describeWindow(leafWindow)
 	};

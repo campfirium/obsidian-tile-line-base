@@ -62,11 +62,11 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		if (configBlock.tagGroups) {
 			view.tagGroupStore.setState(configBlock.tagGroups);
 		}
-		if ((configBlock as any).galleryFilterViews) {
-			view.galleryFilterStateStore.setState((configBlock as any).galleryFilterViews);
+		if (configBlock.galleryFilterViews) {
+			view.galleryFilterStateStore.setState(configBlock.galleryFilterViews);
 		}
-		if ((configBlock as any).galleryTagGroups) {
-			view.galleryTagGroupStore.setState((configBlock as any).galleryTagGroups);
+		if (configBlock.galleryTagGroups) {
+			view.galleryTagGroupStore.setState(configBlock.galleryTagGroups);
 		}
 		if (configBlock.columnWidths) {
 			view.columnLayoutStore.applyConfig(configBlock.columnWidths);
@@ -95,15 +95,21 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		const hasGalleryViews = galleryViewsState && Array.isArray(galleryViewsState.views) && galleryViewsState.views.length > 0;
 		if (hasGalleryViews) {
 			view.galleryViewStore.load({
-				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }) => ({
-					...entry,
-					template: normalizeSlideViewConfig(entry.template ?? null),
-					cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
-					cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
-					groupField: typeof (entry as { groupField?: unknown }).groupField === 'string'
-						? ((entry as { groupField: string }).groupField.trim() || undefined)
-						: undefined
-				})),
+				views: galleryViewsState.views.map((entry: { id?: string; name?: string; template?: unknown; cardWidth?: unknown; cardHeight?: unknown }, index) => {
+						const id = typeof entry.id === 'string' && entry.id.trim() ? entry.id : 'gallery-' + String(index + 1);
+						const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name : 'Gallery ' + String(index + 1);
+						const groupField = typeof (entry as { groupField?: unknown }).groupField === 'string'
+							? ((entry as { groupField: string }).groupField.trim() || undefined)
+							: undefined;
+						return {
+							id,
+							name,
+							template: normalizeSlideViewConfig(entry.template ?? null),
+							cardWidth: typeof entry.cardWidth === 'number' ? entry.cardWidth : undefined,
+							cardHeight: typeof entry.cardHeight === 'number' ? entry.cardHeight : undefined,
+							groupField
+						};
+					}),
 				activeViewId: galleryViewsState.activeViewId ?? null
 			});
 			const activeGallery = view.galleryViewStore.ensureActive();
@@ -218,7 +224,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.galleryFilterStateStore.loadFromSettings();
 		view.galleryFilterViewState = view.galleryFilterStateStore.getState();
 	}
-	if (!configBlock || (configBlock as any).galleryTagGroups == null) {
+	if (!configBlock || configBlock.galleryTagGroups == null) {
 		view.galleryTagGroupStore.loadFromSettings();
 	}
 	syncGalleryTagGroupState(view);

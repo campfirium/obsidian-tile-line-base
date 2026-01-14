@@ -4,6 +4,7 @@ import { MarkdownBlockParser } from '../table-view/MarkdownBlockParser';
 import { MagicMigrationController } from '../table-view/MagicMigrationController';
 import { isEffectivelyEmpty, isTopHeadingOnly, stripFrontmatter } from '../table-view/magicMigrationContent';
 import { getLogger } from '../utils/logger';
+import { t } from '../i18n';
 import type { SettingsService } from '../services/SettingsService';
 import type { WindowContext, WindowContextManager } from './WindowContextManager';
 
@@ -67,7 +68,7 @@ export class ViewSwitchCoordinator {
 			};
 
 			item
-				.setTitle('Open in TileLineBase table view')
+				.setTitle(t('viewControls.openTableViewFromFileMenu'))
 				.setIcon('table')
 				.onClick(clickHandler);
 			logger.debug('handleFileMenu: menu item ready', { file: file.path });
@@ -333,7 +334,8 @@ export class ViewSwitchCoordinator {
 			return eventView;
 		}
 
-		const maybeActiveWindow = (globalThis as any).activeWindow as Window | undefined;
+		const globalWithActiveWindow = globalThis as typeof globalThis & { activeWindow?: Window };
+		const maybeActiveWindow = globalWithActiveWindow.activeWindow;
 		if (maybeActiveWindow) {
 			return maybeActiveWindow;
 		}
@@ -459,9 +461,9 @@ export class ViewSwitchCoordinator {
 		}
 
 		const leafWindow = this.windowContextManager.getLeafWindow(leaf);
-
+		const leafWithId = leaf as WorkspaceLeaf & { id?: string };
 		return {
-			id: (leaf as any).id ?? undefined,
+			id: leafWithId.id ?? undefined,
 			type,
 			window: this.describeWindow(leafWindow)
 		};
@@ -495,7 +497,8 @@ export class ViewSwitchCoordinator {
 			if (view instanceof TableView) {
 				leafFile = view.file;
 			} else {
-				const possibleFile = (view as any)?.file;
+				const viewWithFile = view as { file?: unknown };
+			const possibleFile = viewWithFile.file;
 				if (possibleFile instanceof TFile) {
 					leafFile = possibleFile;
 				}

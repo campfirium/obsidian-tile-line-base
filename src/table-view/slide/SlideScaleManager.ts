@@ -1,3 +1,7 @@
+const applyCssProps = (el: HTMLElement, props: Record<string, string>): void => {
+	(el as HTMLElement & { setCssProps: (props: Record<string, string>) => void }).setCssProps(props);
+};
+
 export class SlideScaleManager {
 	private readonly ownerWindow: Window | null;
 	private activeSlide: HTMLElement | null = null;
@@ -57,12 +61,11 @@ export class SlideScaleManager {
 		this.resizeObserver.observe(slide);
 	}
 
-	/* eslint-disable obsidianmd/no-static-styles-assignment */
 	private applyScale(): void {
 		const slide = this.activeSlide;
 		if (!slide) return;
 		if (!this.isFullscreen()) {
-			slide.style.setProperty('--tlb-slide-scale', '1');
+			applyCssProps(slide, { '--tlb-slide-scale': '1' });
 			return;
 		}
 		const stageWidth = this.stage.clientWidth;
@@ -70,13 +73,12 @@ export class SlideScaleManager {
 		const baseWidth = slide.offsetWidth;
 		const baseHeight = slide.offsetHeight;
 		if (!stageWidth || !stageHeight || !baseWidth || !baseHeight) {
-			slide.style.setProperty('--tlb-slide-scale', '1');
+			applyCssProps(slide, { '--tlb-slide-scale': '1' });
 			return;
 		}
 		const scale = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
-		slide.style.setProperty('--tlb-slide-scale', `${scale}`);
+		applyCssProps(slide, { '--tlb-slide-scale': String(scale) });
 	}
-	/* eslint-enable obsidianmd/no-static-styles-assignment */
 
 	private cancelScaleUpdate(): void {
 		if (this.scaleRaf != null && this.ownerWindow) {

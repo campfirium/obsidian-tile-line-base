@@ -82,7 +82,7 @@ export class TableCreationController {
 			const sanitizedName = this.sanitiseName(params.name) || t('tableCreation.defaultTableName');
 			const { folderPath, fileName } = this.resolveTargetPath(sanitizedName);
 			const filePath = folderPath ? `${folderPath}/${fileName}` : fileName;
-			const uniquePath = await this.findUniquePath(filePath);
+			const uniquePath = this.findUniquePath(filePath);
 
 			const markdown = this.buildMarkdown({
 				tableName: sanitizedName,
@@ -166,7 +166,7 @@ export class TableCreationController {
 		return { folderPath, fileName };
 	}
 
-	private async findUniquePath(initialPath: string): Promise<string> {
+	private findUniquePath(initialPath: string): string {
 		const vault = this.options.app.vault;
 		if (!vault.getAbstractFileByPath(initialPath)) {
 			return initialPath;
@@ -204,8 +204,8 @@ export class TableCreationController {
 
 	private async openFileInTableView(file: TFile): Promise<void> {
 		const plugin = getPluginContext();
-		if (plugin && typeof (plugin as any).openFileInTableView === 'function') {
-			await (plugin as any).openFileInTableView(file);
+		if (plugin) {
+			await plugin.openFileInTableView(file);
 			return;
 		}
 		await this.options.app.workspace.openLinkText(file.path, '', true);

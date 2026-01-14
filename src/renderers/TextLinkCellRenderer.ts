@@ -4,6 +4,7 @@ import { t } from '../i18n';
 import type { DetectedCellLink, CellLinkClickContext } from '../types/cellLinks';
 import { detectPrimaryCellLink } from '../utils/linkDetection';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
+import { formatUnknownValue } from '../utils/valueFormat';
 
 export class TextLinkCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
@@ -154,7 +155,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		if (fallback == null) {
 			return null;
 		}
-		const str = String(fallback);
+		const str = formatUnknownValue(fallback);
 		return str.length > 0 ? str : null;
 	}
 

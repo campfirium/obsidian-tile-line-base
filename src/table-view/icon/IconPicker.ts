@@ -44,6 +44,10 @@ const ICON_NAV_GAP_COLUMNS = 1;
 const ICON_NAV_FIRST_COLUMN = ICON_GRID_COLUMNS - ICON_NAV_SLOT_COUNT;
 const ICON_MATCHES_PER_PAGE = ICON_GRID_COLUMNS * ICON_GRID_ROWS - ICON_NAV_SLOT_COUNT - ICON_NAV_GAP_COLUMNS;
 
+const applyCssProps = (el: HTMLElement, props: Record<string, string>): void => {
+	(el as HTMLElement & { setCssProps: (props: Record<string, string>) => void }).setCssProps(props);
+};
+
 class IconPicker {
 	private readonly options: IconPickerOptions;
 	private readonly wrapper: HTMLElement;
@@ -482,17 +486,21 @@ class IconPicker {
 		if (!Number.isFinite(anchorRect.height) || anchorRect.height === 0) {
 			top = Math.max(viewportPadding + view.scrollY, view.innerHeight / 2 - panelHeight / 2 + view.scrollY);
 		}
-		/* eslint-disable obsidianmd/no-static-styles-assignment */
-		this.panelEl.style.position = 'fixed';
-		this.panelEl.style.left = `${left}px`;
-		this.panelEl.style.top = `${top}px`;
-		this.panelEl.style.width = `${targetWidth}px`;
-		this.panelContentEl?.style.setProperty('--tlb-filter-view-icon-grid-columns', String(ICON_GRID_COLUMNS));
-		this.panelContentEl?.style.setProperty('--tlb-filter-view-icon-grid-rows', String(ICON_GRID_ROWS));
-		this.panelContentEl?.style.setProperty('--tlb-filter-view-icon-cell-size', '40px');
-		this.panelContentEl?.style.setProperty('--tlb-filter-view-icon-size', '22px');
-		this.panelContentEl?.style.setProperty('--tlb-filter-view-icon-nav-icon-size', '26px');
-		/* eslint-enable obsidianmd/no-static-styles-assignment */
+		applyCssProps(this.panelEl, {
+			position: 'fixed',
+			left: String(left) + 'px',
+			top: String(top) + 'px',
+			width: String(targetWidth) + 'px'
+		});
+		if (this.panelContentEl) {
+			applyCssProps(this.panelContentEl, {
+				'--tlb-filter-view-icon-grid-columns': String(ICON_GRID_COLUMNS),
+				'--tlb-filter-view-icon-grid-rows': String(ICON_GRID_ROWS),
+				'--tlb-filter-view-icon-cell-size': '40px',
+				'--tlb-filter-view-icon-size': '22px',
+				'--tlb-filter-view-icon-nav-icon-size': '26px'
+			});
+		}
 	}
 
 	private updateTrigger(): void {

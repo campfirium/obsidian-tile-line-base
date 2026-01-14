@@ -4,17 +4,17 @@ import { getLogger } from '../../utils/logger';
 const logger = getLogger('grid:composition-proxy');
 
 /**
- * CompositionProxy - 常驻合成代理�?
+ * CompositionProxy - 常驻合成代理�?
  *
- * 通过一个隐藏的 textarea 抢占焦点，让 IME 在正式编辑器初始化前就能完整接收按键�?
- * 代理层会在文本确定（ASCII 兜底�?compositionend）后交给上层回写�?
+ * 通过一个隐藏的 textarea 抢占焦点，让 IME 在正式编辑器初始化前就能完整接收按键�?
+ * 代理层会在文本确定（ASCII 兜底�?compositionend）后交给上层回写�?
  */
 
 export class CompositionProxy {
 	private host: HTMLTextAreaElement;
 	private ownerDocument: Document;
 	private resolve?: (text: string) => void;
-	private reject?: (err?: any) => void;
+	private reject?: (err?: unknown) => void;
 	private composing = false;
 	private asciiTimer: number | null = null;
 	private keyHandler?: (event: KeyboardEvent) => void;
@@ -144,7 +144,7 @@ export class CompositionProxy {
 		this.keyHandler = handler;
 	}
 
-	cancel(reason?: any): void {
+	cancel(reason?: unknown): void {
 		const reject = this.reject;
 		if (!reject && !this.resolve) {
 			this.cleanup();

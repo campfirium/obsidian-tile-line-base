@@ -65,7 +65,7 @@ export class TablePersistenceService {
 
 	constructor(private readonly deps: TablePersistenceDeps) {}
 
-	async loadConfig(): Promise<Record<string, any> | null> {
+	async loadConfig(): Promise<TableConfigData | null> {
 		const file = this.deps.getFile();
 		if (!file) {
 			return null;

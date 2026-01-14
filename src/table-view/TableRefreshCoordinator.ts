@@ -253,7 +253,7 @@ export class TableRefreshCoordinator {
 		return { focused, selected };
 	}
 
-	async finalizeRender(snapshot: ViewSnapshot | null): Promise<void> {
+	finalizeRender(snapshot: ViewSnapshot | null): void {
 		this.pendingContext = null;
 		this.inactiveContext = null;
 		this.dirtyWhileInactive = false;

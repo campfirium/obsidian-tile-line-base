@@ -5,6 +5,7 @@ import type { Schema } from './SchemaBuilder';
 import type { H2Block } from './MarkdownBlockParser';
 import { CopyTemplateModal } from './CopyTemplateModal';
 import { getLogger } from '../utils/logger';
+import { formatUnknownValue } from '../utils/valueFormat';
 
 const logger = getLogger('table-view:copy-template');
 
@@ -298,6 +299,6 @@ export class CopyTemplateController {
 		if (value === null || value === undefined) {
 			return '';
 		}
-		return typeof value === 'string' ? value : String(value);
+		return typeof value === 'string' ? value : formatUnknownValue(value);
 	}
 }

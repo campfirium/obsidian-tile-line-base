@@ -1,3 +1,4 @@
+import { formatUnknownValue } from '../../utils/valueFormat';
 import {
 	sanitizeSlideTemplateConfig,
 	type SlideTemplateConfig,
@@ -322,8 +323,8 @@ const resolveImageFieldFromRows = (
 	}
 	for (const row of sampleRows) {
 		for (const field of fields) {
-			const raw = (row as Record<string, unknown>)[field];
-			const text = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
+			const raw = row[field];
+			const text = typeof raw === 'string' ? raw.trim() : formatUnknownValue(raw).trim();
 			if (!text) continue;
 			if (resolveDirectImage(text)) {
 				return field;

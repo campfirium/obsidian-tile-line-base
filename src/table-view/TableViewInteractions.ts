@@ -125,7 +125,7 @@ export function renameColumnInFilterViews(view: TableView, oldName: string, newN
 	};
 
 	updateState(view.filterViewState);
-	updateState(view.galleryFilterViewState as any);
+	updateState(view.galleryFilterViewState);
 }
 
 export function removeColumnFromFilterViews(view: TableView, column: string): void {
@@ -160,7 +160,7 @@ export function removeColumnFromFilterViews(view: TableView, column: string): vo
 	};
 
 	updateState(view.filterViewState);
-	updateState(view.galleryFilterViewState as any);
+	updateState(view.galleryFilterViewState);
 }
 
 export function cleanupEventListeners(view: TableView): void {
@@ -169,7 +169,7 @@ export function cleanupEventListeners(view: TableView): void {
 	view.focusManager.clearPendingFocus('cleanup');
 }
 
-export async function handleOnClose(view: TableView): Promise<void> {
+export function handleOnClose(view: TableView): void {
 	view.globalQuickFilterController.cleanup();
 	view.galleryQuickFilterController.cleanup();
 	if (view.filterViewBar) {

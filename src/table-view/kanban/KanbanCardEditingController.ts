@@ -2,6 +2,7 @@ import type { RowData } from '../../grid/GridAdapter';
 import { ROW_ID_FIELD } from '../../grid/GridAdapter';
 import type { TableView } from '../../TableView';
 import { t } from '../../i18n';
+import { formatUnknownValue } from '../../utils/valueFormat';
 import { getCurrentLocalDateTime } from '../../utils/datetime';
 import { KanbanCardCreateModal } from './KanbanCardCreateModal';
 
@@ -156,6 +157,6 @@ export class KanbanCardEditingController {
 		if (value === null || value === undefined) {
 			return '';
 		}
-		return String(value);
+		return formatUnknownValue(value);
 	}
 }

@@ -285,10 +285,8 @@ const setImageAttributes = (img: HTMLImageElement, size: MediaSize): void => {
 	if (img.decoding !== 'async') {
 		img.decoding = 'async';
 	}
-	try {
-		(img as any).fetchPriority = 'low';
-	} catch {
-		// ignore unsupported fetchPriority
+	if ('fetchPriority' in img) {
+		(img as HTMLImageElement & { fetchPriority?: string }).fetchPriority = 'low';
 	}
 	const normalized = normalizeSize(size);
 	const targetW = clampSize(normalized.width);

@@ -1,6 +1,7 @@
-import type { FilterCondition, FilterOperator, FilterRule, SortRule } from '../../types/filterView';
+import type { FilterCondition, FilterRule, SortRule } from '../../types/filterView';
 import type { RowData } from '../../grid/GridAdapter';
 import { tryParseDate, tryParseNumber, tryParseTime } from './FilterValueParsers';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 type NormalizedSortValue = {
 	type: 'empty' | 'number' | 'date' | 'time' | 'string';
@@ -39,7 +40,7 @@ export class FilterDataProcessor {
 		const cellRaw = row[condition.column];
 		const cellText = cellRaw == null ? '' : String(cellRaw);
 		const compareText = condition.value == null ? '' : String(condition.value);
-		const operator = condition.operator as FilterOperator;
+		const operator = condition.operator;
 
 		switch (operator) {
 			case 'equals':
@@ -207,7 +208,7 @@ export class FilterDataProcessor {
 			}
 			return { type: 'number', value, rank: 2 };
 		}
-		const text = String(value);
+		const text = formatUnknownValue(value);
 		const parsed = parseFloat(text);
 		if (!Number.isNaN(parsed) && String(parsed) === text.trim()) {
 			return { type: 'number', value: parsed, rank: 2 };

@@ -21,6 +21,16 @@ export interface ColumnDef {
 	editorType?: 'text' | 'date' | 'time';  // 编辑器类型
 	dateFormat?: DateFormatPreset; // 日期展示格式
 	timeFormat?: TimeFormatPreset; // 时间展示格式
+	tooltipField?: string;
+	width?: number;
+	flex?: number | null;
+	minWidth?: number;
+	pinned?: 'left' | 'right' | boolean | null;
+	lockPinned?: boolean;
+	lockPosition?: boolean | 'left' | 'right';
+	suppressMovable?: boolean;
+	suppressSizeToFit?: boolean;
+	context?: Record<string, unknown>;
 }
 
 /**
@@ -30,6 +40,8 @@ export interface ColumnDef {
 export interface RowData {
 	[key: string]: string;
 }
+
+export type FilterModel = Record<string, unknown> | null;
 
 export interface SortModelEntry {
 	field: string;
@@ -80,7 +92,7 @@ export interface GridAdapter {
 		container: HTMLElement,
 		columns: ColumnDef[],
 		rows: RowData[],
-		context?: any
+		context?: unknown
 	): void;
 
 	/**
@@ -164,8 +176,8 @@ export interface GridAdapter {
 	 */
 	runWhenReady?(callback: () => void): void;
 
-	getFilterModel?(): any | null;
-	setFilterModel?(model: any | null): void;
+	getFilterModel?(): FilterModel;
+	setFilterModel?(model: FilterModel): void;
 	getColumnState?(): ColumnState[] | null;
 	applyColumnState?(state: ColumnState[] | null): void;
 

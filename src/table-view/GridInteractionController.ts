@@ -114,8 +114,8 @@ export class GridInteractionController {
 			return;
 		}
 
-		const headerElement = target.closest('.ag-header-cell, .ag-header-group-cell') as HTMLElement | null;
-		if (headerElement) {
+		const headerElement = target.closest('.ag-header-cell, .ag-header-group-cell');
+		if (headerElement instanceof HTMLElement) {
 			const headerColId = headerElement.getAttribute('col-id');
 			if (headerColId && headerColId !== 'status' && headerColId !== '#') {
 				event.preventDefault();

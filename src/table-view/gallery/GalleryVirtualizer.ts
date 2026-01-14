@@ -123,8 +123,8 @@ export class GalleryVirtualizer {
 	}
 
 	private findScrollContainer(): HTMLElement {
-		const target = this.container.closest('.tlb-table-view-content') as HTMLElement | null;
-		return target ?? this.container;
+		const target = this.container.closest('.tlb-table-view-content');
+		return target instanceof HTMLElement ? target : this.container;
 	}
 
 	private measureRowGap(grid: HTMLElement, cardWidth: number): number {

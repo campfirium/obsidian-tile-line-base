@@ -34,7 +34,7 @@ const DATA_STORE_OPTIONS = {
 } as const;
 const HARD_FALLBACK_FILE_NAME = 'Imported Table';
 
-export async function exportTableToCsv(view: TableView): Promise<void> {
+export function exportTableToCsv(view: TableView): void {
 	if (!view.file) {
 		new Notice(t('csv.errorNoFile'));
 		return;
@@ -68,7 +68,7 @@ export async function exportTableToCsv(view: TableView): Promise<void> {
 	}
 }
 
-export async function importTableFromCsv(view: TableView): Promise<void> {
+export function importTableFromCsv(view: TableView): void {
 	if (!view.file) {
 		new Notice(t('csv.errorNoFile'));
 		return;
@@ -149,7 +149,7 @@ export function importCsvAsNewTable(app: App, options: ImportCsvAsNewTableOption
 			const referenceFile = options.referenceFile ?? app.workspace.getActiveFile();
 			const folderPath = resolveTargetFolder(referenceFile);
 			const baseName = sanitiseFileName(file.name, t('csv.defaultFileName'));
-			const uniquePath = await findUniqueFilePath(app, folderPath, baseName);
+			const uniquePath = findUniqueFilePath(app, folderPath, baseName);
 			const createdFile = await app.vault.create(uniquePath, markdown);
 			TableRefreshCoordinator.requestRefreshForPath(createdFile.path, {
 				source: 'table-operation',
@@ -333,7 +333,7 @@ function sanitiseBaseName(raw: string): string {
 		.replace(/[. ]+$/g, '');
 }
 
-async function findUniqueFilePath(app: App, folderPath: string, baseName: string): Promise<string> {
+function findUniqueFilePath(app: App, folderPath: string, baseName: string): string {
 	const vault = app.vault;
 	const candidate = buildFilePath(folderPath, baseName);
 	if (!vault.getAbstractFileByPath(candidate)) {
@@ -364,8 +364,8 @@ function buildFilePath(folderPath: string, baseName: string): string {
 
 async function openFileInTableView(app: App, file: TFile): Promise<void> {
 	const plugin = getPluginContext();
-	if (plugin && typeof (plugin as any).openFileInTableView === 'function') {
-		await (plugin as any).openFileInTableView(file);
+	if (plugin) {
+		await plugin.openFileInTableView(file);
 		return;
 	}
 	await app.workspace.openLinkText(file.path, '', true);

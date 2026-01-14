@@ -190,16 +190,15 @@ export class GridLayoutController {
 	}
 
 	private applyContainerSize(container: HTMLElement): void {
-		const layoutHost =
-			(container.closest('.tlb-table-view-content') as HTMLElement | null) ||
-			(container.parentElement as HTMLElement | null);
+		const layoutHost = container.closest('.tlb-table-view-content') ?? container.parentElement;
+		const layoutHostElement = layoutHost instanceof HTMLElement ? layoutHost : null;
 
 		let targetHeight = 0;
-		if (layoutHost) {
-			const parentRect = layoutHost.getBoundingClientRect();
+		if (layoutHostElement) {
+			const parentRect = layoutHostElement.getBoundingClientRect();
 			const containerRect = container.getBoundingClientRect();
 			const parentHeight =
-				parentRect.height || layoutHost.clientHeight || layoutHost.offsetHeight;
+				parentRect.height || layoutHostElement.clientHeight || layoutHostElement.offsetHeight;
 			if (parentHeight > 0) {
 				const offsetTop = containerRect.top - parentRect.top;
 				const available = parentHeight - offsetTop;

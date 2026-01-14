@@ -428,7 +428,7 @@ export class FilterViewController {
 			onEdit: async () => {
 				await this.editDefaultView();
 			},
-			onReset: async () => {
+			onReset: () => {
 				if (clearDefaultViewPreferences(this.stateStore)) {
 					this.runStateEffects({ persist: true, apply: false });
 				}

@@ -42,15 +42,15 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 		rows: slideRows,
 		fields,
 		config: renderState.renderConfig,
-		onSaveRow: async (row, values) => {
+		onSaveRow: (row, values) => {
 			const rowIndex = view.dataStore.getBlockIndexFromRow(row);
-			if (rowIndex == null) return;
+			if (rowIndex == null) return Promise.resolve();
 			for (const [field, value] of Object.entries(values)) {
 				view.dataStore.updateCell(rowIndex, field, value);
 			}
 			view.markUserMutation('slide-inline-edit');
 			view.persistenceService.scheduleSave();
-			return view.dataStore.extractRowData();
+			return Promise.resolve(view.dataStore.extractRowData());
 		},
 		onEditTemplate: () => {
 			const baseConfig = ensureLayoutDefaults(normalizeSlideViewConfig(view.slideConfig));

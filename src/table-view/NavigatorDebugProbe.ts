@@ -16,6 +16,40 @@ interface NavigatorCompatOptions {
 	getViewType: () => string;
 }
 
+type PluginManager = {
+	enabledPlugins?: Set<string>;
+	plugins?: Record<string, unknown>;
+};
+
+type NavigatorPlugin = {
+	api?: { navigation?: { reveal?: (file: TFile) => Promise<void> | void } };
+	revealFileInActualFolder?: (file: TFile) => Promise<void> | void;
+	revealFileInNearestFolder?: (file: TFile) => Promise<void> | void;
+};
+
+type NavigatorView = {
+	navigateToFile?: (file: TFile) => void;
+	revealFileInActualFolder?: (file: TFile) => void;
+	revealFileInNearestFolder?: (file: TFile) => void;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function getPluginManager(app: App): PluginManager | null {
+	const plugins = (app as { plugins?: unknown }).plugins;
+	if (!isRecord(plugins)) {
+		return null;
+	}
+	const enabledPlugins = plugins.enabledPlugins;
+	const managerPlugins = plugins.plugins;
+	return {
+		enabledPlugins: enabledPlugins instanceof Set ? enabledPlugins : undefined,
+		plugins: isRecord(managerPlugins) ? managerPlugins : undefined
+	};
+}
+
 export function attachNavigatorCompatibility(
 	leaf: WorkspaceLeaf,
 	options: NavigatorCompatOptions
@@ -46,7 +80,7 @@ export function attachNavigatorCompatibility(
 							stack: stackSnippet
 						});
 					}
-					return Promise.resolve(leaf) as unknown as ReturnType<WorkspaceLeaf["openFile"]>;
+					return Promise.resolve();
 				}
 				return next.call(this, file, ...rest);
 			};
@@ -57,14 +91,15 @@ export function attachNavigatorCompatibility(
 }
 
 export function notifyNavigatorFocus(app: App, file: TFile): void {
-	const pluginManager = (app as any)?.plugins;
+	const pluginManager = getPluginManager(app);
 	if (!pluginManager?.enabledPlugins?.has?.(NAVIGATOR_PLUGIN_ID)) {
 		return;
 	}
-	const navigatorPlugin = pluginManager?.plugins?.[NAVIGATOR_PLUGIN_ID];
-	if (!navigatorPlugin) {
+	const navigatorPluginRaw = pluginManager.plugins?.[NAVIGATOR_PLUGIN_ID];
+	if (!navigatorPluginRaw || !isRecord(navigatorPluginRaw)) {
 		return;
 	}
+	const navigatorPlugin = navigatorPluginRaw as NavigatorPlugin;
 
 	const now = Date.now();
 	if (lastFocusSyncPath === file.path && now - lastFocusSyncAt < FOCUS_SYNC_THROTTLE_MS) {
@@ -73,7 +108,7 @@ export function notifyNavigatorFocus(app: App, file: TFile): void {
 	lastFocusSyncAt = now;
 	lastFocusSyncPath = file.path;
 
-	const apiNavigation = (navigatorPlugin as any)?.api?.navigation;
+	const apiNavigation = navigatorPlugin.api?.navigation;
 	if (apiNavigation && typeof apiNavigation.reveal === "function") {
 		try {
 			void apiNavigation.reveal(file);
@@ -83,7 +118,7 @@ export function notifyNavigatorFocus(app: App, file: TFile): void {
 		}
 	}
 
-	const revealActual = (navigatorPlugin as any)?.revealFileInActualFolder;
+	const revealActual = navigatorPlugin.revealFileInActualFolder;
 	if (typeof revealActual === "function") {
 		try {
 			void revealActual.call(navigatorPlugin, file);
@@ -93,7 +128,7 @@ export function notifyNavigatorFocus(app: App, file: TFile): void {
 		}
 	}
 
-	const revealNearest = (navigatorPlugin as any)?.revealFileInNearestFolder;
+	const revealNearest = navigatorPlugin.revealFileInNearestFolder;
 	if (typeof revealNearest === "function") {
 		try {
 			void revealNearest.call(navigatorPlugin, file);
@@ -110,7 +145,7 @@ function revealInNavigatorLeaves(app: App, file: TFile): boolean {
 	let revealed = false;
 	const leaves = app.workspace.getLeavesOfType("notebook-navigator");
 	for (const leaf of leaves) {
-		const view = leaf.view as any;
+		const view = leaf.view as NavigatorView;
 		const reveal =
 			typeof view?.navigateToFile === "function"
 				? view.navigateToFile

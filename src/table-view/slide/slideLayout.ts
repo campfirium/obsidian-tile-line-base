@@ -11,9 +11,17 @@ export interface ComputedLayout {
 	centerFromTop?: boolean;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return !!value && typeof value === 'object';
+}
+
+const applyCssProps = (el: HTMLElement, props: Record<string, string>): void => {
+	(el as HTMLElement & { setCssProps: (props: Record<string, string>) => void }).setCssProps(props);
+};
+
 export function computeLayout(layout: unknown, kind: 'title' | 'body'): ComputedLayout {
 	const defaults = kind === 'title' ? getDefaultTitleLayout() : getDefaultBodyLayout();
-	const source = layout && typeof layout === 'object' ? (layout as any) : {};
+	const source = isRecord(layout) ? layout : {};
 	const widthPct = Math.min(100, Math.max(0, Number(source.widthPct ?? defaults.widthPct)));
 	const topPct = Math.min(100, Math.max(0, Number(source.topPct ?? defaults.topPct)));
 	const insetPct = Math.min(100, Math.max(0, Number(source.insetPct ?? defaults.insetPct)));
@@ -28,41 +36,51 @@ export function computeLayout(layout: unknown, kind: 'title' | 'body'): Computed
 	return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight, centerFromTop };
 }
 
-/* eslint-disable obsidianmd/no-static-styles-assignment */
 export function applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement): void {
 	el.classList.add('tlb-slide-layout');
-	el.style.setProperty('--tlb-layout-width', `${layout.widthPct}%`);
-	el.style.setProperty('--tlb-layout-text-align', layout.align);
+	applyCssProps(el, {
+		'--tlb-layout-width': String(layout.widthPct) + '%',
+		'--tlb-layout-text-align': layout.align
+	});
 
 	const centerFromTop = Boolean(layout.centerFromTop);
 	let transform = 'translateX(0)';
 	if (layout.align === 'center') {
-		el.style.setProperty('--tlb-layout-left', '50%');
-		el.style.setProperty('--tlb-layout-right', 'auto');
+		applyCssProps(el, {
+			'--tlb-layout-left': '50%',
+			'--tlb-layout-right': 'auto'
+		});
 		transform = 'translateX(-50%)';
 	} else if (layout.align === 'right') {
-		el.style.setProperty('--tlb-layout-left', 'auto');
-		el.style.setProperty('--tlb-layout-right', `${layout.insetPct}%`);
+		applyCssProps(el, {
+			'--tlb-layout-left': 'auto',
+			'--tlb-layout-right': String(layout.insetPct) + '%'
+		});
 		transform = 'translateX(0)';
 	} else {
-		el.style.setProperty('--tlb-layout-left', `${layout.insetPct}%`);
-		el.style.setProperty('--tlb-layout-right', 'auto');
+		applyCssProps(el, {
+			'--tlb-layout-left': String(layout.insetPct) + '%',
+			'--tlb-layout-right': 'auto'
+		});
 		transform = 'translateX(0)';
 	}
 	if (centerFromTop) {
-		transform = transform === 'translateX(-50%)' ? 'translate(-50%, -50%)' : `${transform} translateY(-50%)`;
+		transform = transform === 'translateX(-50%)'
+			? 'translate(-50%, -50%)'
+			: transform + ' translateY(-50%)';
 	}
-	el.style.setProperty('--tlb-layout-transform', transform);
+	applyCssProps(el, { '--tlb-layout-transform': transform });
 
 	const usableHeight = Math.max(0, slideEl.clientHeight);
 	const topPx = (usableHeight * layout.topPct) / 100;
-	el.style.setProperty('--tlb-layout-top', `${topPx}px`);
+	applyCssProps(el, { '--tlb-layout-top': String(topPx) + 'px' });
 
 	if (layout.widthPct >= 99) {
-		el.style.width = '100%';
-		el.style.left = '0';
-		el.style.right = '0';
-		el.style.transform = 'none';
+		applyCssProps(el, {
+			width: '100%',
+			left: '0',
+			right: '0',
+			transform: 'none'
+		});
 	}
 }
-/* eslint-enable obsidianmd/no-static-styles-assignment */

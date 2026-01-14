@@ -13,6 +13,8 @@ const MODE_ICONS: Record<ViewMode, string[]> = {
 	gallery: ['layout-grid', 'images', 'gallery']
 };
 
+type ActionButton = HTMLElement & { iconEl?: HTMLElement; containerEl?: HTMLElement };
+
 export class ViewModeManager {
 	private readonly actionIds: Record<ViewMode, string> = {
 		table: 'switch-table-view',
@@ -36,7 +38,8 @@ export class ViewModeManager {
 				evt?.stopPropagation();
 				void this.setActiveViewMode(mode);
 			});
-			const iconEl = (button as any).iconEl ?? (button as any).containerEl ?? (button as any);
+			const buttonEl = button as ActionButton;
+			const iconEl = buttonEl.iconEl ?? buttonEl.containerEl ?? buttonEl;
 			for (const icon of MODE_ICONS[mode]) {
 				setIcon(iconEl, icon);
 				if (iconEl?.querySelector?.('svg')) break;

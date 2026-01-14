@@ -1,4 +1,4 @@
-import { ColDef, type ICellRendererParams } from 'ag-grid-community';
+import { ColDef, type ICellRendererParams, type ValueFormatterParams } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
@@ -112,27 +112,29 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		cellClass: 'tlb-cell-truncate'
 	};
 
-	const mergedColDef = { ...baseColDef, ...(column as unknown as ColDef) };
+	type ColumnDefWithOverrides = ColDef & SchemaColumnDef;
+	const mergedColDef: ColumnDefWithOverrides = { ...baseColDef, ...column };
 
 	if (!mergedColDef.cellRenderer) {
 		mergedColDef.cellRenderer = createTextLinkCellRenderer();
 	}
 
-	if ((column as any).editorType === 'date') {
-		const format = (column as any).dateFormat ?? 'iso';
-		(mergedColDef as any).cellEditor = createDateCellEditor();
-		(mergedColDef as any).valueFormatter = (params: any) => formatDateForDisplay(params.value, format);
+	const editorType = mergedColDef.editorType;
+	if (editorType === 'date') {
+		const format = mergedColDef.dateFormat ?? 'iso';
+		mergedColDef.cellEditor = createDateCellEditor();
+		mergedColDef.valueFormatter = (params: ValueFormatterParams) => formatDateForDisplay(params.value, format);
 		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-date-cell');
-	} else if ((column as any).editorType === 'time') {
-		const format = (column as any).timeFormat ?? 'hh_mm';
-		(mergedColDef as any).cellEditor = createTimeCellEditor();
-		(mergedColDef as any).valueFormatter = (params: any) => formatTimeForDisplay(params.value, format);
+	} else if (editorType === 'time') {
+		const format = mergedColDef.timeFormat ?? 'hh_mm';
+		mergedColDef.cellEditor = createTimeCellEditor();
+		mergedColDef.valueFormatter = (params: ValueFormatterParams) => formatTimeForDisplay(params.value, format);
 		mergedColDef.cellClass = appendCellClass(mergedColDef.cellClass, 'tlb-time-cell');
 	}
 
-	delete (mergedColDef as any).editorType;
-	delete (mergedColDef as any).dateFormat;
-	delete (mergedColDef as any).timeFormat;
+	delete mergedColDef.editorType;
+	delete mergedColDef.dateFormat;
+	delete mergedColDef.timeFormat;
 
 	if (typeof column.field === 'string' && column.field !== INDEX_FIELD && column.field !== STATUS_FIELD) {
 		mergedColDef.minWidth =
@@ -142,7 +144,7 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		if (typeof mergedColDef.maxWidth === 'number') {
 			mergedColDef.maxWidth = clampColumnWidth(mergedColDef.maxWidth);
 		} else {
-			delete (mergedColDef as any).maxWidth;
+			delete mergedColDef.maxWidth;
 		}
 	}
 
@@ -151,11 +153,11 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		mergedColDef.lockPinned = true;
 	}
 
-	const explicitWidth = (mergedColDef as any).width;
+	const explicitWidth = mergedColDef.width;
 	if (typeof explicitWidth === 'number') {
 		const clamped = clampColumnWidth(explicitWidth);
-		(mergedColDef as any).width = clamped;
-		(mergedColDef as any).suppressSizeToFit = true;
+		mergedColDef.width = clamped;
+		mergedColDef.suppressSizeToFit = true;
 	}
 
 	return mergedColDef;

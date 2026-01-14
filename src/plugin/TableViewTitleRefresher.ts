@@ -57,7 +57,8 @@ export class TableViewTitleRefresher {
 		if (!element) {
 			return;
 		}
-		const setText = (element as any).setText;
+		const elementWithSetText = element as HTMLElement & { setText?: (value: string) => void };
+		const setText = elementWithSetText.setText;
 		if (typeof setText === 'function') {
 			setText.call(element, text);
 			return;

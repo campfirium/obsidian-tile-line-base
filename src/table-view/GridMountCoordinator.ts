@@ -1,5 +1,6 @@
-import type { ColumnDef, GridAdapter, RowData, RowDragEndPayload } from '../grid/GridAdapter';
+import type { ColumnDef, GridAdapter, RowData, RowDragEndPayload, CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
 import type { CellLinkClickContext } from '../types/cellLinks';
+import type { TaskStatus } from '../renderers/StatusCellRenderer';
 import type { Schema } from './SchemaBuilder';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import type { TableDataStore } from './TableDataStore';
@@ -31,18 +32,18 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		const normalizedName = name.trim().toLowerCase();
 		if (normalizedName === 'status') {
 			baseColDef.headerName = '';
-			(baseColDef as any).suppressMovable = true;
-			(baseColDef as any).lockPosition = true;
-			(baseColDef as any).lockPinned = true;
-			(baseColDef as any).pinned = 'left';
+			baseColDef.suppressMovable = true;
+			baseColDef.lockPosition = true;
+			baseColDef.lockPinned = true;
+			baseColDef.pinned = 'left';
 			baseColDef.editable = false;
 		}
 
 		if (primaryField && name === primaryField) {
-			(baseColDef as any).pinned = 'left';
-			(baseColDef as any).lockPinned = true;
-			(baseColDef as any).lockPosition = true;
-			(baseColDef as any).suppressMovable = true;
+			baseColDef.pinned = 'left';
+			baseColDef.lockPinned = true;
+			baseColDef.lockPosition = true;
+			baseColDef.suppressMovable = true;
 		}
 
 		if (columnConfigs) {
@@ -58,7 +59,7 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		const columnType = dataStore.getColumnDisplayType(name);
 		if (columnType === 'formula') {
 			baseColDef.editable = false;
-			(baseColDef as any).tooltipField = dataStore.getFormulaTooltipField(name);
+			baseColDef.tooltipField = dataStore.getFormulaTooltipField(name);
 		} else if (columnType === 'date') {
 			baseColDef.editorType = 'date';
 			baseColDef.dateFormat = dataStore.getDateFormat(name);
@@ -70,12 +71,12 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		const storedWidth = columnLayoutStore.getWidth(name);
 		if (typeof storedWidth === 'number' && name !== '#' && name !== 'status') {
 			const width = clampWidth(storedWidth);
-			(baseColDef as any).width = width;
-			const context = (baseColDef as any).context ?? {};
+			baseColDef.width = width;
+			const context = baseColDef.context ?? {};
 			context.tlbStoredWidth = width;
 			context.tlbWidthSource = 'manual';
-			(baseColDef as any).context = context;
-			(baseColDef as any).suppressSizeToFit = true;
+			baseColDef.context = context;
+			baseColDef.suppressSizeToFit = true;
 		}
 
 		return baseColDef;
@@ -84,15 +85,15 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 
 function applyConfiguredWidth(colDef: ColumnDef, widthExpression: string): void {
 	if (widthExpression === 'flex') {
-		(colDef as any).flex = 1;
-		(colDef as any).minWidth = 200;
+		colDef.flex = 1;
+		colDef.minWidth = 200;
 		return;
 	}
 
 	if (widthExpression.endsWith('%')) {
 		const percentage = parseInt(widthExpression.replace('%', ''), 10);
 		if (!Number.isNaN(percentage)) {
-			(colDef as any).flex = percentage;
+			colDef.flex = percentage;
 		}
 		return;
 	}
@@ -100,26 +101,26 @@ function applyConfiguredWidth(colDef: ColumnDef, widthExpression: string): void 
 	if (widthExpression.endsWith('px')) {
 		const pixels = parseInt(widthExpression.replace('px', ''), 10);
 		if (!Number.isNaN(pixels)) {
-			(colDef as any).width = pixels;
+			colDef.width = pixels;
 		}
 		return;
 	}
 
 	const numeric = parseInt(widthExpression, 10);
 	if (!Number.isNaN(numeric)) {
-		(colDef as any).width = numeric;
+		colDef.width = numeric;
 	}
 }
 
 interface GridMountHandlers {
-	onStatusChange: (rowId: string, newStatus: any) => void;
+	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;
 	onColumnResize: (field: string, width: number) => void;
 	onCopyH2Section: (rowIndex: number) => void;
 	onCopySelectionAsTemplate?: (rowIndex: number) => void;
 	onColumnOrderChange: (fields: string[]) => void;
 	onModelUpdated: () => void;
-	onCellEdit: (event: any) => void;
-	onHeaderEdit: (event: any) => void;
+	onCellEdit: (event: CellEditEvent) => void;
+	onHeaderEdit: (event: HeaderEditEvent) => void;
 	onColumnHeaderContextMenu: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow: (field: string | null) => void;
 	onOpenCellLink: (context: CellLinkClickContext) => void;

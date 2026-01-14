@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { Menu, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow, MarkdownView, Modal } from 'obsidian';
 import { TableView, TABLE_VIEW_TYPE } from './TableView';
 import { TableViewTitleRefresher } from './plugin/TableViewTitleRefresher';
@@ -632,13 +631,14 @@ export default class TileLineBasePlugin extends Plugin {
 		return this.settingsService.getLoggingConfig().globalLevel;
 	}
 
-	async setLoggingLevel(level: LogLevelName): Promise<void> {
+	setLoggingLevel(level: LogLevelName): Promise<void> {
 		const current = this.settingsService.getLoggingConfig().globalLevel;
 		if (current === level) {
-			return;
+			return Promise.resolve();
 		}
 		const config = setGlobalLogLevel(level);
 		this.settings.logging = config;
+		return Promise.resolve();
 	}
 
 	getNavigatorCompatibilityEnabled(): boolean {
@@ -656,7 +656,7 @@ export default class TileLineBasePlugin extends Plugin {
 		if (this.navigatorCompatModalShown || this.settingsService.getNavigatorCompatNoticeShown()) {
 			return;
 		}
-		const pluginManager = (this.app as any)?.plugins;
+		const pluginManager = (this.app as { plugins?: { enabledPlugins?: Set<string>; on?: (event: string, handler: (pluginId: string) => void) => void; off?: (event: string, handler: (pluginId: string) => void) => void } }).plugins;
 		if (!pluginManager?.enabledPlugins?.has?.('notebook-navigator')) {
 			return;
 		}
@@ -711,7 +711,8 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private getMostRecentLeaf(): WorkspaceLeaf | null {
-		const getLeaf = (this.app.workspace as any).getMostRecentLeaf;
+		const workspaceWithRecent = this.app.workspace as typeof this.app.workspace & { getMostRecentLeaf?: () => WorkspaceLeaf | null };
+		const getLeaf = workspaceWithRecent.getMostRecentLeaf;
 		if (typeof getLeaf === 'function') {
 			return getLeaf.call(this.app.workspace) ?? null;
 		}
@@ -723,7 +724,7 @@ export default class TileLineBasePlugin extends Plugin {
 	}
 
 	private registerNavigatorPluginListener(): void {
-		const pluginManager = (this.app as any)?.plugins;
+		const pluginManager = (this.app as { plugins?: { enabledPlugins?: Set<string>; on?: (event: string, handler: (pluginId: string) => void) => void; off?: (event: string, handler: (pluginId: string) => void) => void } }).plugins;
 		if (!pluginManager || typeof pluginManager.on !== 'function') {
 			return;
 		}

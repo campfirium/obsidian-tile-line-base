@@ -1,4 +1,5 @@
 import type { RowData } from '../../grid/GridAdapter';
+import { formatUnknownValue } from '../../utils/valueFormat';
 import {
 	DEFAULT_KANBAN_CARD_CONTENT,
 	type KanbanCardContentConfig,
@@ -170,7 +171,7 @@ function normalizeValue(input: unknown): string {
 	if (input == null) {
 		return '';
 	}
-	return String(input).trim();
+	return formatUnknownValue(input).trim();
 }
 
 function normalizeTemplatePlaceholders(value: string): string {

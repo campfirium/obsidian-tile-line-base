@@ -4,14 +4,9 @@
  * 使用 AG Grid Community 实现 GridAdapter 接口。
  */
 
-import {
-	AllCommunityModule,
-	CellEditingStoppedEvent,
-	ColumnState,
-	GridApi,
-	RowDragEndEvent,
-	ModuleRegistry
-} from 'ag-grid-community';
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
+import type { CellEditingStoppedEvent, ColumnState, GridApi, RowDragEndEvent } from 'ag-grid-community';
+
 import {
 	CellEditEvent,
 	ColumnDef,
@@ -22,8 +17,9 @@ import {
 	RowDragEndPayload,
 	SortModelEntry
 } from './GridAdapter';
+import type { FilterModel } from './GridAdapter';
 import { syncGridContainerTheme, syncGridPopupRoot } from './themeSync';
-import { t } from '../i18n';
+import { t, type TranslationKey } from '../i18n';
 import { AgGridColumnService } from './column/AgGridColumnService';
 import { AgGridInteractionController } from './interactions/AgGridInteractionController';
 import type { GridInteractionContext } from './interactions/types';
@@ -70,7 +66,7 @@ export class AgGridAdapter implements GridAdapter {
 			getGridContext: () => this.gridContext,
 			getCellEditCallback: () => this.cellEditCallback,
 			getEnterAtLastRowCallback: () => this.enterAtLastRowCallback,
-			translate: (key: string) => t(key as any)
+			translate: (key: string) => t(key as TranslationKey)
 		});
 		this.interaction.onViewportResize(reason => {
 			if (reason === 'resize') {
@@ -79,7 +75,7 @@ export class AgGridAdapter implements GridAdapter {
 		});
 
 		this.lifecycle.onReady(({ gridApi, columnApi }) => {
-			this.columnService.attachApis(gridApi, (columnApi ?? null) as any);
+			this.columnService.attachApis(gridApi, columnApi as Parameters<AgGridColumnService['attachApis']>[1]);
 		});
 
 		this.lifecycle.onModelUpdated(() => {
@@ -154,11 +150,11 @@ export class AgGridAdapter implements GridAdapter {
 		});
 	}
 
-	getFilterModel(): any | null {
+	getFilterModel(): FilterModel {
 		return this.state.getFilterModel();
 	}
 
-	setFilterModel(model: any | null): void {
+	setFilterModel(model: FilterModel): void {
 		this.state.setFilterModel(model);
 	}
 
@@ -315,7 +311,7 @@ export class AgGridAdapter implements GridAdapter {
 			targetRow: (event.overNode?.data as RowData | undefined) ?? null,
 			direction: event.vDirection ?? null,
 			overIndex: typeof event.overIndex === 'number' ? event.overIndex : null,
-			displayedRowOrder: this.collectDisplayedRowOrder(event.api as GridApi | null)
+			displayedRowOrder: this.collectDisplayedRowOrder(event.api)
 		};
 
 		this.rowDragEndCallback(payload);
@@ -334,7 +330,10 @@ export class AgGridAdapter implements GridAdapter {
 			const node = api.getDisplayedRowAtIndex(i);
 			const data = (node?.data as RowData | undefined) ?? null;
 			if (data && Object.prototype.hasOwnProperty.call(data, ROW_ID_FIELD)) {
-				order.push((data as any)[ROW_ID_FIELD]);
+				const rowId = data[ROW_ID_FIELD];
+				if (typeof rowId === 'string' || typeof rowId === 'number') {
+					order.push(rowId);
+				}
 			}
 		}
 		return order.length > 0 ? order : null;

@@ -187,8 +187,9 @@ export function createDateCellEditor() {
 			const { normalized, valid } = this.prepareNormalizedValue(this.textInput.value ?? '');
 			this.hiddenPicker.value = valid && normalized !== null ? normalized : '';
 			try {
-				if (typeof (this.hiddenPicker as any).showPicker === 'function') {
-					(this.hiddenPicker as any).showPicker();
+				const picker = this.hiddenPicker as HTMLInputElement & { showPicker?: () => void };
+				if (typeof picker.showPicker === 'function') {
+					picker.showPicker();
 				} else {
 					this.hiddenPicker.focus();
 					this.hiddenPicker.click();

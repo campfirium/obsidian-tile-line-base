@@ -55,12 +55,8 @@ export class TagGroupStore {
 		}
 
 		const stored = this.scope === 'gallery'
-			? (typeof (plugin as any).getGalleryTagGroupsForFile === 'function'
-				? (plugin as any).getGalleryTagGroupsForFile(this.filePath)
-				: null)
-			: (typeof plugin.getTagGroupsForFile === 'function'
-				? plugin.getTagGroupsForFile(this.filePath)
-				: null);
+			? plugin.getGalleryTagGroupsForFile(this.filePath)
+			: plugin.getTagGroupsForFile(this.filePath);
 		if (!stored) {
 			this.resetState();
 			return this.state;
@@ -79,11 +75,7 @@ export class TagGroupStore {
 			return;
 		}
 		if (this.scope === 'gallery') {
-			const saver = (plugin as any).saveGalleryTagGroupsForFile;
-			if (typeof saver !== 'function') {
-				return;
-			}
-			await saver.call(plugin, this.filePath, this.state);
+			await plugin.saveGalleryTagGroupsForFile(this.filePath, this.state);
 			return;
 		}
 		if (typeof plugin.saveTagGroupsForFile !== 'function') {

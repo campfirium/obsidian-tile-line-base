@@ -11,7 +11,7 @@ export interface ConfigCalloutMeta {
 
 export interface ConfigCalloutPayload {
 	meta: ConfigCalloutMeta | null;
-	data: Record<string, any> | null;
+	data: Record<string, unknown> | null;
 }
 
 export function buildConfigCalloutBlock(payload: unknown, meta?: ConfigCalloutMeta | null): string {
@@ -34,11 +34,11 @@ export function readConfigCallout(content: string): ConfigCalloutPayload | null 
 	}
 	try {
 		const parsed = JSON.parse(match[1]);
-		if (!parsed || typeof parsed !== 'object') {
+		if (!isRecord(parsed)) {
 			return null;
 		}
-		const meta = parseMeta((parsed as any).meta);
-		const candidate = (parsed as any).data ?? parsed;
+		const meta = parseMeta(parsed.meta);
+		const candidate = 'data' in parsed ? parsed.data : parsed;
 		const data = isRecord(candidate) ? candidate : null;
 		return { meta, data };
 	} catch {
@@ -53,11 +53,11 @@ export function stripExistingConfigBlock(content: string): string {
 }
 
 function parseMeta(value: unknown): ConfigCalloutMeta | null {
-	if (!value || typeof value !== 'object') {
+	if (!isRecord(value)) {
 		return null;
 	}
-	const fileId = typeof (value as any).fileId === 'string' ? (value as any).fileId : '';
-	const version = typeof (value as any).version === 'number' ? (value as any).version : Number.NaN;
+	const fileId = typeof value.fileId === 'string' ? value.fileId : '';
+	const version = typeof value.version === 'number' ? value.version : Number.NaN;
 	if (!fileId || Number.isNaN(version)) {
 		return null;
 	}
@@ -78,7 +78,7 @@ function sanitizePayload(payload: unknown): Record<string, unknown> {
 	return result;
 }
 
-function isRecord(value: unknown): value is Record<string, any> {
+function isRecord(value: unknown): value is Record<string, unknown> {
 	return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 

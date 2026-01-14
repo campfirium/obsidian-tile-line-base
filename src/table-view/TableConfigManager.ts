@@ -52,7 +52,7 @@ export class TableConfigManager {
 		// Config now persists via plugin settings; nothing to reset.
 	}
 
-	async load(file: TFile): Promise<Record<string, any> | null> {
+	async load(file: TFile): Promise<TableConfigData | null> {
 		const plugin = getPluginContext();
 		if (!plugin) {
 			logger.warn('Plugin context unavailable when loading table config');
@@ -77,14 +77,14 @@ export class TableConfigManager {
 		if (settings.tagGroups[filePath]) {
 			snapshot.tagGroups = plugin.getTagGroupsForFile(filePath);
 		}
-		if ((settings as any).galleryFilterViews?.[filePath]) {
-			snapshot.galleryFilterViews = (plugin as any).getGalleryFilterViewsForFile
-				? (plugin as any).getGalleryFilterViewsForFile(filePath)
+		if (settings.galleryFilterViews?.[filePath]) {
+			snapshot.galleryFilterViews = plugin.getGalleryFilterViewsForFile
+				? plugin.getGalleryFilterViewsForFile(filePath)
 				: undefined;
 		}
-		if ((settings as any).galleryTagGroups?.[filePath]) {
-			snapshot.galleryTagGroups = (plugin as any).getGalleryTagGroupsForFile
-				? (plugin as any).getGalleryTagGroupsForFile(filePath)
+		if (settings.galleryTagGroups?.[filePath]) {
+			snapshot.galleryTagGroups = plugin.getGalleryTagGroupsForFile
+				? plugin.getGalleryTagGroupsForFile(filePath)
 				: undefined;
 		}
 		const layout = settings.columnLayouts[filePath];
@@ -144,14 +144,14 @@ export class TableConfigManager {
 		const filterViews = data.filterViews ?? { views: [], activeViewId: null, metadata: {} };
 		tasks.push(plugin.saveFilterViewsForFile(filePath, filterViews));
 		const galleryFilterViews = data.galleryFilterViews ?? { views: [], activeViewId: null, metadata: {} };
-		if ((plugin as any).saveGalleryFilterViewsForFile) {
-			tasks.push((plugin as any).saveGalleryFilterViewsForFile(filePath, galleryFilterViews));
+		if (plugin.saveGalleryFilterViewsForFile) {
+			tasks.push(plugin.saveGalleryFilterViewsForFile(filePath, galleryFilterViews));
 		}
 		if (data.tagGroups) {
 			tasks.push(plugin.saveTagGroupsForFile(filePath, data.tagGroups));
 		}
-		if (data.galleryTagGroups && (plugin as any).saveGalleryTagGroupsForFile) {
-			tasks.push((plugin as any).saveGalleryTagGroupsForFile(filePath, data.galleryTagGroups));
+		if (data.galleryTagGroups && plugin.saveGalleryTagGroupsForFile) {
+			tasks.push(plugin.saveGalleryTagGroupsForFile(filePath, data.galleryTagGroups));
 		}
 		tasks.push(settingsService.setColumnLayout(filePath, data.columnWidths ?? null));
 
@@ -171,7 +171,7 @@ export class TableConfigManager {
 		tasks.push(settingsService.setFileViewPreference(filePath, viewPreference));
 
 		const kanbanPreference =
-			data.kanban && data.kanban.laneField?.trim().length ? (data.kanban as KanbanViewPreferenceConfig) : null;
+			data.kanban && data.kanban.laneField?.trim().length ? data.kanban : null;
 		tasks.push(settingsService.saveKanbanPreferencesForFile(filePath, kanbanPreference));
 
 		if (data.kanbanBoards && data.kanbanBoards.boards.length > 0) {
@@ -222,7 +222,7 @@ export class TableConfigManager {
 		}
 	}
 
-	private normalizeConfigData(source: Record<string, any>): TableConfigData | null {
+	private normalizeConfigData(source: Record<string, unknown>): TableConfigData | null {
 		if (!isRecord(source)) {
 			return null;
 		}
@@ -230,19 +230,19 @@ export class TableConfigManager {
 		let hasData = false;
 
 		if (isRecord(source.filterViews)) {
-			result.filterViews = source.filterViews as FileFilterViewState;
+			result.filterViews = source.filterViews as unknown as FileFilterViewState;
 			hasData = true;
 		}
 		if (isRecord(source.tagGroups)) {
-			result.tagGroups = source.tagGroups as FileTagGroupState;
+			result.tagGroups = source.tagGroups as unknown as FileTagGroupState;
 			hasData = true;
 		}
 		if (isRecord(source.galleryFilterViews)) {
-			result.galleryFilterViews = source.galleryFilterViews as FileFilterViewState;
+			result.galleryFilterViews = source.galleryFilterViews as unknown as FileFilterViewState;
 			hasData = true;
 		}
 		if (isRecord(source.galleryTagGroups)) {
-			result.galleryTagGroups = source.galleryTagGroups as FileTagGroupState;
+			result.galleryTagGroups = source.galleryTagGroups as unknown as FileTagGroupState;
 			hasData = true;
 		}
 		if (isRecord(source.columnWidths)) {
@@ -273,40 +273,46 @@ export class TableConfigManager {
 			hasData = true;
 		}
 		if (isRecord(source.kanban)) {
-			result.kanban = source.kanban as KanbanViewPreferenceConfig;
+			result.kanban = source.kanban as unknown as KanbanViewPreferenceConfig;
 			hasData = true;
 		}
 		if (isRecord(source.kanbanBoards)) {
-			result.kanbanBoards = source.kanbanBoards as KanbanBoardState;
+			result.kanbanBoards = source.kanbanBoards as unknown as KanbanBoardState;
 			hasData = true;
 		}
 		if (isRecord(source.slide)) {
-			result.slide = source.slide as SlideViewConfig;
+			result.slide = source.slide as unknown as SlideViewConfig;
 			hasData = true;
 		}
 		if (isRecord(source.gallery)) {
-			result.gallery = source.gallery as SlideViewConfig;
+			result.gallery = source.gallery as unknown as SlideViewConfig;
 			hasData = true;
 		}
 		if (isRecord(source.galleryViews)) {
-			const rawViews = (source.galleryViews as { views?: unknown }).views;
+			const galleryViewsRecord = source.galleryViews;
+			const rawViews = galleryViewsRecord.views;
 			const views = Array.isArray(rawViews)
-				? rawViews.map((entry: any) => {
-					const width = normalizeCardSize(entry?.cardWidth, DEFAULT_GALLERY_CARD_WIDTH);
-					const height = normalizeCardSize(entry?.cardHeight, DEFAULT_GALLERY_CARD_HEIGHT);
-					const fallback = (!width || !height) ? deriveCardSizeFromAspect(entry?.cardAspectRatio) : null;
+				? rawViews.map((entry) => {
+					const entryRecord = isRecord(entry) ? entry : {};
+					const width = normalizeCardSize(entryRecord.cardWidth, DEFAULT_GALLERY_CARD_WIDTH);
+					const height = normalizeCardSize(entryRecord.cardHeight, DEFAULT_GALLERY_CARD_HEIGHT);
+					const fallback = (!width || !height)
+						? deriveCardSizeFromAspect(entryRecord.cardAspectRatio)
+						: null;
 					return {
-						id: entry?.id,
-						name: entry?.name,
-						template: entry?.template,
+						id: typeof entryRecord.id === 'string' ? entryRecord.id : '',
+						name: typeof entryRecord.name === 'string' ? entryRecord.name : '',
+						template: entryRecord.template as SlideViewConfig,
 						cardWidth: width ?? fallback?.width ?? undefined,
 						cardHeight: height ?? fallback?.height ?? undefined
 					};
 				})
 				: [];
+			const activeViewId =
+				typeof galleryViewsRecord.activeViewId === 'string' ? galleryViewsRecord.activeViewId : null;
 			result.galleryViews = {
-				views: views as Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>,
-				activeViewId: (source.galleryViews as { activeViewId?: string | null }).activeViewId ?? null
+				views,
+				activeViewId
 			};
 			hasData = true;
 		}
@@ -315,6 +321,6 @@ export class TableConfigManager {
 	}
 }
 
-function isRecord(value: unknown): value is Record<string, any> {
+function isRecord(value: unknown): value is Record<string, unknown> {
 	return !!value && typeof value === 'object' && !Array.isArray(value);
 }

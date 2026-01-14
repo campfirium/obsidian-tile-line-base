@@ -2,6 +2,7 @@ import { Menu } from 'obsidian';
 import type { RowData } from '../../grid/GridAdapter';
 import type { FilterRule, FilterViewDefinition } from '../../types/filterView';
 import type { TagGroupDefinition } from '../../types/tagGroup';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 export interface GalleryCardFieldOption {
 	value: string;
@@ -66,7 +67,7 @@ export function resolveGalleryCardFieldContext(options: {
 
 export function normalizeGalleryCardFieldValue(field: string, value: unknown): string {
 	const normalizedField = typeof field === 'string' ? field.trim().toLowerCase() : '';
-	const normalizedValue = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
+	const normalizedValue = typeof value === 'string' ? value.trim() : formatUnknownValue(value).trim();
 	if (!normalizedValue) {
 		return '';
 	}
@@ -89,12 +90,12 @@ export function openGalleryCardFieldMenu(options: {
 
 	const menu = new Menu();
 	const rawCurrent = row[context.field];
-	const currentValue = typeof rawCurrent === 'string' ? rawCurrent.trim() : String(rawCurrent ?? '').trim();
+	const currentValue = typeof rawCurrent === 'string' ? rawCurrent.trim() : formatUnknownValue(rawCurrent).trim();
 	const currentKey = normalizeGalleryCardFieldValue(context.field, currentValue);
 	let added = false;
 
 	for (const option of context.options) {
-		const value = typeof option.value === 'string' ? option.value.trim() : String(option.value ?? '').trim();
+		const value = typeof option.value === 'string' ? option.value.trim() : formatUnknownValue(option.value).trim();
 		if (!value) {
 			continue;
 		}

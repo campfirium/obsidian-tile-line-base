@@ -34,10 +34,9 @@ const FORMAT_PRESET_DEFINITIONS: readonly FormulaFormatPresetDefinition[] = [
 ];
 
 const PATTERN_TO_PRESET = new Map<string, FormulaFormatPreset>(
-	FORMAT_PRESET_DEFINITIONS.filter((definition) => definition.pattern).map((definition) => [
-		(definition.pattern ?? '').toLowerCase(),
-		definition.value
-	]) as Array<[string, FormulaFormatPreset]>
+	FORMAT_PRESET_DEFINITIONS.flatMap((definition): Array<[string, FormulaFormatPreset]> =>
+		definition.pattern ? [[definition.pattern.toLowerCase(), definition.value]] : []
+	)
 );
 
 export function getFormulaFormatPresetOptions(): readonly FormulaFormatPresetDefinition[] {

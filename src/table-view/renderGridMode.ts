@@ -7,13 +7,23 @@ import { handleStatusChange, handleCellEdit } from './TableCellInteractions';
 import { handleCellLinkOpen } from './LinkNavigation';
 import { applyStripeStyles } from './stripeStyles';
 import { syncGridContainerTheme } from '../grid/themeSync';
+import type { BorderColorMode, StripeColorMode } from '../types/appearance';
+
+interface RenderGridModePlugin {
+	getStripeColorMode?: () => StripeColorMode;
+	getStripeCustomColor?: () => string | null;
+	getBorderColorMode?: () => BorderColorMode;
+	getBorderCustomColor?: () => string | null;
+	getBorderContrast?: () => number;
+	isHideRightSidebarEnabled?: () => boolean;
+}
 
 interface RenderGridModeOptions {
 	view: TableView;
 	container: HTMLElement;
 	ownerDoc: Document;
 	primaryField: string | null;
-	plugin: any;
+	plugin: RenderGridModePlugin | null;
 }
 
 export function renderGridMode(options: RenderGridModeOptions): void {
@@ -55,7 +65,7 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 		borderContrast,
 		isDarkMode
 	});
-	const hideRightSidebar = plugin?.isHideRightSidebarEnabled() ?? false;
+	const hideRightSidebar = plugin?.isHideRightSidebarEnabled?.() ?? false;
 	const sideBarVisible = !hideRightSidebar;
 
 	const containerWindow = ownerDoc?.defaultView ?? window;

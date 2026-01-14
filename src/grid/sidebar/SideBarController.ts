@@ -72,8 +72,8 @@ export class SideBarController {
 
 	private hasSideBarModule(api: GridApi): boolean {
 		const registry = ModuleRegistry as unknown as {
-			_getAllRegisteredModules?: () => Set<any> | undefined;
-			_getGridRegisteredModules?: (gridId: string | undefined, rowModel: string | undefined) => any[];
+			_getAllRegisteredModules?: () => Set<unknown> | undefined;
+			_getGridRegisteredModules?: (gridId: string | undefined, rowModel: string | undefined) => unknown[];
 		};
 
 		const allModules = registry?._getAllRegisteredModules?.();
@@ -91,7 +91,7 @@ export class SideBarController {
 		return Array.isArray(scopedModules) && scopedModules.some((module) => this.moduleMatches(module));
 	}
 
-	private modulesSetHasSidebar(modules: Set<any>): boolean {
+	private modulesSetHasSidebar(modules: Set<unknown>): boolean {
 		for (const module of modules) {
 			if (this.moduleMatches(module)) {
 				return true;
@@ -100,26 +100,32 @@ export class SideBarController {
 		return false;
 	}
 
-	private moduleMatches(module: any): boolean {
-		return Boolean(module && typeof module === 'object' && module.moduleName === SIDEBAR_MODULE_NAME);
+	private moduleMatches(module: unknown): boolean {
+		if (!module || typeof module !== 'object') {
+			return false;
+		}
+		const moduleRecord = module as { moduleName?: unknown };
+		return moduleRecord.moduleName === SIDEBAR_MODULE_NAME;
 	}
 
 	private extractGridId(api: GridApi): string | undefined {
-		const context = (api as any)?.__getContext?.() ?? (api as any)?.ctx ?? null;
+		const apiWithContext = api as GridApi & { __getContext?: () => { gridId?: string } | null; ctx?: { gridId?: string } | null; gridId?: string; gridOptionsService?: { gridId?: string; _gridId?: string } };
+		const context = apiWithContext.__getContext?.() ?? apiWithContext.ctx ?? null;
 		if (context && typeof context.gridId === 'string') {
 			return context.gridId;
 		}
-		const gridId = (api as any)?.gridId;
+		const gridId = apiWithContext.gridId;
 		if (typeof gridId === 'string') {
 			return gridId;
 		}
-		const gridOptionsService = (api as any)?.gridOptionsService;
+		const gridOptionsService = apiWithContext.gridOptionsService;
 		const fromService = gridOptionsService?.gridId ?? gridOptionsService?._gridId;
 		return typeof fromService === 'string' ? fromService : undefined;
 	}
 
 	private extractRowModel(api: GridApi): string | undefined {
-		const rowModel = (api as any)?.getModel?.()?.getType?.();
+		const apiWithModel = api as GridApi & { getModel?: () => { getType?: () => string } | null };
+		const rowModel = apiWithModel.getModel?.()?.getType?.();
 		return typeof rowModel === 'string' ? rowModel : undefined;
 	}
 

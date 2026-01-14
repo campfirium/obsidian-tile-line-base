@@ -9,6 +9,10 @@ interface KanbanViewportManagerOptions {
 	container: HTMLElement;
 }
 
+const applyCssProps = (el: HTMLElement, props: Record<string, string>): void => {
+	(el as HTMLElement & { setCssProps: (props: Record<string, string>) => void }).setCssProps(props);
+};
+
 export class KanbanViewportManager {
 	private viewportWindow: Window | null = null;
 	private viewportFrameId: number | null = null;
@@ -60,9 +64,10 @@ export class KanbanViewportManager {
 			win.addEventListener('resize', this.resizeHandler, { passive: true });
 		}
 		this.cancelMeasurement();
-		// eslint-disable-next-line obsidianmd/no-static-styles-assignment
-		container.style.overflowY = 'auto';
-		container.style.minHeight = `${KANBAN_VIEWPORT_MIN_HEIGHT_PX}px`;
+		applyCssProps(container, {
+			'overflow-y': 'auto',
+			'min-height': String(KANBAN_VIEWPORT_MIN_HEIGHT_PX) + 'px'
+		});
 		this.viewportFrameId = win.requestAnimationFrame(() => {
 			this.viewportFrameId = null;
 			this.applyViewportHeight(win);
@@ -77,7 +82,9 @@ export class KanbanViewportManager {
 		const rect = container.getBoundingClientRect();
 		const available = win.innerHeight - rect.top - KANBAN_VIEWPORT_PADDING_PX;
 		const clamped = Math.max(available, KANBAN_VIEWPORT_MIN_HEIGHT_PX);
-		container.style.maxHeight = `${clamped}px`;
+		applyCssProps(container, {
+			'max-height': String(clamped) + 'px'
+		});
 	}
 
 	private cancelMeasurement(): void {

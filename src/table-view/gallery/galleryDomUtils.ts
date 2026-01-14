@@ -29,7 +29,8 @@ export function ensureGalleryCard(state: GalleryDomState, grid: HTMLElement, ind
 }
 
 export function ensureGallerySlide(card: HTMLElement): HTMLElement {
-	let slide = card.querySelector('.tlb-gallery-card__slide') as HTMLElement | null;
+	const target = card.querySelector('.tlb-gallery-card__slide');
+	let slide = target instanceof HTMLElement ? target : null;
 	if (!slide) {
 		slide = card.createDiv({ cls: 'tlb-slide-full__slide tlb-gallery-card__slide tlb-gallery-edit' });
 	}

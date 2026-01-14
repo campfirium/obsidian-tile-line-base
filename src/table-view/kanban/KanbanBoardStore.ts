@@ -312,7 +312,7 @@ export class KanbanBoardStore {
 	}
 
 	private sanitizeSortDirection(
-		direction: KanbanSortDirection | string | null | undefined
+		direction: KanbanSortDirection | null | undefined
 	): KanbanSortDirection {
 		if (direction === 'asc' || direction === 'desc') {
 			return direction;

@@ -2,6 +2,7 @@ import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
 import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/kanban';
 import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
 import { isStatusLaneField, normalizeStatusLaneValue } from './statusLaneHelpers';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 export interface KanbanCardField {
 	name: string;
@@ -323,7 +324,7 @@ function normalizeString(input: unknown): string {
 	if (input == null) {
 		return '';
 	}
-	return String(input).trim();
+	return formatUnknownValue(input).trim();
 }
 
 function parseSortMetadata(raw: string): { numeric: number | null; text: string | null } {

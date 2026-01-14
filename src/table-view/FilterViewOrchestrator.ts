@@ -44,7 +44,8 @@ export class FilterViewOrchestrator {
 
 		const adapter = this.deps.getGridAdapter();
 		if (adapter) {
-			const api = (adapter as any).gridApi;
+			const adapterWithApi = adapter as GridAdapter & { gridApi?: { setGridOption?: (key: string, value: unknown) => void } };
+			const api = adapterWithApi.gridApi;
 			if (api && typeof api.setGridOption === 'function') {
 				api.setGridOption('rowData', this.visibleRows);
 			} else {

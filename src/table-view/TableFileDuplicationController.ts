@@ -28,7 +28,7 @@ export class TableFileDuplicationController {
 		}
 
 		try {
-			const targetPath = await this.buildTargetPath(sourceFile);
+			const targetPath = this.buildTargetPath(sourceFile);
 			const content = await this.options.app.vault.read(sourceFile);
 			const duplicatedFile = await this.options.app.vault.create(targetPath, content);
 			await this.persistConfigForFile(duplicatedFile);
@@ -44,7 +44,7 @@ export class TableFileDuplicationController {
 		}
 	}
 
-	async exportWithConfigBlock(): Promise<void> {
+	exportWithConfigBlock(): void {
 		const sourceFile = this.options.getCurrentFile();
 		if (!sourceFile) {
 			new Notice(t('fileDuplication.errorNoFile'));
@@ -80,11 +80,11 @@ export class TableFileDuplicationController {
 		await this.options.configManager.save(targetFile, payload);
 	}
 
-	private async buildTargetPath(file: TFile): Promise<string> {
+	private buildTargetPath(file: TFile): string {
 		return this.buildPathWithSuffix(file, this.getCopySuffix(), t('fileDuplication.fallbackName'));
 	}
 
-	private async buildPathWithSuffix(file: TFile, suffix: string, fallbackName: string): Promise<string> {
+	private buildPathWithSuffix(file: TFile, suffix: string, fallbackName: string): string {
 		const parentPath = file.parent?.path ?? '';
 		const extension = file.extension ? `.${file.extension}` : '';
 		const baseName = file.basename.trim() || fallbackName;

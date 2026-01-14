@@ -1,11 +1,12 @@
 import type { Command, TFile, WorkspaceLeaf } from 'obsidian';
+import type { TableView } from '../TableView';
 import { registerKanbanViewCommand } from './commands/registerKanbanViewCommand';
 import { registerSlideViewCommand } from './commands/registerSlideViewCommand';
 import { registerGalleryViewCommand } from './commands/registerGalleryViewCommand';
 
 interface ViewCommandDeps {
 	addCommand: (config: Command) => void;
-	getActiveTableView(): any;
+	getActiveTableView(): TableView | null;
 	getActiveContext(): { leaf: WorkspaceLeaf | null; activeFile: TFile | null };
 	openWithMode: (mode: 'kanban' | 'slide' | 'gallery', file: TFile, leaf: WorkspaceLeaf | null) => Promise<void>;
 }

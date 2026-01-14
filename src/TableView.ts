@@ -181,12 +181,12 @@ export class TableView extends ItemView {
 			}
 		}
 		if (this.refreshCoordinator) {
-			await this.refreshCoordinator.finalizeRender(snapshot);
+			this.refreshCoordinator.finalizeRender(snapshot);
 		}
 		this.viewModeManager.updateButtons();
 		this.refreshDisplayText();
 	}
-	async onOpen(): Promise<void> {
+	onOpen(): Promise<void> {
 		ensureMarkdownToggle(this);
 		this.viewModeManager.ensureActions();
 		this.viewModeManager.updateButtons();
@@ -194,7 +194,7 @@ export class TableView extends ItemView {
 			const plugin = getPluginContext();
 			const compatEnabled = plugin?.getNavigatorCompatibilityEnabled?.() ?? false;
 			if (compatEnabled) {
-				const pluginManager = (this.app as any)?.plugins;
+				const pluginManager = (this.app as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
 				const navigatorActive = !!pluginManager?.enabledPlugins?.has?.('notebook-navigator');
 				if (navigatorActive) {
 					this.disposeNavigatorProbe = attachNavigatorCompatibility(this.leaf, {
@@ -204,6 +204,7 @@ export class TableView extends ItemView {
 				}
 			}
 		}
+		return Promise.resolve();
 	}
 	async onClose(): Promise<void> {
 		await this.restoreSessionBaselineIfEligible();
@@ -249,7 +250,7 @@ export class TableView extends ItemView {
 		this.galleryViewStore.reset();
 		this.activeGalleryViewId = null;
 		this.galleryViewsLoaded = false;
-		await handleOnClose(this);
+		handleOnClose(this);
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.dispose();
 		}
@@ -258,7 +259,7 @@ export class TableView extends ItemView {
 			this.disposeNavigatorProbe = null;
 		}
 	}
-	onPaneMenu(menu: Menu, source: "more-options" | "tab-header" | string): void {
+	onPaneMenu(menu: Menu, source: string): void {
 		if (source && source !== "more-options") { return; }
 		const markdownLeaf = this.app.workspace.getLeavesOfType("markdown")
 			.find((leaf) => (leaf.view as MarkdownView).file?.path === this.file?.path)
@@ -266,7 +267,12 @@ export class TableView extends ItemView {
 		const markdownView = markdownLeaf?.view instanceof MarkdownView ? markdownLeaf.view : null;
 		if (markdownView) { markdownView.onPaneMenu(menu, source); return; }
 		super.onPaneMenu(menu, source);
-		if (this.file) { (this.app.workspace as any).trigger?.("file-menu", menu, this.file, source, this.leaf); }
+		if (this.file) {
+		const workspaceWithTrigger = this.app.workspace as typeof this.app.workspace & {
+			trigger?: (event: string, ...args: unknown[]) => void;
+		};
+		workspaceWithTrigger.trigger?.("file-menu", menu, this.file, source, this.leaf);
+	}
 	}
 	public setKanbanHeightMode(mode: KanbanHeightMode): void {
 		const normalized = sanitizeKanbanHeightMode(mode);

@@ -1,7 +1,7 @@
 {
   "id": "tile-line-base",
   "name": "TileLineBase",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "minAppVersion": "1.0.0",
   "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "author": "Campfirium",

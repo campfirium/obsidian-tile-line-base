@@ -1,5 +1,15 @@
 {
-"0.9.3": {
+  "0.9.4": {
+    "date": "2026-02-23",
+    "info": "Improved link rendering and interaction in table cells.",
+    "new": [],
+    "improved": [
+      "Table cells now render inline links that can be opened directly, replacing the right-side link icon button; fixed Markdown link classification for non-ASCII internal paths."
+    ],
+    "fixed": [],
+    "changed": []
+  },
+  "0.9.3": {
     "date": "2026-01-14",
     "info": "Metadata alignment for community submission.",
     "new": [],
@@ -7,7 +17,7 @@
     "fixed": [],
     "changed": []
   },
-"0.9.2": {
+  "0.9.2": {
     "date": "2026-01-13",
     "info": "",
     "new": [
@@ -21,7 +31,7 @@
     ],
     "changed": []
   },
-"0.9.1": {
+  "0.9.1": {
     "date": "2026-01-13",
     "info": "Backup restore workflow, tooltip polish, and NN compatibility improvements.",
     "new": [
@@ -40,7 +50,7 @@
     ],
     "changed": []
   },
-"0.9.0": {
+  "0.9.0": {
     "date": "2025-12-17",
     "info": "Major update: Gallery View (Beta), Multiline Editing, and Theme Fixes.",
     "new": [

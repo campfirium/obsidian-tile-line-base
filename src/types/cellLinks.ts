@@ -13,3 +13,16 @@ export interface CellLinkClickContext {
 	rowId: string | null;
 	rawValue: string;
 }
+
+export interface CellTextSegment {
+	kind: 'text';
+	text: string;
+}
+
+export interface CellLinkSegment {
+	kind: 'link';
+	text: string;
+	link: DetectedCellLink;
+}
+
+export type CellRenderableSegment = CellTextSegment | CellLinkSegment;

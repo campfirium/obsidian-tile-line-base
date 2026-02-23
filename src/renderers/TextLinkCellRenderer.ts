@@ -1,20 +1,17 @@
 import type { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
-import { setIcon } from 'obsidian';
-import { t } from '../i18n';
-import type { DetectedCellLink, CellLinkClickContext } from '../types/cellLinks';
-import { detectPrimaryCellLink } from '../utils/linkDetection';
+import type { CellLinkClickContext, DetectedCellLink } from '../types/cellLinks';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
 import { formatUnknownValue } from '../utils/valueFormat';
+import { parseCellLinkSegments } from '../utils/linkDetection';
 
 export class TextLinkCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
 	private textEl!: HTMLElement;
-	private buttonEl: HTMLButtonElement | null = null;
 	private params!: ICellRendererParams;
-	private currentLink: DetectedCellLink | null = null;
-	private buttonClickHandler?: (event: MouseEvent) => void;
-	private buttonMouseDownHandler?: (event: MouseEvent) => void;
-	private buttonKeydownHandler?: (event: KeyboardEvent) => void;
+	private currentLinks: DetectedCellLink[] = [];
+	private textClickHandler?: (event: MouseEvent) => void;
+	private textMouseDownHandler?: (event: MouseEvent) => void;
+	private textKeydownHandler?: (event: KeyboardEvent) => void;
 
 	init(params: ICellRendererParams): void {
 		this.params = params;
@@ -25,10 +22,9 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 
 		this.textEl = doc.createElement('span');
 		this.textEl.className = 'tlb-link-cell__text';
-		this.textEl.textContent = this.getDisplayValue(params);
 		this.eGui.appendChild(this.textEl);
-
-		this.renderLinkButton();
+		this.attachTextEvents();
+		this.renderContent();
 	}
 
 	getGui(): HTMLElement {
@@ -37,92 +33,13 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 
 	refresh(params: ICellRendererParams): boolean {
 		this.params = params;
-		this.textEl.textContent = this.getDisplayValue(params);
-		this.renderLinkButton();
+		this.renderContent();
 		return true;
 	}
 
 	destroy(): void {
-		this.detachButtonEvents();
-		this.buttonEl = null;
-		this.buttonClickHandler = undefined;
-		this.buttonMouseDownHandler = undefined;
-		this.buttonKeydownHandler = undefined;
-		this.currentLink = null;
-	}
-
-	private renderLinkButton(): void {
-		const link = detectPrimaryCellLink(this.params.value);
-		this.currentLink = link;
-
-		if (!link) {
-			this.detachButtonEvents();
-			if (this.buttonEl?.isConnected) {
-				this.buttonEl.remove();
-			}
-			this.buttonEl = null;
-			return;
-		}
-
-		if (!this.buttonEl) {
-			const doc = this.params.eGridCell?.ownerDocument ?? document;
-			this.buttonEl = doc.createElement('button');
-			this.buttonEl.type = 'button';
-			this.buttonEl.className = 'tlb-link-cell__button';
-			this.buttonEl.tabIndex = 0;
-			this.eGui.appendChild(this.buttonEl);
-			this.attachButtonEvents();
-		}
-
-		const iconId = link.type === 'internal' ? 'file' : 'external-link';
-		const tooltipKey = link.type === 'internal' ? 'textLinkCell.openInternal' : 'textLinkCell.openExternal';
-		const tooltip = t(tooltipKey, { target: link.displayText });
-
-		const button = this.buttonEl;
-		if (!button) {
-			return;
-		}
-		setIcon(button, iconId);
-		button.setAttribute('title', tooltip);
-		button.setAttribute('aria-label', tooltip);
-		button.dataset.linkType = link.type;
-	}
-
-	private attachButtonEvents(): void {
-		if (!this.buttonEl) {
-			return;
-		}
-		this.buttonClickHandler = (event: MouseEvent) => {
-			event.preventDefault();
-			event.stopPropagation();
-			this.triggerLinkOpen();
-		};
-		this.buttonMouseDownHandler = (event: MouseEvent) => {
-			event.preventDefault();
-			event.stopPropagation();
-		};
-		this.buttonKeydownHandler = (event: KeyboardEvent) => {
-			if (event.key === 'Enter' || event.key === ' ') {
-				event.preventDefault();
-				event.stopPropagation();
-				this.triggerLinkOpen();
-			}
-		};
-		this.buttonEl.addEventListener('click', this.buttonClickHandler, { capture: false });
-		this.buttonEl.addEventListener('mousedown', this.buttonMouseDownHandler, { capture: true });
-		this.buttonEl.addEventListener('keydown', this.buttonKeydownHandler, { capture: false });
-	}
-
-	private detachButtonEvents(): void {
-		if (this.buttonEl && this.buttonClickHandler) {
-			this.buttonEl.removeEventListener('click', this.buttonClickHandler);
-		}
-		if (this.buttonEl && this.buttonMouseDownHandler) {
-			this.buttonEl.removeEventListener('mousedown', this.buttonMouseDownHandler, true);
-		}
-		if (this.buttonEl && this.buttonKeydownHandler) {
-			this.buttonEl.removeEventListener('keydown', this.buttonKeydownHandler);
-		}
+		this.detachTextEvents();
+		this.currentLinks = [];
 	}
 
 	public shouldDisplayTooltip(): boolean {
@@ -132,13 +49,117 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		return this.textEl.scrollWidth > this.textEl.clientWidth + 1;
 	}
 
-	private triggerLinkOpen(): void {
+	private renderContent(): void {
+		const rawValue = this.getRawValue();
+		const segments = parseCellLinkSegments(rawValue);
+		const hasLink = segments.some((segment) => segment.kind === 'link');
+		this.currentLinks = [];
+
+		if (!hasLink) {
+			this.textEl.textContent = this.getDisplayValue(this.params);
+			return;
+		}
+
+		const doc = this.params.eGridCell?.ownerDocument ?? document;
+		const fragment = doc.createDocumentFragment();
+
+		for (const segment of segments) {
+			if (segment.kind === 'text') {
+				fragment.appendChild(doc.createTextNode(segment.text));
+				continue;
+			}
+
+			const linkIndex = this.currentLinks.length;
+			this.currentLinks.push(segment.link);
+
+			const anchor = doc.createElement('a');
+			anchor.className = 'tlb-link-cell__anchor';
+			anchor.textContent = segment.text;
+			anchor.href = '#';
+			anchor.tabIndex = 0;
+			anchor.dataset.linkIndex = String(linkIndex);
+			fragment.appendChild(anchor);
+		}
+
+		this.textEl.replaceChildren(fragment);
+	}
+
+	private attachTextEvents(): void {
+		this.textClickHandler = (event: MouseEvent) => {
+			const link = this.getLinkFromEventTarget(event.target);
+			if (!link) {
+				return;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			this.triggerLinkOpen(link);
+		};
+
+		this.textMouseDownHandler = (event: MouseEvent) => {
+			const link = this.getLinkFromEventTarget(event.target);
+			if (!link) {
+				return;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+		};
+
+		this.textKeydownHandler = (event: KeyboardEvent) => {
+			if (event.key !== 'Enter' && event.key !== ' ') {
+				return;
+			}
+			const link = this.getLinkFromEventTarget(event.target);
+			if (!link) {
+				return;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			this.triggerLinkOpen(link);
+		};
+
+		this.textEl.addEventListener('click', this.textClickHandler, { capture: false });
+		this.textEl.addEventListener('mousedown', this.textMouseDownHandler, { capture: true });
+		this.textEl.addEventListener('keydown', this.textKeydownHandler, { capture: false });
+	}
+
+	private detachTextEvents(): void {
+		if (this.textClickHandler) {
+			this.textEl.removeEventListener('click', this.textClickHandler);
+		}
+		if (this.textMouseDownHandler) {
+			this.textEl.removeEventListener('mousedown', this.textMouseDownHandler, true);
+		}
+		if (this.textKeydownHandler) {
+			this.textEl.removeEventListener('keydown', this.textKeydownHandler);
+		}
+	}
+
+	private getLinkFromEventTarget(target: EventTarget | null): DetectedCellLink | null {
+		if (!(target instanceof HTMLElement)) {
+			return null;
+		}
+		const anchor = target.closest<HTMLElement>('.tlb-link-cell__anchor');
+		if (!anchor || !this.textEl.contains(anchor)) {
+			return null;
+		}
+		const indexText = anchor.dataset.linkIndex;
+		if (!indexText) {
+			return null;
+		}
+		const index = Number.parseInt(indexText, 10);
+		if (!Number.isFinite(index) || index < 0 || index >= this.currentLinks.length) {
+			return null;
+		}
+		return this.currentLinks[index] ?? null;
+	}
+
+	private triggerLinkOpen(link: DetectedCellLink): void {
 		const context = this.params.context as { openCellLink?: (ctx: CellLinkClickContext) => void } | undefined;
-		if (!context?.openCellLink || !this.currentLink) {
+		if (!context?.openCellLink) {
 			return;
 		}
 		context.openCellLink({
-			link: this.currentLink,
+			link,
 			field: this.params.colDef?.field ?? null,
 			rowId: this.getRowId(),
 			rawValue: this.getRawValue()

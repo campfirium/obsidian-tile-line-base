@@ -12,10 +12,12 @@ import { DEFAULT_KANBAN_SORT_DIRECTION, sanitizeKanbanFontScale } from '../../ty
 import { sanitizeKanbanHeightMode } from './kanbanHeight';
 import { sanitizeKanbanLaneWidth } from './kanbanWidth';
 import type { TableView } from '../../TableView';
+import type { DetectedCellLink } from '../../types/cellLinks';
 import type { KanbanLane } from './KanbanDataBuilder';
 import { KanbanViewportManager } from './KanbanViewportManager';
 import type { GlobalQuickFilterManager } from '../filter/GlobalQuickFilterManager';
 import { t } from '../../i18n';
+import { handleCellLinkOpen } from '../LinkNavigation';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { KanbanLaneReorderController } from './KanbanLaneReorderController';
 import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
@@ -421,7 +423,10 @@ export class KanbanViewController {
 					container: cardsContainer,
 					card,
 					cardContent: this.cardContent,
-					tooltipManager: this.tooltipManager
+					tooltipManager: this.tooltipManager,
+					onLinkClick: (link, field, rawValue) => {
+						this.handleCardLinkClick(card, link, field, rawValue);
+					}
 				});
 				this.attachCardHandlers(cardEl, card);
 			}
@@ -467,11 +472,17 @@ export class KanbanViewController {
 			this.cardEditor.open({ rowIndex: card.rowIndex, row: card.row });
 		};
 		cardEl.addEventListener('dblclick', (event) => {
+			if (this.isLinkTarget(event.target)) {
+				return;
+			}
 			event.preventDefault();
 			event.stopPropagation();
 			openEditor();
 		});
 		cardEl.addEventListener('keydown', (event) => {
+			if (this.isLinkTarget(event.target)) {
+				return;
+			}
 			if (event.key !== 'Enter' && event.key !== ' ') {
 				return;
 			}
@@ -479,6 +490,31 @@ export class KanbanViewController {
 			event.stopPropagation();
 			openEditor();
 		});
+	}
+
+	private handleCardLinkClick(
+		card: KanbanLane['cards'][number],
+		link: DetectedCellLink,
+		field: string | null,
+		rawValue: string
+	): void {
+		const rawRowId = card.row?.__tlb_row_id;
+		const rowId = typeof rawRowId === 'string' && rawRowId.trim().length > 0
+			? rawRowId
+			: card.id;
+		handleCellLinkOpen(this.view, {
+			link,
+			field,
+			rowId,
+			rawValue
+		});
+	}
+
+	private isLinkTarget(target: EventTarget | null): boolean {
+		if (!(target instanceof Element)) {
+			return false;
+		}
+		return Boolean(target.closest('a, .internal-link, .external-link, [data-href]'));
 	}
 
 	private handleDragEnd(event: SortableEvent): void {

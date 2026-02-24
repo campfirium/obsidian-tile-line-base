@@ -4661,6 +4661,19 @@
 	word-break: break-word;
 }
 
+.tlb-kanban-card__link {
+	color: var(--text-accent);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	cursor: pointer;
+	word-break: break-word;
+}
+
+.tlb-kanban-card__link:hover,
+.tlb-kanban-card__link:focus-visible {
+	color: var(--text-accent-hover, var(--text-accent));
+}
+
 .tlb-kanban-card__field-more {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-faint);

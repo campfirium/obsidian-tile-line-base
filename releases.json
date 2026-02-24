@@ -112,5 +112,15 @@
     "improved": [],
     "fixed": [],
     "changed": []
+  },
+  "0.9.5": {
+    "date": "2026-02-24",
+    "info": "",
+    "new": [],
+    "improved": [
+      "Support Markdown links with direct click-to-open in Table, Gallery, Kanban, and Slide views."
+    ],
+    "fixed": [],
+    "changed": []
   }
 }

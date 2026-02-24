@@ -9,6 +9,7 @@ import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
 import { COVER_HIDDEN_CLASS, COVER_LAYOUT, resolveSourceTitle } from './slideCover';
 import { renderSlideEditForm, serializeTemplateSegments, type EditState } from './slideTemplateEditing';
 import { applyLayoutWithWatcher, buildSlideMarkdown, renderMarkdownBlock, resetRenderArtifacts } from './SlideRenderUtils';
+import { findRenderedLinkElement, tryOpenRenderedInternalLink } from '../RenderedLinkNavigation';
 interface SlideControllerOptions {
 	app: App;
 	sourcePath: string;
@@ -281,7 +282,13 @@ export class SlideViewController {
 			attr: { 'data-tlb-slide-index': String(slideIndex) }
 		});
 		if (page.editable) {
-			slide.addEventListener('click', () => {
+			slide.addEventListener('click', (event) => {
+				if (tryOpenRenderedInternalLink(this.app, this.sourcePath, event)) {
+					return;
+				}
+				if (findRenderedLinkElement(event.target)) {
+					return;
+				}
 				if (!this.isEditingPage(page)) {
 					this.beginEdit(page, row);
 				}

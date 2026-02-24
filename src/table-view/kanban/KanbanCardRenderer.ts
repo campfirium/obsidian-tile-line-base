@@ -1,4 +1,6 @@
 import { t } from '../../i18n';
+import type { DetectedCellLink } from '../../types/cellLinks';
+import { parseCellLinkSegments } from '../../utils/linkDetection';
 import type { KanbanRuntimeCardContent } from '../../types/kanban';
 import type { KanbanTooltipManager } from './KanbanTooltipManager';
 import type { KanbanLane } from './KanbanDataBuilder';
@@ -8,10 +10,11 @@ interface RenderKanbanCardOptions {
 	card: KanbanLane['cards'][number];
 	cardContent: KanbanRuntimeCardContent;
 	tooltipManager: KanbanTooltipManager;
+	onLinkClick: (link: DetectedCellLink, field: string | null, rawValue: string) => void;
 }
 
 export function renderKanbanCard(options: RenderKanbanCardOptions): HTMLElement {
-	const { container, card, cardContent, tooltipManager } = options;
+	const { container, card, cardContent, tooltipManager, onLinkClick } = options;
 	const cardEl = container.createDiv({
 		cls: 'tlb-kanban-card',
 		attr: {
@@ -25,7 +28,8 @@ export function renderKanbanCard(options: RenderKanbanCardOptions): HTMLElement 
 	const title = cardEl.createDiv({ cls: 'tlb-kanban-card__title' });
 	const titleText = title.createSpan({ cls: 'tlb-kanban-card__title-text' });
 	const trimmedTitle = card.title.trim();
-	titleText.setText(trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback'));
+	const titleValue = trimmedTitle.length > 0 ? trimmedTitle : t('kanbanView.untitledCardFallback');
+	renderLinkedText(titleText, titleValue, null, onLinkClick);
 	if (!cardContent.tagsBelowBody && card.tags.length > 0) {
 		const tagsInline = title.createSpan({
 			cls: 'tlb-kanban-card__tags tlb-kanban-card__tags--inline'
@@ -44,7 +48,7 @@ export function renderKanbanCard(options: RenderKanbanCardOptions): HTMLElement 
 	}
 	if (showBody) {
 		const bodyEl = cardEl.createDiv({ cls: 'tlb-kanban-card__body' });
-		bodyEl.setText(bodyText);
+		renderLinkedText(bodyEl, bodyText, null, onLinkClick);
 	}
 
 	if (card.tags.length > 0 && cardContent.tagsBelowBody) {
@@ -63,7 +67,7 @@ export function renderKanbanCard(options: RenderKanbanCardOptions): HTMLElement 
 			const nameEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-name' });
 			nameEl.setText(field.name);
 			const valueEl = fieldRow.createSpan({ cls: 'tlb-kanban-card__field-value' });
-			valueEl.setText(field.value);
+			renderLinkedText(valueEl, field.value, field.name, onLinkClick);
 		}
 		if (card.fields.length > 6) {
 			const more = fieldsEl.createDiv({ cls: 'tlb-kanban-card__field-more' });
@@ -78,5 +82,48 @@ const renderTags = (container: HTMLElement, tags: string[]): void => {
 	for (const tag of tags) {
 		const tagEl = container.createSpan({ cls: 'tlb-kanban-card__tag' });
 		tagEl.setText(tag);
+	}
+};
+
+const renderLinkedText = (
+	container: HTMLElement,
+	rawValue: string,
+	field: string | null,
+	onLinkClick: (link: DetectedCellLink, field: string | null, rawValue: string) => void
+): void => {
+	const value = rawValue ?? '';
+	const segments = parseCellLinkSegments(value);
+	const hasLinks = segments.some((segment) => segment.kind === 'link');
+	if (!hasLinks) {
+		container.setText(value);
+		return;
+	}
+
+	for (const segment of segments) {
+		if (segment.kind === 'text') {
+			container.createSpan({ text: segment.text });
+			continue;
+		}
+		const linkEl = container.createEl('a', {
+			cls: 'tlb-kanban-card__link',
+			text: segment.text
+		});
+		linkEl.setAttribute('href', segment.link.target);
+		if (segment.link.type === 'internal') {
+			linkEl.addClass('internal-link');
+			linkEl.setAttribute('data-href', segment.link.target);
+		} else {
+			linkEl.addClass('external-link');
+			linkEl.setAttribute('target', '_blank');
+			linkEl.setAttribute('rel', 'noopener noreferrer');
+		}
+		linkEl.addEventListener('pointerdown', (event) => {
+			event.stopPropagation();
+		});
+		linkEl.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			onLinkClick(segment.link, field, value);
+		});
 	}
 };

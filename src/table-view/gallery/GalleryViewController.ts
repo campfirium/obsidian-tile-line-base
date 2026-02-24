@@ -20,6 +20,7 @@ import {
 	type GalleryDomState
 } from './galleryDomUtils';
 import { getLogger } from '../../utils/logger';
+import { findRenderedLinkElement, tryOpenRenderedInternalLink } from '../RenderedLinkNavigation';
 
 interface GalleryViewControllerOptions {
 	app: App;
@@ -395,6 +396,12 @@ export class GalleryViewController {
 				});
 				card.onclick = (evt) => {
 					if (evt.defaultPrevented) return;
+					if (tryOpenRenderedInternalLink(this.app, this.sourcePath, evt)) {
+						return;
+					}
+					if (findRenderedLinkElement(evt.target)) {
+						return;
+					}
 					this.beginEdit(page, row);
 				};
 			}

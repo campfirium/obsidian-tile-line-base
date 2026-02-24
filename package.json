@@ -1,11 +1,12 @@
 {
   "name": "obsidian-tile-line-base",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "main": "dist/main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "npm run lint && npx tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run check:release",
+    "build:sync": "npm run build && npm run mirror:obs -- --prefer=plugin-dir",
     "lint": "node scripts/run-lint.mjs",
     "check:i18n-hardcoded": "node scripts/check-i18n-hardcoded.mjs",
     "test:magic": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\"}' .lab/scripts/test-magic-migration.ts",

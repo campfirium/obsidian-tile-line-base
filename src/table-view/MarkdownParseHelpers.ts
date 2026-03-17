@@ -39,6 +39,17 @@ export function isRuntimeConfigBlock(content: string, blockStartIndex: number, b
 	return runtimeKeyPattern.test(firstContentLine);
 }
 
+export function isRuntimeConfigLine(line: string): boolean {
+	const trimmed = line.trim();
+	if (trimmed.length === 0) {
+		return false;
+	}
+	return (
+		/^>\s*\[!tlb-config]/i.test(trimmed) ||
+		/^<!--\s*tlb\.config\s*[:\uFF1A]/i.test(trimmed)
+	);
+}
+
 export function buildInvalidSection(
 	lines: string[],
 	headingIndex: number,

@@ -523,12 +523,12 @@
     "textPlaceholder": "Enter value",
     "datePlaceholder": "Enter date (YYYY-MM-DD)",
     "dateHint": "Current display format: {{format}}",
-    "timePlaceholder": "Enter time (HH:MM)",
+    "timePlaceholder": "Enter time (HH:mm or HH:mm:ss)",
     "timeHint": "Current display format: {{format}}",
     "confirmButton": "Apply",
     "cancelButton": "Cancel",
     "invalidDate": "Please enter a valid date in YYYY-MM-DD format",
-    "invalidTime": "Please enter a valid time."
+    "invalidTime": "Please enter a valid time in HH:mm or HH:mm:ss format."
   },
   "timeCellEditor": {
     "openPickerLabel": "Open time picker",
@@ -663,7 +663,7 @@
     "settingsMenuImportCsvLabel": "Import CSV into table",
     "settingsMenuImportCsvAsTableLabel": "Import CSV as new table",
     "settingsMenuHelpLabel": "Open help note",
-    "unnamedViewLabel": "Over"
+    "unnamedViewLabel": "Unnamed view"
   },
   "rowOrder": {
     "menuLabel": "Reorder rows (physical)",

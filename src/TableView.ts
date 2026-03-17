@@ -301,6 +301,7 @@ export class TableView extends ItemView {
 	}
 	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> { await this.viewModeManager.setActiveViewMode(mode); }
 	public captureConversionBaseline(content: string): void { this.conversionSession.captureBaseline(content); }
+	public replaceConversionBaseline(content: string): void { this.conversionSession.replaceBaseline(content); }
 	public markUserMutation(reason?: string): void { this.conversionSession.markUserMutation(reason); }
 	public hasUserMutations(): boolean { return this.conversionSession.hasUserMutations(); }
 	public async restoreSessionBaselineIfEligible(): Promise<boolean> { return this.conversionSession.restoreBaselineIfEligible(); }

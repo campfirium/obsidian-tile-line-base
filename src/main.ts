@@ -514,6 +514,18 @@ export default class TileLineBasePlugin extends Plugin {
 		this.viewActionManager.refreshAll();
 	}
 
+	isSaveConfigBlockInNoteEnabled(): boolean {
+		return this.settingsService.getSaveConfigBlockInNote();
+	}
+
+	async setSaveConfigBlockInNoteEnabled(value: boolean): Promise<void> {
+		const changed = await this.settingsService.setSaveConfigBlockInNote(value);
+		if (!changed) {
+			return;
+		}
+		this.settings = this.settingsService.getSettings();
+	}
+
 	getStripeColorMode(): StripeColorMode {
 		return this.settingsService.getStripeColorMode();
 	}

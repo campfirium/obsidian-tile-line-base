@@ -86,6 +86,7 @@ export interface TileLineBaseSettings {
 	defaultGalleryCardHeight: number | null;
 	hideRightSidebar: boolean;
 	hideMarkdownViewButtons: boolean;
+	saveConfigBlockInNote: boolean;
 	borderContrast: number;
 	stripeColorMode: StripeColorMode;
 	stripeCustomColor: string | null;
@@ -121,6 +122,7 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	defaultGalleryCardHeight: null,
 	hideRightSidebar: true,
 	hideMarkdownViewButtons: false,
+	saveConfigBlockInNote: false,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
 	stripeCustomColor: null,
@@ -190,6 +192,9 @@ export class SettingsService {
 		merged.hideMarkdownViewButtons = typeof merged.hideMarkdownViewButtons === 'boolean'
 			? merged.hideMarkdownViewButtons
 			: DEFAULT_SETTINGS.hideMarkdownViewButtons;
+		merged.saveConfigBlockInNote = typeof merged.saveConfigBlockInNote === 'boolean'
+			? merged.saveConfigBlockInNote
+			: DEFAULT_SETTINGS.saveConfigBlockInNote;
 		const borderCandidate = Number(merged.borderContrast);
 		merged.borderContrast =
 			Number.isFinite(borderCandidate) && borderCandidate >= 0 && borderCandidate <= 1
@@ -301,6 +306,19 @@ export class SettingsService {
 			return false;
 		}
 		this.settings.hideMarkdownViewButtons = value;
+		await this.persist();
+		return true;
+	}
+
+	getSaveConfigBlockInNote(): boolean {
+		return this.settings.saveConfigBlockInNote === true;
+	}
+
+	async setSaveConfigBlockInNote(value: boolean): Promise<boolean> {
+		if (this.settings.saveConfigBlockInNote === value) {
+			return false;
+		}
+		this.settings.saveConfigBlockInNote = value;
 		await this.persist();
 		return true;
 	}

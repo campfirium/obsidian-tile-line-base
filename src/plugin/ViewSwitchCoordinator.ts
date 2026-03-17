@@ -511,4 +511,3 @@ export class ViewSwitchCoordinator {
 		return match;
 	}
 }
-

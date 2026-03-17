@@ -11,6 +11,8 @@ type SidebarSettingHost = Plugin & {
 	setHideRightSidebarEnabled(value: boolean): Promise<void>;
 	isHideMarkdownViewButtonsEnabled(): boolean;
 	setHideMarkdownViewButtonsEnabled(value: boolean): Promise<void>;
+	isSaveConfigBlockInNoteEnabled(): boolean;
+	setSaveConfigBlockInNoteEnabled(value: boolean): Promise<void>;
 	getStripeColorMode(): StripeColorMode;
 	setStripeColorMode(mode: StripeColorMode): Promise<void>;
 	getStripeCustomColor(): string | null;
@@ -183,6 +185,16 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				toggle.setValue(this.plugin.isHideMarkdownViewButtonsEnabled());
 				toggle.onChange(async (value) => {
 					await this.plugin.setHideMarkdownViewButtonsEnabled(value);
+				});
+			});
+
+		new Setting(containerEl)
+			.setName(t('settings.saveConfigBlockInNoteLabel'))
+			.setDesc(t('settings.saveConfigBlockInNoteDesc'))
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.isSaveConfigBlockInNoteEnabled());
+				toggle.onChange(async (value) => {
+					await this.plugin.setSaveConfigBlockInNoteEnabled(value);
 				});
 			});
 

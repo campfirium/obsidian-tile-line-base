@@ -76,6 +76,7 @@ export function initializeTableView(view: TableView): void {
 			getGalleryFilterViewState: () => view.galleryFilterViewState,
 			getGalleryTagGroupState: () => view.galleryTagGroupState,
 			markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
+			replaceConversionBaseline: (content) => view.replaceConversionBaseline(content),
 			shouldAllowSave: () => view.hasUserMutations(),
 			onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),
 			getSaveDelayMs: () => (view.refreshCoordinator.hasSiblingForTrackedFile() ? 120 : 500)

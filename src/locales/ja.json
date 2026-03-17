@@ -90,12 +90,13 @@
       "globalSettingsLabel": "グローバル設定",
       "leftOffsetLabel": "左のオフセット (%)",
       "rightOffsetLabel": "右のオフセット (%)",
-      "topOffsetLabel": "上オフセット (%)"
+      "topOffsetLabel": "上のオフセット (%)"
     }
   },
   "viewControls": {
     "openTableView": "テーブル",
     "openMarkdownView": "編集",
+    "openTableViewFromFileMenu": "TileLineBase ビューで開く",
     "switchViewMenu": "ビュー: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "テーブルビューでは右サイドバーを隠す",
     "hideRightSidebarDesc": "TileLineBase のテーブルビューがアクティブな間は Obsidian の右サイドバーを折りたたみます。他のビューには影響しません。",
+    "hideMarkdownViewButtonsLabel": "Markdown タブで TileLineBase ボタンを隠す",
+    "hideMarkdownViewButtonsDesc": "有効にすると、Markdown タブのヘッダーに TileLineBase ビューのボタンが表示されません。",
+    "saveConfigBlockInNoteLabel": "設定ブロックを現在のノートに保持する",
+    "saveConfigBlockInNoteDesc": "次回の設定保存時に適用されます。",
     "tableViewHeading": "テーブルビュー",
     "stripeColorLabel": "行ストライプの色",
     "stripeColorDesc": "デフォルトはテーマに合わせたストライプ（明度±4%）を使用します。",
@@ -519,16 +524,16 @@
     "textPlaceholder": "値を入力",
     "datePlaceholder": "日付を入力 (YYYY-MM-DD)",
     "dateHint": "現在の表示形式: {{format}}",
-    "timePlaceholder": "時刻を入力 (HH:MM)",
+    "timePlaceholder": "時刻を入力 (HH:mm または HH:mm:ss)",
     "timeHint": "現在の表示形式: {{format}}",
     "confirmButton": "適用",
     "cancelButton": "キャンセル",
     "invalidDate": "YYYY-MM-DD 形式の有効な日付を入力してください",
-    "invalidTime": "有効な時刻を入力してください。"
+    "invalidTime": "HH:mm または HH:mm:ss 形式で有効な時刻を入力してください。"
   },
   "timeCellEditor": {
     "openPickerLabel": "時刻ピッカーを開く",
-    "invalidInput": "有効な時刻を入力してください。"
+    "invalidInput": "HH:mm または HH:mm:ss 形式で有効な時刻を入力してください。"
   },
   "copyTemplate": {
     "menuCopy": "テンプレートとしてコピー",
@@ -666,6 +671,9 @@
     "modalTitle": "行を並べ替える",
     "modalWarning": "ファイル内の行順が書き換えられます。"
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "列を並べ替える (物理順)"
+  },
   "fileDuplication": {
     "errorNoFile": "現在のファイルを利用できません。",
     "failureNotice": "ファイルの複製に失敗しました。後でもう一度お試しください。",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "バックアップの復元に失敗しました。詳細はコンソールを確認してください。",
     "restoreCancelButton": "キャンセル",
     "sizeLabel": "サイズ: {{size}}",
+    "listHeaderTimestamp": "時刻",
     "changePreviewInitial": "初期スナップショット",
     "listHeaderRow": "行",
+    "listHeaderFields": "フィールド",
+    "listHeaderChanges": "変更",
+    "listHeaderActions": "操作",
+    "detailUnavailable": "利用不可",
+    "changePreviewNoChanges": "変更なし",
+    "changePreviewUnavailable": "プレビューを利用できません",
     "exportButton": "エクスポート",
     "exportButtonAria": "{{timestamp}} のバックアップを新しいファイルとしてエクスポート",
     "noticeExportSuccess": "バックアップを {{file}} にエクスポートしました。",
@@ -862,7 +877,7 @@
     "openExternal": "リンクを開く: {{target}}"
   },
   "onboarding": {
-    "helpFileName": "TileLineBaseへようこそ",
+    "helpFileName": "TileLineBase へようこそ",
     "helpFileContent": "# TileLineBaseへようこそ\n\n## task: 最初の TLB タスクを完了する\n\nAction: ステータス列のチェックボックスをクリックして、このタスクを完了にします。\n\n## task: カンバンを並べ替える\n\nAction: 右上の Kanban アイコンをクリックし、このカードを「Done」または別のレーンへドラッグします。\n\n## task: スライドを表示する\n\nAction: 右上の Slides アイコンをクリックし、全画面ボタンを押します。`Tab` でサムネイルを確認してください。\n\n## task: データソースを確認する\n\nAction: 右上の Edit アイコンをクリックして元の Markdown ビューに戻ります。\n\n## task: CSV データをインポートする\n\nAction: 右上の歯車アイコンをクリックし、「CSV を新しいテーブルとしてインポート」を選びます。\n",
     "createHelpFailed": "TileLineBase がヘルプドキュメントを作成できませんでした。詳細はコンソールを確認してください。",
     "openHelpFailed": "TileLineBase がヘルプドキュメントを開けませんでした。"

@@ -96,6 +96,7 @@
   "viewControls": {
     "openTableView": "Tabela",
     "openMarkdownView": "Edytuj",
+    "openTableViewFromFileMenu": "Otwórz w widoku TileLineBase",
     "switchViewMenu": "Widok: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Ukryj prawy pasek boczny w widoku tabeli",
     "hideRightSidebarDesc": "Zwiń prawy pasek boczny Obsidiana zawsze, gdy aktywny jest widok tabeli TileLineBase. Inne widoki pozostają bez zmian.",
+    "hideMarkdownViewButtonsLabel": "Ukryj przyciski TileLineBase na kartach Markdown",
+    "hideMarkdownViewButtonsDesc": "Po włączeniu karty Markdown nie pokazują przycisków widoku TileLineBase w nagłówku.",
+    "saveConfigBlockInNoteLabel": "Zachowaj blok konfiguracji w bieżącej notatce",
+    "saveConfigBlockInNoteDesc": "Zostanie zastosowane przy następnym zapisie konfiguracji.",
     "tableViewHeading": "Widok tabeli",
     "stripeColorLabel": "Kolor pasków wierszy",
     "stripeColorDesc": "Domyślnie używa pasków opartych na motywie (±4% jasności).",
@@ -519,16 +524,16 @@
     "textPlaceholder": "Wpisz wartość",
     "datePlaceholder": "Wpisz datę (YYYY-MM-DD)",
     "dateHint": "Bieżący format wyświetlania: {{format}}",
-    "timePlaceholder": "Wpisz czas (HH:MM)",
+    "timePlaceholder": "Wpisz czas (HH:mm lub HH:mm:ss)",
     "timeHint": "Bieżący format wyświetlania: {{format}}",
     "confirmButton": "Zastosuj",
     "cancelButton": "Anuluj",
     "invalidDate": "Wprowadź prawidłową datę w formacie YYYY-MM-DD",
-    "invalidTime": "Wprowadź prawidłowy czas."
+    "invalidTime": "Wprowadź prawidłowy czas w formacie HH:mm lub HH:mm:ss."
   },
   "timeCellEditor": {
     "openPickerLabel": "Otwórz wybierak czasu",
-    "invalidInput": "Wprowadź prawidłowy czas."
+    "invalidInput": "Wprowadź prawidłowy czas w formacie HH:mm lub HH:mm:ss."
   },
   "copyTemplate": {
     "menuCopy": "Kopiuj jako szablon",
@@ -666,6 +671,9 @@
     "modalTitle": "Zmień kolejność wierszy",
     "modalWarning": "Spowoduje to zapisanie nowej kolejności w pliku."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Zmień kolejność kolumn (fizycznie)"
+  },
   "fileDuplication": {
     "errorNoFile": "Bieżący plik jest niedostępny.",
     "failureNotice": "Nie udało się zduplikować pliku. Spróbuj ponownie później.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "Nie udało się przywrócić kopii. Sprawdź konsolę, aby uzyskać szczegóły.",
     "restoreCancelButton": "Anuluj",
     "sizeLabel": "Rozmiar: {{size}}",
+    "listHeaderTimestamp": "Czas",
     "changePreviewInitial": "Początkowa migawka",
     "listHeaderRow": "Wiersz",
+    "listHeaderFields": "Pola",
+    "listHeaderChanges": "Zmiany",
+    "listHeaderActions": "Akcje",
+    "detailUnavailable": "Niedostępne",
+    "changePreviewNoChanges": "Brak zmian",
+    "changePreviewUnavailable": "Podgląd niedostępny",
     "exportButton": "Eksportuj",
     "exportButtonAria": "Eksportuj kopię z {{timestamp}} jako nowy plik",
     "noticeExportSuccess": "Wyeksportowano kopię do {{file}}.",

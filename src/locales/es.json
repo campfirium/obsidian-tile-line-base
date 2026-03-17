@@ -11,6 +11,7 @@
   "viewControls": {
     "openTableView": "Tabla",
     "openMarkdownView": "Editar",
+    "openTableViewFromFileMenu": "Abrir en la vista de TileLineBase",
     "switchViewMenu": "Vista: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Ocultar la barra lateral derecha en la vista de tabla",
     "hideRightSidebarDesc": "Contrae la barra lateral derecha de Obsidian cada vez que la vista de tabla de TileLineBase está activa. Las demás vistas no se ven afectadas.",
+    "hideMarkdownViewButtonsLabel": "Ocultar botones de TileLineBase en pestañas Markdown",
+    "hideMarkdownViewButtonsDesc": "Cuando está activado, las pestañas Markdown no muestran botones de la vista de TileLineBase en el encabezado.",
+    "saveConfigBlockInNoteLabel": "Mantener el bloque de configuración en la nota actual",
+    "saveConfigBlockInNoteDesc": "Se aplica en el próximo guardado de la configuración.",
     "tableViewHeading": "Vista de tabla",
     "stripeColorLabel": "Color de las franjas de filas",
     "stripeColorDesc": "El predeterminado usa franjas basadas en el tema (±4% de luminosidad).",
@@ -519,16 +524,16 @@
     "textPlaceholder": "Ingresa un valor",
     "datePlaceholder": "Ingresa la fecha (AAAA-MM-DD)",
     "dateHint": "Formato de visualización actual: {{format}}",
-    "timePlaceholder": "Ingresa la hora (HH:MM)",
+    "timePlaceholder": "Ingresa la hora (HH:mm o HH:mm:ss)",
     "timeHint": "Formato de visualización actual: {{format}}",
     "confirmButton": "Aplicar",
     "cancelButton": "Cancelar",
     "invalidDate": "Ingresa una fecha válida con el formato AAAA-MM-DD",
-    "invalidTime": "Ingresa una hora válida."
+    "invalidTime": "Ingresa una hora válida en formato HH:mm o HH:mm:ss."
   },
   "timeCellEditor": {
     "openPickerLabel": "Abrir selector de hora",
-    "invalidInput": "Ingresa una hora válida."
+    "invalidInput": "Ingresa una hora válida en formato HH:mm o HH:mm:ss."
   },
   "copyTemplate": {
     "menuCopy": "Copiar como plantilla",
@@ -666,6 +671,9 @@
     "modalTitle": "Reordenar filas",
     "modalWarning": "Esto reescribe el orden de las filas en el archivo."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Reordenar columnas (físico)"
+  },
   "fileDuplication": {
     "errorNoFile": "El archivo actual no está disponible.",
     "failureNotice": "No se pudo duplicar el archivo. Inténtalo de nuevo más tarde.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "No se pudo restaurar la copia de seguridad. Revisa la consola para obtener detalles.",
     "restoreCancelButton": "Cancelar",
     "sizeLabel": "Tamaño: {{size}}",
+    "listHeaderTimestamp": "Hora",
     "changePreviewInitial": "Instantánea inicial",
     "listHeaderRow": "Fila",
+    "listHeaderFields": "Campos",
+    "listHeaderChanges": "Cambios",
+    "listHeaderActions": "Acciones",
+    "detailUnavailable": "No disponible",
+    "changePreviewNoChanges": "Sin cambios",
+    "changePreviewUnavailable": "Vista previa no disponible",
     "exportButton": "Exportar",
     "exportButtonAria": "Exportar la copia de {{timestamp}} como archivo nuevo",
     "noticeExportSuccess": "Se exportó la copia de seguridad a {{file}}.",

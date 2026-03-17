@@ -17,7 +17,8 @@ export class ViewActionManager {
 	constructor(
 		private readonly app: App,
 		private readonly coordinator: ViewSwitchCoordinator,
-		private readonly windowContextManager: WindowContextManager
+		private readonly windowContextManager: WindowContextManager,
+		private readonly shouldHideMarkdownActions: () => boolean
 	) {}
 
 	refreshAll(): void {
@@ -30,14 +31,27 @@ export class ViewActionManager {
 		if (!leaf) {
 			return;
 		}
-		if (leaf.view instanceof MarkdownView) {
-			this.ensureMarkdownAction(leaf, leaf.view);
+		if (!(leaf.view instanceof MarkdownView)) {
+			return;
 		}
+		if (this.shouldHideMarkdownActions()) {
+			this.clearInjectedActionsForLeaf(leaf.view);
+			return;
+		}
+		this.ensureMarkdownAction(leaf, leaf.view);
 	}
 
 	clearInjectedActions(): void {
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view instanceof MarkdownView) {
+				this.clearInjectedActionsForLeaf(leaf.view);
+			}
+		});
+	}
+
+	private clearInjectedActionsForLeaf(view: MarkdownView): void {
 		const selector = `[${this.actionAttribute}]`;
-		document.querySelectorAll(selector).forEach((element) => {
+		view.containerEl.querySelectorAll(selector).forEach((element) => {
 			const el = element as HTMLElement;
 			const actionId = el.getAttribute(this.actionAttribute);
 			if (

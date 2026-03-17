@@ -308,6 +308,8 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Hide right sidebar in TileLineBase views",
     "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever any TileLineBase view is active, then restore the previous state after leaving.",
+    "hideMarkdownViewButtonsLabel": "Hide TileLineBase buttons in Markdown tabs",
+    "hideMarkdownViewButtonsDesc": "When enabled, Markdown tabs do not show TileLineBase view buttons in the header.",
     "tableViewHeading": "Table view",
     "stripeColorLabel": "Row stripe color",
     "stripeColorDesc": "Default uses theme-based stripes (±4% lightness).",

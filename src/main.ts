@@ -59,7 +59,12 @@ export default class TileLineBasePlugin extends Plugin {
 		this.settingsService = new SettingsService(this);
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
-		this.viewActionManager = new ViewActionManager(this.app, this.viewCoordinator, this.windowContextManager);
+		this.viewActionManager = new ViewActionManager(
+			this.app,
+			this.viewCoordinator,
+			this.windowContextManager,
+			() => this.isHideMarkdownViewButtonsEnabled()
+		);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
 		this.rightSidebarController = new RightSidebarController(this.app);
 		await this.loadSettings();
@@ -490,6 +495,23 @@ export default class TileLineBasePlugin extends Plugin {
 		if (!changed) { return; }
 		this.settings = this.settingsService.getSettings();
 		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
+	}
+
+	isHideMarkdownViewButtonsEnabled(): boolean {
+		return this.settingsService.getHideMarkdownViewButtons();
+	}
+
+	async setHideMarkdownViewButtonsEnabled(value: boolean): Promise<void> {
+		const changed = await this.settingsService.setHideMarkdownViewButtons(value);
+		if (!changed) {
+			return;
+		}
+		this.settings = this.settingsService.getSettings();
+		if (value) {
+			this.viewActionManager.clearInjectedActions();
+			return;
+		}
+		this.viewActionManager.refreshAll();
 	}
 
 	getStripeColorMode(): StripeColorMode {

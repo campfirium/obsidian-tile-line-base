@@ -666,6 +666,9 @@
     "modalTitle": "Reorder rows",
     "modalWarning": "This rewrites row order in the file."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Reorder columns (physical)"
+  },
   "fileDuplication": {
     "errorNoFile": "Current file is unavailable.",
     "failureNotice": "Failed to duplicate the file. Please try again later.",

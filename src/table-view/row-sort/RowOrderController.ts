@@ -17,6 +17,8 @@ interface RowOrderControllerDeps {
 	filterStateStore: FilterStateStore;
 	getSchema: () => Schema | null;
 	getAvailableColumns: () => string[];
+	refreshGrid: () => void;
+	scheduleSave: () => void;
 }
 
 export class RowOrderController {
@@ -26,6 +28,8 @@ export class RowOrderController {
 	private readonly filterStateStore: FilterStateStore;
 	private readonly getSchema: () => Schema | null;
 	private readonly getAvailableColumns: () => string[];
+	private readonly refreshGrid: () => void;
+	private readonly scheduleSave: () => void;
 
 	constructor(deps: RowOrderControllerDeps) {
 		this.app = deps.app;
@@ -34,6 +38,8 @@ export class RowOrderController {
 		this.filterStateStore = deps.filterStateStore;
 		this.getSchema = deps.getSchema;
 		this.getAvailableColumns = deps.getAvailableColumns;
+		this.refreshGrid = deps.refreshGrid;
+		this.scheduleSave = deps.scheduleSave;
 	}
 
 	openSortModal(): void {
@@ -52,6 +58,45 @@ export class RowOrderController {
 			}
 		});
 		modal.open();
+	}
+
+	reorderColumnsPhysically(): void {
+		const schema = this.getSchema();
+		if (!schema) {
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		if (blocks.length === 0) {
+			return;
+		}
+
+		const beforeOrders = blocks.map((block, index) => ({
+			ref: block,
+			index,
+			keys: Object.keys(block.data)
+		}));
+		const changed = this.dataStore.reorderAllBlockFields();
+		if (!changed) {
+			return;
+		}
+		const afterOrders = blocks.map((block, index) => ({
+			ref: block,
+			index,
+			keys: Object.keys(block.data)
+		}));
+
+		this.refreshGrid();
+		this.scheduleSave();
+
+		this.history.record({
+			undo: () => {
+				this.applyStoredBlockFieldOrders(beforeOrders);
+			},
+			redo: () => {
+				this.applyStoredBlockFieldOrders(afterOrders);
+			}
+		});
 	}
 
 	private applySortRules(sortRules: SortRule[]): void {
@@ -123,5 +168,29 @@ export class RowOrderController {
 
 	private getSortableColumns(): string[] {
 		return this.getAvailableColumns();
+	}
+
+	private applyStoredBlockFieldOrders(entries: Array<{ ref: H2Block; index: number; keys: string[] }>): void {
+		for (const entry of entries) {
+			const blockIndex = this.resolveBlockIndex(entry.ref, entry.index);
+			if (blockIndex < 0) {
+				continue;
+			}
+			this.dataStore.applyBlockFieldOrder(blockIndex, entry.keys);
+		}
+		this.refreshGrid();
+		this.scheduleSave();
+	}
+
+	private resolveBlockIndex(ref: H2Block, fallbackIndex: number): number {
+		const blocks = this.dataStore.getBlocks();
+		const refIndex = blocks.indexOf(ref);
+		if (refIndex >= 0) {
+			return refIndex;
+		}
+		if (fallbackIndex >= 0 && fallbackIndex < blocks.length) {
+			return fallbackIndex;
+		}
+		return -1;
 	}
 }

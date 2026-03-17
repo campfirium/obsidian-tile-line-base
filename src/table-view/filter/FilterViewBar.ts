@@ -24,6 +24,7 @@ export interface FilterViewBarCallbacks {
 	onDefaultViewMenu(button: HTMLElement, event?: MouseEvent): void;
 	onEditDefaultView(): void;
 	onOpenRowOrder(button: HTMLElement): void;
+	onReorderColumnsPhysically(button: HTMLElement): void;
 }
 
 interface FilterViewBarOptions {
@@ -271,6 +272,16 @@ export class FilterViewBar {
 							this.options.callbacks.onOpenRowOrder(this.settingsButtonEl);
 						});
 				});
+			},
+			() => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('columnPhysicalOrder.menuLabel'))
+						.setIcon('columns-3')
+						.onClick(() => {
+							this.options.callbacks.onReorderColumnsPhysically(this.settingsButtonEl);
+						});
+				});
 			}
 		]);
 
@@ -466,5 +477,4 @@ export interface FilterViewBarTagGroupState {
 	visibleViewIds: Set<string> | null;
 	hasGroups: boolean;
 }
-
 

@@ -64,6 +64,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			onOpenRowOrder: () => {
 				view.rowOrderController.openSortModal();
 			},
+			onReorderColumnsPhysically: () => {
+				view.rowOrderController.reorderColumnsPhysically();
+			},
 			onDuplicateCurrentFile: () => {
 				void view.fileDuplicationController.duplicateCurrentFile();
 			},

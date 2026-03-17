@@ -33,6 +33,8 @@ import {
 	normalizeColumnConfigs as normalizeColumnConfigsInternal,
 	removeColumn as removeColumnInternal,
 	renameColumn as renameColumnInternal,
+	applyBlockFieldOrder as applyBlockFieldOrderInternal,
+	reorderAllBlockFields as reorderAllBlockFieldsInternal,
 	reorderColumns as reorderColumnsInternal,
 	reorderSchemaBlockFields as reorderSchemaBlockFieldsInternal
 } from './data-store/ColumnOperations';
@@ -232,6 +234,19 @@ export class TableDataStore {
 		}
 		reorderSchemaBlockFieldsInternal(this.schema, this.blocks, this.hiddenSortableFields);
 		return true;
+	}
+
+	reorderAllBlockFields(): boolean {
+		return reorderAllBlockFieldsInternal(this.schema, this.blocks);
+	}
+
+	applyBlockFieldOrder(rowIndex: number, orderedFields: string[]): boolean {
+		if (rowIndex < 0 || rowIndex >= this.blocks.length) {
+			return false;
+		}
+
+		const block = this.blocks[rowIndex];
+		return applyBlockFieldOrderInternal(block, orderedFields);
 	}
 
 	duplicateColumn(field: string): string | null {

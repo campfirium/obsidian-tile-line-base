@@ -112,7 +112,9 @@ export function initializeTableView(view: TableView): void {
 		history: view.historyManager,
 		filterStateStore: view.filterStateStore,
 		getSchema: () => view.schema,
-		getAvailableColumns: () => getAvailableColumns(view)
+		getAvailableColumns: () => getAvailableColumns(view),
+		refreshGrid: () => view.filterOrchestrator.refresh(),
+		scheduleSave: () => { view.markUserMutation('column-order-physical'); view.persistenceService.scheduleSave(); }
 	});
 	view.copyTemplateController = new CopyTemplateController({
 		app: view.app,

@@ -120,13 +120,6 @@ export function reorderSchemaBlockFields(
 	}
 
 	const schemaBlock = blocks[0];
-	const currentEntries = Object.entries(schemaBlock.data);
-	if (currentEntries.length === 0) {
-		return false;
-	}
-
-	const nextEntries: Array<[string, string]> = [];
-	const seen = new Set<string>();
 	const hiddenFields = new Set<string>(hiddenSortableFields);
 	for (const config of schema.columnConfigs ?? []) {
 		if (config.hide) {
@@ -134,14 +127,43 @@ export function reorderSchemaBlockFields(
 		}
 	}
 
-	for (const field of schema.columnNames) {
-		if (hiddenFields.has(field)) {
+	const visibleFields = schema.columnNames.filter((field) => !hiddenFields.has(field));
+	return reorderBlockFieldOrder(schemaBlock, visibleFields);
+}
+
+export function reorderAllBlockFields(schema: Schema | null, blocks: H2Block[]): boolean {
+	if (!schema || blocks.length === 0) {
+		return false;
+	}
+
+	let changed = false;
+	for (const block of blocks) {
+		if (reorderBlockFieldOrder(block, schema.columnNames)) {
+			changed = true;
+		}
+	}
+
+	return changed;
+}
+
+export function applyBlockFieldOrder(block: H2Block, orderedFields: string[]): boolean {
+	return reorderBlockFieldOrder(block, orderedFields);
+}
+
+function reorderBlockFieldOrder(block: H2Block, orderedFields: string[]): boolean {
+	const currentEntries = Object.entries(block.data);
+	if (currentEntries.length === 0) {
+		return false;
+	}
+
+	const nextEntries: Array<[string, string]> = [];
+	const seen = new Set<string>();
+
+	for (const field of orderedFields) {
+		if (!Object.prototype.hasOwnProperty.call(block.data, field)) {
 			continue;
 		}
-		if (!Object.prototype.hasOwnProperty.call(schemaBlock.data, field)) {
-			continue;
-		}
-		nextEntries.push([field, schemaBlock.data[field]]);
+		nextEntries.push([field, block.data[field]]);
 		seen.add(field);
 	}
 
@@ -153,24 +175,31 @@ export function reorderSchemaBlockFields(
 		seen.add(field);
 	}
 
-	let changed = nextEntries.length !== currentEntries.length;
-	if (!changed) {
-		for (let index = 0; index < currentEntries.length; index++) {
-			const [currentKey, currentValue] = currentEntries[index];
-			const [nextKey, nextValue] = nextEntries[index];
-			if (currentKey !== nextKey || currentValue !== nextValue) {
-				changed = true;
-				break;
-			}
-		}
-	}
-
-	if (!changed) {
+	if (!hasEntryOrderChanged(currentEntries, nextEntries)) {
 		return false;
 	}
 
-	schemaBlock.data = Object.fromEntries(nextEntries);
+	block.data = Object.fromEntries(nextEntries);
 	return true;
+}
+
+function hasEntryOrderChanged(
+	currentEntries: Array<[string, string]>,
+	nextEntries: Array<[string, string]>
+): boolean {
+	if (nextEntries.length !== currentEntries.length) {
+		return true;
+	}
+
+	for (let index = 0; index < currentEntries.length; index++) {
+		const [currentKey] = currentEntries[index];
+		const [nextKey] = nextEntries[index];
+		if (currentKey !== nextKey) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 interface InsertColumnParams {

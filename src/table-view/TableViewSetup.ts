@@ -76,6 +76,7 @@ export function initializeTableView(view: TableView): void {
 			getGalleryFilterViewState: () => view.galleryFilterViewState,
 			getGalleryTagGroupState: () => view.galleryTagGroupState,
 			markSelfMutation: (file) => view.refreshCoordinator.markSelfMutation(file),
+			replaceConversionBaseline: (content) => view.replaceConversionBaseline(content),
 			shouldAllowSave: () => view.hasUserMutations(),
 			onSaveSettled: () => view.refreshCoordinator.handleSaveSettled(),
 			getSaveDelayMs: () => (view.refreshCoordinator.hasSiblingForTrackedFile() ? 120 : 500)
@@ -112,7 +113,9 @@ export function initializeTableView(view: TableView): void {
 		history: view.historyManager,
 		filterStateStore: view.filterStateStore,
 		getSchema: () => view.schema,
-		getAvailableColumns: () => getAvailableColumns(view)
+		getAvailableColumns: () => getAvailableColumns(view),
+		refreshGrid: () => view.filterOrchestrator.refresh(),
+		scheduleSave: () => { view.markUserMutation('column-order-physical'); view.persistenceService.scheduleSave(); }
 	});
 	view.copyTemplateController = new CopyTemplateController({
 		app: view.app,

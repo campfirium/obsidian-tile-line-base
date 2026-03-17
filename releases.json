@@ -1,4 +1,19 @@
 {
+  "0.9.6": {
+    "date": "2026-03-17",
+    "info": "",
+    "new": [
+      "Option to hide the TLB view toolbar button in Obsidian native views.",
+      "Option to keep TLB config blocks in notes."
+    ],
+    "improved": [
+      "Column reordering support."
+    ],
+    "fixed": [
+      "Conversion Assistant recognition of config blocks."
+    ],
+    "changed": []
+  },
   "0.9.4": {
     "date": "2026-02-23",
     "info": "Improved link rendering and interaction in table cells.",

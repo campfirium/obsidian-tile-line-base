@@ -11,6 +11,7 @@
   "viewControls": {
     "openTableView": "Tabela",
     "openMarkdownView": "Editar",
+    "openTableViewFromFileMenu": "Abrir na visualização do TileLineBase",
     "switchViewMenu": "Vista: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Ocultar a barra lateral direita na visualização em tabela",
     "hideRightSidebarDesc": "Recolhe a barra lateral direita do Obsidian sempre que a visualização em tabela do TileLineBase estiver ativa. Outras visualizações não são afetadas.",
+    "hideMarkdownViewButtonsLabel": "Ocultar botões do TileLineBase nas abas Markdown",
+    "hideMarkdownViewButtonsDesc": "Quando ativado, as abas Markdown não exibem botões da visualização do TileLineBase no cabeçalho.",
+    "saveConfigBlockInNoteLabel": "Manter o bloco de configuração na nota atual",
+    "saveConfigBlockInNoteDesc": "Aplica-se no próximo salvamento da configuração.",
     "tableViewHeading": "Visualização em tabela",
     "stripeColorLabel": "Cor das faixas de linhas",
     "stripeColorDesc": "O padrão usa faixas baseadas no tema (±4% de luminosidade).",
@@ -519,16 +524,16 @@
     "textPlaceholder": "Digite o valor",
     "datePlaceholder": "Digite a data (AAAA-MM-DD)",
     "dateHint": "Formato de exibição atual: {{format}}",
-    "timePlaceholder": "Digite a hora (HH:MM)",
+    "timePlaceholder": "Digite a hora (HH:mm ou HH:mm:ss)",
     "timeHint": "Formato de exibição atual: {{format}}",
     "confirmButton": "Aplicar",
     "cancelButton": "Cancelar",
     "invalidDate": "Insira uma data válida no formato AAAA-MM-DD",
-    "invalidTime": "Insira um horário válido."
+    "invalidTime": "Insira um horário válido no formato HH:mm ou HH:mm:ss."
   },
   "timeCellEditor": {
     "openPickerLabel": "Abrir seletor de hora",
-    "invalidInput": "Insira um horário válido."
+    "invalidInput": "Insira um horário válido no formato HH:mm ou HH:mm:ss."
   },
   "copyTemplate": {
     "menuCopy": "Copiar como modelo",
@@ -666,6 +671,9 @@
     "modalTitle": "Reordenar linhas",
     "modalWarning": "Isto reescreverá a ordem das linhas no arquivo."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Reordenar colunas (físico)"
+  },
   "fileDuplication": {
     "errorNoFile": "O arquivo atual está indisponível.",
     "failureNotice": "Falha ao duplicar o arquivo. Tente novamente mais tarde.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "Falha ao restaurar o backup. Verifique o console para detalhes.",
     "restoreCancelButton": "Cancelar",
     "sizeLabel": "Tamanho: {{size}}",
+    "listHeaderTimestamp": "Hora",
     "changePreviewInitial": "Instantâneo inicial",
     "listHeaderRow": "Linha",
+    "listHeaderFields": "Campos",
+    "listHeaderChanges": "Alterações",
+    "listHeaderActions": "Ações",
+    "detailUnavailable": "Indisponível",
+    "changePreviewNoChanges": "Sem alterações",
+    "changePreviewUnavailable": "Pré-visualização indisponível",
     "exportButton": "Exportar",
     "exportButtonAria": "Exportar backup de {{timestamp}} como um novo arquivo",
     "noticeExportSuccess": "Backup exportado para {{file}}.",

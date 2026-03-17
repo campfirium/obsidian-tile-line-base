@@ -308,6 +308,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Hide right sidebar in TileLineBase views",
     "hideRightSidebarDesc": "Collapse Obsidian's right sidebar whenever any TileLineBase view is active, then restore the previous state after leaving.",
+    "hideMarkdownViewButtonsLabel": "Hide TileLineBase buttons in Markdown tabs",
+    "hideMarkdownViewButtonsDesc": "When enabled, Markdown tabs do not show TileLineBase view buttons in the header.",
+    "saveConfigBlockInNoteLabel": "Keep config block in the current note",
+    "saveConfigBlockInNoteDesc": "Applies on the next config save.",
     "tableViewHeading": "Table view",
     "stripeColorLabel": "Row stripe color",
     "stripeColorDesc": "Default uses theme-based stripes (±4% lightness).",
@@ -519,12 +523,12 @@
     "textPlaceholder": "Enter value",
     "datePlaceholder": "Enter date (YYYY-MM-DD)",
     "dateHint": "Current display format: {{format}}",
-    "timePlaceholder": "Enter time (HH:MM)",
+    "timePlaceholder": "Enter time (HH:mm or HH:mm:ss)",
     "timeHint": "Current display format: {{format}}",
     "confirmButton": "Apply",
     "cancelButton": "Cancel",
     "invalidDate": "Please enter a valid date in YYYY-MM-DD format",
-    "invalidTime": "Please enter a valid time."
+    "invalidTime": "Please enter a valid time in HH:mm or HH:mm:ss format."
   },
   "timeCellEditor": {
     "openPickerLabel": "Open time picker",
@@ -659,12 +663,15 @@
     "settingsMenuImportCsvLabel": "Import CSV into table",
     "settingsMenuImportCsvAsTableLabel": "Import CSV as new table",
     "settingsMenuHelpLabel": "Open help note",
-    "unnamedViewLabel": "Over"
+    "unnamedViewLabel": "Unnamed view"
   },
   "rowOrder": {
     "menuLabel": "Reorder rows (physical)",
     "modalTitle": "Reorder rows",
     "modalWarning": "This rewrites row order in the file."
+  },
+  "columnPhysicalOrder": {
+    "menuLabel": "Reorder columns (physical)"
   },
   "fileDuplication": {
     "errorNoFile": "Current file is unavailable.",

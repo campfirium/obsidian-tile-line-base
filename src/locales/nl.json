@@ -96,6 +96,7 @@
   "viewControls": {
     "openTableView": "Tabel",
     "openMarkdownView": "Bewerken",
+    "openTableViewFromFileMenu": "Openen in TileLineBase-weergave",
     "switchViewMenu": "Weergave: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Rechterzijbalk verbergen in tabelweergave",
     "hideRightSidebarDesc": "Klap de rechterzijbalk van Obsidian in zodra de TileLineBase-tabelweergave actief is. Andere weergaven blijven ongemoeid.",
+    "hideMarkdownViewButtonsLabel": "TileLineBase-knoppen verbergen in Markdown-tabbladen",
+    "hideMarkdownViewButtonsDesc": "Wanneer ingeschakeld, tonen Markdown-tabbladen geen TileLineBase-weergaveknoppen in de koptekst.",
+    "saveConfigBlockInNoteLabel": "Configuratieblok in de huidige notitie behouden",
+    "saveConfigBlockInNoteDesc": "Wordt toegepast bij de volgende configuratie-opslag.",
     "tableViewHeading": "Tabelweergave",
     "stripeColorLabel": "Kleur rijstrepen",
     "stripeColorDesc": "Standaard gebruikt themagebaseerde strepen (±4% lichtheid).",
@@ -519,16 +524,16 @@
     "textPlaceholder": "Voer waarde in",
     "datePlaceholder": "Voer datum in (YYYY-MM-DD)",
     "dateHint": "Huidige weergave-indeling: {{format}}",
-    "timePlaceholder": "Voer tijd in (HH:MM)",
+    "timePlaceholder": "Voer tijd in (HH:mm of HH:mm:ss)",
     "timeHint": "Huidige weergave-indeling: {{format}}",
     "confirmButton": "Toepassen",
     "cancelButton": "Annuleren",
     "invalidDate": "Voer een geldige datum in het formaat YYYY-MM-DD in",
-    "invalidTime": "Voer een geldige tijd in."
+    "invalidTime": "Voer een geldige tijd in het formaat HH:mm of HH:mm:ss in."
   },
   "timeCellEditor": {
     "openPickerLabel": "Tijdkiezer openen",
-    "invalidInput": "Voer een geldige tijd in."
+    "invalidInput": "Voer een geldige tijd in het formaat HH:mm of HH:mm:ss in."
   },
   "copyTemplate": {
     "menuCopy": "Kopiëren als template",
@@ -666,6 +671,9 @@
     "modalTitle": "Rijen herschikken",
     "modalWarning": "Dit herschrijft de rijvolgorde in het bestand."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Kolommen herschikken (fysiek)"
+  },
   "fileDuplication": {
     "errorNoFile": "Huidig bestand is niet beschikbaar.",
     "failureNotice": "Bestand dupliceren mislukt. Probeer het later opnieuw.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "Back-up herstellen mislukt. Controleer de console voor details.",
     "restoreCancelButton": "Annuleren",
     "sizeLabel": "Grootte: {{size}}",
+    "listHeaderTimestamp": "Tijd",
     "changePreviewInitial": "Eerste momentopname",
     "listHeaderRow": "Rij",
+    "listHeaderFields": "Velden",
+    "listHeaderChanges": "Wijzigingen",
+    "listHeaderActions": "Acties",
+    "detailUnavailable": "Niet beschikbaar",
+    "changePreviewNoChanges": "Geen wijzigingen",
+    "changePreviewUnavailable": "Voorbeeld niet beschikbaar",
     "exportButton": "Exporteren",
     "exportButtonAria": "Back-up van {{timestamp}} exporteren als nieuw bestand",
     "noticeExportSuccess": "Back-up geëxporteerd naar {{file}}.",

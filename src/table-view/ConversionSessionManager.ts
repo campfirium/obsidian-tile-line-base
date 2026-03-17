@@ -38,6 +38,18 @@ export class ConversionSessionManager {
 		logger.debug('capture', { file: file.path });
 	}
 
+	replaceBaseline(content: string): void {
+		const file = this.view.file;
+		if (!file) {
+			return;
+		}
+		this.baseline = content;
+		this.filePath = file.path;
+		this.sessionHasMutations = false;
+		this.baselinePersisted = false;
+		logger.debug('replace', { file: file.path });
+	}
+
 	markUserMutation(reason?: string): void {
 		if (this.sessionHasMutations) {
 			return;

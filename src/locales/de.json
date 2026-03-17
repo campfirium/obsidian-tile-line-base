@@ -11,6 +11,7 @@
   "viewControls": {
     "openTableView": "Tabelle",
     "openMarkdownView": "Bearbeiten",
+    "openTableViewFromFileMenu": "In TileLineBase-Ansicht öffnen",
     "switchViewMenu": "Ansicht: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Rechte Seitenleiste in der Tabellenansicht ausblenden",
     "hideRightSidebarDesc": "Die rechte Obsidian-Seitenleiste einklappen, sobald die TileLineBase-Tabellenansicht aktiv ist. Andere Ansichten bleiben unverändert.",
+    "hideMarkdownViewButtonsLabel": "TileLineBase-Schaltflächen in Markdown-Tabs ausblenden",
+    "hideMarkdownViewButtonsDesc": "Wenn aktiviert, zeigen Markdown-Tabs keine TileLineBase-Schaltflächen im Kopfbereich an.",
+    "saveConfigBlockInNoteLabel": "Konfigurationsblock in der aktuellen Notiz behalten",
+    "saveConfigBlockInNoteDesc": "Wird beim nächsten Speichern der Konfiguration angewendet.",
     "tableViewHeading": "Tabellenansicht",
     "stripeColorLabel": "Zeilenstreifenfarbe",
     "stripeColorDesc": "Standard nutzt themenbasierte Streifen (±4 % Helligkeit).",
@@ -519,16 +524,16 @@
     "textPlaceholder": "Wert eingeben",
     "datePlaceholder": "Datum eingeben (YYYY-MM-DD)",
     "dateHint": "Aktuelles Anzeigeformat: {{format}}",
-    "timePlaceholder": "Uhrzeit eingeben (HH:MM)",
+    "timePlaceholder": "Uhrzeit eingeben (HH:mm oder HH:mm:ss)",
     "timeHint": "Aktuelles Anzeigeformat: {{format}}",
     "confirmButton": "Übernehmen",
     "cancelButton": "Abbrechen",
     "invalidDate": "Bitte ein gültiges Datum im Format YYYY-MM-DD eingeben",
-    "invalidTime": "Bitte eine gültige Uhrzeit eingeben."
+    "invalidTime": "Bitte eine gültige Uhrzeit im Format HH:mm oder HH:mm:ss eingeben."
   },
   "timeCellEditor": {
     "openPickerLabel": "Zeit-Auswahl öffnen",
-    "invalidInput": "Bitte eine gültige Uhrzeit eingeben."
+    "invalidInput": "Bitte eine gültige Uhrzeit im Format HH:mm oder HH:mm:ss eingeben."
   },
   "copyTemplate": {
     "menuCopy": "Als Vorlage kopieren",
@@ -666,6 +671,9 @@
     "modalTitle": "Zeilen neu anordnen",
     "modalWarning": "Dadurch wird die Zeilenreihenfolge in der Datei neu geschrieben."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Spalten neu anordnen (physisch)"
+  },
   "fileDuplication": {
     "errorNoFile": "Aktuelle Datei ist nicht verfügbar.",
     "failureNotice": "Datei konnte nicht dupliziert werden. Bitte später erneut versuchen.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "Backup konnte nicht wiederhergestellt werden. Details siehe Konsole.",
     "restoreCancelButton": "Abbrechen",
     "sizeLabel": "Größe: {{size}}",
+    "listHeaderTimestamp": "Zeit",
     "changePreviewInitial": "Erster Schnappschuss",
     "listHeaderRow": "Zeile",
+    "listHeaderFields": "Felder",
+    "listHeaderChanges": "Änderungen",
+    "listHeaderActions": "Aktionen",
+    "detailUnavailable": "Nicht verfügbar",
+    "changePreviewNoChanges": "Keine Änderungen",
+    "changePreviewUnavailable": "Vorschau nicht verfügbar",
     "exportButton": "Exportieren",
     "exportButtonAria": "Backup vom {{timestamp}} als neue Datei exportieren",
     "noticeExportSuccess": "Backup nach {{file}} exportiert.",

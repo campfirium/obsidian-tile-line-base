@@ -1,6 +1,6 @@
 import type { DateFormatPreset, TimeFormatPreset } from '../utils/datetime';
 import { parseColumnDefinition as parseColumnDefinitionLine } from './MarkdownColumnConfigParser';
-import { buildInvalidSection, isRuntimeConfigBlock, resolveColonIndex } from './MarkdownParseHelpers';
+import { buildInvalidSection, isRuntimeConfigBlock, isRuntimeConfigLine, resolveColonIndex } from './MarkdownParseHelpers';
 import type { FormulaFormatPreset } from './formulaFormatPresets';
 import {
 	isCollapsedDataLine,
@@ -103,6 +103,9 @@ export class MarkdownBlockParser {
 			if (index <= skipUntil) continue;
 			const line = lines[index];
 			const trimmed = line.trim();
+			if (isRuntimeConfigLine(trimmed)) {
+				continue;
+			}
 			if (trimmed.startsWith('```')) {
 				flushStray(index);
 				inCodeBlock = !inCodeBlock;

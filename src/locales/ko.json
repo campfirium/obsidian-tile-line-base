@@ -96,6 +96,7 @@
   "viewControls": {
     "openTableView": "테이블",
     "openMarkdownView": "편집",
+    "openTableViewFromFileMenu": "TileLineBase 보기에서 열기",
     "switchViewMenu": "보기: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "테이블 보기에서 오른쪽 사이드바 숨기기",
     "hideRightSidebarDesc": "TileLineBase 테이블 보기가 활성화될 때 Obsidian 오른쪽 사이드바를 접습니다. 다른 보기에는 영향을 주지 않습니다.",
+    "hideMarkdownViewButtonsLabel": "Markdown 탭에서 TileLineBase 버튼 숨기기",
+    "hideMarkdownViewButtonsDesc": "활성화하면 Markdown 탭의 헤더에 TileLineBase 보기 버튼이 표시되지 않습니다.",
+    "saveConfigBlockInNoteLabel": "현재 노트에 설정 블록 유지",
+    "saveConfigBlockInNoteDesc": "다음 설정 저장 시 적용됩니다.",
     "tableViewHeading": "테이블 보기",
     "stripeColorLabel": "행 줄무늬 색상",
     "stripeColorDesc": "기본값은 테마 기반 줄무늬(명도 ±4%)를 사용합니다.",
@@ -519,16 +524,16 @@
     "textPlaceholder": "값 입력",
     "datePlaceholder": "날짜 입력 (YYYY-MM-DD)",
     "dateHint": "현재 표시 형식: {{format}}",
-    "timePlaceholder": "시간 입력 (HH:MM)",
+    "timePlaceholder": "시간 입력 (HH:mm 또는 HH:mm:ss)",
     "timeHint": "현재 표시 형식: {{format}}",
     "confirmButton": "적용",
     "cancelButton": "취소",
     "invalidDate": "YYYY-MM-DD 형식의 올바른 날짜를 입력하세요",
-    "invalidTime": "올바른 시간을 입력하세요."
+    "invalidTime": "HH:mm 또는 HH:mm:ss 형식의 올바른 시간을 입력하세요."
   },
   "timeCellEditor": {
     "openPickerLabel": "시간 선택기 열기",
-    "invalidInput": "올바른 시간을 입력하세요."
+    "invalidInput": "HH:mm 또는 HH:mm:ss 형식의 올바른 시간을 입력하세요."
   },
   "copyTemplate": {
     "menuCopy": "템플릿으로 복사",
@@ -666,6 +671,9 @@
     "modalTitle": "행 재정렬",
     "modalWarning": "파일의 행 순서가 다시 기록됩니다."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "열 재정렬 (실제 순서)"
+  },
   "fileDuplication": {
     "errorNoFile": "현재 파일을 사용할 수 없습니다.",
     "failureNotice": "파일을 복제하지 못했습니다. 잠시 후 다시 시도하세요.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "백업을 복원하지 못했습니다. 자세한 내용은 콘솔을 확인하세요.",
     "restoreCancelButton": "취소",
     "sizeLabel": "크기: {{size}}",
+    "listHeaderTimestamp": "시간",
     "changePreviewInitial": "초기 스냅샷",
     "listHeaderRow": "행",
+    "listHeaderFields": "필드",
+    "listHeaderChanges": "변경 사항",
+    "listHeaderActions": "작업",
+    "detailUnavailable": "사용할 수 없음",
+    "changePreviewNoChanges": "변경 없음",
+    "changePreviewUnavailable": "미리 보기 사용 불가",
     "exportButton": "내보내기",
     "exportButtonAria": "{{timestamp}} 백업을 새 파일로 내보내기",
     "noticeExportSuccess": "백업을 {{file}}에 내보냈습니다.",

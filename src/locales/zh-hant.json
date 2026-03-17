@@ -11,6 +11,7 @@
   "viewControls": {
     "openTableView": "表格",
     "openMarkdownView": "編輯",
+    "openTableViewFromFileMenu": "在 TileLineBase 視圖中開啟",
     "switchViewMenu": "視圖: {{mode}}"
   },
   "galleryView": {
@@ -289,8 +290,8 @@
     "quickLinksVideosLabel": "影片",
     "quickLinksStarLabel": "星標",
     "quickLinksFeedbackTooltip": "回報問題或提出功能需求（GitHub 範本）",
-    "quickLinksVideosTooltip": "先看入門，更多影片稍後（YouTube）",
-    "quickLinksStarTooltip": "如果有幫助，GitHub 上給個 Star 很重要",
+    "quickLinksVideosTooltip": "入門影片已上線，更多內容陸續更新（YouTube）",
+    "quickLinksStarTooltip": "如果這個插件對你有幫助，歡迎在 GitHub 上點個 Star，這對我們很重要",
     "interfaceLanguageLabel": "介面語言",
     "interfaceLanguageDesc": "",
     "interfaceLanguageOptionAuto": "跟隨 Obsidian 語言",
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "表格視圖時隱藏右側邊欄",
     "hideRightSidebarDesc": "當 TileLineBase 表格視圖啟用時自動收合 Obsidian 的右側邊欄，其他視圖不受影響。",
+    "hideMarkdownViewButtonsLabel": "在 Markdown 分頁中隱藏 TileLineBase 按鈕",
+    "hideMarkdownViewButtonsDesc": "啟用後，Markdown 分頁的標題列中將不顯示 TileLineBase 視圖按鈕。",
+    "saveConfigBlockInNoteLabel": "在目前筆記中保留設定區塊",
+    "saveConfigBlockInNoteDesc": "將於下次儲存設定時生效。",
     "tableViewHeading": "表格視圖",
     "stripeColorLabel": "行條紋顏色",
     "stripeColorDesc": "預設使用以主題為基準的條紋（亮度 ±4%）。",
@@ -662,6 +667,9 @@
     "modalTitle": "調整列順序",
     "modalWarning": "將直接改寫檔案中的列順序。"
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "調整欄順序（實際順序）"
+  },
   "fileDuplication": {
     "errorNoFile": "目前沒有可複製的檔案。",
     "failureNotice": "複製檔案失敗，請稍後再試。",
@@ -690,8 +698,15 @@
     "noticeRestoreFailed": "還原備份失敗，詳見主控台。",
     "restoreCancelButton": "取消",
     "sizeLabel": "大小：{{size}}",
+    "listHeaderTimestamp": "時間",
     "changePreviewInitial": "初始快照",
     "listHeaderRow": "行",
+    "listHeaderFields": "欄位",
+    "listHeaderChanges": "變更",
+    "listHeaderActions": "操作",
+    "detailUnavailable": "不可用",
+    "changePreviewNoChanges": "無變更",
+    "changePreviewUnavailable": "預覽不可用",
     "exportButton": "匯出",
     "exportButtonAria": "將 {{timestamp}} 的備份匯出為新檔案",
     "noticeExportSuccess": "已將備份匯出至 {{file}}。",

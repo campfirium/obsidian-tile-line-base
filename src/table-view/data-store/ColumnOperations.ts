@@ -110,6 +110,98 @@ export function reorderColumns(schema: Schema | null, orderedFields: string[]): 
 	return true;
 }
 
+export function reorderSchemaBlockFields(
+	schema: Schema | null,
+	blocks: H2Block[],
+	hiddenSortableFields: Set<string>
+): boolean {
+	if (!schema || blocks.length === 0) {
+		return false;
+	}
+
+	const schemaBlock = blocks[0];
+	const hiddenFields = new Set<string>(hiddenSortableFields);
+	for (const config of schema.columnConfigs ?? []) {
+		if (config.hide) {
+			hiddenFields.add(config.name);
+		}
+	}
+
+	const visibleFields = schema.columnNames.filter((field) => !hiddenFields.has(field));
+	return reorderBlockFieldOrder(schemaBlock, visibleFields);
+}
+
+export function reorderAllBlockFields(schema: Schema | null, blocks: H2Block[]): boolean {
+	if (!schema || blocks.length === 0) {
+		return false;
+	}
+
+	let changed = false;
+	for (const block of blocks) {
+		if (reorderBlockFieldOrder(block, schema.columnNames)) {
+			changed = true;
+		}
+	}
+
+	return changed;
+}
+
+export function applyBlockFieldOrder(block: H2Block, orderedFields: string[]): boolean {
+	return reorderBlockFieldOrder(block, orderedFields);
+}
+
+function reorderBlockFieldOrder(block: H2Block, orderedFields: string[]): boolean {
+	const currentEntries = Object.entries(block.data);
+	if (currentEntries.length === 0) {
+		return false;
+	}
+
+	const nextEntries: Array<[string, string]> = [];
+	const seen = new Set<string>();
+
+	for (const field of orderedFields) {
+		if (!Object.prototype.hasOwnProperty.call(block.data, field)) {
+			continue;
+		}
+		nextEntries.push([field, block.data[field]]);
+		seen.add(field);
+	}
+
+	for (const [field, value] of currentEntries) {
+		if (seen.has(field)) {
+			continue;
+		}
+		nextEntries.push([field, value]);
+		seen.add(field);
+	}
+
+	if (!hasEntryOrderChanged(currentEntries, nextEntries)) {
+		return false;
+	}
+
+	block.data = Object.fromEntries(nextEntries);
+	return true;
+}
+
+function hasEntryOrderChanged(
+	currentEntries: Array<[string, string]>,
+	nextEntries: Array<[string, string]>
+): boolean {
+	if (nextEntries.length !== currentEntries.length) {
+		return true;
+	}
+
+	for (let index = 0; index < currentEntries.length; index++) {
+		const [currentKey] = currentEntries[index];
+		const [nextKey] = nextEntries[index];
+		if (currentKey !== nextKey) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 interface InsertColumnParams {
 	schema: Schema | null;
 	blocks: H2Block[];

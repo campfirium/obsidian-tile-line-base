@@ -85,6 +85,8 @@ export interface TileLineBaseSettings {
 	defaultGalleryCardWidth: number | null;
 	defaultGalleryCardHeight: number | null;
 	hideRightSidebar: boolean;
+	hideMarkdownViewButtons: boolean;
+	saveConfigBlockInNote: boolean;
 	borderContrast: number;
 	stripeColorMode: StripeColorMode;
 	stripeCustomColor: string | null;
@@ -119,6 +121,8 @@ export const DEFAULT_SETTINGS: TileLineBaseSettings = {
 	defaultGalleryCardWidth: null,
 	defaultGalleryCardHeight: null,
 	hideRightSidebar: true,
+	hideMarkdownViewButtons: false,
+	saveConfigBlockInNote: false,
 	borderContrast: 0.4,
 	stripeColorMode: 'recommended',
 	stripeCustomColor: null,
@@ -185,6 +189,12 @@ export class SettingsService {
 		merged.hideRightSidebar = typeof merged.hideRightSidebar === 'boolean'
 			? merged.hideRightSidebar
 			: DEFAULT_SETTINGS.hideRightSidebar;
+		merged.hideMarkdownViewButtons = typeof merged.hideMarkdownViewButtons === 'boolean'
+			? merged.hideMarkdownViewButtons
+			: DEFAULT_SETTINGS.hideMarkdownViewButtons;
+		merged.saveConfigBlockInNote = typeof merged.saveConfigBlockInNote === 'boolean'
+			? merged.saveConfigBlockInNote
+			: DEFAULT_SETTINGS.saveConfigBlockInNote;
 		const borderCandidate = Number(merged.borderContrast);
 		merged.borderContrast =
 			Number.isFinite(borderCandidate) && borderCandidate >= 0 && borderCandidate <= 1
@@ -283,6 +293,32 @@ export class SettingsService {
 			return false;
 		}
 		this.settings.hideRightSidebar = value;
+		await this.persist();
+		return true;
+	}
+
+	getHideMarkdownViewButtons(): boolean {
+		return this.settings.hideMarkdownViewButtons === true;
+	}
+
+	async setHideMarkdownViewButtons(value: boolean): Promise<boolean> {
+		if (this.settings.hideMarkdownViewButtons === value) {
+			return false;
+		}
+		this.settings.hideMarkdownViewButtons = value;
+		await this.persist();
+		return true;
+	}
+
+	getSaveConfigBlockInNote(): boolean {
+		return this.settings.saveConfigBlockInNote === true;
+	}
+
+	async setSaveConfigBlockInNote(value: boolean): Promise<boolean> {
+		if (this.settings.saveConfigBlockInNote === value) {
+			return false;
+		}
+		this.settings.saveConfigBlockInNote = value;
 		await this.persist();
 		return true;
 	}

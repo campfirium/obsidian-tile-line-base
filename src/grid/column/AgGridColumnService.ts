@@ -180,12 +180,10 @@ export class AgGridColumnService {
 			return;
 		}
 
-		const columnApi = this.columnApi;
-		if (!columnApi || typeof columnApi.getAllGridColumns !== 'function') {
+		const orderedColumns = this.resolveMovedColumnOrder(event);
+		if (orderedColumns.length === 0) {
 			return;
 		}
-
-		const orderedColumns: Column[] = columnApi.getAllGridColumns() ?? [];
 		const orderedFields: string[] = [];
 
 		for (const gridColumn of orderedColumns) {
@@ -210,6 +208,29 @@ export class AgGridColumnService {
 		}
 
 		this.callbacks.onColumnOrderChange?.(orderedFields);
+	}
+
+	private resolveMovedColumnOrder(event: ColumnMovedEvent): Column[] {
+		const eventApi = (event as ColumnMovedEvent & {
+			api?: GridApi & { getAllDisplayedColumns?: () => Column[] | null };
+		}).api;
+		const displayedColumns = eventApi?.getAllDisplayedColumns?.() ?? [];
+		if (displayedColumns.length > 0) {
+			return displayedColumns;
+		}
+
+		const gridApi = this.gridApi as (GridApi & { getAllDisplayedColumns?: () => Column[] | null }) | null;
+		const gridColumns = gridApi?.getAllDisplayedColumns?.() ?? [];
+		if (gridColumns.length > 0) {
+			return gridColumns;
+		}
+
+		const columnApi = this.columnApi;
+		if (columnApi && typeof columnApi.getAllGridColumns === 'function') {
+			return columnApi.getAllGridColumns() ?? [];
+		}
+
+		return [];
 	}
 
 	getColumnState(): ColumnState[] | null {

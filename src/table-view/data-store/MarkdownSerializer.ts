@@ -71,14 +71,25 @@ function collectCollapsedEntries(block: H2Block, hiddenFields: Set<string>): Col
 	return entries;
 }
 
+function getVisibleColumnOrder(
+	schema: Schema,
+	block: H2Block,
+	hiddenFields: Set<string>,
+	isSchemaBlock: boolean
+): string[] {
+	if (isSchemaBlock) {
+		return schema.columnNames.filter((key) => !hiddenFields.has(key));
+	}
+
+	return Object.keys(block.data).filter((key) => !hiddenFields.has(key));
+}
+
 function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: Set<string>, isSchemaBlock: boolean): string[] {
 	const lines: string[] = [];
 	let isFirstKey = true;
+	const visibleKeys = getVisibleColumnOrder(schema, block, hiddenFields, isSchemaBlock);
 
-	for (const key of schema.columnNames) {
-		if (hiddenFields.has(key)) {
-			continue;
-		}
+	for (const key of visibleKeys) {
 		const rawValue = block.data[key] ?? '';
 		const trimmed = rawValue.trim();
 		const encoded = isFirstKey || trimmed.length > 0 ? encodeFieldValue(rawValue) : null;

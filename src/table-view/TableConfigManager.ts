@@ -209,6 +209,9 @@ export class TableConfigManager {
 				return null;
 			}
 			await this.save(file, normalized);
+			if (plugin.getSettingsService().getSaveConfigBlockInNote()) {
+				return normalized;
+			}
 			const cleaned = stripExistingConfigBlock(content);
 			const finalContent =
 				cleaned.length === 0 ? '' : cleaned.endsWith('\n') ? cleaned : `${cleaned}\n`;

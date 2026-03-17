@@ -9,6 +9,7 @@ import type { FilterStateStore } from './filter/FilterStateStore';
 import type { BackupManager } from '../services/BackupManager';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
+import { getPluginContext } from '../pluginContext';
 import type { KanbanBoardState, KanbanHeightMode, KanbanSortDirection } from '../types/kanban';
 import {
 	DEFAULT_KANBAN_FONT_SCALE,
@@ -17,6 +18,7 @@ import {
 } from '../types/kanban';
 import type { SlideViewConfig } from '../types/slide';
 import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
+import { buildConfigCalloutBlock, stripExistingConfigBlock } from './config/ConfigBlockIO';
 
 const logger = getLogger('table-view:persistence');
 
@@ -51,6 +53,7 @@ interface TablePersistenceDeps {
 	getGlobalSlideConfig?: () => SlideViewConfig | null;
 	getGlobalGalleryConfig?: () => SlideViewConfig | null;
 	markSelfMutation?: (file: TFile) => void;
+	replaceConversionBaseline?: (content: string) => void;
 	shouldAllowSave?: () => boolean;
 	onSaveSettled?: () => void;
 	getSaveDelayMs?: () => number;
@@ -131,19 +134,30 @@ export class TablePersistenceService {
 
 		try {
 			const markdown = this.deps.dataStore.blocksToMarkdown().trimEnd();
+			const configPayload = this.getConfigPayload();
 			const backupManager = this.deps.getBackupManager();
 			if (backupManager) {
 				try {
-					await backupManager.ensureBackup(targetFile, `${markdown}\n`);
+					await backupManager.ensureBackup(
+						targetFile,
+						this.buildPersistedContent(markdown, configPayload, this.shouldPersistConfigBlockInNote())
+					);
 				} catch (error) {
 					logger.warn('Backup snapshot failed before save', error);
 				}
 			}
 			this.deps.markSelfMutation?.(targetFile);
-			await this.deps.app.vault.modify(targetFile, `${markdown}\n`);
-			await this.saveConfig({
-				beforeWrite: (target) => this.deps.markSelfMutation?.(target)
-			});
+			if (this.shouldPersistConfigBlockInNote()) {
+				const nextContent = this.buildPersistedContent(markdown, configPayload, true);
+				await this.deps.app.vault.modify(targetFile, nextContent);
+				this.deps.replaceConversionBaseline?.(nextContent);
+				await this.saveConfigState(targetFile, configPayload);
+			} else {
+				const nextContent = this.buildPersistedContent(markdown, configPayload, false);
+				await this.deps.app.vault.modify(targetFile, nextContent);
+				this.deps.replaceConversionBaseline?.(nextContent);
+				await this.saveConfigState(targetFile, configPayload);
+			}
 		} catch (error) {
 			logger.error('Failed to save file', error);
 			new Notice(t('tablePersistence.saveFailed'));
@@ -259,8 +273,58 @@ export class TablePersistenceService {
 		if (!file) {
 			return;
 		}
+		const payload = this.getConfigPayload();
+		await this.saveConfigState(file, payload);
+		const persistConfigBlockInNote = this.shouldPersistConfigBlockInNote();
+		const targetFile = this.deps.app.vault.getAbstractFileByPath(file.path);
+		if (!(targetFile instanceof TFile) || targetFile !== file) {
+			logger.warn('saveConfig:aborted file missing or replaced', { path: file.path });
+			return;
+		}
+		_options?.beforeWrite?.(targetFile);
+		this.deps.markSelfMutation?.(targetFile);
+		let nextContentSnapshot: string | null = null;
+		await this.deps.app.vault.process(targetFile, (currentContent) => {
+			const nextContent = this.buildConfigOnlyPersistedContent(currentContent, payload, persistConfigBlockInNote);
+			nextContentSnapshot = nextContent;
+			return nextContent;
+		});
+		if (!nextContentSnapshot) {
+			return;
+		}
+		this.deps.replaceConversionBaseline?.(nextContentSnapshot);
+	}
 
-		await this.deps.configManager.save(file, this.getConfigPayload());
+	private async saveConfigState(file: TFile, payload: TableConfigData): Promise<void> {
+		await this.deps.configManager.save(file, payload);
+	}
+
+	private shouldPersistConfigBlockInNote(): boolean {
+		const plugin = getPluginContext();
+		return plugin?.getSettingsService().getSaveConfigBlockInNote() === true;
+	}
+
+	private buildPersistedContent(markdown: string, payload: TableConfigData, includeConfigBlock: boolean): string {
+		const segments: string[] = [];
+		if (markdown.trim().length > 0) {
+			segments.push(markdown);
+		}
+		if (includeConfigBlock) {
+			segments.push(buildConfigCalloutBlock(payload));
+		}
+		return `${segments.join('\n\n').trimEnd()}\n`;
+	}
+
+	private buildConfigOnlyPersistedContent(content: string, payload: TableConfigData, includeConfigBlock: boolean): string {
+		const base = stripExistingConfigBlock(content).trimEnd();
+		if (!includeConfigBlock) {
+			return `${base}\n`;
+		}
+		const configBlock = buildConfigCalloutBlock(payload);
+		if (base.length === 0) {
+			return `${configBlock}\n`;
+		}
+		return `${base}\n\n${configBlock}\n`;
 	}
 
 	getMarkdownSnapshot(): string {

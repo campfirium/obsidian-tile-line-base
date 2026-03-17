@@ -11,6 +11,7 @@
   "viewControls": {
     "openTableView": "Tableau",
     "openMarkdownView": "Modifier",
+    "openTableViewFromFileMenu": "Ouvrir dans la vue TileLineBase",
     "switchViewMenu": "Vue: {{mode}}"
   },
   "galleryView": {
@@ -308,6 +309,10 @@
     "interfaceLanguageOptionZhHant": "繁體中文",
     "hideRightSidebarLabel": "Masquer le panneau latéral droit en vue tableau",
     "hideRightSidebarDesc": "Replier le panneau droit d'Obsidian lorsque la vue tableau TileLineBase est active. Les autres vues restent inchangées.",
+    "hideMarkdownViewButtonsLabel": "Masquer les boutons TileLineBase dans les onglets Markdown",
+    "hideMarkdownViewButtonsDesc": "Lorsque cette option est activée, les onglets Markdown n'affichent pas les boutons de vue TileLineBase dans l'en-tête.",
+    "saveConfigBlockInNoteLabel": "Conserver le bloc de configuration dans la note actuelle",
+    "saveConfigBlockInNoteDesc": "S'applique lors du prochain enregistrement de la configuration.",
     "tableViewHeading": "Vue tableau",
     "stripeColorLabel": "Couleur des bandes de ligne",
     "stripeColorDesc": "Par défaut, utilise des bandes basées sur le thème (±4 % de luminosité).",
@@ -519,16 +524,16 @@
     "textPlaceholder": "Saisissez une valeur",
     "datePlaceholder": "Saisissez une date (AAAA-MM-JJ)",
     "dateHint": "Format d'affichage actuel : {{format}}",
-    "timePlaceholder": "Saisissez une heure (HH:MM)",
+    "timePlaceholder": "Saisissez une heure (HH:mm ou HH:mm:ss)",
     "timeHint": "Format d'affichage actuel : {{format}}",
     "confirmButton": "Appliquer",
     "cancelButton": "Annuler",
     "invalidDate": "Veuillez entrer une date valide au format AAAA-MM-JJ",
-    "invalidTime": "Veuillez entrer une heure valide."
+    "invalidTime": "Veuillez entrer une heure valide au format HH:mm ou HH:mm:ss."
   },
   "timeCellEditor": {
     "openPickerLabel": "Ouvrir le sélecteur d'heure",
-    "invalidInput": "Veuillez entrer une heure valide."
+    "invalidInput": "Veuillez entrer une heure valide au format HH:mm ou HH:mm:ss."
   },
   "copyTemplate": {
     "menuCopy": "Copier comme modèle",
@@ -666,6 +671,9 @@
     "modalTitle": "Réorganiser les lignes",
     "modalWarning": "Cela réécrit l'ordre des lignes dans le fichier."
   },
+  "columnPhysicalOrder": {
+    "menuLabel": "Réorganiser les colonnes (physique)"
+  },
   "fileDuplication": {
     "errorNoFile": "Le fichier actuel est indisponible.",
     "failureNotice": "Impossible de dupliquer le fichier. Réessayez plus tard.",
@@ -694,8 +702,15 @@
     "noticeRestoreFailed": "Impossible de restaurer la sauvegarde. Consultez la console pour plus de détails.",
     "restoreCancelButton": "Annuler",
     "sizeLabel": "Taille : {{size}}",
+    "listHeaderTimestamp": "Heure",
     "changePreviewInitial": "Instantané initial",
     "listHeaderRow": "Ligne",
+    "listHeaderFields": "Champs",
+    "listHeaderChanges": "Modifications",
+    "listHeaderActions": "Actions",
+    "detailUnavailable": "Indisponible",
+    "changePreviewNoChanges": "Aucun changement",
+    "changePreviewUnavailable": "Aperçu indisponible",
     "exportButton": "Exporter",
     "exportButtonAria": "Exporter la sauvegarde du {{timestamp}} comme nouveau fichier",
     "noticeExportSuccess": "Sauvegarde exportée vers {{file}}.",

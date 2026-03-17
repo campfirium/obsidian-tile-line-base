@@ -33,7 +33,8 @@ import {
 	normalizeColumnConfigs as normalizeColumnConfigsInternal,
 	removeColumn as removeColumnInternal,
 	renameColumn as renameColumnInternal,
-	reorderColumns as reorderColumnsInternal
+	reorderColumns as reorderColumnsInternal,
+	reorderSchemaBlockFields as reorderSchemaBlockFieldsInternal
 } from './data-store/ColumnOperations';
 import {
 	hasColumnConfigContent as hasColumnConfigContentInternal,
@@ -225,7 +226,12 @@ export class TableDataStore {
 	}
 
 	reorderColumns(orderedFields: string[]): boolean {
-		return reorderColumnsInternal(this.schema, orderedFields);
+		const reordered = reorderColumnsInternal(this.schema, orderedFields);
+		if (!reordered) {
+			return false;
+		}
+		reorderSchemaBlockFieldsInternal(this.schema, this.blocks, this.hiddenSortableFields);
+		return true;
 	}
 
 	duplicateColumn(field: string): string | null {

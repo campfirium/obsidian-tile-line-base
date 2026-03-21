@@ -44,10 +44,17 @@ export class FilterViewOrchestrator {
 
 		const adapter = this.deps.getGridAdapter();
 		if (adapter) {
-			const adapterWithApi = adapter as GridAdapter & { gridApi?: { setGridOption?: (key: string, value: unknown) => void } };
+			const adapterWithApi = adapter as GridAdapter & {
+				gridApi?: {
+					setGridOption?: (key: string, value: unknown) => void;
+					redrawRows?: () => void;
+				};
+			};
 			const api = adapterWithApi.gridApi;
 			if (api && typeof api.setGridOption === 'function') {
 				api.setGridOption('rowData', this.visibleRows);
+				// Force row-class recomputation after inserts/reorders so status CSS follows the row data.
+				api.redrawRows?.();
 			} else {
 				adapter.updateData(this.visibleRows);
 			}

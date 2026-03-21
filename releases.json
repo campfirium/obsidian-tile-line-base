@@ -1,4 +1,14 @@
 {
+  "0.9.7": {
+    "date": "2026-03-21",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [
+      "Status row colors now refresh correctly after row updates."
+    ],
+    "changed": []
+  },
   "0.9.6": {
     "date": "2026-03-17",
     "info": "",

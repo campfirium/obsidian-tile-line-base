@@ -147,6 +147,7 @@ export class AgGridAdapter implements GridAdapter {
 		this.lifecycle.withGridApi(api => {
 			api.setGridOption('rowData', rows);
 			api.refreshCells({ force: true });
+			api.redrawRows();
 		});
 	}
 

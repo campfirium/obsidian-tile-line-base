@@ -42,7 +42,12 @@ export function extractRowData(params: ExtractRowDataParams): RowData[] {
 		if (!Object.prototype.hasOwnProperty.call(row, ROW_ID_FIELD)) {
 			row[ROW_ID_FIELD] = String(i);
 		}
-		applyFormulaResults(formulaState, formulaOptions, row, formulasEnabled);
+		const blockIndex = Number.parseInt(String(row[ROW_ID_FIELD] ?? ''), 10);
+		const block = Number.isInteger(blockIndex) ? blocks[blockIndex] : null;
+		if (!block) {
+			continue;
+		}
+		applyFormulaResults(formulaState, formulaOptions, block, row, formulasEnabled);
 	}
 
 	return data;

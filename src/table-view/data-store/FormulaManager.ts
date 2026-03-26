@@ -1,7 +1,7 @@
 import { compileFormula, evaluateFormula, type CompiledFormula } from '../../formula/FormulaEngine';
 import type { RowData } from '../../grid/GridAdapter';
 import { t } from '../../i18n';
-import type { ColumnConfig } from '../MarkdownBlockParser';
+import type { ColumnConfig, H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
 import type { FormulaOptions } from './types';
 import {
@@ -100,6 +100,7 @@ export function prepareFormulaColumns(
 export function applyFormulaResults(
 	state: FormulaState,
 	options: FormulaOptions,
+	block: H2Block,
 	row: RowData,
 	formulasEnabled: boolean
 ): void {
@@ -112,6 +113,7 @@ export function applyFormulaResults(
 		const compileError = state.compileErrors.get(columnName);
 		if (compileError) {
 			row[columnName] = options.errorValue;
+			block.data[columnName] = '';
 			row[tooltipField] = t('tableDataStore.formulaParseFailed', { error: compileError });
 			continue;
 		}
@@ -130,6 +132,7 @@ export function applyFormulaResults(
 		);
 		if (error) {
 			row[columnName] = options.errorValue;
+			block.data[columnName] = '';
 			row[tooltipField] = t('tableDataStore.formulaError', { error });
 		} else {
 			const preset = state.formats.get(columnName);
@@ -139,6 +142,7 @@ export function applyFormulaResults(
 			} else {
 				row[columnName] = value;
 			}
+			block.data[columnName] = String(row[columnName] ?? '');
 			row[tooltipField] = '';
 		}
 	}

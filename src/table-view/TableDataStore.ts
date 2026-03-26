@@ -199,6 +199,7 @@ export class TableDataStore {
 
 	updateCell(rowIndex: number, field: string, newValue: string): boolean {
 		if (!this.schema) return false;
+		if (this.isFormulaColumn(field)) return false;
 		if (rowIndex < 0 || rowIndex >= this.blocks.length) return false;
 		const block = this.blocks[rowIndex];
 		block.data[field] = newValue;

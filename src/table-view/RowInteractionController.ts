@@ -680,6 +680,7 @@ export class RowInteractionController {
 		);
 
 		blocks.splice(insertionIndex, 0, extracted);
+		const hierarchyChanges = this.syncDraggedRowHierarchyAfterReorder(blocks, insertionIndex, extracted);
 
 		this.refreshGridData();
 		this.focusRow(insertionIndex, focusField);
@@ -696,8 +697,68 @@ export class RowInteractionController {
 				redo: { rowIndex: insertionIndex, field: focusField ?? null }
 			}
 		);
+		if (hierarchyChanges.length > 0) {
+			this.history.recordCellChanges(hierarchyChanges, {
+				undo: { rowIndex: insertionIndex, field: focusField ?? null },
+				redo: { rowIndex: insertionIndex, field: focusField ?? null }
+			});
+		}
 
 		return insertionIndex;
+	}
+
+	private syncDraggedRowHierarchyAfterReorder(
+		blocks: H2Block[],
+		rowIndex: number,
+		block: H2Block
+	): Array<{ ref: H2Block; index: number; field: string; oldValue: string; newValue: string }> {
+		const changes: Array<{ ref: H2Block; index: number; field: string; oldValue: string; newValue: string }> = [];
+		const currentParentEntryId = String(block.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		const entryId = String(block.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		const hasChildren = entryId.length > 0 && this.hasDirectChildren(blocks, entryId);
+
+		let nextParentEntryId = '';
+		let nextParentBlock: H2Block | null = null;
+		let nextParentRowIndex: number | null = null;
+
+		if (!hasChildren) {
+			nextParentRowIndex = this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex);
+			if (nextParentRowIndex !== null) {
+				nextParentBlock = blocks[nextParentRowIndex] ?? null;
+				nextParentEntryId = String(nextParentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+				if (!nextParentEntryId) {
+					nextParentBlock = null;
+					nextParentRowIndex = null;
+				}
+			}
+		}
+
+		if (nextParentEntryId !== currentParentEntryId) {
+			block.data[PARENT_ENTRY_ID_FIELD] = nextParentEntryId;
+			changes.push({
+				ref: block,
+				index: rowIndex,
+				field: PARENT_ENTRY_ID_FIELD,
+				oldValue: currentParentEntryId,
+				newValue: nextParentEntryId
+			});
+		}
+
+		if (nextParentBlock && nextParentRowIndex !== null) {
+			const currentCollapsedState = String(nextParentBlock.data?.[COLLAPSED_STATE_FIELD] ?? 'false');
+			if (currentCollapsedState !== 'false') {
+				nextParentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+				changes.push({
+					ref: nextParentBlock,
+					index: nextParentRowIndex,
+					field: COLLAPSED_STATE_FIELD,
+					oldValue: currentCollapsedState,
+					newValue: 'false'
+				});
+			}
+		}
+
+		return changes;
 	}
 
 	private shouldPlaceAfter(direction: 'up' | 'down' | null, sourceIndex: number, targetIndex: number): boolean {

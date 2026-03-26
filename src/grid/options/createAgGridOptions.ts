@@ -6,6 +6,8 @@ import type {
 	ColumnHeaderContextMenuEvent,
 	GridOptions,
 	PasteEndEvent,
+	RowDragCancelEvent,
+	RowDragEnterEvent,
 	RowDragEndEvent,
 	SuppressKeyboardEventParams
 } from 'ag-grid-community';
@@ -43,6 +45,8 @@ export function createAgGridOptions({
 	resizeColumns,
 	onRowDragEnd
 }: GridOptionsParams): GridOptions {
+	let isRowDragActive = false;
+
 	return {
 		popupParent: popupParent ?? ownerDocument?.body ?? document.body,
 		rowHeight: DEFAULT_ROW_HEIGHT,
@@ -119,10 +123,20 @@ export function createAgGridOptions({
 			const callback = getColumnHeaderContextMenu();
 			callback?.({ field, domEvent });
 		},
+		onRowDragEnter: (_event: RowDragEnterEvent) => {
+			isRowDragActive = true;
+		},
 		onRowDragEnd: (event: RowDragEndEvent) => {
+			isRowDragActive = false;
 			onRowDragEnd(event);
 		},
+		onRowDragCancel: (_event: RowDragCancelEvent) => {
+			isRowDragActive = false;
+		},
 		postSortRows: (params) => {
+			if (isRowDragActive) {
+				return;
+			}
 			postSortNodesPreservingHierarchy(params);
 		},
 		defaultColDef: {

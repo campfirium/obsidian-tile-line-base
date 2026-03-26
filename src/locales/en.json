@@ -483,6 +483,8 @@
     "insertRowAbove": "Insert row above",
     "insertRowBelow": "Insert row below",
     "insertChildEntry": "New child entry",
+    "setAsChildEntry": "Set as child entry",
+    "setAsTopLevelEntry": "Set as top-level entry",
     "fillSelectedColumn": "Fill '{{column}}' for selected {{count}} rows",
     "duplicateSelected": "Duplicate selected {{count}} rows",
     "deleteSelected": "Delete selected {{count}} rows",

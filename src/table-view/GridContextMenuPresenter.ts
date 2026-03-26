@@ -45,6 +45,21 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 		!isMultiSelect &&
 		Boolean(targetBlock) &&
 		String(targetBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim().length === 0;
+	const hierarchyAction = !isMultiSelect
+		? params.rowInteraction.canOutdentRow(params.blockIndex)
+			? {
+					labelKey: 'gridInteraction.setAsTopLevelEntry' as const,
+					icon: 'outdent',
+					handler: () => params.rowInteraction.outdentRow(params.blockIndex, { focusField: '#' }),
+					disabled: !params.rowInteraction.canOutdentRow(params.blockIndex)
+				}
+			: {
+					labelKey: 'gridInteraction.setAsChildEntry' as const,
+					icon: 'indent',
+					handler: () => params.rowInteraction.indentRow(params.blockIndex, { focusField: '#' }),
+					disabled: !params.rowInteraction.canIndentRow(params.blockIndex)
+				}
+		: undefined;
 
 	let fillSelection: ReturnType<typeof createFillSelectionAction> = {};
 	if (isMultiSelect && !isSystemColumn) {
@@ -132,6 +147,7 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 			insertChild: canInsertChild
 				? () => params.rowInteraction.addChildRow(params.blockIndex)
 				: undefined,
+			hierarchyAction,
 			fillSelectionWithValue: fillSelection.action,
 			duplicateSelection: () => params.rowInteraction.duplicateRows(selectedRows),
 			deleteSelection: () => params.rowInteraction.deleteRows(selectedRows),

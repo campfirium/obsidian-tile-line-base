@@ -138,6 +138,116 @@ export class RowInteractionController {
 		);
 	}
 
+	canIndentRow(rowIndex: number): boolean {
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		if (!block || rowIndex <= 0) {
+			return false;
+		}
+
+		const parentEntryId = String(block.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (parentEntryId) {
+			return false;
+		}
+
+		const entryId = String(block.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!entryId || this.hasDirectChildren(blocks, entryId)) {
+			return false;
+		}
+
+		return this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex) !== null;
+	}
+
+	canOutdentRow(rowIndex: number): boolean {
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		if (!block) {
+			return false;
+		}
+
+		return String(block.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim().length > 0;
+	}
+
+	indentRow(rowIndex: number, options?: RowActionOptions): boolean {
+		if (!this.ensureSchema() || !this.canIndentRow(rowIndex)) {
+			return false;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		const parentRowIndex = this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex);
+		if (!block || parentRowIndex === null) {
+			return false;
+		}
+
+		const parentBlock = blocks[parentRowIndex];
+		const parentEntryId = String(parentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!parentBlock || !parentEntryId) {
+			return false;
+		}
+
+		const focusField = this.resolveFocusField(options);
+		const targets = [{ index: rowIndex, fields: [PARENT_ENTRY_ID_FIELD] }];
+		const currentCollapsedState = String(parentBlock.data?.[COLLAPSED_STATE_FIELD] ?? 'false');
+		if (currentCollapsedState !== 'false') {
+			targets.push({ index: parentRowIndex, fields: [COLLAPSED_STATE_FIELD] });
+		}
+
+		const recorded = this.history.captureCellChanges(
+			targets,
+			() => {
+				block.data[PARENT_ENTRY_ID_FIELD] = parentEntryId;
+				parentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+			},
+			{
+				undo: { rowIndex, field: focusField ?? null },
+				redo: { rowIndex, field: focusField ?? null }
+			}
+		);
+
+		if (!recorded) {
+			return false;
+		}
+
+		this.refreshGridData();
+		this.focusRow(rowIndex, focusField);
+		this.scheduleSave();
+		return true;
+	}
+
+	outdentRow(rowIndex: number, options?: RowActionOptions): boolean {
+		if (!this.ensureSchema() || !this.canOutdentRow(rowIndex)) {
+			return false;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		if (!block) {
+			return false;
+		}
+
+		const focusField = this.resolveFocusField(options);
+		const recorded = this.history.captureCellChanges(
+			[{ index: rowIndex, fields: [PARENT_ENTRY_ID_FIELD] }],
+			() => {
+				block.data[PARENT_ENTRY_ID_FIELD] = '';
+			},
+			{
+				undo: { rowIndex, field: focusField ?? null },
+				redo: { rowIndex, field: focusField ?? null }
+			}
+		);
+
+		if (!recorded) {
+			return false;
+		}
+
+		this.refreshGridData();
+		this.focusRow(rowIndex, focusField);
+		this.scheduleSave();
+		return true;
+	}
+
 	toggleRowCollapsed(rowIndex: number): void {
 		if (!this.ensureSchema()) {
 			return;
@@ -605,6 +715,16 @@ export class RowInteractionController {
 			return min;
 		}
 		return Math.max(min, Math.min(max, value));
+	}
+
+	private findNearestPreviousTopLevelRowIndex(blocks: H2Block[], rowIndex: number): number | null {
+		for (let index = rowIndex - 1; index >= 0; index--) {
+			const parentEntryId = String(blocks[index]?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+			if (!parentEntryId) {
+				return index;
+			}
+		}
+		return null;
 	}
 
 	private hasDirectChildren(blocks: H2Block[], entryId: string): boolean {

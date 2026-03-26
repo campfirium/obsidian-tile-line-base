@@ -5,8 +5,8 @@ import type {
 	CellKeyDownEvent,
 	ColumnHeaderContextMenuEvent,
 	GridOptions,
-	RowDragEndEvent,
 	PasteEndEvent,
+	RowDragEndEvent,
 	SuppressKeyboardEventParams
 } from 'ag-grid-community';
 import { normalizeStatus } from '../../renderers/StatusCellRenderer';
@@ -16,6 +16,7 @@ import type { AgGridInteractionController } from '../interactions/AgGridInteract
 import type { GridInteractionContext } from '../interactions/types';
 import type { RowData } from '../GridAdapter';
 import { ROW_ID_FIELD } from '../GridAdapter';
+import { postSortNodesPreservingHierarchy } from '../../table-view/HierarchySort';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -120,6 +121,9 @@ export function createAgGridOptions({
 		},
 		onRowDragEnd: (event: RowDragEndEvent) => {
 			onRowDragEnd(event);
+		},
+		postSortRows: (params) => {
+			postSortNodesPreservingHierarchy(params);
 		},
 		defaultColDef: {
 			tooltipValueGetter: () => null,

@@ -4,6 +4,7 @@ import { collectCascadeDeleteIndexes } from '../DisplayListBuilder';
 import {
 	assignFreshEntryId,
 	COLLAPSED_STATE_FIELD,
+	ENTRY_ID_FIELD,
 	PARENT_ENTRY_ID_FIELD,
 	STATUS_CHANGED_FIELD
 } from '../entryFields';
@@ -45,8 +46,8 @@ export function addRow(params: AddRowParams): number {
 	}
 
 	newBlock.data[STATUS_CHANGED_FIELD] = getTimestamp();
-	newBlock.data[PARENT_ENTRY_ID_FIELD] = '';
-	newBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+	newBlock.data[PARENT_ENTRY_ID_FIELD] = prefills?.[PARENT_ENTRY_ID_FIELD] ?? '';
+	newBlock.data[COLLAPSED_STATE_FIELD] = prefills?.[COLLAPSED_STATE_FIELD] ?? 'false';
 	assignFreshEntryId(newBlock);
 
 	if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
@@ -56,6 +57,49 @@ export function addRow(params: AddRowParams): number {
 
 	blocks.push(newBlock);
 	return blocks.length - 1;
+}
+
+export function addChildRow(params: AddRowParams & { parentRowIndex: number }): number {
+	const { blocks, parentRowIndex } = params;
+	if (parentRowIndex < 0 || parentRowIndex >= blocks.length) {
+		return -1;
+	}
+
+	const parentBlock = blocks[parentRowIndex];
+	const parentEntryId = String(parentBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+	if (parentEntryId) {
+		return -1;
+	}
+
+	const currentEntryId = String(parentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+	if (!currentEntryId) {
+		return -1;
+	}
+
+	let insertIndex = parentRowIndex + 1;
+	for (let index = parentRowIndex + 1; index < blocks.length; index++) {
+		const blockParentEntryId = String(blocks[index]?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (blockParentEntryId !== currentEntryId) {
+			break;
+		}
+		insertIndex = index + 1;
+	}
+
+	const childIndex = addRow({
+		...params,
+		beforeRowIndex: insertIndex,
+		prefills: {
+			...(params.prefills ?? {}),
+			[PARENT_ENTRY_ID_FIELD]: currentEntryId
+		}
+	});
+
+	if (childIndex < 0) {
+		return childIndex;
+	}
+
+	parentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+	return childIndex;
 }
 
 export function deleteRow(schema: Schema | null, blocks: H2Block[], rowIndex: number): number | null {

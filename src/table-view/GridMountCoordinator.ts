@@ -6,6 +6,7 @@ import type { ColumnConfig } from './MarkdownBlockParser';
 import type { TableDataStore } from './TableDataStore';
 import type { GridController } from './GridController';
 import { ColumnLayoutStore } from './ColumnLayoutStore';
+import { createTreeTitleCellRenderer } from '../renderers/TreeTitleCellRenderer';
 
 interface ColumnBuilderParams {
 	schema: Schema;
@@ -44,6 +45,7 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 			baseColDef.lockPinned = true;
 			baseColDef.lockPosition = true;
 			baseColDef.suppressMovable = true;
+			baseColDef.cellRenderer = createTreeTitleCellRenderer();
 		}
 
 		if (columnConfigs) {
@@ -124,6 +126,7 @@ interface GridMountHandlers {
 	onColumnHeaderContextMenu: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow: (field: string | null) => void;
 	onOpenCellLink: (context: CellLinkClickContext) => void;
+	onToggleTreeRowCollapse?: (rowIndex: number) => void;
 	onRowDragEnd?: (event: RowDragEndPayload) => void;
 }
 
@@ -151,6 +154,7 @@ export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; 
 		onColumnHeaderContextMenu: handlers.onColumnHeaderContextMenu,
 		onEnterAtLastRow: handlers.onEnterAtLastRow,
 		onOpenCellLink: handlers.onOpenCellLink,
+		onToggleTreeRowCollapse: handlers.onToggleTreeRowCollapse,
 		onRowDragEnd: handlers.onRowDragEnd
 	}, {
 		sideBarVisible: sideBarVisible !== false

@@ -6,6 +6,7 @@ import { getLogger } from '../utils/logger';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
 import { ROW_ID_FIELD, type RowDragEndPayload } from '../grid/GridAdapter';
+import { COLLAPSED_STATE_FIELD, ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from './entryFields';
 
 const logger = getLogger('table-view:row-interaction');
 
@@ -87,6 +88,98 @@ export class RowInteractionController {
 				redo: { rowIndex: insertIndex, field: focusField ?? null }
 			}
 		);
+	}
+
+	addChildRow(parentRowIndex: number, options?: RowActionOptions): void {
+		if (!this.ensureSchema()) {
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		if (parentRowIndex < 0 || parentRowIndex >= blocks.length) {
+			logger.error('Invalid parent row index:', parentRowIndex);
+			return;
+		}
+
+		const parentBlock = blocks[parentRowIndex];
+		const parentEntryId = String(parentBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (parentEntryId) {
+			logger.warn('Ignored child entry creation for nested row', parentRowIndex);
+			return;
+		}
+
+		const focusField = this.resolveFocusField(options);
+		const filterPrefills = this.getActiveFilterPrefills();
+		const optionPrefills = options?.prefills ?? {};
+		const mergedPrefills = { ...filterPrefills, ...optionPrefills };
+		const insertIndex = this.dataStore.addChildRow(parentRowIndex, mergedPrefills);
+		if (insertIndex < 0) {
+			logger.error('Failed to add child entry');
+			return;
+		}
+
+		this.refreshGridData();
+		if (!options?.skipFocus) {
+			this.focusRow(insertIndex, focusField);
+		}
+		this.scheduleSave();
+
+		const newBlock = this.dataStore.getBlocks()[insertIndex];
+		if (!newBlock) {
+			return;
+		}
+
+		this.history.recordRowInsertions(
+			[{ index: insertIndex, ref: newBlock }],
+			{
+				undo: { rowIndex: parentRowIndex, field: focusField ?? null },
+				redo: { rowIndex: insertIndex, field: focusField ?? null }
+			}
+		);
+	}
+
+	toggleRowCollapsed(rowIndex: number): void {
+		if (!this.ensureSchema()) {
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		if (rowIndex < 0 || rowIndex >= blocks.length) {
+			logger.error('Invalid row index for collapse toggle:', rowIndex);
+			return;
+		}
+
+		const block = blocks[rowIndex];
+		const parentEntryId = String(block?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (parentEntryId) {
+			return;
+		}
+
+		const entryId = String(block?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!entryId || !this.hasDirectChildren(blocks, entryId)) {
+			return;
+		}
+
+		const focusField = this.resolveFocusField();
+		const recorded = this.history.captureCellChanges(
+			[{ index: rowIndex, fields: [COLLAPSED_STATE_FIELD] }],
+			() => {
+				const current = String(block.data?.[COLLAPSED_STATE_FIELD] ?? 'false') === 'true';
+				block.data[COLLAPSED_STATE_FIELD] = current ? 'false' : 'true';
+			},
+			{
+				undo: { rowIndex, field: focusField ?? null },
+				redo: { rowIndex, field: focusField ?? null }
+			}
+		);
+
+		if (!recorded) {
+			return;
+		}
+
+		this.refreshGridData();
+		this.focusRow(rowIndex, focusField);
+		this.scheduleSave();
 	}
 
 	deleteRow(rowIndex: number, options?: RowActionOptions): void {
@@ -512,6 +605,15 @@ export class RowInteractionController {
 			return min;
 		}
 		return Math.max(min, Math.min(max, value));
+	}
+
+	private hasDirectChildren(blocks: H2Block[], entryId: string): boolean {
+		for (const block of blocks) {
+			if (String(block?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim() === entryId) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }

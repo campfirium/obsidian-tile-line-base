@@ -92,6 +92,9 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 				onColumnHeaderContextMenu: (field, event) =>
 					view.columnInteractionController.handleColumnHeaderContextMenu(field, event),
 				onOpenCellLink: (context) => handleCellLinkOpen(view, context),
+				onToggleTreeRowCollapse: (rowIndex) => {
+					view.rowInteractionController.toggleRowCollapsed(rowIndex);
+				},
 				onEnterAtLastRow: (field) => {
 					const oldRowCount = view.blocks.length;
 					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });

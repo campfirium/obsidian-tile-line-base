@@ -19,6 +19,7 @@ import {
 } from './data-store/FormulaManager';
 import {
 	addRow as addRowInternal,
+	addChildRow as addChildRowInternal,
 	deleteRow as deleteRowInternal,
 	deleteRows as deleteRowsInternal,
 	duplicateRow as duplicateRowInternal,
@@ -209,6 +210,17 @@ export class TableDataStore {
 			schema: this.schema,
 			blocks: this.blocks,
 			beforeRowIndex: beforeRowIndex ?? null,
+			prefills,
+			newRowPrefix: t('tableDataStore.newRowPrefix'),
+			getTimestamp: getCurrentLocalDateTime
+		});
+	}
+
+	addChildRow(parentRowIndex: number, prefills?: Record<string, string>): number {
+		return addChildRowInternal({
+			schema: this.schema,
+			blocks: this.blocks,
+			parentRowIndex,
 			prefills,
 			newRowPrefix: t('tableDataStore.newRowPrefix'),
 			getTimestamp: getCurrentLocalDateTime

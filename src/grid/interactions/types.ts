@@ -13,6 +13,7 @@ export interface GridInteractionContext {
 	onCopySelectionAsTemplate?: (rowIndex: number) => void;
 	onColumnOrderChange?: (fields: string[]) => void;
 	openCellLink?: (context: CellLinkClickContext) => void;
+	toggleTreeRowCollapse?: (rowIndex: number) => void;
 	sideBarVisible?: boolean;
 	getContainerEl?: () => HTMLElement | null;
 }

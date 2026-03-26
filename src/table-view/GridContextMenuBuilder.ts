@@ -31,6 +31,7 @@ interface MenuBuilderOptions {
 		promoteToNote?: () => void;
 		insertAbove: () => void;
 		insertBelow: () => void;
+		insertChild?: () => void;
 		fillSelectionWithValue?: () => void;
 		duplicateSelection: () => void;
 		deleteSelection: () => void;
@@ -213,6 +214,9 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 	}
 	addItem('gridInteraction.insertRowAbove', 'arrow-up', options.actions.insertAbove);
 	addItem('gridInteraction.insertRowBelow', 'arrow-down', options.actions.insertBelow);
+	addItem('gridInteraction.insertChildEntry', 'indent', options.actions.insertChild, {
+		disabled: !options.actions.insertChild
+	});
 
 	if (options.isMultiSelect) {
 		if (options.actions.fillSelectionWithValue && options.fillSelectionLabelParams) {

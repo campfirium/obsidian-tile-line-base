@@ -1,5 +1,6 @@
 import type { H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
+import { collectCascadeDeleteIndexes } from '../DisplayListBuilder';
 import {
 	assignFreshEntryId,
 	COLLAPSED_STATE_FIELD,
@@ -64,7 +65,10 @@ export function deleteRow(schema: Schema | null, blocks: H2Block[], rowIndex: nu
 	if (rowIndex < 0 || rowIndex >= blocks.length) {
 		return null;
 	}
-	blocks.splice(rowIndex, 1);
+	const indexesToDelete = collectCascadeDeleteIndexes(blocks, [rowIndex]);
+	for (let index = indexesToDelete.length - 1; index >= 0; index--) {
+		blocks.splice(indexesToDelete[index], 1);
+	}
 	if (blocks.length === 0) {
 		return null;
 	}
@@ -76,7 +80,7 @@ export function deleteRows(schema: Schema | null, blocks: H2Block[], rowIndexes:
 		return null;
 	}
 
-	const sorted = [...rowIndexes].sort((a, b) => b - a);
+	const sorted = collectCascadeDeleteIndexes(blocks, rowIndexes).sort((a, b) => b - a);
 	for (const index of sorted) {
 		if (index >= 0 && index < blocks.length) {
 			blocks.splice(index, 1);

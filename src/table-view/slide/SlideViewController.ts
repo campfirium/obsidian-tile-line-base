@@ -10,6 +10,12 @@ import { COVER_HIDDEN_CLASS, COVER_LAYOUT, resolveSourceTitle } from './slideCov
 import { renderSlideEditForm, serializeTemplateSegments, type EditState } from './slideTemplateEditing';
 import { applyLayoutWithWatcher, buildSlideMarkdown, renderMarkdownBlock, resetRenderArtifacts } from './SlideRenderUtils';
 import { findRenderedLinkElement, tryOpenRenderedInternalLink } from '../RenderedLinkNavigation';
+import {
+	DISPLAY_ORDER_FIELD,
+	ROW_COLLAPSED_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_LEVEL_FIELD
+} from '../DisplayListBuilder';
 interface SlideControllerOptions {
 	app: App;
 	sourcePath: string;
@@ -20,7 +26,17 @@ interface SlideControllerOptions {
 	onSaveRow: (row: RowData, values: Record<string, string>) => Promise<RowData[] | void>;
 	onEditTemplate: () => void;
 }
-const RESERVED_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
+const RESERVED_FIELDS = new Set([
+	'#',
+	'__tlb_row_id',
+	'__tlb_status',
+	DISPLAY_ORDER_FIELD,
+	ROW_LEVEL_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_COLLAPSED_FIELD,
+	'status',
+	'statusChanged'
+]);
 export class SlideViewController {
 	private readonly app: App;
 	private readonly sourcePath: string;

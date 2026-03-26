@@ -9,6 +9,7 @@ import {
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
 import type { Schema, SchemaBuildResult } from './SchemaBuilder';
 import { t } from '../i18n';
+import { normalizeParentLinks } from './DisplayListBuilder';
 import {
 	createFormulaState,
 	getFormulaTooltipField as getTooltipFieldInternal,
@@ -72,6 +73,9 @@ export class TableDataStore {
 		this.hiddenSortableFields = new Set(result.hiddenSortableFields);
 		this.schemaDirty = result.schemaDirty;
 		this.sparseCleanupRequired = result.sparseCleanupRequired;
+		if (normalizeParentLinks(this.blocks)) {
+			this.sparseCleanupRequired = true;
+		}
 		this.setFrontmatter(options?.frontmatter ?? null, options?.frontmatterPadding ?? null);
 		this.leadingHeading = options?.leadingHeading ?? null;
 		prepareFormulaColumns(this.formulaState, this.schema, columnConfigs ?? null);

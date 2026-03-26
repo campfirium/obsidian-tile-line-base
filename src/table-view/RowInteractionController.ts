@@ -1,6 +1,7 @@
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
 import type { H2Block } from './MarkdownBlockParser';
+import { collectCascadeDeleteIndexes } from './DisplayListBuilder';
 import { getLogger } from '../utils/logger';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
@@ -99,7 +100,11 @@ export class RowInteractionController {
 			return;
 		}
 
-		const snapshot = this.history.snapshotBlock(blocks[rowIndex]);
+		const deleteIndexes = collectCascadeDeleteIndexes(blocks, [rowIndex]);
+		const snapshots = deleteIndexes.map((index) => ({
+			index,
+			snapshot: this.history.snapshotBlock(blocks[index])
+		}));
 		const focusField = this.resolveFocusField(options);
 		const nextIndex = this.dataStore.deleteRow(rowIndex);
 		const fallbackRow = this.ensureFallbackRow();
@@ -114,7 +119,7 @@ export class RowInteractionController {
 		this.scheduleSave();
 
 		this.history.recordRowDeletions(
-			[{ index: rowIndex, snapshot }],
+			snapshots,
 			{
 				focus: {
 					undo: { rowIndex, field: focusField ?? null },
@@ -149,7 +154,8 @@ export class RowInteractionController {
 			return;
 		}
 
-		const snapshots: Array<{ index: number; snapshot: BlockSnapshot }> = normalized.map((index) => ({
+		const deleteIndexes = collectCascadeDeleteIndexes(blocks, normalized);
+		const snapshots: Array<{ index: number; snapshot: BlockSnapshot }> = deleteIndexes.map((index) => ({
 			index,
 			snapshot: this.history.snapshotBlock(blocks[index])
 		}));

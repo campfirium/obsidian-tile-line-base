@@ -9,9 +9,23 @@ import type { H2Block } from './MarkdownBlockParser';
 import { SchemaBuilder } from './SchemaBuilder';
 import { TableDataStore } from './TableDataStore';
 import { TableRefreshCoordinator } from './TableRefreshCoordinator';
+import {
+	DISPLAY_ORDER_FIELD,
+	ROW_COLLAPSED_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_LEVEL_FIELD
+} from './DisplayListBuilder';
 
 const logger = getLogger('table-view:csv');
-const EXCLUDED_FIELDS = new Set(['#', ROW_ID_FIELD, '__tlb_status', '__tlb_index']);
+const EXCLUDED_FIELDS = new Set([
+	'#',
+	ROW_ID_FIELD,
+	'__tlb_status',
+	DISPLAY_ORDER_FIELD,
+	ROW_LEVEL_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_COLLAPSED_FIELD
+]);
 const UTF8_BOM = '\uFEFF';
 const TABLE_FILE_EXTENSION = '.md';
 const HIDDEN_ELEMENT_CLASS = 'tlb-visually-hidden';

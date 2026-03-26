@@ -1,12 +1,12 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
-import type { H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
+import { buildDisplayList } from '../DisplayListBuilder';
 import { applyFormulaResults, shouldNotifyFormulaLimit, type FormulaState } from './FormulaManager';
 import type { ExtractRowOptions, FormulaOptions } from './types';
 
 interface ExtractRowDataParams {
 	schema: Schema | null;
-	blocks: H2Block[];
+	blocks: Parameters<typeof buildDisplayList>[0]['blocks'];
 	hiddenSortableFields: Set<string>;
 	formulaState: FormulaState;
 	formulaOptions: FormulaOptions;
@@ -20,8 +20,14 @@ export function extractRowData(params: ExtractRowDataParams): RowData[] {
 		return [];
 	}
 
-	const data: RowData[] = [];
-	const rowCount = blocks.length;
+	const displayList = buildDisplayList({
+		schema,
+		blocks,
+		hiddenSortableFields,
+		getTimestamp
+	});
+	const data = displayList.rows;
+	const rowCount = data.length;
 	const formulasEnabled = rowCount <= formulaOptions.rowLimit;
 
 	if (
@@ -31,33 +37,12 @@ export function extractRowData(params: ExtractRowDataParams): RowData[] {
 		options?.onFormulaLimitExceeded?.(formulaOptions.rowLimit);
 	}
 
-	for (let i = 0; i < blocks.length; i++) {
-		const block = blocks[i];
-		const row: RowData = {};
-
-		row['#'] = String(i + 1);
-		row[ROW_ID_FIELD] = String(i);
-
-		for (const key of schema.columnNames) {
-			if (key === 'status' && !block.data[key]) {
-				block.data[key] = 'todo';
-				if (!block.data['statusChanged']) {
-					block.data['statusChanged'] = getTimestamp();
-				}
-			}
-			row[key] = block.data[key] || '';
+	for (let i = 0; i < data.length; i++) {
+		const row = data[i];
+		if (!Object.prototype.hasOwnProperty.call(row, ROW_ID_FIELD)) {
+			row[ROW_ID_FIELD] = String(i);
 		}
-
-		for (const hiddenField of hiddenSortableFields) {
-			if (hiddenField === '#') {
-				continue;
-			}
-			row[hiddenField] = block.data[hiddenField] || '';
-		}
-
 		applyFormulaResults(formulaState, formulaOptions, row, formulasEnabled);
-
-		data.push(row);
 	}
 
 	return data;

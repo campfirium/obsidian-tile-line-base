@@ -5,9 +5,25 @@ import {
 	type SlideTextTemplate
 } from '../../types/slide';
 import type { ColumnConfig } from '../MarkdownBlockParser';
+import {
+	DISPLAY_ORDER_FIELD,
+	ROW_COLLAPSED_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_LEVEL_FIELD
+} from '../DisplayListBuilder';
 import { resolveDirectImage } from './SlideContentResolver';
 
-export const RESERVED_SLIDE_FIELDS = new Set(['#', '__tlb_row_id', '__tlb_status', '__tlb_index', 'status', 'statusChanged']);
+export const RESERVED_SLIDE_FIELDS = new Set([
+	'#',
+	'__tlb_row_id',
+	'__tlb_status',
+	DISPLAY_ORDER_FIELD,
+	ROW_LEVEL_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_COLLAPSED_FIELD,
+	'status',
+	'statusChanged'
+]);
 const RESERVED_SLIDE_FIELDS_LOWER = new Set(Array.from(RESERVED_SLIDE_FIELDS).map((field) => field.toLowerCase()));
 
 const BUILT_IN_SLIDE_BASE: SlideTemplateConfig = sanitizeSlideTemplateConfig({

@@ -9,7 +9,8 @@ import {
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
 import type { Schema, SchemaBuildResult } from './SchemaBuilder';
 import { t } from '../i18n';
-import { normalizeParentLinks } from './DisplayListBuilder';
+import { normalizeParentLinks, syncParentEntryProjection } from './DisplayListBuilder';
+import { isParentEntryProjectionField } from './entryFields';
 import {
 	createFormulaState,
 	getFormulaTooltipField as getTooltipFieldInternal,
@@ -64,6 +65,10 @@ export class TableDataStore {
 		prepareFormulaColumns(this.formulaState, this.schema, this.schema?.columnConfigs ?? null);
 	}
 
+	isComputedDisplayColumn(name: string): boolean {
+		return this.isFormulaColumn(name) || isParentEntryProjectionField(name);
+	}
+
 	initialise(
 		result: SchemaBuildResult,
 		columnConfigs: ColumnConfig[] | null,
@@ -75,6 +80,9 @@ export class TableDataStore {
 		this.schemaDirty = result.schemaDirty;
 		this.sparseCleanupRequired = result.sparseCleanupRequired;
 		if (normalizeParentLinks(this.blocks)) {
+			this.sparseCleanupRequired = true;
+		}
+		if (syncParentEntryProjection(this.schema, this.blocks)) {
 			this.sparseCleanupRequired = true;
 		}
 		this.setFrontmatter(options?.frontmatter ?? null, options?.frontmatterPadding ?? null);
@@ -199,7 +207,7 @@ export class TableDataStore {
 
 	updateCell(rowIndex: number, field: string, newValue: string): boolean {
 		if (!this.schema) return false;
-		if (this.isFormulaColumn(field)) return false;
+		if (this.isComputedDisplayColumn(field)) return false;
 		if (rowIndex < 0 || rowIndex >= this.blocks.length) return false;
 		const block = this.blocks[rowIndex];
 		block.data[field] = newValue;
@@ -303,6 +311,7 @@ export class TableDataStore {
 	}
 
 	removeColumn(field: string): boolean {
+		if (isParentEntryProjectionField(field)) return false;
 		if (!removeColumnInternal(
 			this.schema,
 			this.blocks,
@@ -315,6 +324,7 @@ export class TableDataStore {
 	}
 
 	renameColumn(oldName: string, newName: string): boolean {
+		if (isParentEntryProjectionField(oldName) || isParentEntryProjectionField(newName)) return false;
 		if (!renameColumnInternal(
 			this.schema,
 			this.blocks,

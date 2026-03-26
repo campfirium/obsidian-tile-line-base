@@ -4,6 +4,7 @@ import {
 	COLLAPSED_STATE_FIELD,
 	ensureHiddenEntryFields,
 	HIDDEN_ENTRY_FIELD_SET,
+	PARENT_ENTRY_FIELD,
 	PARENT_ENTRY_ID_FIELD,
 	STATUS_CHANGED_FIELD
 } from './entryFields';
@@ -173,6 +174,16 @@ export class SchemaBuilder {
 			if (schemaBlock.data[STATUS_CHANGED_FIELD] === undefined) {
 				schemaBlock.data[STATUS_CHANGED_FIELD] = getCurrentLocalDateTime();
 			}
+			schemaDirty = true;
+		}
+
+		const parentEntryIndex = columnNames.indexOf(PARENT_ENTRY_FIELD);
+		if (parentEntryIndex !== -1) {
+			columnNames.splice(parentEntryIndex, 1);
+		}
+		columnNames.push(PARENT_ENTRY_FIELD);
+		if (schemaBlock.data[PARENT_ENTRY_FIELD] === undefined) {
+			schemaBlock.data[PARENT_ENTRY_FIELD] = '';
 			schemaDirty = true;
 		}
 

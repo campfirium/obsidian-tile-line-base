@@ -2,6 +2,7 @@ import type { H2Block } from './MarkdownBlockParser';
 
 export const ENTRY_ID_FIELD = 'entryId';
 export const PARENT_ENTRY_ID_FIELD = 'parentEntryId';
+export const PARENT_ENTRY_FIELD = 'parentEntry';
 export const COLLAPSED_STATE_FIELD = 'collapsed';
 export const STATUS_CHANGED_FIELD = 'statusChanged';
 
@@ -35,6 +36,10 @@ export function ensureHiddenEntryFields(block: H2Block): boolean {
 
 export function assignFreshEntryId(block: H2Block): void {
 	block.data[ENTRY_ID_FIELD] = createEntryId();
+}
+
+export function isParentEntryProjectionField(field: string | null | undefined): boolean {
+	return (field ?? '').trim() === PARENT_ENTRY_FIELD;
 }
 
 function hasNonEmptyValue(value: unknown): boolean {

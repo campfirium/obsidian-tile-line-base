@@ -4,6 +4,7 @@ import type { HeaderEditEvent } from '../grid/GridAdapter';
 import type { TableView } from '../TableView';
 import { t } from '../i18n';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
+import { isParentEntryProjectionField } from './entryFields';
 
 type FilterViewStateLike = import('../types/filterView').FileFilterViewState;
 
@@ -55,6 +56,9 @@ export function handleHeaderEdit(view: TableView, colIndex: number, newValue: st
 		return;
 	}
 	const oldName = view.schema.columnNames[colIndex];
+	if (isParentEntryProjectionField(oldName)) {
+		return;
+	}
 	const trimmed = newValue.trim();
 	if (!trimmed || trimmed === oldName) {
 		return;

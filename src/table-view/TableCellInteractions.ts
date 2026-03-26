@@ -110,6 +110,10 @@ export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 		return;
 	}
 
+	if (view.dataStore.isComputedDisplayColumn(field)) {
+		return;
+	}
+
 	if (!view.schema) {
 		logger.error('Schema not initialized');
 		return;

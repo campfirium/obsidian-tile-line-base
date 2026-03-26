@@ -1,6 +1,6 @@
 import { ROW_ID_FIELD, type RowData } from '../../grid/GridAdapter';
 import type { Schema } from '../SchemaBuilder';
-import { buildDisplayList } from '../DisplayListBuilder';
+import { buildDisplayList, syncParentEntryProjection } from '../DisplayListBuilder';
 import { applyFormulaResults, shouldNotifyFormulaLimit, type FormulaState } from './FormulaManager';
 import type { ExtractRowOptions, FormulaOptions } from './types';
 
@@ -19,6 +19,8 @@ export function extractRowData(params: ExtractRowDataParams): RowData[] {
 	if (!schema) {
 		return [];
 	}
+
+	syncParentEntryProjection(schema, blocks);
 
 	const displayList = buildDisplayList({
 		schema,

@@ -1,6 +1,7 @@
 import type { ColumnConfig, H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
 import { isReservedColumnId } from '../../grid/systemColumnUtils';
+import { PARENT_ENTRY_FIELD } from '../entryFields';
 import type { FormulaState } from './FormulaManager';
 
 export function reorderColumns(schema: Schema | null, orderedFields: string[]): boolean {
@@ -21,8 +22,9 @@ export function reorderColumns(schema: Schema | null, orderedFields: string[]): 
 	if (currentOrder.includes('status')) {
 		fixedFields.add('status');
 	}
+	const trailingFixedFields = new Set<string>(currentOrder.includes(PARENT_ENTRY_FIELD) ? [PARENT_ENTRY_FIELD] : []);
 
-	const movableFields = currentOrder.filter((field) => !fixedFields.has(field));
+	const movableFields = currentOrder.filter((field) => !fixedFields.has(field) && !trailingFixedFields.has(field));
 	if (movableFields.length === 0) {
 		return false;
 	}
@@ -63,6 +65,9 @@ export function reorderColumns(schema: Schema | null, orderedFields: string[]): 
 		appendUnique('status');
 	}
 	for (const field of reorderedMovable) {
+		appendUnique(field);
+	}
+	for (const field of trailingFixedFields) {
 		appendUnique(field);
 	}
 

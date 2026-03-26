@@ -4,6 +4,7 @@ import type { Schema } from './SchemaBuilder';
 import {
 	COLLAPSED_STATE_FIELD,
 	ENTRY_ID_FIELD,
+	PARENT_ENTRY_FIELD,
 	PARENT_ENTRY_ID_FIELD
 } from './entryFields';
 
@@ -38,7 +39,9 @@ export function buildDisplayList(params: {
 		return { rows: [], changed: false };
 	}
 
-	const changed = normalizeParentLinks(blocks);
+	const parentLinkChanged = normalizeParentLinks(blocks);
+	const projectionChanged = syncParentEntryProjection(schema, blocks);
+	const changed = parentLinkChanged || projectionChanged;
 	const entryMap = new Map<string, DisplayEntry>();
 	for (let index = 0; index < blocks.length; index++) {
 		const block = blocks[index];
@@ -175,6 +178,60 @@ export function normalizeParentLinks(blocks: H2Block[]): boolean {
 		const parent = entryMap.get(parentEntryId);
 		if (!parent || parent.parentEntryId) {
 			block.data[PARENT_ENTRY_ID_FIELD] = '';
+			changed = true;
+		}
+	}
+
+	return changed;
+}
+
+export function syncParentEntryProjection(schema: Schema | null, blocks: H2Block[]): boolean {
+	if (!schema || blocks.length === 0) {
+		return false;
+	}
+
+	const primaryField = schema.columnNames[0] ?? null;
+	if (!primaryField) {
+		return false;
+	}
+
+	const blockByEntryId = new Map<string, H2Block>();
+	for (const block of blocks) {
+		const entryId = String(block.data[ENTRY_ID_FIELD] ?? '').trim();
+		if (entryId) {
+			blockByEntryId.set(entryId, block);
+		}
+	}
+
+	let changed = false;
+	for (let index = 0; index < blocks.length; index++) {
+		const block = blocks[index];
+		const parentEntryId = String(block.data[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		const parentBlock = parentEntryId ? blockByEntryId.get(parentEntryId) ?? null : null;
+		const nextValue = parentBlock ? String(parentBlock.data[primaryField] ?? '') : '';
+		const currentValue = String(block.data[PARENT_ENTRY_FIELD] ?? '');
+
+		if (index === 0) {
+			if (currentValue !== '') {
+				block.data[PARENT_ENTRY_FIELD] = '';
+				changed = true;
+			} else if (block.data[PARENT_ENTRY_FIELD] === undefined) {
+				block.data[PARENT_ENTRY_FIELD] = '';
+				changed = true;
+			}
+			continue;
+		}
+
+		if (nextValue.trim().length === 0) {
+			if (Object.prototype.hasOwnProperty.call(block.data, PARENT_ENTRY_FIELD)) {
+				delete block.data[PARENT_ENTRY_FIELD];
+				changed = true;
+			}
+			continue;
+		}
+
+		if (currentValue !== nextValue) {
+			block.data[PARENT_ENTRY_FIELD] = nextValue;
 			changed = true;
 		}
 	}

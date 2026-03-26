@@ -81,7 +81,26 @@ function getVisibleColumnOrder(
 		return schema.columnNames.filter((key) => !hiddenFields.has(key));
 	}
 
-	return Object.keys(block.data).filter((key) => !hiddenFields.has(key));
+	const ordered: string[] = [];
+	const seen = new Set<string>();
+
+	for (const key of schema.columnNames) {
+		if (hiddenFields.has(key)) {
+			continue;
+		}
+		ordered.push(key);
+		seen.add(key);
+	}
+
+	for (const key of Object.keys(block.data)) {
+		if (hiddenFields.has(key) || seen.has(key)) {
+			continue;
+		}
+		ordered.push(key);
+		seen.add(key);
+	}
+
+	return ordered;
 }
 
 function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: Set<string>, isSchemaBlock: boolean): string[] {

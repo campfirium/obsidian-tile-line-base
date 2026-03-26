@@ -59,9 +59,11 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		}
 
 		const columnType = dataStore.getColumnDisplayType(name);
-		if (columnType === 'formula') {
+		if (dataStore.isComputedDisplayColumn(name)) {
 			baseColDef.editable = false;
-			baseColDef.tooltipField = dataStore.getFormulaTooltipField(name);
+			if (columnType === 'formula') {
+				baseColDef.tooltipField = dataStore.getFormulaTooltipField(name);
+			}
 		} else if (columnType === 'date') {
 			baseColDef.editorType = 'date';
 			baseColDef.dateFormat = dataStore.getDateFormat(name);

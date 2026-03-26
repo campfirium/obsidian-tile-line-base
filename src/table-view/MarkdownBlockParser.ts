@@ -13,6 +13,7 @@ import {
 	COLLAPSED_COMMENT_KEY
 } from './collapsed/CollapsedFieldCodec';
 import { consumeTildeFencedBlock, isTildeFenceMarker } from './MultilineFieldCodec';
+import { normalizeEntryFieldName } from './entryFields';
 export type ColumnFieldDisplayType = 'text' | 'date' | 'time' | 'image';
 export interface ColumnConfig {
 	name: string;
@@ -277,7 +278,7 @@ ${section.text}`;
 		if (commentIndex >= 0 && colonIndex > commentIndex) {
 			return null;
 		}
-		const key = line.substring(0, colonIndex).trim();
+		const key = normalizeEntryFieldName(line.substring(0, colonIndex).trim());
 		if (!key) {
 			return null;
 		}

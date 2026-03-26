@@ -7,6 +7,7 @@ import {
 	ROW_HAS_CHILDREN_FIELD,
 	ROW_LEVEL_FIELD
 } from './DisplayListBuilder';
+import { isParentEntryProjectionField } from './entryFields';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
 import { openBackupRestoreModal } from './BackupRestoreModal';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './TableCsvController';
@@ -151,6 +152,12 @@ export function getAvailableColumns(view: TableView): string[] {
 		}
 
 		if (exclude.has(value)) {
+
+			return;
+
+		}
+
+		if (isParentEntryProjectionField(value)) {
 
 			return;
 

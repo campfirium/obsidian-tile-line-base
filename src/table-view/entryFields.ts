@@ -3,6 +3,7 @@ import type { H2Block } from './MarkdownBlockParser';
 export const ENTRY_ID_FIELD = 'entryId';
 export const PARENT_ENTRY_ID_FIELD = 'parentEntryId';
 export const PARENT_ENTRY_FIELD = 'parentEntry';
+export const PARENT_ENTRY_MARKDOWN_FIELD = 'parent';
 export const COLLAPSED_STATE_FIELD = 'collapsed';
 export const STATUS_CHANGED_FIELD = 'statusChanged';
 
@@ -39,7 +40,23 @@ export function assignFreshEntryId(block: H2Block): void {
 }
 
 export function isParentEntryProjectionField(field: string | null | undefined): boolean {
-	return (field ?? '').trim() === PARENT_ENTRY_FIELD;
+	return normalizeEntryFieldName(field) === PARENT_ENTRY_FIELD;
+}
+
+export function normalizeEntryFieldName(field: string | null | undefined): string {
+	const normalized = (field ?? '').trim();
+	if (normalized === PARENT_ENTRY_MARKDOWN_FIELD) {
+		return PARENT_ENTRY_FIELD;
+	}
+	return normalized;
+}
+
+export function getEntryFieldMarkdownLabel(field: string | null | undefined): string {
+	const normalized = normalizeEntryFieldName(field);
+	if (normalized === PARENT_ENTRY_FIELD) {
+		return PARENT_ENTRY_MARKDOWN_FIELD;
+	}
+	return normalized;
 }
 
 function hasNonEmptyValue(value: unknown): boolean {

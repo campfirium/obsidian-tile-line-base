@@ -5,6 +5,10 @@ import {
 	SYSTEM_COLLAPSED_FIELD_SET,
 	type CollapsedFieldEntry
 } from '../collapsed/CollapsedFieldCodec';
+import {
+	getEntryFieldMarkdownLabel,
+	isParentEntryProjectionField
+} from '../entryFields';
 
 import { encodeFieldValue } from '../MultilineFieldCodec';
 
@@ -77,8 +81,20 @@ function getVisibleColumnOrder(
 	hiddenFields: Set<string>,
 	isSchemaBlock: boolean
 ): string[] {
+	const normalizeVisibleOrder = (keys: string[]): string[] => {
+		const ordered = keys.slice();
+		const parentEntryIndex = ordered.findIndex((key) => isParentEntryProjectionField(key));
+		if (parentEntryIndex <= 1) {
+			return ordered;
+		}
+		const [parentEntryField] = ordered.splice(parentEntryIndex, 1);
+		const insertIndex = ordered.length > 0 ? 1 : 0;
+		ordered.splice(insertIndex, 0, parentEntryField);
+		return ordered;
+	};
+
 	if (isSchemaBlock) {
-		return schema.columnNames.filter((key) => !hiddenFields.has(key));
+		return normalizeVisibleOrder(schema.columnNames.filter((key) => !hiddenFields.has(key)));
 	}
 
 	const ordered: string[] = [];
@@ -100,7 +116,7 @@ function getVisibleColumnOrder(
 		seen.add(key);
 	}
 
-	return ordered;
+	return normalizeVisibleOrder(ordered);
 }
 
 function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: Set<string>, isSchemaBlock: boolean): string[] {
@@ -112,7 +128,8 @@ function serializeVisibleColumns(schema: Schema, block: H2Block, hiddenFields: S
 		const rawValue = block.data[key] ?? '';
 		const trimmed = rawValue.trim();
 		const encoded = isFirstKey || trimmed.length > 0 ? encodeFieldValue(rawValue) : null;
-		const linePrefix = isFirstKey ? `## ${key}\uFF1A` : `${key}\uFF1A`;
+		const displayKey = getEntryFieldMarkdownLabel(key);
+		const linePrefix = isFirstKey ? `## ${displayKey}\uFF1A` : `${displayKey}\uFF1A`;
 
 		if (isFirstKey) {
 			if (encoded?.fence && encoded.contentLines) {

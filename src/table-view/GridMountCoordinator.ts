@@ -7,6 +7,7 @@ import type { TableDataStore } from './TableDataStore';
 import type { GridController } from './GridController';
 import { ColumnLayoutStore } from './ColumnLayoutStore';
 import { createTreeTitleCellRenderer } from '../renderers/TreeTitleCellRenderer';
+import { isParentEntryProjectionField } from './entryFields';
 
 interface ColumnBuilderParams {
 	schema: Schema;
@@ -23,12 +24,14 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		(columnConfigs ?? []).filter((config) => config.hide).map((config) => config.name)
 	);
 
-	return schema.columnNames.filter((name) => !hiddenColumns.has(name)).map((name) => {
-		const baseColDef: ColumnDef = {
-			field: name,
-			headerName: name,
-			editable: true
-		};
+	return schema.columnNames
+		.filter((name) => !hiddenColumns.has(name) && !isParentEntryProjectionField(name))
+		.map((name) => {
+			const baseColDef: ColumnDef = {
+				field: name,
+				headerName: name,
+				editable: true
+			};
 
 		const normalizedName = name.trim().toLowerCase();
 		if (normalizedName === 'status') {
@@ -83,8 +86,8 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 			baseColDef.suppressSizeToFit = true;
 		}
 
-		return baseColDef;
-	});
+			return baseColDef;
+		});
 }
 
 function applyConfiguredWidth(colDef: ColumnDef, widthExpression: string): void {

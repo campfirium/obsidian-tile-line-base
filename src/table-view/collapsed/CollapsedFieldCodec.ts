@@ -1,4 +1,5 @@
 import { formatUnknownValue } from '../../utils/valueFormat';
+import { HIDDEN_ENTRY_FIELD_SET } from '../entryFields';
 export interface CollapsedFieldEntry {
 	name: string;
 	value: string;
@@ -14,7 +15,7 @@ const ENTRY_PATTERN = /([^\s:]+)[:\uFF1A]{2}/g;
 const CALLOUT_HEADER_PATTERN = /^\s*>\s*\[!tlb-collapsed]/i;
 const COMMENT_PATTERN = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}\\s*[:\\uFF1A]\\s*(\\{[\\s\\S]*?})\\s*-->$`, 'i');
 
-export const SYSTEM_COLLAPSED_FIELD_SET = new Set(['statusChanged']);
+export const SYSTEM_COLLAPSED_FIELD_SET = new Set(HIDDEN_ENTRY_FIELD_SET);
 
 export function isCollapsedDataLine(line: string): boolean {
 	return COLLAPSED_LINE_PATTERN.test(line.trim());
@@ -184,4 +185,3 @@ function normalizeValue(value: unknown): string {
 function decodeCollapsedValue(value: string): string {
 	return value.replace(/\\t/g, '\t').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
 }
-

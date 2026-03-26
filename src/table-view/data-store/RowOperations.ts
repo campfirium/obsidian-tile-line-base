@@ -1,5 +1,11 @@
 import type { H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
+import {
+	assignFreshEntryId,
+	COLLAPSED_STATE_FIELD,
+	PARENT_ENTRY_ID_FIELD,
+	STATUS_CHANGED_FIELD
+} from '../entryFields';
 
 interface AddRowParams {
 	schema: Schema | null;
@@ -37,7 +43,10 @@ export function addRow(params: AddRowParams): number {
 		}
 	}
 
-	newBlock.data['statusChanged'] = getTimestamp();
+	newBlock.data[STATUS_CHANGED_FIELD] = getTimestamp();
+	newBlock.data[PARENT_ENTRY_ID_FIELD] = '';
+	newBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+	assignFreshEntryId(newBlock);
 
 	if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 		blocks.splice(beforeRowIndex, 0, newBlock);
@@ -98,6 +107,7 @@ export function duplicateRow(schema: Schema | null, blocks: H2Block[], rowIndex:
 			? source.collapsedFields.map((entry) => ({ ...entry }))
 			: []
 	};
+	assignFreshEntryId(duplicated);
 	blocks.splice(rowIndex + 1, 0, duplicated);
 	return rowIndex + 1;
 }
@@ -120,6 +130,7 @@ export function duplicateRows(schema: Schema | null, blocks: H2Block[], rowIndex
 				? sourceBlock.collapsedFields.map((entry) => ({ ...entry }))
 				: []
 		};
+		assignFreshEntryId(duplicated);
 		blocks.splice(index + 1, 0, duplicated);
 	}
 

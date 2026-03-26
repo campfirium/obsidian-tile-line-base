@@ -6,6 +6,7 @@ import type { TableDataStore } from './TableDataStore';
 import type { ColumnLayoutStore } from './ColumnLayoutStore';
 import { ColumnEditorModal, type ColumnEditorResult, type ColumnFieldType } from './ColumnEditorModal';
 import { t } from '../i18n';
+import { PARENT_ENTRY_FIELD } from './entryFields';
 
 interface ColumnInteractionDeps {
 	app: App;
@@ -58,6 +59,11 @@ export class ColumnInteractionController {
 			return;
 		}
 
+		if (field === PARENT_ENTRY_FIELD) {
+			this.openParentEntryColumnMenu(event);
+			return;
+		}
+
 		if (isDisplayedSystemColumn(field)) {
 			return;
 		}
@@ -101,6 +107,16 @@ export class ColumnInteractionController {
 		menu.addItem((item) => {
 			item.setTitle(t('columnInteraction.menuHide')).setIcon('eye-off').onClick(() => {
 				this.setColumnHidden('status', true);
+			});
+		});
+		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+	}
+
+	private openParentEntryColumnMenu(event: MouseEvent): void {
+		const menu = new Menu();
+		menu.addItem((item) => {
+			item.setTitle(t('columnInteraction.menuHide')).setIcon('eye-off').onClick(() => {
+				this.setColumnHidden(PARENT_ENTRY_FIELD, true);
 			});
 		});
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });

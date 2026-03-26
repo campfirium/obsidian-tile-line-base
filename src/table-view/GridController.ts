@@ -22,6 +22,7 @@ export interface GridControllerHandlers {
 	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow?: (field: string | null) => void;
 	onOpenCellLink?: (context: CellLinkClickContext) => void;
+	onToggleTreeRowCollapse?: (rowIndex: number) => void;
 	onRowDragEnd?: (event: RowDragEndPayload) => void;
 }
 
@@ -61,6 +62,7 @@ export class GridController {
 			onCopySelectionAsTemplate: handlers.onCopySelectionAsTemplate,
 			onColumnOrderChange: handlers.onColumnOrderChange,
 			openCellLink: handlers.onOpenCellLink,
+			toggleTreeRowCollapse: handlers.onToggleTreeRowCollapse,
 			sideBarVisible,
 			getContainerEl: () => container
 		});

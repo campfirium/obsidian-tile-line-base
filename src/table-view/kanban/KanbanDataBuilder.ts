@@ -3,6 +3,12 @@ import type { KanbanRuntimeCardContent, KanbanSortDirection } from '../../types/
 import { renderTitle, renderBody, renderTags } from './KanbanCardContent';
 import { isStatusLaneField, normalizeStatusLaneValue } from './statusLaneHelpers';
 import { formatUnknownValue } from '../../utils/valueFormat';
+import {
+	DISPLAY_ORDER_FIELD,
+	ROW_COLLAPSED_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_LEVEL_FIELD
+} from '../DisplayListBuilder';
 
 export interface KanbanCardField {
 	name: string;
@@ -204,7 +210,14 @@ function buildCardFields(options: BuildCardFieldsOptions): KanbanCardField[] {
 	const { row, displayFields, laneField, sortField, primaryField, content } = options;
 	const result: KanbanCardField[] = [];
 	const seen = new Set<string>();
-	const excluded = new Set<string>([laneField, ROW_ID_FIELD]);
+	const excluded = new Set<string>([
+		laneField,
+		ROW_ID_FIELD,
+		DISPLAY_ORDER_FIELD,
+		ROW_LEVEL_FIELD,
+		ROW_HAS_CHILDREN_FIELD,
+		ROW_COLLAPSED_FIELD
+	]);
 	if (sortField) {
 		excluded.add(sortField);
 	}

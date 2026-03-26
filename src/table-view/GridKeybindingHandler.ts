@@ -46,6 +46,8 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 	}
 
 	const gridAdapter = context.getGridAdapter();
+	const focusedCell = gridAdapter?.getFocusedCell?.() ?? null;
+	const ctrlLike = event.metaKey || event.ctrlKey;
 	if (event.key === 'F2') {
 		if (event.defaultPrevented) {
 			return;
@@ -76,8 +78,22 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 		schedule(invoke);
 		return;
 	}
+	if (
+		event.key === 'Tab' &&
+		!ctrlLike &&
+		!event.altKey &&
+		focusedCell?.field === '#'
+	) {
+		event.preventDefault();
+		event.stopPropagation();
+		if (event.shiftKey) {
+			context.rowInteraction.outdentRow(focusedCell.rowIndex, { focusField: '#' });
+		} else {
+			context.rowInteraction.indentRow(focusedCell.rowIndex, { focusField: '#' });
+		}
+		return;
+	}
 	const selectedRows = gridAdapter?.getSelectedRows?.() || [];
-	const ctrlLike = event.metaKey || event.ctrlKey;
 	if (ctrlLike && !event.altKey) {
 		if (event.key === 'z' || event.key === 'Z') {
 			event.preventDefault();

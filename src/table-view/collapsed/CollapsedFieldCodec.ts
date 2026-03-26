@@ -1,4 +1,9 @@
 import { formatUnknownValue } from '../../utils/valueFormat';
+import {
+	getEntryFieldMarkdownLabel,
+	HIDDEN_ENTRY_FIELD_SET,
+	normalizeEntryFieldName
+} from '../entryFields';
 export interface CollapsedFieldEntry {
 	name: string;
 	value: string;
@@ -14,7 +19,7 @@ const ENTRY_PATTERN = /([^\s:]+)[:\uFF1A]{2}/g;
 const CALLOUT_HEADER_PATTERN = /^\s*>\s*\[!tlb-collapsed]/i;
 const COMMENT_PATTERN = new RegExp(`^<!--\\s*${COLLAPSED_COMMENT_KEY.replace(/\./g, '\\.')}\\s*[:\\uFF1A]\\s*(\\{[\\s\\S]*?})\\s*-->$`, 'i');
 
-export const SYSTEM_COLLAPSED_FIELD_SET = new Set(['statusChanged']);
+export const SYSTEM_COLLAPSED_FIELD_SET = new Set(HIDDEN_ENTRY_FIELD_SET);
 
 export function isCollapsedDataLine(line: string): boolean {
 	return COLLAPSED_LINE_PATTERN.test(line.trim());
@@ -72,9 +77,9 @@ export function mergeCollapsedEntries(target: { data: Record<string, string>; co
 	const unique = new Map<string, CollapsedFieldEntry>();
 	for (const entry of entries) {
 		const normalized: CollapsedFieldEntry = {
-			name: entry.name,
+			name: normalizeEntryFieldName(entry.name),
 			value: entry.value,
-			isSystem: entry.isSystem ?? SYSTEM_COLLAPSED_FIELD_SET.has(entry.name)
+			isSystem: entry.isSystem ?? SYSTEM_COLLAPSED_FIELD_SET.has(normalizeEntryFieldName(entry.name))
 		};
 		unique.set(normalized.name, normalized);
 		target.data[normalized.name] = normalized.value;
@@ -88,7 +93,7 @@ export function buildCollapsedCallout(entries: CollapsedFieldEntry[]): string[] 
 	}
 	const payloadObj: Record<string, unknown> = {};
 	for (const entry of entries) {
-		payloadObj[entry.name] = entry.value;
+		payloadObj[getEntryFieldMarkdownLabel(entry.name)] = entry.value;
 	}
 	const payload = JSON.stringify(payloadObj);
 	return [
@@ -109,9 +114,9 @@ function parseCollapsedBody(body: string): CollapsedFieldEntry[] {
 		const end = i + 1 < matches.length ? matches[i + 1].index : body.length;
 		const raw = body.slice(current.valueStart, end).trim();
 		entries.push({
-			name: current.name,
+			name: normalizeEntryFieldName(current.name),
 			value: decodeCollapsedValue(raw),
-			isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(current.name)
+			isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(normalizeEntryFieldName(current.name))
 		});
 	}
 	return entries;
@@ -131,7 +136,7 @@ function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 				if (!isRecord(field)) {
 					continue;
 				}
-				const name = typeof field.name === 'string' ? field.name : '';
+				const name = normalizeEntryFieldName(typeof field.name === 'string' ? field.name : '');
 				if (!name) {
 					continue;
 				}
@@ -148,13 +153,14 @@ function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 
 		const fields: CollapsedFieldEntry[] = [];
 		for (const [name, value] of Object.entries(parsed)) {
-			if (!name || name === 'version') {
+			const normalizedName = normalizeEntryFieldName(name);
+			if (!normalizedName || normalizedName === 'version') {
 				continue;
 			}
 			fields.push({
-				name,
+				name: normalizedName,
 				value: normalizeValue(value),
-				isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(name)
+				isSystem: SYSTEM_COLLAPSED_FIELD_SET.has(normalizedName)
 			});
 		}
 		return fields;
@@ -184,4 +190,3 @@ function normalizeValue(value: unknown): string {
 function decodeCollapsedValue(value: string): string {
 	return value.replace(/\\t/g, '\t').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
 }
-

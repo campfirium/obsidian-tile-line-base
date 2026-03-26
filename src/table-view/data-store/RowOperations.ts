@@ -1,5 +1,13 @@
 import type { H2Block } from '../MarkdownBlockParser';
 import type { Schema } from '../SchemaBuilder';
+import { collectCascadeDeleteIndexes } from '../DisplayListBuilder';
+import {
+	assignFreshEntryId,
+	COLLAPSED_STATE_FIELD,
+	ENTRY_ID_FIELD,
+	PARENT_ENTRY_ID_FIELD,
+	STATUS_CHANGED_FIELD
+} from '../entryFields';
 
 interface AddRowParams {
 	schema: Schema | null;
@@ -37,7 +45,10 @@ export function addRow(params: AddRowParams): number {
 		}
 	}
 
-	newBlock.data['statusChanged'] = getTimestamp();
+	newBlock.data[STATUS_CHANGED_FIELD] = getTimestamp();
+	newBlock.data[PARENT_ENTRY_ID_FIELD] = prefills?.[PARENT_ENTRY_ID_FIELD] ?? '';
+	newBlock.data[COLLAPSED_STATE_FIELD] = prefills?.[COLLAPSED_STATE_FIELD] ?? 'false';
+	assignFreshEntryId(newBlock);
 
 	if (beforeRowIndex !== undefined && beforeRowIndex !== null) {
 		blocks.splice(beforeRowIndex, 0, newBlock);
@@ -48,6 +59,49 @@ export function addRow(params: AddRowParams): number {
 	return blocks.length - 1;
 }
 
+export function addChildRow(params: AddRowParams & { parentRowIndex: number }): number {
+	const { blocks, parentRowIndex } = params;
+	if (parentRowIndex < 0 || parentRowIndex >= blocks.length) {
+		return -1;
+	}
+
+	const parentBlock = blocks[parentRowIndex];
+	const parentEntryId = String(parentBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+	if (parentEntryId) {
+		return -1;
+	}
+
+	const currentEntryId = String(parentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+	if (!currentEntryId) {
+		return -1;
+	}
+
+	let insertIndex = parentRowIndex + 1;
+	for (let index = parentRowIndex + 1; index < blocks.length; index++) {
+		const blockParentEntryId = String(blocks[index]?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (blockParentEntryId !== currentEntryId) {
+			break;
+		}
+		insertIndex = index + 1;
+	}
+
+	const childIndex = addRow({
+		...params,
+		beforeRowIndex: insertIndex,
+		prefills: {
+			...(params.prefills ?? {}),
+			[PARENT_ENTRY_ID_FIELD]: currentEntryId
+		}
+	});
+
+	if (childIndex < 0) {
+		return childIndex;
+	}
+
+	parentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+	return childIndex;
+}
+
 export function deleteRow(schema: Schema | null, blocks: H2Block[], rowIndex: number): number | null {
 	if (!schema) {
 		return null;
@@ -55,7 +109,10 @@ export function deleteRow(schema: Schema | null, blocks: H2Block[], rowIndex: nu
 	if (rowIndex < 0 || rowIndex >= blocks.length) {
 		return null;
 	}
-	blocks.splice(rowIndex, 1);
+	const indexesToDelete = collectCascadeDeleteIndexes(blocks, [rowIndex]);
+	for (let index = indexesToDelete.length - 1; index >= 0; index--) {
+		blocks.splice(indexesToDelete[index], 1);
+	}
 	if (blocks.length === 0) {
 		return null;
 	}
@@ -67,7 +124,7 @@ export function deleteRows(schema: Schema | null, blocks: H2Block[], rowIndexes:
 		return null;
 	}
 
-	const sorted = [...rowIndexes].sort((a, b) => b - a);
+	const sorted = collectCascadeDeleteIndexes(blocks, rowIndexes).sort((a, b) => b - a);
 	for (const index of sorted) {
 		if (index >= 0 && index < blocks.length) {
 			blocks.splice(index, 1);
@@ -98,6 +155,7 @@ export function duplicateRow(schema: Schema | null, blocks: H2Block[], rowIndex:
 			? source.collapsedFields.map((entry) => ({ ...entry }))
 			: []
 	};
+	assignFreshEntryId(duplicated);
 	blocks.splice(rowIndex + 1, 0, duplicated);
 	return rowIndex + 1;
 }
@@ -120,6 +178,7 @@ export function duplicateRows(schema: Schema | null, blocks: H2Block[], rowIndex
 				? sourceBlock.collapsedFields.map((entry) => ({ ...entry }))
 				: []
 		};
+		assignFreshEntryId(duplicated);
 		blocks.splice(index + 1, 0, duplicated);
 	}
 

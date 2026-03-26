@@ -1,5 +1,13 @@
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import type { ColumnConfig, H2Block } from './MarkdownBlockParser';
+import {
+	COLLAPSED_STATE_FIELD,
+	ensureHiddenEntryFields,
+	HIDDEN_ENTRY_FIELD_SET,
+	PARENT_ENTRY_FIELD,
+	PARENT_ENTRY_ID_FIELD,
+	STATUS_CHANGED_FIELD
+} from './entryFields';
 
 export interface Schema {
 	columnNames: string[];
@@ -15,7 +23,7 @@ export interface SchemaBuildResult {
 	blocks: H2Block[];
 }
 
-const HIDDEN_SYSTEM_FIELDS = new Set(['statusChanged']);
+const HIDDEN_SYSTEM_FIELDS = new Set(HIDDEN_ENTRY_FIELD_SET);
 const STATUS_FIELD = 'status';
 const STATUS_ALIASES = new Set(['状态', '狀態', 'status', 'Status', 'STATUS']);
 
@@ -75,6 +83,9 @@ export class SchemaBuilder {
 		const schemaBlock = blocks[0];
 		for (const block of blocks) {
 			normalizeStatusFieldOnBlock(block);
+			if (ensureHiddenEntryFields(block)) {
+				schemaDirty = true;
+			}
 		}
 		normalizeStatusFieldOnConfigs(columnConfigs);
 		const hiddenConfigFields = new Set<string>(
@@ -131,7 +142,9 @@ export class SchemaBuilder {
 
 				if (HIDDEN_SYSTEM_FIELDS.has(key)) {
 					hiddenSortableFields.add(key);
-					if (typeof value === 'string' && value.trim().length === 0) {
+					const shouldPreserveEmptyValue =
+						key === PARENT_ENTRY_ID_FIELD || key === COLLAPSED_STATE_FIELD;
+					if (!shouldPreserveEmptyValue && typeof value === 'string' && value.trim().length === 0) {
 						delete block.data[key];
 						sparseCleanupRequired = true;
 					}
@@ -158,9 +171,19 @@ export class SchemaBuilder {
 		seenKeys.add(STATUS_FIELD);
 		if (statusIndex === -1 && schemaBlock.data[STATUS_FIELD] === undefined) {
 			schemaBlock.data[STATUS_FIELD] = 'todo';
-			if (schemaBlock.data['statusChanged'] === undefined) {
-				schemaBlock.data['statusChanged'] = getCurrentLocalDateTime();
+			if (schemaBlock.data[STATUS_CHANGED_FIELD] === undefined) {
+				schemaBlock.data[STATUS_CHANGED_FIELD] = getCurrentLocalDateTime();
 			}
+			schemaDirty = true;
+		}
+
+		const parentEntryIndex = columnNames.indexOf(PARENT_ENTRY_FIELD);
+		if (parentEntryIndex !== -1) {
+			columnNames.splice(parentEntryIndex, 1);
+		}
+		columnNames.push(PARENT_ENTRY_FIELD);
+		if (schemaBlock.data[PARENT_ENTRY_FIELD] === undefined) {
+			schemaBlock.data[PARENT_ENTRY_FIELD] = '';
 			schemaDirty = true;
 		}
 

@@ -6,6 +6,8 @@ import type { ColumnConfig } from './MarkdownBlockParser';
 import type { TableDataStore } from './TableDataStore';
 import type { GridController } from './GridController';
 import { ColumnLayoutStore } from './ColumnLayoutStore';
+import { createTreeTitleCellRenderer } from '../renderers/TreeTitleCellRenderer';
+import { isParentEntryProjectionField } from './entryFields';
 
 interface ColumnBuilderParams {
 	schema: Schema;
@@ -22,12 +24,14 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		(columnConfigs ?? []).filter((config) => config.hide).map((config) => config.name)
 	);
 
-	return schema.columnNames.filter((name) => !hiddenColumns.has(name)).map((name) => {
-		const baseColDef: ColumnDef = {
-			field: name,
-			headerName: name,
-			editable: true
-		};
+	return schema.columnNames
+		.filter((name) => !hiddenColumns.has(name) && !isParentEntryProjectionField(name))
+		.map((name) => {
+			const baseColDef: ColumnDef = {
+				field: name,
+				headerName: name,
+				editable: true
+			};
 
 		const normalizedName = name.trim().toLowerCase();
 		if (normalizedName === 'status') {
@@ -44,6 +48,7 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 			baseColDef.lockPinned = true;
 			baseColDef.lockPosition = true;
 			baseColDef.suppressMovable = true;
+			baseColDef.cellRenderer = createTreeTitleCellRenderer();
 		}
 
 		if (columnConfigs) {
@@ -57,9 +62,11 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 		}
 
 		const columnType = dataStore.getColumnDisplayType(name);
-		if (columnType === 'formula') {
+		if (dataStore.isComputedDisplayColumn(name)) {
 			baseColDef.editable = false;
-			baseColDef.tooltipField = dataStore.getFormulaTooltipField(name);
+			if (columnType === 'formula') {
+				baseColDef.tooltipField = dataStore.getFormulaTooltipField(name);
+			}
 		} else if (columnType === 'date') {
 			baseColDef.editorType = 'date';
 			baseColDef.dateFormat = dataStore.getDateFormat(name);
@@ -79,8 +86,8 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 			baseColDef.suppressSizeToFit = true;
 		}
 
-		return baseColDef;
-	});
+			return baseColDef;
+		});
 }
 
 function applyConfiguredWidth(colDef: ColumnDef, widthExpression: string): void {
@@ -124,6 +131,7 @@ interface GridMountHandlers {
 	onColumnHeaderContextMenu: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow: (field: string | null) => void;
 	onOpenCellLink: (context: CellLinkClickContext) => void;
+	onToggleTreeRowCollapse?: (rowIndex: number) => void;
 	onRowDragEnd?: (event: RowDragEndPayload) => void;
 }
 
@@ -151,6 +159,7 @@ export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; 
 		onColumnHeaderContextMenu: handlers.onColumnHeaderContextMenu,
 		onEnterAtLastRow: handlers.onEnterAtLastRow,
 		onOpenCellLink: handlers.onOpenCellLink,
+		onToggleTreeRowCollapse: handlers.onToggleTreeRowCollapse,
 		onRowDragEnd: handlers.onRowDragEnd
 	}, {
 		sideBarVisible: sideBarVisible !== false

@@ -1,10 +1,12 @@
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
 import type { H2Block } from './MarkdownBlockParser';
+import { collectCascadeDeleteIndexes } from './DisplayListBuilder';
 import { getLogger } from '../utils/logger';
 import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
 import { ROW_ID_FIELD, type RowDragEndPayload } from '../grid/GridAdapter';
+import { COLLAPSED_STATE_FIELD, ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from './entryFields';
 
 const logger = getLogger('table-view:row-interaction');
 
@@ -88,6 +90,208 @@ export class RowInteractionController {
 		);
 	}
 
+	addChildRow(parentRowIndex: number, options?: RowActionOptions): void {
+		if (!this.ensureSchema()) {
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		if (parentRowIndex < 0 || parentRowIndex >= blocks.length) {
+			logger.error('Invalid parent row index:', parentRowIndex);
+			return;
+		}
+
+		const parentBlock = blocks[parentRowIndex];
+		const parentEntryId = String(parentBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (parentEntryId) {
+			logger.warn('Ignored child entry creation for nested row', parentRowIndex);
+			return;
+		}
+
+		const focusField = this.resolveFocusField(options);
+		const filterPrefills = this.getActiveFilterPrefills();
+		const optionPrefills = options?.prefills ?? {};
+		const mergedPrefills = { ...filterPrefills, ...optionPrefills };
+		const insertIndex = this.dataStore.addChildRow(parentRowIndex, mergedPrefills);
+		if (insertIndex < 0) {
+			logger.error('Failed to add child entry');
+			return;
+		}
+
+		this.refreshGridData();
+		if (!options?.skipFocus) {
+			this.focusRow(insertIndex, focusField);
+		}
+		this.scheduleSave();
+
+		const newBlock = this.dataStore.getBlocks()[insertIndex];
+		if (!newBlock) {
+			return;
+		}
+
+		this.history.recordRowInsertions(
+			[{ index: insertIndex, ref: newBlock }],
+			{
+				undo: { rowIndex: parentRowIndex, field: focusField ?? null },
+				redo: { rowIndex: insertIndex, field: focusField ?? null }
+			}
+		);
+	}
+
+	canIndentRow(rowIndex: number): boolean {
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		if (!block || rowIndex <= 0) {
+			return false;
+		}
+
+		const parentEntryId = String(block.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (parentEntryId) {
+			return false;
+		}
+
+		const entryId = String(block.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!entryId || this.hasDirectChildren(blocks, entryId)) {
+			return false;
+		}
+
+		return this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex) !== null;
+	}
+
+	canOutdentRow(rowIndex: number): boolean {
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		if (!block) {
+			return false;
+		}
+
+		return String(block.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim().length > 0;
+	}
+
+	indentRow(rowIndex: number, options?: RowActionOptions): boolean {
+		if (!this.ensureSchema() || !this.canIndentRow(rowIndex)) {
+			return false;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		const parentRowIndex = this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex);
+		if (!block || parentRowIndex === null) {
+			return false;
+		}
+
+		const parentBlock = blocks[parentRowIndex];
+		const parentEntryId = String(parentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!parentBlock || !parentEntryId) {
+			return false;
+		}
+
+		const focusField = this.resolveFocusField(options);
+		const targets = [{ index: rowIndex, fields: [PARENT_ENTRY_ID_FIELD] }];
+		const currentCollapsedState = String(parentBlock.data?.[COLLAPSED_STATE_FIELD] ?? 'false');
+		if (currentCollapsedState !== 'false') {
+			targets.push({ index: parentRowIndex, fields: [COLLAPSED_STATE_FIELD] });
+		}
+
+		const recorded = this.history.captureCellChanges(
+			targets,
+			() => {
+				block.data[PARENT_ENTRY_ID_FIELD] = parentEntryId;
+				parentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+			},
+			{
+				undo: { rowIndex, field: focusField ?? null },
+				redo: { rowIndex, field: focusField ?? null }
+			}
+		);
+
+		if (!recorded) {
+			return false;
+		}
+
+		this.refreshGridData();
+		this.focusRow(rowIndex, focusField);
+		this.scheduleSave();
+		return true;
+	}
+
+	outdentRow(rowIndex: number, options?: RowActionOptions): boolean {
+		if (!this.ensureSchema() || !this.canOutdentRow(rowIndex)) {
+			return false;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		const block = blocks[rowIndex];
+		if (!block) {
+			return false;
+		}
+
+		const focusField = this.resolveFocusField(options);
+		const recorded = this.history.captureCellChanges(
+			[{ index: rowIndex, fields: [PARENT_ENTRY_ID_FIELD] }],
+			() => {
+				block.data[PARENT_ENTRY_ID_FIELD] = '';
+			},
+			{
+				undo: { rowIndex, field: focusField ?? null },
+				redo: { rowIndex, field: focusField ?? null }
+			}
+		);
+
+		if (!recorded) {
+			return false;
+		}
+
+		this.refreshGridData();
+		this.focusRow(rowIndex, focusField);
+		this.scheduleSave();
+		return true;
+	}
+
+	toggleRowCollapsed(rowIndex: number): void {
+		if (!this.ensureSchema()) {
+			return;
+		}
+
+		const blocks = this.dataStore.getBlocks();
+		if (rowIndex < 0 || rowIndex >= blocks.length) {
+			logger.error('Invalid row index for collapse toggle:', rowIndex);
+			return;
+		}
+
+		const block = blocks[rowIndex];
+		const parentEntryId = String(block?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (parentEntryId) {
+			return;
+		}
+
+		const entryId = String(block?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!entryId || !this.hasDirectChildren(blocks, entryId)) {
+			return;
+		}
+
+		const focusField = this.resolveFocusField();
+		const recorded = this.history.captureCellChanges(
+			[{ index: rowIndex, fields: [COLLAPSED_STATE_FIELD] }],
+			() => {
+				const current = String(block.data?.[COLLAPSED_STATE_FIELD] ?? 'false') === 'true';
+				block.data[COLLAPSED_STATE_FIELD] = current ? 'false' : 'true';
+			},
+			{
+				undo: { rowIndex, field: focusField ?? null },
+				redo: { rowIndex, field: focusField ?? null }
+			}
+		);
+
+		if (!recorded) {
+			return;
+		}
+
+		this.refreshGridData();
+		this.focusRow(rowIndex, focusField);
+		this.scheduleSave();
+	}
+
 	deleteRow(rowIndex: number, options?: RowActionOptions): void {
 		if (!this.ensureSchema()) {
 			return;
@@ -99,7 +303,11 @@ export class RowInteractionController {
 			return;
 		}
 
-		const snapshot = this.history.snapshotBlock(blocks[rowIndex]);
+		const deleteIndexes = collectCascadeDeleteIndexes(blocks, [rowIndex]);
+		const snapshots = deleteIndexes.map((index) => ({
+			index,
+			snapshot: this.history.snapshotBlock(blocks[index])
+		}));
 		const focusField = this.resolveFocusField(options);
 		const nextIndex = this.dataStore.deleteRow(rowIndex);
 		const fallbackRow = this.ensureFallbackRow();
@@ -114,7 +322,7 @@ export class RowInteractionController {
 		this.scheduleSave();
 
 		this.history.recordRowDeletions(
-			[{ index: rowIndex, snapshot }],
+			snapshots,
 			{
 				focus: {
 					undo: { rowIndex, field: focusField ?? null },
@@ -149,7 +357,8 @@ export class RowInteractionController {
 			return;
 		}
 
-		const snapshots: Array<{ index: number; snapshot: BlockSnapshot }> = normalized.map((index) => ({
+		const deleteIndexes = collectCascadeDeleteIndexes(blocks, normalized);
+		const snapshots: Array<{ index: number; snapshot: BlockSnapshot }> = deleteIndexes.map((index) => ({
 			index,
 			snapshot: this.history.snapshotBlock(blocks[index])
 		}));
@@ -471,6 +680,7 @@ export class RowInteractionController {
 		);
 
 		blocks.splice(insertionIndex, 0, extracted);
+		const hierarchyChanges = this.syncDraggedRowHierarchyAfterReorder(blocks, insertionIndex, extracted);
 
 		this.refreshGridData();
 		this.focusRow(insertionIndex, focusField);
@@ -487,8 +697,68 @@ export class RowInteractionController {
 				redo: { rowIndex: insertionIndex, field: focusField ?? null }
 			}
 		);
+		if (hierarchyChanges.length > 0) {
+			this.history.recordCellChanges(hierarchyChanges, {
+				undo: { rowIndex: insertionIndex, field: focusField ?? null },
+				redo: { rowIndex: insertionIndex, field: focusField ?? null }
+			});
+		}
 
 		return insertionIndex;
+	}
+
+	private syncDraggedRowHierarchyAfterReorder(
+		blocks: H2Block[],
+		rowIndex: number,
+		block: H2Block
+	): Array<{ ref: H2Block; index: number; field: string; oldValue: string; newValue: string }> {
+		const changes: Array<{ ref: H2Block; index: number; field: string; oldValue: string; newValue: string }> = [];
+		const currentParentEntryId = String(block.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		const entryId = String(block.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		const hasChildren = entryId.length > 0 && this.hasDirectChildren(blocks, entryId);
+
+		let nextParentEntryId = '';
+		let nextParentBlock: H2Block | null = null;
+		let nextParentRowIndex: number | null = null;
+
+		if (!hasChildren) {
+			nextParentRowIndex = this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex);
+			if (nextParentRowIndex !== null) {
+				nextParentBlock = blocks[nextParentRowIndex] ?? null;
+				nextParentEntryId = String(nextParentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
+				if (!nextParentEntryId) {
+					nextParentBlock = null;
+					nextParentRowIndex = null;
+				}
+			}
+		}
+
+		if (nextParentEntryId !== currentParentEntryId) {
+			block.data[PARENT_ENTRY_ID_FIELD] = nextParentEntryId;
+			changes.push({
+				ref: block,
+				index: rowIndex,
+				field: PARENT_ENTRY_ID_FIELD,
+				oldValue: currentParentEntryId,
+				newValue: nextParentEntryId
+			});
+		}
+
+		if (nextParentBlock && nextParentRowIndex !== null) {
+			const currentCollapsedState = String(nextParentBlock.data?.[COLLAPSED_STATE_FIELD] ?? 'false');
+			if (currentCollapsedState !== 'false') {
+				nextParentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
+				changes.push({
+					ref: nextParentBlock,
+					index: nextParentRowIndex,
+					field: COLLAPSED_STATE_FIELD,
+					oldValue: currentCollapsedState,
+					newValue: 'false'
+				});
+			}
+		}
+
+		return changes;
 	}
 
 	private shouldPlaceAfter(direction: 'up' | 'down' | null, sourceIndex: number, targetIndex: number): boolean {
@@ -506,6 +776,25 @@ export class RowInteractionController {
 			return min;
 		}
 		return Math.max(min, Math.min(max, value));
+	}
+
+	private findNearestPreviousTopLevelRowIndex(blocks: H2Block[], rowIndex: number): number | null {
+		for (let index = rowIndex - 1; index >= 0; index--) {
+			const parentEntryId = String(blocks[index]?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+			if (!parentEntryId) {
+				return index;
+			}
+		}
+		return null;
+	}
+
+	private hasDirectChildren(blocks: H2Block[], entryId: string): boolean {
+		for (const block of blocks) {
+			if (String(block?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim() === entryId) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }

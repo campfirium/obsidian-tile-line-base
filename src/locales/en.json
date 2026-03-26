@@ -482,6 +482,9 @@
   "gridInteraction": {
     "insertRowAbove": "Insert row above",
     "insertRowBelow": "Insert row below",
+    "insertChildEntry": "New child entry",
+    "setAsChildEntry": "Set as child entry",
+    "setAsTopLevelEntry": "Set as top-level entry",
     "fillSelectedColumn": "Fill '{{column}}' for selected {{count}} rows",
     "duplicateSelected": "Duplicate selected {{count}} rows",
     "deleteSelected": "Delete selected {{count}} rows",
@@ -511,6 +514,10 @@
     "pasteCellFailed": "Failed to paste cell value",
     "pasteCellFailedLog": "Paste cell failed:",
     "pasteCellFormulaDisabled": "Formulas cannot be overwritten"
+  },
+  "treeTitleCell": {
+    "expandRow": "Expand row",
+    "collapseRow": "Collapse row"
   },
   "rowMigration": {
     "defaultFileName": "Migrated Rows",

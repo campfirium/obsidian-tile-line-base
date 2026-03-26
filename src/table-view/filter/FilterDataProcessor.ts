@@ -2,6 +2,7 @@ import type { FilterCondition, FilterRule, SortRule } from '../../types/filterVi
 import type { RowData } from '../../grid/GridAdapter';
 import { tryParseDate, tryParseNumber, tryParseTime } from './FilterValueParsers';
 import { formatUnknownValue } from '../../utils/valueFormat';
+import { reorderRowsPreservingHierarchy } from '../HierarchySort';
 
 type NormalizedSortValue = {
 	type: 'empty' | 'number' | 'date' | 'time' | 'string';
@@ -26,7 +27,7 @@ export class FilterDataProcessor {
 		}
 		const sorted = [...rows];
 		sorted.sort((a, b) => this.compareRowsForSort(a, b, effectiveRules));
-		return sorted;
+		return reorderRowsPreservingHierarchy(sorted);
 	}
 
 	private static matchesFilterRule(row: RowData, rule: FilterRule): boolean {

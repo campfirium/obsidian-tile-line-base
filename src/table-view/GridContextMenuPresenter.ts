@@ -11,6 +11,7 @@ import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { GridCellClipboardController } from './GridCellClipboardController';
 import type { RowMigrationController } from './RowMigrationController';
 import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
+import { PARENT_ENTRY_ID_FIELD } from './entryFields';
 interface GridContextMenuParams {
 	app: App;
 	container: HTMLElement | null;
@@ -39,6 +40,26 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 	const targetIndexes = resolveBlockIndexesForCopy(params.getGridAdapter, params.dataStore, params.blockIndex);
 	const migrateIndexes = targetIndexes;
 	const hasMigrateTargets = migrateIndexes.length > 0;
+	const targetBlock = params.dataStore.getBlocks()[params.blockIndex];
+	const canInsertChild =
+		!isMultiSelect &&
+		Boolean(targetBlock) &&
+		String(targetBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim().length === 0;
+	const hierarchyAction = !isMultiSelect
+		? params.rowInteraction.canOutdentRow(params.blockIndex)
+			? {
+					labelKey: 'gridInteraction.setAsTopLevelEntry' as const,
+					icon: 'outdent',
+					handler: () => params.rowInteraction.outdentRow(params.blockIndex, { focusField: '#' }),
+					disabled: !params.rowInteraction.canOutdentRow(params.blockIndex)
+				}
+			: {
+					labelKey: 'gridInteraction.setAsChildEntry' as const,
+					icon: 'indent',
+					handler: () => params.rowInteraction.indentRow(params.blockIndex, { focusField: '#' }),
+					disabled: !params.rowInteraction.canIndentRow(params.blockIndex)
+				}
+		: undefined;
 
 	let fillSelection: ReturnType<typeof createFillSelectionAction> = {};
 	if (isMultiSelect && !isSystemColumn) {
@@ -123,6 +144,10 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 				: undefined,
 			insertAbove: () => params.rowInteraction.addRow(params.blockIndex),
 			insertBelow: () => params.rowInteraction.addRow(params.blockIndex + 1),
+			insertChild: canInsertChild
+				? () => params.rowInteraction.addChildRow(params.blockIndex)
+				: undefined,
+			hierarchyAction,
 			fillSelectionWithValue: fillSelection.action,
 			duplicateSelection: () => params.rowInteraction.duplicateRows(selectedRows),
 			deleteSelection: () => params.rowInteraction.deleteRows(selectedRows),

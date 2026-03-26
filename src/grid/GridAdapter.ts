@@ -31,6 +31,7 @@ export interface ColumnDef {
 	suppressMovable?: boolean;
 	suppressSizeToFit?: boolean;
 	context?: Record<string, unknown>;
+	cellRenderer?: unknown;
 }
 
 /**

@@ -5,8 +5,10 @@ import type {
 	CellKeyDownEvent,
 	ColumnHeaderContextMenuEvent,
 	GridOptions,
-	RowDragEndEvent,
 	PasteEndEvent,
+	RowDragCancelEvent,
+	RowDragEnterEvent,
+	RowDragEndEvent,
 	SuppressKeyboardEventParams
 } from 'ag-grid-community';
 import { normalizeStatus } from '../../renderers/StatusCellRenderer';
@@ -16,6 +18,7 @@ import type { AgGridInteractionController } from '../interactions/AgGridInteract
 import type { GridInteractionContext } from '../interactions/types';
 import type { RowData } from '../GridAdapter';
 import { ROW_ID_FIELD } from '../GridAdapter';
+import { postSortNodesPreservingHierarchy } from '../../table-view/HierarchySort';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -42,6 +45,8 @@ export function createAgGridOptions({
 	resizeColumns,
 	onRowDragEnd
 }: GridOptionsParams): GridOptions {
+	let isRowDragActive = false;
+
 	return {
 		popupParent: popupParent ?? ownerDocument?.body ?? document.body,
 		rowHeight: DEFAULT_ROW_HEIGHT,
@@ -118,8 +123,21 @@ export function createAgGridOptions({
 			const callback = getColumnHeaderContextMenu();
 			callback?.({ field, domEvent });
 		},
+		onRowDragEnter: (_event: RowDragEnterEvent) => {
+			isRowDragActive = true;
+		},
 		onRowDragEnd: (event: RowDragEndEvent) => {
+			isRowDragActive = false;
 			onRowDragEnd(event);
+		},
+		onRowDragCancel: (_event: RowDragCancelEvent) => {
+			isRowDragActive = false;
+		},
+		postSortRows: (params) => {
+			if (isRowDragActive) {
+				return;
+			}
+			postSortNodesPreservingHierarchy(params);
 		},
 		defaultColDef: {
 			tooltipValueGetter: () => null,

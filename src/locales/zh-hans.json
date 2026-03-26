@@ -545,7 +545,7 @@
     "cancelButton": "取消"
   },
   "tableDataStore": {
-    "newRowPrefix": "新项目",
+    "newRowPrefix": "新条目",
     "newColumnName": "字段",
     "formulaSelfReference": "公式不能引用自身列",
     "formulaParseFailed": "解析公式失败：{{error}}",

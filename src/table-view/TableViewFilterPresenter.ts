@@ -1,6 +1,13 @@
 import type { TableView } from '../TableView';
 import { FilterViewBar, type FilterViewBarTagGroupState } from './filter/FilterViewBar';
 import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
+import {
+	DISPLAY_ORDER_FIELD,
+	ROW_COLLAPSED_FIELD,
+	ROW_HAS_CHILDREN_FIELD,
+	ROW_LEVEL_FIELD
+} from './DisplayListBuilder';
+import { isParentEntryProjectionField } from './entryFields';
 import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
 import { openBackupRestoreModal } from './BackupRestoreModal';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './TableCsvController';
@@ -124,7 +131,15 @@ export function getAvailableColumns(view: TableView): string[] {
 
 	const seen = new Set<string>();
 
-	const exclude = new Set<string>(['#', ROW_ID_FIELD, '__tlb_status', '__tlb_index']);
+	const exclude = new Set<string>([
+		'#',
+		ROW_ID_FIELD,
+		'__tlb_status',
+		DISPLAY_ORDER_FIELD,
+		ROW_LEVEL_FIELD,
+		ROW_HAS_CHILDREN_FIELD,
+		ROW_COLLAPSED_FIELD
+	]);
 
 
 
@@ -137,6 +152,12 @@ export function getAvailableColumns(view: TableView): string[] {
 		}
 
 		if (exclude.has(value)) {
+
+			return;
+
+		}
+
+		if (isParentEntryProjectionField(value)) {
 
 			return;
 

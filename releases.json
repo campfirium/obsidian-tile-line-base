@@ -1,4 +1,15 @@
 {
+  "0.9.9": {
+    "date": "2026-03-27",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [
+      "Parent rows now keep their child rows attached when dragged, while child rows can still be moved on their own.",
+      "Filter views now keep the parent row visible when a child row matches the filter."
+    ],
+    "changed": []
+  },
   "0.9.8": {
     "date": "2026-03-26",
     "info": "",

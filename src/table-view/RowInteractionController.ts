@@ -7,6 +7,7 @@ import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
 import { ROW_ID_FIELD, type RowDragEndPayload } from '../grid/GridAdapter';
 import { COLLAPSED_STATE_FIELD, ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from './entryFields';
+import { reorderBlocksPreservingHierarchy } from './HierarchySort';
 
 const logger = getLogger('table-view:row-interaction');
 
@@ -573,6 +574,9 @@ export class RowInteractionController {
 		const blocks = this.dataStore.getBlocks();
 		const sourceIndex = this.dataStore.getBlockIndexFromRow(event.draggedRow ?? undefined);
 		let targetIndex = this.dataStore.getBlockIndexFromRow(event.targetRow ?? undefined);
+		const draggedIndexes =
+			sourceIndex === null ? [] : this.collectDraggedRowIndexes(blocks, sourceIndex);
+		const movesHierarchyBranch = draggedIndexes.length > 1;
 
 		const displayedOrder = Array.isArray(event.displayedRowOrder) ? event.displayedRowOrder : null;
 		const hasFullDisplayedOrder = Array.isArray(displayedOrder) && displayedOrder.length === blocks.length;
@@ -580,7 +584,21 @@ export class RowInteractionController {
 			// 过滤/排序视图下不处理拖拽，避免影响隐藏行顺序
 			return;
 		}
-		if (hasFullDisplayedOrder && sourceIndex !== null) {
+		if (hasFullDisplayedOrder && sourceIndex !== null && movesHierarchyBranch) {
+			const orderedBlocks = this.buildOrderedBlocksFromDisplayedOrder(blocks, displayedOrder);
+			if (!orderedBlocks || this.isSameBlockOrder(blocks, orderedBlocks)) {
+				return;
+			}
+			const focusField = this.resolveFocusField();
+			const sourceBlock = blocks[sourceIndex] ?? null;
+			const nextIndex = sourceBlock ? orderedBlocks.indexOf(sourceBlock) : -1;
+			this.history.applyRowOrderChange(orderedBlocks, {
+				undo: { rowIndex: sourceIndex, field: focusField ?? null },
+				redo: { rowIndex: nextIndex >= 0 ? nextIndex : sourceIndex, field: focusField ?? null }
+			});
+			return;
+		}
+		if (hasFullDisplayedOrder && sourceIndex !== null && !movesHierarchyBranch) {
 			const sourceId =
 				event.draggedRow && Object.prototype.hasOwnProperty.call(event.draggedRow, ROW_ID_FIELD)
 					? String(event.draggedRow[ROW_ID_FIELD])
@@ -666,37 +684,56 @@ export class RowInteractionController {
 			return null;
 		}
 
-		const focusField = this.resolveFocusField();
-		const [extracted] = blocks.splice(sourceIndex, 1);
-		if (!extracted) {
+		const draggedIndexes = this.collectDraggedRowIndexes(blocks, sourceIndex);
+		if (draggedIndexes.length === 0) {
+			return null;
+		}
+		if (draggedIndexes.includes(targetIndex)) {
 			return null;
 		}
 
-		const normalizedTarget = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
-		const insertionIndex = this.clampIndex(
-			position === 'after' ? normalizedTarget + 1 : normalizedTarget,
-			0,
-			blocks.length
-		);
+		const orderedBlocks = this.buildReorderedBlockList(blocks, draggedIndexes, targetIndex, position);
+		if (!orderedBlocks) {
+			return null;
+		}
 
-		blocks.splice(insertionIndex, 0, extracted);
-		const hierarchyChanges = this.syncDraggedRowHierarchyAfterReorder(blocks, insertionIndex, extracted);
+		const movedBlocks = draggedIndexes
+			.map((index) => blocks[index])
+			.filter((block): block is H2Block => Boolean(block));
+		const anchorBlock = movedBlocks[0] ?? null;
+		if (!anchorBlock) {
+			return null;
+		}
+		const orderedInsertionIndex = orderedBlocks.indexOf(anchorBlock);
+		if (orderedInsertionIndex < 0) {
+			return null;
+		}
 
-		this.refreshGridData();
-		this.focusRow(insertionIndex, focusField);
-		this.scheduleSave();
+		const focusField = this.resolveFocusField();
+		this.history.applyRowOrderChange(orderedBlocks, {
+			undo: { rowIndex: sourceIndex, field: focusField ?? null },
+			redo: { rowIndex: orderedInsertionIndex, field: focusField ?? null }
+		});
 
-		this.history.recordRowMove(
-			{
-				ref: extracted,
-				fromIndex: sourceIndex,
-				toIndex: insertionIndex
-			},
-			{
-				undo: { rowIndex: sourceIndex, field: focusField ?? null },
-				redo: { rowIndex: insertionIndex, field: focusField ?? null }
-			}
-		);
+		const reorderedBlocks = this.dataStore.getBlocks();
+		const insertionIndex = reorderedBlocks.indexOf(anchorBlock);
+		if (insertionIndex < 0) {
+			return null;
+		}
+
+		const hierarchyChanges =
+			movedBlocks.length > 1
+				? []
+				: this.syncDraggedRowHierarchyAfterReorder(reorderedBlocks, insertionIndex, anchorBlock);
+
+		if (hierarchyChanges.length === 0) {
+			this.focusRow(insertionIndex, focusField);
+		} else {
+			this.refreshGridData();
+			this.focusRow(insertionIndex, focusField);
+			this.scheduleSave();
+		}
+
 		if (hierarchyChanges.length > 0) {
 			this.history.recordCellChanges(hierarchyChanges, {
 				undo: { rowIndex: insertionIndex, field: focusField ?? null },
@@ -795,6 +832,115 @@ export class RowInteractionController {
 			}
 		}
 		return false;
+	}
+
+	private collectDraggedRowIndexes(blocks: H2Block[], sourceIndex: number): number[] {
+		const sourceBlock = blocks[sourceIndex];
+		if (!sourceBlock) {
+			return [];
+		}
+
+		const sourceParentEntryId = String(sourceBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (sourceParentEntryId) {
+			return [sourceIndex];
+		}
+
+		const sourceEntryId = String(sourceBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!sourceEntryId) {
+			return [sourceIndex];
+		}
+
+		const draggedIndexes = [sourceIndex];
+		for (let index = 0; index < blocks.length; index++) {
+			if (index === sourceIndex) {
+				continue;
+			}
+			if (String(blocks[index]?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim() === sourceEntryId) {
+				draggedIndexes.push(index);
+			}
+		}
+
+		return draggedIndexes.sort((left, right) => left - right);
+	}
+
+	private buildReorderedBlockList(
+		blocks: H2Block[],
+		draggedIndexes: number[],
+		targetIndex: number,
+		position: 'before' | 'after'
+	): H2Block[] | null {
+		const targetBlock = blocks[targetIndex];
+		if (!targetBlock) {
+			return null;
+		}
+
+		const orderedBlocks = [...blocks];
+		const draggedIndexSet = new Set<number>(draggedIndexes);
+		const movedBlocks = draggedIndexes
+			.map((index) => blocks[index])
+			.filter((block): block is H2Block => Boolean(block));
+		if (movedBlocks.length === 0) {
+			return null;
+		}
+
+		for (let index = orderedBlocks.length - 1; index >= 0; index--) {
+			if (draggedIndexSet.has(index)) {
+				orderedBlocks.splice(index, 1);
+			}
+		}
+
+		const normalizedTargetIndex = orderedBlocks.indexOf(targetBlock);
+		if (normalizedTargetIndex < 0) {
+			return null;
+		}
+
+		const insertionIndex = this.clampIndex(
+			position === 'after' ? normalizedTargetIndex + 1 : normalizedTargetIndex,
+			0,
+			orderedBlocks.length
+		);
+		orderedBlocks.splice(insertionIndex, 0, ...movedBlocks);
+		return orderedBlocks;
+	}
+
+	private buildOrderedBlocksFromDisplayedOrder(
+		blocks: H2Block[],
+		displayedOrder: Array<string | number>
+	): H2Block[] | null {
+		const blockByRowId = new Map<string, H2Block>();
+		for (let index = 0; index < blocks.length; index++) {
+			const block = blocks[index];
+			if (block) {
+				blockByRowId.set(String(index), block);
+			}
+		}
+
+		const rawOrderedBlocks: H2Block[] = [];
+		for (const rowId of displayedOrder) {
+			const block = blockByRowId.get(String(rowId));
+			if (!block) {
+				return null;
+			}
+			rawOrderedBlocks.push(block);
+		}
+
+		if (rawOrderedBlocks.length !== blocks.length) {
+			return null;
+		}
+
+		return reorderBlocksPreservingHierarchy(rawOrderedBlocks);
+	}
+
+	private isSameBlockOrder(current: H2Block[], next: H2Block[]): boolean {
+		if (current.length !== next.length) {
+			return false;
+		}
+		for (let index = 0; index < current.length; index++) {
+			if (current[index] !== next[index]) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 }

@@ -3,6 +3,7 @@ import type { RowData } from '../../grid/GridAdapter';
 import { tryParseDate, tryParseNumber, tryParseTime } from './FilterValueParsers';
 import { formatUnknownValue } from '../../utils/valueFormat';
 import { reorderRowsPreservingHierarchy } from '../HierarchySort';
+import { ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from '../entryFields';
 
 type NormalizedSortValue = {
 	type: 'empty' | 'number' | 'date' | 'time' | 'string';
@@ -12,7 +13,33 @@ type NormalizedSortValue = {
 
 export class FilterDataProcessor {
 	static applyFilterRule(rows: RowData[], rule: FilterRule): RowData[] {
-		return rows.filter((row) => this.matchesFilterRule(row, rule));
+		const matchedEntryIds = new Set<string>();
+		const matchedRows = new Set<RowData>();
+		for (const row of rows) {
+			const entryId = this.normalizeHierarchyValue(row[ENTRY_ID_FIELD]);
+			const parentEntryId = this.normalizeHierarchyValue(row[PARENT_ENTRY_ID_FIELD]);
+			if (!this.matchesFilterRule(row, rule)) {
+				continue;
+			}
+			matchedRows.add(row);
+			if (entryId) {
+				matchedEntryIds.add(entryId);
+				if (parentEntryId) {
+					matchedEntryIds.add(parentEntryId);
+				}
+			}
+		}
+
+		return rows.filter((row) => {
+			if (matchedRows.has(row)) {
+				return true;
+			}
+			const entryId = this.normalizeHierarchyValue(row[ENTRY_ID_FIELD]);
+			if (!entryId) {
+				return false;
+			}
+			return matchedEntryIds.has(entryId);
+		});
 	}
 
 	static sortRowData(rows: RowData[], sortRules: SortRule[]): RowData[] {
@@ -165,6 +192,16 @@ export class FilterDataProcessor {
 
 	private static normalizeText(value: string): string {
 		return value.trim().toLowerCase();
+	}
+
+	private static normalizeHierarchyValue(value: unknown): string {
+		if (typeof value === 'string') {
+			return value.trim();
+		}
+		if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+			return `${value}`.trim();
+		}
+		return '';
 	}
 
 	private static compareRowsForSort(a: RowData, b: RowData, sortRules: SortRule[]): number {

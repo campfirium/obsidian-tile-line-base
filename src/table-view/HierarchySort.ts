@@ -1,9 +1,14 @@
 import type { PostSortRowsParams, RowNode } from 'ag-grid-community';
 import type { RowData } from '../grid/GridAdapter';
 import { ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from './entryFields';
+import type { H2Block } from './MarkdownBlockParser';
 
 export function reorderRowsPreservingHierarchy(rows: RowData[]): RowData[] {
 	return reorderItemsPreservingHierarchy(rows, (row) => row);
+}
+
+export function reorderBlocksPreservingHierarchy(blocks: H2Block[]): H2Block[] {
+	return reorderItemsPreservingHierarchy(blocks, (block) => block.data as RowData);
 }
 
 export function postSortNodesPreservingHierarchy(params: PostSortRowsParams<RowData>): void {

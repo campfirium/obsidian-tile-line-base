@@ -12,6 +12,7 @@ import { createGridContextMenu } from './GridContextMenuPresenter';
 import { getLogger } from '../utils/logger';
 import { handleGridKeydown } from './GridKeybindingHandler';
 import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
+import type { FilterViewController } from './filter/FilterViewController';
 
 interface GridInteractionDeps {
 	app: App;
@@ -23,6 +24,7 @@ interface GridInteractionDeps {
 	copyTemplate: CopyTemplateController;
 	history: TableHistoryManager;
 	paragraphPromotion: ParagraphPromotionController;
+	getFilterViewController: () => FilterViewController;
 }
 
 export class GridInteractionController {
@@ -150,6 +152,13 @@ export class GridInteractionController {
 	}
 
 	private handleKeydown(event: KeyboardEvent): void {
+		if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key === 'Enter') {
+			this.logger.warn('ctrlEnter:documentKeydown', {
+				targetTag: (event.target as HTMLElement | null)?.tagName ?? null,
+				activeTag: (this.container?.ownerDocument.activeElement as HTMLElement | null)?.tagName ?? null,
+				defaultPrevented: event.defaultPrevented
+			});
+		}
 		handleGridKeydown(event, {
 			container: this.container,
 			logger: this.logger,
@@ -197,7 +206,8 @@ export class GridInteractionController {
 			},
 			onRequestClose: () => this.hideContextMenu(),
 			history: this.history,
-			paragraphPromotion: this.deps.paragraphPromotion
+			paragraphPromotion: this.deps.paragraphPromotion,
+			filterViewController: this.deps.getFilterViewController()
 		});
 
 		if (!menu) {

@@ -775,7 +775,7 @@ export class SettingsService {
 			})
 			.filter((rule: SortRule | null): rule is SortRule => rule !== null);
 		const sanitizedIcon = this.sanitizeIconId(source.icon);
-		return {
+		const cloned: FilterViewDefinition = {
 			id: source.id,
 			name: source.name,
 			filterRule: source.filterRule != null ? this.deepClone(source.filterRule) : null,
@@ -784,6 +784,14 @@ export class SettingsService {
 			quickFilter: source.quickFilter ?? null,
 			icon: sanitizedIcon
 		};
+		if (source.isTemporary) {
+			cloned.isTemporary = true;
+			cloned.temporaryKey =
+				typeof source.temporaryKey === 'string' && source.temporaryKey.trim().length > 0
+					? source.temporaryKey.trim()
+					: null;
+		}
+		return cloned;
 	}
 
 	private deepClone<T>(value: T): T {

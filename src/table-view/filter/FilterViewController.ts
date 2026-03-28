@@ -41,6 +41,13 @@ export interface CloneFilterViewOptions {
 	icon?: string | null;
 }
 
+export interface CreateTemporaryFilterViewOptions {
+	name: string;
+	filterRule: FilterRule;
+	icon?: string | null;
+	temporaryKey?: string | null;
+}
+
 export class FilterViewController {
 	private readonly app: App;
 	private readonly stateStore: FilterStateStore;
@@ -145,6 +152,14 @@ export class FilterViewController {
 
 	openFilterViewMenu(view: FilterViewDefinition, event: MouseEvent): void {
 		const menu = new Menu();
+		if (view.isTemporary) {
+			menu.addItem((item) => {
+				item.setTitle(t('filterViewController.menuSaveTemporary')).setIcon('save').onClick(() => {
+					this.saveTemporaryView(view.id);
+				});
+			});
+			menu.addSeparator();
+		}
 		menu.addItem((item) => {
 			item.setTitle(t('filterViewController.menuEdit')).setIcon('pencil').onClick(() => {
 				void this.updateFilterView(view.id);
@@ -165,7 +180,7 @@ export class FilterViewController {
 			});
 		});
 
-		if (this.tagGroupSupport) {
+		if (this.tagGroupSupport && !view.isTemporary) {
 			menu.addItem((item) => {
 				item
 					.setTitle(t('tagGroups.menuAddFilterView'))
@@ -373,6 +388,61 @@ export class FilterViewController {
 		this.runStateEffects({ persist: true, apply: false });
 
 		return clonedView;
+	}
+
+	createTemporaryFilterView(options: CreateTemporaryFilterViewOptions): FilterViewDefinition {
+		const temporaryKey = typeof options.temporaryKey === 'string' ? options.temporaryKey.trim() : '';
+		const existingTemporary = temporaryKey.length > 0
+			? this.stateStore.getState().views.find((view) => view.isTemporary && view.temporaryKey === temporaryKey) ?? null
+			: null;
+		if (existingTemporary) {
+			this.activateFilterView(existingTemporary.id);
+			return existingTemporary;
+		}
+
+		const temporaryView: FilterViewDefinition = {
+			id: this.generateFilterViewId(),
+			name: options.name.trim(),
+			filterRule: {
+				combineMode: options.filterRule.combineMode,
+				conditions: options.filterRule.conditions.map((condition) => ({ ...condition }))
+			},
+			sortRules: [],
+			columnState: null,
+			quickFilter: null,
+			icon: sanitizeIconId(options.icon),
+			isTemporary: true,
+			temporaryKey: temporaryKey.length > 0 ? temporaryKey : null
+		};
+
+		this.stateStore.updateState((state) => {
+			state.views.push(temporaryView);
+			state.activeViewId = temporaryView.id;
+		});
+		this.runStateEffects({ persist: true, apply: true });
+		return temporaryView;
+	}
+
+	saveTemporaryView(viewId: string): void {
+		let savedName: string | null = null;
+		let changed = false;
+		this.stateStore.updateState((state) => {
+			const target = state.views.find((view) => view.id === viewId);
+			if (!target || !target.isTemporary) {
+				return;
+			}
+			target.isTemporary = false;
+			target.temporaryKey = null;
+			savedName = target.name;
+			changed = true;
+		});
+		if (!changed) {
+			return;
+		}
+		this.runStateEffects({ persist: true, apply: false });
+		if (savedName) {
+			new Notice(t('filterViewController.saveTemporaryNotice', { name: savedName }));
+		}
 	}
 
 	deleteFilterView(viewId: string): void {

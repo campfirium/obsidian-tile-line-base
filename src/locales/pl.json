@@ -136,7 +136,6 @@
       "manageGroupsButton": "Zarządzaj grupami filtrów"
     }
   },
-  
   "kanbanView": {
     "schemaUnavailable": "Widok kanban wymaga prawidłowego schematu tabeli. Wczytaj notatkę ponownie i spróbuj jeszcze raz.",
     "missingLaneField": "Widok kanban potrzebuje kolumny \"{{field}}\". Dodaj ją w widoku tabeli albo wróć.",
@@ -165,7 +164,6 @@
     "laneActions": {
       "addCard": "Dodaj kartę do \"{{lane}}\""
     },
-    
     "fieldModal": {
       "title": "Wybierz kolumnę kanban",
       "description": "Wskaż kolumnę, której wartości utworzą kolumny w tablicy kanban.",
@@ -511,7 +509,11 @@
     "migrateSelectFilePlaceholder": "Wyszukaj plik docelowy",
     "pasteCellFailed": "Nie udało się wkleić wartości komórki",
     "pasteCellFailedLog": "Wklejanie komórki nie powiodło się:",
-    "pasteCellFormulaDisabled": "Nie można nadpisać formuł"
+    "pasteCellFormulaDisabled": "Nie można nadpisać formuł",
+    "insertChildEntry": "Nowy wpis podrzędny",
+    "setAsChildEntry": "Ustaw jako wpis podrzędny",
+    "setAsTopLevelEntry": "Ustaw jako wpis główny",
+    "openTemporaryParentView": "Zobacz tę grupę"
   },
   "rowMigration": {
     "defaultFileName": "Przeniesione wiersze",
@@ -664,7 +666,8 @@
     "settingsMenuImportCsvLabel": "Importuj CSV do tabeli",
     "settingsMenuImportCsvAsTableLabel": "Importuj CSV jako nową tabelę",
     "settingsMenuHelpLabel": "Otwórz notatkę pomocy",
-    "unnamedViewLabel": "Widok bez nazwy"
+    "unnamedViewLabel": "Widok bez nazwy",
+    "closeViewAriaLabel": "Zamknij widok {{name}}"
   },
   "rowOrder": {
     "menuLabel": "Zmień kolejność wierszy (w pliku)",
@@ -730,7 +733,9 @@
     "duplicateModalTitle": "Duplikuj widok: {{name}}",
     "menuEditDefault": "Edytuj widok domyślny",
     "menuResetDefault": "Zresetuj widok domyślny",
-    "editDefaultModalTitle": "Edytuj widok domyślny"
+    "editDefaultModalTitle": "Edytuj widok domyślny",
+    "menuSaveTemporary": "Zapisz jako zwykły widok",
+    "saveTemporaryNotice": "Zapisano widok: {{name}}"
   },
   "filterViewModals": {
     "saveButton": "Zapisz",
@@ -881,5 +886,9 @@
     "helpFileContent": "# witaj w TileLineBase\n\n## task: Ukończ swoje pierwsze zadanie TLB\n\nAction: Kliknij pole w kolumnie Status, aby oznaczyć to zadanie jako ukończone.\n\n## task: Przenieś Kanban\n\nAction: Kliknij ikonę Kanban (prawy górny róg), a następnie przeciągnij tę kartę do „Done” lub innej kolumny.\n\n## task: Prezentuj slajdy\n\nAction: Kliknij ikonę Slides (prawy górny róg), potem przycisk pełnego ekranu. Naciśnij `Tab`, aby zobaczyć miniatury.\n\n## task: Poznaj źródło danych\n\nAction: Kliknij ikonę Edit (prawy górny róg), aby wrócić do pierwotnego widoku Markdown.\n\n## task: Importuj dane CSV\n\nAction: Kliknij ikonę koła zębatego (prawy górny róg), a następnie wybierz „Importuj CSV jako nową tabelę.”\n",
     "createHelpFailed": "TileLineBase nie zdołał utworzyć dokumentu pomocy. Sprawdź konsolę, aby uzyskać szczegóły.",
     "openHelpFailed": "TileLineBase nie mógł otworzyć dokumentu pomocy."
+  },
+  "treeTitleCell": {
+    "expandRow": "Rozwiń wiersz",
+    "collapseRow": "Zwiń wiersz"
   }
 }

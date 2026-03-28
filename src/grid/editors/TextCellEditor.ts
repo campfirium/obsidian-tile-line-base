@@ -11,6 +11,7 @@
  */
 
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
+import { ROW_ID_FIELD } from '../GridAdapter';
 
 const MIN_POPUP_WIDTH = 420;
 const MIN_CELL_WIDTH = 160;
@@ -98,6 +99,12 @@ export function createTextCellEditor() {
 
 			this.eInput.addEventListener('keydown', (event) => {
 				if (event.key === 'Enter') {
+					if (event.ctrlKey || event.metaKey) {
+						event.preventDefault();
+						event.stopPropagation();
+						this.triggerAddChildRow();
+						return;
+					}
 					if (event.shiftKey) {
 						event.stopPropagation();
 						return;
@@ -271,6 +278,17 @@ export function createTextCellEditor() {
 
 			this.wrapper.style.left = `${left}px`;
 			this.wrapper.style.top = `${top}px`;
+		}
+
+		private triggerAddChildRow(): void {
+			const rowIndexRaw = this.params?.data?.[ROW_ID_FIELD];
+			const rowIndex = Number.parseInt(String(rowIndexRaw ?? ''), 10);
+			if (Number.isNaN(rowIndex)) {
+				return;
+			}
+			const field = this.params?.column?.getColId?.() ?? this.params?.colDef?.field ?? null;
+			const context = this.params?.context as { onAddChildRow?: (targetRowIndex: number, targetField: string | null) => void } | undefined;
+			context?.onAddChildRow?.(rowIndex, field);
 		}
 
 		private updateScrollableState(isScrollable: boolean): void {

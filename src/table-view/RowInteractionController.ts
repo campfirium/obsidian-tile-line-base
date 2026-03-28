@@ -93,6 +93,7 @@ export class RowInteractionController {
 
 	addChildRow(parentRowIndex: number, options?: RowActionOptions): void {
 		if (!this.ensureSchema()) {
+			logger.warn('ctrlEnter:addChildRow:missingSchema', { parentRowIndex });
 			return;
 		}
 
@@ -102,21 +103,42 @@ export class RowInteractionController {
 			return;
 		}
 
-		const parentBlock = blocks[parentRowIndex];
-		const parentEntryId = String(parentBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
-		if (parentEntryId) {
-			logger.warn('Ignored child entry creation for nested row', parentRowIndex);
-			return;
-		}
-
 		const focusField = this.resolveFocusField(options);
 		const filterPrefills = this.getActiveFilterPrefills();
 		const optionPrefills = options?.prefills ?? {};
-		const mergedPrefills = { ...filterPrefills, ...optionPrefills };
-		const insertIndex = this.dataStore.addChildRow(parentRowIndex, mergedPrefills);
+		const block = blocks[parentRowIndex];
+		const parentEntryId = String(block?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		const insertContext = parentEntryId
+			? this.buildSiblingInsertContext(blocks, parentRowIndex, parentEntryId)
+			: this.buildFirstChildInsertContext(blocks, parentRowIndex);
+		if (!insertContext) {
+			logger.error('Failed to resolve child entry insertion context');
+			return;
+		}
+		logger.warn('ctrlEnter:addChildRow:start', {
+			parentRowIndex,
+			focusField,
+			parentEntryId: parentEntryId || null,
+			insertIndex: insertContext.insertIndex
+		});
+		const mergedPrefills = {
+			...filterPrefills,
+			...insertContext.prefills,
+			...optionPrefills
+		};
+		const insertIndex = this.dataStore.addRow(insertContext.insertIndex, mergedPrefills);
 		if (insertIndex < 0) {
 			logger.error('Failed to add child entry');
 			return;
+		}
+		logger.warn('ctrlEnter:addChildRow:inserted', {
+			parentRowIndex,
+			insertIndex,
+			focusField
+		});
+
+		if (insertContext.parentBlock) {
+			insertContext.parentBlock.data[COLLAPSED_STATE_FIELD] = 'false';
 		}
 
 		this.refreshGridData();
@@ -133,7 +155,7 @@ export class RowInteractionController {
 		this.history.recordRowInsertions(
 			[{ index: insertIndex, ref: newBlock }],
 			{
-				undo: { rowIndex: parentRowIndex, field: focusField ?? null },
+				undo: { rowIndex: insertContext.undoRowIndex, field: focusField ?? null },
 				redo: { rowIndex: insertIndex, field: focusField ?? null }
 			}
 		);
@@ -673,6 +695,45 @@ export class RowInteractionController {
 			return options.focusField ?? null;
 		}
 		return this.getFocusedField();
+	}
+
+	private buildFirstChildInsertContext(
+		blocks: H2Block[],
+		parentRowIndex: number
+	): { insertIndex: number; prefills: Record<string, string>; parentBlock: H2Block; undoRowIndex: number } | null {
+		const parentBlock = blocks[parentRowIndex];
+		if (!parentBlock) {
+			return null;
+		}
+		const entryId = String(parentBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		if (!entryId) {
+			return null;
+		}
+		return {
+			insertIndex: parentRowIndex + 1,
+			prefills: { [PARENT_ENTRY_ID_FIELD]: entryId },
+			parentBlock,
+			undoRowIndex: parentRowIndex
+		};
+	}
+
+	private buildSiblingInsertContext(
+		blocks: H2Block[],
+		rowIndex: number,
+		parentEntryId: string
+	): { insertIndex: number; prefills: Record<string, string>; parentBlock: H2Block | null; undoRowIndex: number } | null {
+		if (!parentEntryId) {
+			return null;
+		}
+		const parentRowIndex = blocks.findIndex(
+			(candidate) => String(candidate?.data?.[ENTRY_ID_FIELD] ?? '').trim() === parentEntryId
+		);
+		return {
+			insertIndex: rowIndex + 1,
+			prefills: { [PARENT_ENTRY_ID_FIELD]: parentEntryId },
+			parentBlock: parentRowIndex >= 0 ? blocks[parentRowIndex] ?? null : null,
+			undoRowIndex: rowIndex
+		};
 	}
 
 	private reorderRow(sourceIndex: number, targetIndex: number, position: 'before' | 'after'): number | null {

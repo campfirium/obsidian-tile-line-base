@@ -3,6 +3,7 @@ import {
 	CellFocusedEvent,
 	GridApi
 } from 'ag-grid-community';
+import { ROW_ID_FIELD, type RowData } from '../GridAdapter';
 import { CompositionCaptureManager } from './internal/CompositionCaptureManager';
 import { GridClipboardService } from './internal/GridClipboardService';
 import { FocusNavigator } from './internal/FocusNavigator';
@@ -99,7 +100,8 @@ export class AgGridInteractionController {
 			translate: (key) => this.deps.translate(key),
 			debug: (...args) => this.debug(...args),
 			clipboard: this.clipboard,
-			navigator: this.navigator
+			navigator: this.navigator,
+			getAddChildRowCallback: () => this.deps.getAddChildRowCallback()
 		});
 		compositionHolder.current = this.composition;
 
@@ -144,10 +146,31 @@ export class AgGridInteractionController {
 		}
 		return started;
 	}
+	stopEditingFocusedCell(reason?: string): boolean {
+		const result = this.stopActiveEditingSession(reason ?? 'unknown');
+		return result === 'success';
+	}
 	handleGridCellKeyDown(event: CellKeyDownEvent): void {
 		const keyEvent = normalizeKeyboardEvent(event.event);
 		if (!keyEvent) {
 			return;
+		}
+
+		if ((keyEvent.metaKey || keyEvent.ctrlKey) && !keyEvent.altKey && !keyEvent.shiftKey && keyEvent.key === 'Enter') {
+			const blockIndex = this.resolveBlockIndex(event.node?.data);
+			this.debug('ctrlEnter:cellKeyDown', {
+				displayedRowIndex: event.node?.rowIndex ?? null,
+				blockIndex,
+				colId: event.column?.getColId?.() ?? null
+			});
+			if (blockIndex !== null) {
+				keyEvent.preventDefault?.();
+				keyEvent.stopPropagation?.();
+				this.deps.getAddChildRowCallback()?.(blockIndex, event.column?.getColId?.() ?? null);
+			} else {
+				this.debug('ctrlEnter:cellKeyDown:missingBlockIndex');
+				return;
+			}
 		}
 
 		if (keyEvent.key === 'F2') {
@@ -188,6 +211,22 @@ export class AgGridInteractionController {
 		const keyEvent = normalizeKeyboardEvent(params.event);
 		if (!keyEvent) {
 			return false;
+		}
+
+		if ((keyEvent.metaKey || keyEvent.ctrlKey) && !keyEvent.altKey && !keyEvent.shiftKey && keyEvent.key === 'Enter') {
+			const blockIndex = this.resolveBlockIndex((params.node as { data?: RowData | null } | undefined)?.data);
+			this.debug('ctrlEnter:suppressKeyboardEvent', {
+				displayedRowIndex: params.node?.rowIndex ?? null,
+				blockIndex,
+				colId: params.column?.getColId?.() ?? null
+			});
+			if (blockIndex !== null) {
+				keyEvent.preventDefault?.();
+				keyEvent.stopPropagation?.();
+				this.deps.getAddChildRowCallback()?.(blockIndex, params.column?.getColId?.() ?? null);
+				return true;
+			}
+			this.debug('ctrlEnter:suppressKeyboardEvent:missingBlockIndex');
 		}
 
 		if (this.editing && keyEvent.key === 'Enter' && keyEvent.shiftKey) {
@@ -242,6 +281,19 @@ const columnId = column?.getColId?.() ?? (event as { columnId?: string | null })
 		this.pasteExit.destroy();
 		this.container = null;
 	}
+
+	private resolveBlockIndex(data: RowData | null | undefined): number | null {
+		if (!data) {
+			return null;
+		}
+		const raw = data[ROW_ID_FIELD];
+		if (raw === null || raw === undefined) {
+			return null;
+		}
+		const parsed = Number.parseInt(String(raw), 10);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+
 	private handleViewportActivity(reason: ViewportResizeReason): void {
 		this.debug('handleViewportActivity', reason);
 		this.composition.requestProxyRealign(reason);

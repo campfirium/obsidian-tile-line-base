@@ -136,7 +136,6 @@
       "manageGroupsButton": "Filtergroepen beheren"
     }
   },
-  
   "kanbanView": {
     "schemaUnavailable": "Kanbanweergave vereist een geldig tabelschema. Laad de notitie opnieuw en probeer het opnieuw.",
     "missingLaneField": "Kanbanweergave heeft de kolom \"{{field}}\" nodig. Voeg hem toe in de tabelweergave of schakel terug.",
@@ -165,7 +164,6 @@
     "laneActions": {
       "addCard": "Kaart toevoegen aan \"{{lane}}\""
     },
-    
     "fieldModal": {
       "title": "Kanbankolom selecteren",
       "description": "Kies de kolom waarvan de waarden de kolommen in het kanbanbord vormen.",
@@ -511,7 +509,11 @@
     "migrateSelectFilePlaceholder": "Zoek doelbestand",
     "pasteCellFailed": "Celwaarde plakken mislukt",
     "pasteCellFailedLog": "Cel plakken mislukt:",
-    "pasteCellFormulaDisabled": "Formules kunnen niet worden overschreven"
+    "pasteCellFormulaDisabled": "Formules kunnen niet worden overschreven",
+    "insertChildEntry": "Nieuwe subvermelding",
+    "setAsChildEntry": "Als subvermelding instellen",
+    "setAsTopLevelEntry": "Als vermelding op hoofdniveau instellen",
+    "openTemporaryParentView": "Deze groep bekijken"
   },
   "rowMigration": {
     "defaultFileName": "Gemigreerde rijen",
@@ -664,7 +666,8 @@
     "settingsMenuImportCsvLabel": "CSV in tabel importeren",
     "settingsMenuImportCsvAsTableLabel": "CSV als nieuwe tabel importeren",
     "settingsMenuHelpLabel": "Hulpnotitie openen",
-    "unnamedViewLabel": "Naamloze weergave"
+    "unnamedViewLabel": "Naamloze weergave",
+    "closeViewAriaLabel": "Weergave {{name}} sluiten"
   },
   "rowOrder": {
     "menuLabel": "Rijen herschikken (fysiek)",
@@ -730,7 +733,9 @@
     "duplicateModalTitle": "Weergave dupliceren: {{name}}",
     "menuEditDefault": "Standaardweergave bewerken",
     "menuResetDefault": "Standaardweergave resetten",
-    "editDefaultModalTitle": "Standaardweergave bewerken"
+    "editDefaultModalTitle": "Standaardweergave bewerken",
+    "menuSaveTemporary": "Opslaan als gewone weergave",
+    "saveTemporaryNotice": "Weergave opgeslagen: {{name}}"
   },
   "filterViewModals": {
     "saveButton": "Opslaan",
@@ -881,5 +886,9 @@
     "helpFileContent": "# welkom bij TileLineBase\n\n## task: Voltooi je eerste TLB-taak\n\nAction: Klik het selectievakje in de kolom Status aan om deze taak als voltooid te markeren.\n\n## task: Kanban herschikken\n\nAction: Klik op het Kanban-pictogram (rechtsboven) en sleep deze kaart naar \"Done\" of een andere baan.\n\n## task: Presentaties tonen\n\nAction: Klik op het Slides-pictogram (rechtsboven), klik daarna op de fullscreen-knop. Druk op `Tab` om miniaturen te bekijken.\n\n## task: Datasource verkennen\n\nAction: Klik op het Edit-pictogram (rechtsboven) om terug te keren naar de oorspronkelijke Markdown-weergave.\n\n## task: CSV-gegevens importeren\n\nAction: Klik op het tandwielpictogram (rechtsboven) en kies \"CSV importeren als nieuwe tabel.\"\n",
     "createHelpFailed": "TileLineBase kon het helpdocument niet maken. Controleer de console voor details.",
     "openHelpFailed": "TileLineBase kon het helpdocument niet openen."
+  },
+  "treeTitleCell": {
+    "expandRow": "Rij uitklappen",
+    "collapseRow": "Rij inklappen"
   }
 }

@@ -28,6 +28,7 @@ interface TablePersistenceDeps {
 	columnLayoutStore: ColumnLayoutStore;
 	configManager: TableConfigManager;
 	filterStateStore: FilterStateStore;
+	galleryFilterStateStore?: FilterStateStore;
 	getFile: () => TFile | null;
 	getFilterViewState: () => FileFilterViewState;
 	getTagGroupState: () => FileTagGroupState;
@@ -236,9 +237,10 @@ export class TablePersistenceService {
 			activeGalleryTemplate && !isDefaultSlideViewConfig(activeGalleryTemplate) && !matchesGlobalGalleryConfig;
 
 		return {
-			filterViews: this.deps.getFilterViewState(),
+			filterViews: this.deps.filterStateStore.getPersistableState(),
 			tagGroups: this.deps.getTagGroupState(),
-			galleryFilterViews: this.deps.getGalleryFilterViewState ? this.deps.getGalleryFilterViewState() : undefined,
+			galleryFilterViews: this.deps.galleryFilterStateStore?.getPersistableState()
+				?? (this.deps.getGalleryFilterViewState ? this.deps.getGalleryFilterViewState() : undefined),
 			galleryTagGroups: this.deps.getGalleryTagGroupState ? this.deps.getGalleryTagGroupState() : undefined,
 			columnWidths: this.deps.columnLayoutStore.exportPreferences(),
 			columnConfigs,

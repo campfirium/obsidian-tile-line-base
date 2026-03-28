@@ -51,7 +51,6 @@
       "manageGroupsButton": "Gerenciar grupos de filtros"
     }
   },
-  
   "kanbanView": {
     "schemaUnavailable": "A visualização Kanban requer um esquema de tabela válido. Recarregue a nota e tente novamente.",
     "missingLaneField": "A visualização Kanban precisa da coluna \"{{field}}\". Adicione-a na visualização em tabela ou volte para lá.",
@@ -80,7 +79,6 @@
     "laneActions": {
       "addCard": "Adicionar cartão a \"{{lane}}\""
     },
-    
     "fieldModal": {
       "title": "Selecionar coluna Kanban",
       "description": "Escolha a coluna cujos valores formarão as raias do quadro Kanban.",
@@ -511,7 +509,11 @@
     "migrateSelectFilePlaceholder": "Pesquisar arquivo de destino",
     "pasteCellFailed": "Falha ao colar o valor da célula",
     "pasteCellFailedLog": "Falha ao colar a célula:",
-    "pasteCellFormulaDisabled": "Fórmulas não podem ser sobrescritas"
+    "pasteCellFormulaDisabled": "Fórmulas não podem ser sobrescritas",
+    "insertChildEntry": "Nova subentrada",
+    "setAsChildEntry": "Definir como subentrada",
+    "setAsTopLevelEntry": "Definir como entrada de nível superior",
+    "openTemporaryParentView": "Ver este grupo"
   },
   "rowMigration": {
     "defaultFileName": "Linhas migradas",
@@ -664,7 +666,8 @@
     "settingsMenuImportCsvLabel": "Importar CSV para a tabela",
     "settingsMenuImportCsvAsTableLabel": "Importar CSV como nova tabela",
     "settingsMenuHelpLabel": "Abrir nota de ajuda",
-    "unnamedViewLabel": "Visualização sem nome"
+    "unnamedViewLabel": "Visualização sem nome",
+    "closeViewAriaLabel": "Fechar visualização {{name}}"
   },
   "rowOrder": {
     "menuLabel": "Reordenar linhas (no arquivo)",
@@ -730,7 +733,9 @@
     "duplicateModalTitle": "Duplicar visualização: {{name}}",
     "menuEditDefault": "Editar visualização padrão",
     "menuResetDefault": "Redefinir visualização padrão",
-    "editDefaultModalTitle": "Editar visualização padrão"
+    "editDefaultModalTitle": "Editar visualização padrão",
+    "menuSaveTemporary": "Salvar como visualização normal",
+    "saveTemporaryNotice": "Visualização salva: {{name}}"
   },
   "filterViewModals": {
     "saveButton": "Salvar",
@@ -881,5 +886,9 @@
     "helpFileContent": "# bem-vindo ao TileLineBase\n\n## task: Conclua sua primeira tarefa TLB\n\nAction: Clique na caixa de seleção na coluna Status para marcar esta tarefa como concluída.\n\n## task: Reorganizar o Kanban\n\nAction: Clique no ícone Kanban (canto superior direito) e arraste este cartão para “Done” ou outra faixa.\n\n## task: Apresentar slides\n\nAction: Clique no ícone Slides (canto superior direito) e depois no botão de tela cheia. Pressione `Tab` para ver miniaturas.\n\n## task: Explorar a fonte de dados\n\nAction: Clique no ícone Edit (canto superior direito) para voltar à visualização Markdown original.\n\n## task: Importar dados CSV\n\nAction: Clique no ícone de engrenagem (canto superior direito) e selecione “Importar CSV como nova tabela.”\n",
     "createHelpFailed": "O TileLineBase não conseguiu criar o documento de ajuda. Verifique o console para detalhes.",
     "openHelpFailed": "O TileLineBase não conseguiu abrir o documento de ajuda."
+  },
+  "treeTitleCell": {
+    "expandRow": "Expandir linha",
+    "collapseRow": "Recolher linha"
   }
 }

@@ -14,6 +14,8 @@ export class FilterStateStore {
 	private state: FileFilterViewState = { views: [], activeViewId: null, metadata: {} };
 	private filePath: string | null;
 	private readonly scope: FilterScope;
+	private temporaryViews: FilterViewDefinition[] = [];
+	private activeTemporaryViewId: string | null = null;
 
 	constructor(filePath: string | null, scope: FilterScope = 'table') {
 		this.filePath = filePath;
@@ -21,11 +23,17 @@ export class FilterStateStore {
 	}
 
 	setFilePath(filePath: string | null): void {
+		if (this.filePath !== filePath) {
+			this.clearTemporaryViews();
+		}
 		this.filePath = filePath;
 	}
 
-	resetState(): void {
-		this.state = { views: [], activeViewId: null, metadata: {} };
+	resetState(preserveTemporary = false): void {
+		if (!preserveTemporary) {
+			this.clearTemporaryViews();
+		}
+		this.state = this.composeState(null);
 	}
 
 	getState(): FileFilterViewState {
@@ -37,11 +45,11 @@ export class FilterStateStore {
 			this.resetState();
 			return;
 		}
-		this.state = {
+		this.state = this.composeState({
 			activeViewId: next.activeViewId ?? null,
 			views: (next.views ?? []).map((view) => this.cloneFilterViewDefinition(view)),
 			metadata: this.cloneMetadata(next.metadata)
-		};
+		});
 	}
 
 	loadFromSettings = (): FileFilterViewState => {
@@ -62,11 +70,11 @@ export class FilterStateStore {
 		const activeId = storedState.activeViewId && availableIds.has(storedState.activeViewId)
 			? storedState.activeViewId
 			: null;
-		this.state = {
+		this.state = this.composeState({
 			activeViewId: activeId,
 			views: storedState.views.map((view) => this.cloneFilterViewDefinition(view)),
 			metadata: this.cloneMetadata(storedState.metadata)
-		};
+		});
 		return this.state;
 	};
 
@@ -78,15 +86,29 @@ export class FilterStateStore {
 		if (!plugin) {
 			return;
 		}
+		const persistedState = this.getPersistableState();
 		if (this.scope === 'gallery') {
-			await plugin.saveGalleryFilterViewsForFile(this.filePath, this.state);
+			await plugin.saveGalleryFilterViewsForFile(this.filePath, persistedState);
 			return;
 		}
 		if (typeof plugin.saveFilterViewsForFile !== 'function') {
 			return;
 		}
-		await plugin.saveFilterViewsForFile(this.filePath, this.state);
+		await plugin.saveFilterViewsForFile(this.filePath, persistedState);
 	};
+
+	getPersistableState(): FileFilterViewState {
+		const persistedViews = this.state.views
+			.map((view) => this.cloneFilterViewDefinition(view));
+		const persistedIds = new Set(persistedViews.map((view) => view.id));
+		return {
+			activeViewId: this.state.activeViewId && persistedIds.has(this.state.activeViewId)
+				? this.state.activeViewId
+				: null,
+			views: persistedViews,
+			metadata: this.cloneMetadata(this.state.metadata)
+		};
+	}
 
 	cloneColumnState(state: ColumnState[] | null | undefined): ColumnState[] | null {
 		if (!state) {
@@ -112,8 +134,11 @@ export class FilterStateStore {
 		return result;
 	}
 
-	cloneFilterViewDefinition(source: FilterViewDefinition): FilterViewDefinition {
-		return {
+	cloneFilterViewDefinition(
+		source: FilterViewDefinition,
+		options?: { stripTemporary?: boolean }
+	): FilterViewDefinition {
+		const cloned: FilterViewDefinition = {
 			id: source.id,
 			name: source.name,
 			filterRule: source.filterRule ? this.deepClone(source.filterRule) : null,
@@ -124,10 +149,18 @@ export class FilterStateStore {
 			quickFilter: source.quickFilter ?? null,
 			icon: this.sanitizeIconId(source.icon)
 		};
+		if (!options?.stripTemporary && source.isTemporary) {
+			cloned.isTemporary = true;
+			cloned.temporaryKey = typeof source.temporaryKey === 'string' && source.temporaryKey.trim().length > 0
+				? source.temporaryKey.trim()
+				: null;
+		}
+		return cloned;
 	}
 
 	updateState(updater: (state: FileFilterViewState) => void): void {
 		updater(this.state);
+		this.syncTemporaryViewsFromState();
 	}
 
 	findActiveView(): FilterViewDefinition | null {
@@ -194,5 +227,34 @@ export class FilterStateStore {
 			result.icon = icon;
 		}
 		return Object.keys(result).length > 0 ? result : null;
+	}
+
+	private composeState(base: FileFilterViewState | null): FileFilterViewState {
+		const views = [
+			...(base?.views ?? []).map((view) => this.cloneFilterViewDefinition(view)),
+			...this.temporaryViews.map((view) => this.cloneFilterViewDefinition(view))
+		];
+		const availableIds = new Set(views.map((view) => view.id));
+		const requestedActiveId = this.activeTemporaryViewId ?? base?.activeViewId ?? null;
+		return {
+			activeViewId: requestedActiveId && availableIds.has(requestedActiveId) ? requestedActiveId : null,
+			views,
+			metadata: this.cloneMetadata(base?.metadata)
+		};
+	}
+
+	private clearTemporaryViews(): void {
+		this.temporaryViews = [];
+		this.activeTemporaryViewId = null;
+	}
+
+	private syncTemporaryViewsFromState(): void {
+		this.temporaryViews = this.state.views
+			.filter((view) => view.isTemporary)
+			.map((view) => this.cloneFilterViewDefinition(view));
+		this.activeTemporaryViewId =
+			this.state.activeViewId && this.temporaryViews.some((view) => view.id === this.state.activeViewId)
+				? this.state.activeViewId
+				: null;
 	}
 }

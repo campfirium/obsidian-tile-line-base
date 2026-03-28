@@ -21,6 +21,7 @@ export interface GridControllerHandlers {
 	onHeaderEdit?: (event: HeaderEditEvent) => void;
 	onColumnHeaderContextMenu?: (field: string, event: MouseEvent) => void;
 	onEnterAtLastRow?: (field: string | null) => void;
+	onAddChildRow?: (rowIndex: number, field: string | null) => void;
 	onOpenCellLink?: (context: CellLinkClickContext) => void;
 	onToggleTreeRowCollapse?: (rowIndex: number) => void;
 	onRowDragEnd?: (event: RowDragEndPayload) => void;
@@ -60,6 +61,7 @@ export class GridController {
 			onColumnResize: handlers.onColumnResize,
 			onCopyH2Section: handlers.onCopyH2Section,
 			onCopySelectionAsTemplate: handlers.onCopySelectionAsTemplate,
+			onAddChildRow: handlers.onAddChildRow,
 			onColumnOrderChange: handlers.onColumnOrderChange,
 			openCellLink: handlers.onOpenCellLink,
 			toggleTreeRowCollapse: handlers.onToggleTreeRowCollapse,
@@ -86,6 +88,11 @@ export class GridController {
 		if (handlers.onEnterAtLastRow && adapter.onEnterAtLastRow) {
 			adapter.onEnterAtLastRow((field) => {
 				handlers.onEnterAtLastRow?.(field ?? null);
+			});
+		}
+		if (handlers.onAddChildRow && adapter.onAddChildRow) {
+			adapter.onAddChildRow((rowIndex, field) => {
+				handlers.onAddChildRow?.(rowIndex, field);
 			});
 		}
 

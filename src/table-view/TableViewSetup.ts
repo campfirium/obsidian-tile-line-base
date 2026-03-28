@@ -48,6 +48,7 @@ export function initializeTableView(view: TableView): void {
 		columnLayoutStore: view.columnLayoutStore,
 		configManager: view.configManager,
 		filterStateStore: view.filterStateStore,
+		galleryFilterStateStore: view.galleryFilterStateStore,
 		getFile: () => view.file,
 		getFilterViewState: () => view.filterViewState,
 		getTagGroupState: () => view.tagGroupState,
@@ -171,7 +172,8 @@ export function initializeTableView(view: TableView): void {
 		getGridAdapter: () => view.gridAdapter,
 		copyTemplate: view.copyTemplateController,
 		history: view.historyManager,
-		paragraphPromotion: view.paragraphPromotionController
+		paragraphPromotion: view.paragraphPromotionController,
+		getFilterViewController: () => view.filterViewController
 	});
 	view.gridLayoutController = new GridLayoutController(view.app, view.gridController);
 	view.focusManager = new FocusManager({

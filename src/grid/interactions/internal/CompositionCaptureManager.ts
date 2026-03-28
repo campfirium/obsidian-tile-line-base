@@ -1,6 +1,7 @@
 import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
 import { CompositionProxy } from '../../utils/CompositionProxy';
 import { getLogger } from '../../../utils/logger';
+import { ROW_ID_FIELD, type RowData } from '../../GridAdapter';
 import { GridClipboardService } from './GridClipboardService';
 import { FocusNavigator } from './FocusNavigator';
 import {
@@ -19,6 +20,7 @@ interface CompositionManagerOptions {
 	debug: DebugLogger;
 	clipboard: GridClipboardService;
 	navigator: FocusNavigator;
+	getAddChildRowCallback: () => ((rowIndex: number, field: string | null) => void) | undefined;
 }
 
 export class CompositionCaptureManager {
@@ -28,6 +30,7 @@ export class CompositionCaptureManager {
 	private readonly debug: DebugLogger;
 	private readonly clipboard: GridClipboardService;
 	private readonly navigator: FocusNavigator;
+	private readonly getAddChildRowCallback: () => ((rowIndex: number, field: string | null) => void) | undefined;
 	private container: HTMLElement | null = null;
 	private proxyByDoc = new WeakMap<Document, CompositionProxy>();
 	private readonly proxies = new Set<CompositionProxy>();
@@ -42,6 +45,7 @@ export class CompositionCaptureManager {
 		this.debug = options.debug;
 		this.clipboard = options.clipboard;
 		this.navigator = options.navigator;
+		this.getAddChildRowCallback = options.getAddChildRowCallback;
 	}
 
 	setContainer(container: HTMLElement | null): void {
@@ -236,6 +240,26 @@ export class CompositionCaptureManager {
 			this.clipboard.handleCopyShortcut(event);
 			return;
 		}
+		if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+			const coords = this.focus.getCoordinates();
+			const blockIndex = this.resolveBlockIndex(coords.rowIndex);
+			this.debug('ctrlEnter:proxyKeyDown', {
+				displayedRowIndex: coords.rowIndex,
+				blockIndex,
+				colId: coords.colId ?? null
+			});
+			if (blockIndex != null) {
+				event.preventDefault?.();
+				event.stopPropagation?.();
+				const callback = this.getAddChildRowCallback();
+				if (callback) {
+					callback(blockIndex, coords.colId ?? null);
+				}
+			} else {
+				this.debug('ctrlEnter:proxyKeyDown:missingBlockIndex');
+			}
+			return;
+		}
 
 		switch (event.key) {
 			case 'F2':
@@ -339,6 +363,27 @@ export class CompositionCaptureManager {
 			rowIndex: parsed,
 			colId
 		};
+	}
+
+	private resolveBlockIndex(displayedRowIndex: number | null): number | null {
+		if (displayedRowIndex == null || displayedRowIndex < 0) {
+			return null;
+		}
+		const gridApi = this.getGridApi();
+		if (!gridApi || typeof gridApi.getDisplayedRowAtIndex !== 'function') {
+			return null;
+		}
+		const rowNode = gridApi.getDisplayedRowAtIndex(displayedRowIndex);
+		const data = rowNode?.data as RowData | undefined;
+		if (!data) {
+			return null;
+		}
+		const raw = data[ROW_ID_FIELD];
+		if (raw === null || raw === undefined) {
+			return null;
+		}
+		const parsed = Number.parseInt(String(raw), 10);
+		return Number.isNaN(parsed) ? null : parsed;
 	}
 
 	private hasActiveGridEditor(gridApi: GridApi): boolean {

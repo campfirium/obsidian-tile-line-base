@@ -1479,6 +1479,33 @@
 	white-space: nowrap;
 }
 
+.tlb-filter-view-button__close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	margin-left: 2px;
+	color: color-mix(in srgb, var(--text-faint) 88%, transparent);
+	opacity: 0.78;
+	border-radius: 999px;
+	flex: 0 0 auto;
+}
+
+.tlb-filter-view-button__close:hover,
+.tlb-filter-view-button__close:focus-visible {
+	background: color-mix(in srgb, var(--background-modifier-hover) 88%, transparent);
+	color: var(--text-normal);
+	opacity: 1;
+	outline: none;
+}
+
+.tlb-filter-view-button__close svg {
+	width: 10px !important;
+	height: 10px !important;
+	stroke-width: 2.2;
+}
+
 .tlb-filter-view-button[draggable="true"] {
   cursor: grab;
 }

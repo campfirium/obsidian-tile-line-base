@@ -144,6 +144,10 @@ export class AgGridInteractionController {
 		}
 		return started;
 	}
+	stopEditingFocusedCell(reason?: string): boolean {
+		const result = this.stopActiveEditingSession(reason ?? 'unknown');
+		return result === 'success';
+	}
 	handleGridCellKeyDown(event: CellKeyDownEvent): void {
 		const keyEvent = normalizeKeyboardEvent(event.event);
 		if (!keyEvent) {

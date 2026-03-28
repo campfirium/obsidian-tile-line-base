@@ -11,7 +11,6 @@ import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { GridCellClipboardController } from './GridCellClipboardController';
 import type { RowMigrationController } from './RowMigrationController';
 import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
-import { PARENT_ENTRY_ID_FIELD } from './entryFields';
 interface GridContextMenuParams {
 	app: App;
 	container: HTMLElement | null;
@@ -41,10 +40,7 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 	const migrateIndexes = targetIndexes;
 	const hasMigrateTargets = migrateIndexes.length > 0;
 	const targetBlock = params.dataStore.getBlocks()[params.blockIndex];
-	const canInsertChild =
-		!isMultiSelect &&
-		Boolean(targetBlock) &&
-		String(targetBlock?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim().length === 0;
+	const canInsertChild = !isMultiSelect && Boolean(targetBlock);
 	const hierarchyAction = !isMultiSelect
 		? params.rowInteraction.canOutdentRow(params.blockIndex)
 			? {

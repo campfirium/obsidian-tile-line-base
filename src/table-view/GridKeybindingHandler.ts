@@ -40,14 +40,34 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 		context.logger.debug('undo-skip-outside', { key: event.key });
 		return;
 	}
-	if (activeElement?.classList.contains('ag-cell-edit-input')) {
-		context.logger.debug('undo-skip-editor', { key: event.key });
-		return;
-	}
 
 	const gridAdapter = context.getGridAdapter();
 	const focusedCell = gridAdapter?.getFocusedCell?.() ?? null;
 	const ctrlLike = event.metaKey || event.ctrlKey;
+	if (
+		focusedCell &&
+		!ctrlLike &&
+		!event.altKey &&
+		!event.shiftKey &&
+		event.key === 'Insert'
+	) {
+		event.preventDefault();
+		event.stopPropagation();
+		gridAdapter?.stopEditingFocusedCell?.();
+		context.rowInteraction.addRow(focusedCell.rowIndex + 1, { focusField: focusedCell.field });
+		return;
+	}
+	if (focusedCell && ctrlLike && !event.altKey && !event.shiftKey && event.key === 'Enter') {
+		event.preventDefault();
+		event.stopPropagation();
+		gridAdapter?.stopEditingFocusedCell?.();
+		context.rowInteraction.addChildRow(focusedCell.rowIndex, { focusField: focusedCell.field });
+		return;
+	}
+	if (activeElement?.classList.contains('ag-cell-edit-input')) {
+		context.logger.debug('undo-skip-editor', { key: event.key });
+		return;
+	}
 	if (event.key === 'F2') {
 		if (event.defaultPrevented) {
 			return;

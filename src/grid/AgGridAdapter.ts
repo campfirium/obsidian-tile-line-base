@@ -250,6 +250,10 @@ export class AgGridAdapter implements GridAdapter {
 		this.interaction.startEditingFocusedCell('adapter');
 	}
 
+	stopEditingFocusedCell(): void {
+		this.interaction.stopEditingFocusedCell('adapter');
+	}
+
 	getFocusedCell(): { rowIndex: number; field: string } | null {
 		return this.selection.getFocusedCell();
 	}

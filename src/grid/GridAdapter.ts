@@ -161,6 +161,11 @@ export interface GridAdapter {
 	startEditingFocusedCell?(): void;
 
 	/**
+	 * 停止编辑当前聚焦的单元格并提交值
+	 */
+	stopEditingFocusedCell?(): void;
+
+	/**
 	 * 获取当前聚焦的单元格信息
 	 * @returns 聚焦单元格的行索引和列字段名，如果没有聚焦则返回 null
 	 */

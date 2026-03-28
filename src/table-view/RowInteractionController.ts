@@ -93,6 +93,7 @@ export class RowInteractionController {
 
 	addChildRow(parentRowIndex: number, options?: RowActionOptions): void {
 		if (!this.ensureSchema()) {
+			logger.warn('ctrlEnter:addChildRow:missingSchema', { parentRowIndex });
 			return;
 		}
 
@@ -114,6 +115,12 @@ export class RowInteractionController {
 			logger.error('Failed to resolve child entry insertion context');
 			return;
 		}
+		logger.warn('ctrlEnter:addChildRow:start', {
+			parentRowIndex,
+			focusField,
+			parentEntryId: parentEntryId || null,
+			insertIndex: insertContext.insertIndex
+		});
 		const mergedPrefills = {
 			...filterPrefills,
 			...insertContext.prefills,
@@ -124,6 +131,11 @@ export class RowInteractionController {
 			logger.error('Failed to add child entry');
 			return;
 		}
+		logger.warn('ctrlEnter:addChildRow:inserted', {
+			parentRowIndex,
+			insertIndex,
+			focusField
+		});
 
 		if (insertContext.parentBlock) {
 			insertContext.parentBlock.data[COLLAPSED_STATE_FIELD] = 'false';

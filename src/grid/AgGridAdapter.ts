@@ -36,6 +36,7 @@ export class AgGridAdapter implements GridAdapter {
 	private cellEditCallback?: (event: CellEditEvent) => void;
 	private columnHeaderContextMenuCallback?: (event: { field: string; domEvent: MouseEvent }) => void;
 	private enterAtLastRowCallback?: (field: string) => void;
+	private addChildRowCallback?: (rowIndex: number, field: string | null) => void;
 	private rowDragEndCallback?: (event: RowDragEndPayload) => void;
 	private gridContext?: GridInteractionContext;
 	private containerEl: HTMLElement | null = null;
@@ -66,6 +67,7 @@ export class AgGridAdapter implements GridAdapter {
 			getGridContext: () => this.gridContext,
 			getCellEditCallback: () => this.cellEditCallback,
 			getEnterAtLastRowCallback: () => this.enterAtLastRowCallback,
+			getAddChildRowCallback: () => this.addChildRowCallback,
 			translate: (key: string) => t(key as TranslationKey)
 		});
 		this.interaction.onViewportResize(reason => {
@@ -224,6 +226,7 @@ export class AgGridAdapter implements GridAdapter {
 		this.interaction.setContainer(null);
 		this.cellEditCallback = undefined;
 		this.enterAtLastRowCallback = undefined;
+		this.addChildRowCallback = undefined;
 		this.columnHeaderContextMenuCallback = undefined;
 		this.rowDragEndCallback = undefined;
 		this.gridContext = undefined;
@@ -260,6 +263,10 @@ export class AgGridAdapter implements GridAdapter {
 
 	onEnterAtLastRow(callback: (field: string) => void): void {
 		this.enterAtLastRowCallback = callback;
+	}
+
+	onAddChildRow(callback: (rowIndex: number, field: string | null) => void): void {
+		this.addChildRowCallback = callback;
 	}
 
 	onRowDragEnd(callback: (event: RowDragEndPayload) => void): void {

@@ -99,6 +99,9 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 					const oldRowCount = view.blocks.length;
 					view.rowInteractionController.addRow(oldRowCount, { focusField: field ?? null });
 				},
+				onAddChildRow: (rowIndex, field) => {
+					view.rowInteractionController.addChildRow(rowIndex, { focusField: field });
+				},
 				onRowDragEnd: (payload) => {
 					view.rowInteractionController.reorderRowsByDrag(payload);
 				}

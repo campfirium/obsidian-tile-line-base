@@ -41,6 +41,16 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 		return;
 	}
 
+	const isEditingCell = Boolean(
+		activeElement?.classList.contains('ag-cell-edit-input') ||
+		activeElement?.closest('.ag-cell-inline-editing') ||
+		activeElement?.closest('.ag-cell-editor')
+	);
+	if (isEditingCell) {
+		context.logger.debug('undo-skip-editor', { key: event.key });
+		return;
+	}
+
 	const gridAdapter = context.getGridAdapter();
 	const focusedCell = gridAdapter?.getFocusedCell?.() ?? null;
 	const ctrlLike = event.metaKey || event.ctrlKey;
@@ -53,19 +63,13 @@ export function handleGridKeydown(event: KeyboardEvent, context: GridKeybindingC
 	) {
 		event.preventDefault();
 		event.stopPropagation();
-		gridAdapter?.stopEditingFocusedCell?.();
 		context.rowInteraction.addRow(focusedCell.rowIndex + 1, { focusField: focusedCell.field });
 		return;
 	}
 	if (focusedCell && ctrlLike && !event.altKey && !event.shiftKey && event.key === 'Enter') {
 		event.preventDefault();
 		event.stopPropagation();
-		gridAdapter?.stopEditingFocusedCell?.();
 		context.rowInteraction.addChildRow(focusedCell.rowIndex, { focusField: focusedCell.field });
-		return;
-	}
-	if (activeElement?.classList.contains('ag-cell-edit-input')) {
-		context.logger.debug('undo-skip-editor', { key: event.key });
 		return;
 	}
 	if (event.key === 'F2') {

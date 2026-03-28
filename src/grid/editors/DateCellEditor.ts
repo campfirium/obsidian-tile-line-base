@@ -1,4 +1,5 @@
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
+import { ROW_ID_FIELD } from '../GridAdapter';
 import { Notice, setIcon } from 'obsidian';
 
 import { normalizeDateInput } from '../../utils/datetime';
@@ -118,7 +119,11 @@ export function createDateCellEditor() {
 		};
 
 		private keydownHandler = (event: KeyboardEvent) => {
-			if (event.key === 'Enter' || event.key === 'Tab') {
+			if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				event.stopPropagation();
+				this.triggerAddChildRow();
+			} else if (event.key === 'Enter' || event.key === 'Tab') {
 				event.stopPropagation();
 				const normalized = this.applyNormalizedInput();
 				if (normalized !== null) {
@@ -261,6 +266,17 @@ export function createDateCellEditor() {
 				this.invalidNotice.hide();
 				this.invalidNotice = null;
 			}
+		}
+
+		private triggerAddChildRow(): void {
+			const rowIndexRaw = this.params?.data?.[ROW_ID_FIELD];
+			const rowIndex = Number.parseInt(String(rowIndexRaw ?? ''), 10);
+			if (Number.isNaN(rowIndex)) {
+				return;
+			}
+			const field = this.params?.column?.getColId?.() ?? this.params?.colDef?.field ?? null;
+			const context = this.params?.context as { onAddChildRow?: (targetRowIndex: number, targetField: string | null) => void } | undefined;
+			context?.onAddChildRow?.(rowIndex, field);
 		}
 
 	};

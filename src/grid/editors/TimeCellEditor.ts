@@ -1,4 +1,5 @@
 import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
+import { ROW_ID_FIELD } from '../GridAdapter';
 import { Notice } from 'obsidian';
 
 import { normalizeTimeInput } from '../../utils/datetime';
@@ -41,7 +42,11 @@ export function createTimeCellEditor() {
 		};
 
 		private keydownHandler = (event: KeyboardEvent) => {
-			if (event.key === 'Enter' || event.key === 'Tab') {
+			if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				event.stopPropagation();
+				this.triggerAddChildRow();
+			} else if (event.key === 'Enter' || event.key === 'Tab') {
 				event.stopPropagation();
 				const normalized = this.applyNormalizedInput();
 				if (normalized !== null) {
@@ -117,6 +122,17 @@ export function createTimeCellEditor() {
 			}
 			this.lastValidValue = normalized;
 			return normalized;
+		}
+
+		private triggerAddChildRow(): void {
+			const rowIndexRaw = this.params?.data?.[ROW_ID_FIELD];
+			const rowIndex = Number.parseInt(String(rowIndexRaw ?? ''), 10);
+			if (Number.isNaN(rowIndex)) {
+				return;
+			}
+			const field = this.params?.column?.getColId?.() ?? this.params?.colDef?.field ?? null;
+			const context = this.params?.context as { onAddChildRow?: (targetRowIndex: number, targetField: string | null) => void } | undefined;
+			context?.onAddChildRow?.(rowIndex, field);
 		}
 
 		private prepareNormalizedValue(value: string): { normalized: string | null; valid: boolean } {

@@ -177,6 +177,8 @@ export interface GridAdapter {
 	 */
 	onEnterAtLastRow?(callback: (field: string) => void): void;
 
+	onAddChildRow?(callback: (rowIndex: number, field: string | null) => void): void;
+
 	/**
 	 * 在表格初始化完成后执行回调
 	 */

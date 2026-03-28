@@ -11,6 +11,7 @@ export interface GridInteractionContext {
 	onColumnResize?: (field: string, width: number) => void;
 	onCopyH2Section?: (rowIndex: number) => void;
 	onCopySelectionAsTemplate?: (rowIndex: number) => void;
+	onAddChildRow?: (rowIndex: number, field: string | null) => void;
 	onColumnOrderChange?: (fields: string[]) => void;
 	openCellLink?: (context: CellLinkClickContext) => void;
 	toggleTreeRowCollapse?: (rowIndex: number) => void;
@@ -23,6 +24,7 @@ export interface InteractionControllerDeps {
 	getGridContext(): GridInteractionContext | undefined;
 	getCellEditCallback(): ((event: CellEditEvent) => void) | undefined;
 	getEnterAtLastRowCallback(): ((field: string) => void) | undefined;
+	getAddChildRowCallback(): ((rowIndex: number, field: string | null) => void) | undefined;
 	translate(key: string): string;
 }
 

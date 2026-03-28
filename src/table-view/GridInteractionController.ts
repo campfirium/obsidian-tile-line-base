@@ -150,6 +150,13 @@ export class GridInteractionController {
 	}
 
 	private handleKeydown(event: KeyboardEvent): void {
+		if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key === 'Enter') {
+			this.logger.warn('ctrlEnter:documentKeydown', {
+				targetTag: (event.target as HTMLElement | null)?.tagName ?? null,
+				activeTag: (this.container?.ownerDocument.activeElement as HTMLElement | null)?.tagName ?? null,
+				defaultPrevented: event.defaultPrevented
+			});
+		}
 		handleGridKeydown(event, {
 			container: this.container,
 			logger: this.logger,

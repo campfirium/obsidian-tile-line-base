@@ -41,6 +41,8 @@ export interface FilterViewDefinition {
 	columnState?: ColumnState[] | null;
 	quickFilter?: string | null;
 	icon?: string | null;           // 可选 Lucide 图标 ID
+	isTemporary?: boolean;
+	temporaryKey?: string | null;
 }
 
 export interface DefaultFilterViewPreferences {

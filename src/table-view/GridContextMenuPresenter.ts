@@ -11,6 +11,8 @@ import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { GridCellClipboardController } from './GridCellClipboardController';
 import type { RowMigrationController } from './RowMigrationController';
 import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
+import { ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from './entryFields';
+import type { FilterViewController } from './filter/FilterViewController';
 interface GridContextMenuParams {
 	app: App;
 	container: HTMLElement | null;
@@ -28,6 +30,7 @@ interface GridContextMenuParams {
 	onRequestClose: () => void;
 	history: TableHistoryManager;
 	paragraphPromotion: ParagraphPromotionController;
+	filterViewController: FilterViewController;
 }
 
 export function createGridContextMenu(params: GridContextMenuParams): Menu | null {
@@ -41,6 +44,9 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 	const hasMigrateTargets = migrateIndexes.length > 0;
 	const targetBlock = params.dataStore.getBlocks()[params.blockIndex];
 	const canInsertChild = !isMultiSelect && Boolean(targetBlock);
+	const temporaryParentView = !isMultiSelect
+		? buildTemporaryParentViewAction(params, targetBlock, params.blockIndex)
+		: null;
 	const hierarchyAction = !isMultiSelect
 		? params.rowInteraction.canOutdentRow(params.blockIndex)
 			? {
@@ -143,6 +149,7 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 			insertChild: canInsertChild
 				? () => params.rowInteraction.addChildRow(params.blockIndex)
 				: undefined,
+			openTemporaryParentView: temporaryParentView?.handler,
 			hierarchyAction,
 			fillSelectionWithValue: fillSelection.action,
 			duplicateSelection: () => params.rowInteraction.duplicateRows(selectedRows),
@@ -159,5 +166,53 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 	});
 
 	return menu;
+}
+
+function buildTemporaryParentViewAction(
+	params: GridContextMenuParams,
+	targetBlock: ReturnType<TableDataStore['getBlocks']>[number] | undefined,
+	blockIndex: number
+): { handler: () => void } | null {
+	if (!targetBlock) {
+		return null;
+	}
+	const parentEntryId = String(targetBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+	if (parentEntryId) {
+		return null;
+	}
+	const entryId = String(targetBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+	if (!entryId) {
+		return null;
+	}
+	const hasChildren = params.dataStore.getBlocks().some((block, index) => {
+		if (index === blockIndex) {
+			return false;
+		}
+		return String(block?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim() === entryId;
+	});
+	if (!hasChildren) {
+		return null;
+	}
+	const primaryField = params.dataStore.getSchema()?.columnNames?.[0] ?? null;
+	const name = primaryField ? String(targetBlock.data?.[primaryField] ?? '').trim() : '';
+	if (!name) {
+		return null;
+	}
+	return {
+		handler: () => {
+			params.filterViewController.createTemporaryFilterView({
+				name,
+				filterRule: {
+					combineMode: 'OR',
+					conditions: [
+						{ column: ENTRY_ID_FIELD, operator: 'equals', value: entryId },
+						{ column: PARENT_ENTRY_ID_FIELD, operator: 'equals', value: entryId }
+					]
+				},
+				icon: 'filter',
+				temporaryKey: `parent-group:${entryId}`
+			});
+		}
+	};
 }
 

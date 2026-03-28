@@ -10,6 +10,7 @@ export interface FilterViewBarCallbacks {
 	onCreate(): void;
 	onActivate(viewId: string | null): void;
 	onContextMenu(view: FilterViewDefinition, event: MouseEvent): void;
+	onClose(viewId: string): void;
 	onReorder(draggedId: string, targetId: string): void;
 	onOpenTagGroupMenu(button: HTMLElement): void;
 	onOpenTableCreation(button: HTMLElement): void;
@@ -144,7 +145,11 @@ export class FilterViewBar {
 
 		for (let index = 0; index < state.views.length; index++) {
 			const view = state.views[index];
-			if (this.tagGroupState.visibleViewIds && !this.tagGroupState.visibleViewIds.has(view.id)) {
+			if (
+				this.tagGroupState.visibleViewIds &&
+				!this.tagGroupState.visibleViewIds.has(view.id) &&
+				!view.isTemporary
+			) {
 				continue;
 			}
 			const button = this.tabsEl.createEl('button', {
@@ -195,6 +200,30 @@ export class FilterViewBar {
 				event.stopPropagation();
 				this.options.callbacks.onContextMenu(view, event);
 			});
+
+			if (view.isTemporary) {
+				const closeButton = button.createSpan({
+					cls: 'tlb-filter-view-button__close'
+				});
+				closeButton.setAttribute('role', 'button');
+				closeButton.setAttribute('tabindex', '0');
+				closeButton.setAttribute('aria-label', t('filterViewBar.closeViewAriaLabel', { name: view.name }));
+				closeButton.setAttribute('title', t('filterViewBar.closeViewAriaLabel', { name: view.name }));
+				setIcon(closeButton, 'x');
+				closeButton.addEventListener('click', (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					this.options.callbacks.onClose(view.id);
+				});
+				closeButton.addEventListener('keydown', (event) => {
+					if (event.key !== 'Enter' && event.key !== ' ') {
+						return;
+					}
+					event.preventDefault();
+					event.stopPropagation();
+					this.options.callbacks.onClose(view.id);
+				});
+			}
 		}
 
 		this.tabsEl.append(this.addButtonEl);
@@ -477,4 +506,3 @@ export interface FilterViewBarTagGroupState {
 	visibleViewIds: Set<string> | null;
 	hasGroups: boolean;
 }
-

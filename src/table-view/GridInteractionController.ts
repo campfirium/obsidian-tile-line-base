@@ -12,6 +12,7 @@ import { createGridContextMenu } from './GridContextMenuPresenter';
 import { getLogger } from '../utils/logger';
 import { handleGridKeydown } from './GridKeybindingHandler';
 import type { ParagraphPromotionController } from './paragraph/ParagraphPromotionController';
+import type { FilterViewController } from './filter/FilterViewController';
 
 interface GridInteractionDeps {
 	app: App;
@@ -23,6 +24,7 @@ interface GridInteractionDeps {
 	copyTemplate: CopyTemplateController;
 	history: TableHistoryManager;
 	paragraphPromotion: ParagraphPromotionController;
+	getFilterViewController: () => FilterViewController;
 }
 
 export class GridInteractionController {
@@ -204,7 +206,8 @@ export class GridInteractionController {
 			},
 			onRequestClose: () => this.hideContextMenu(),
 			history: this.history,
-			paragraphPromotion: this.deps.paragraphPromotion
+			paragraphPromotion: this.deps.paragraphPromotion,
+			filterViewController: this.deps.getFilterViewController()
 		});
 
 		if (!menu) {

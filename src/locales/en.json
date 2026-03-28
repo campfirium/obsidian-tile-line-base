@@ -513,7 +513,8 @@
     "migrateSelectFilePlaceholder": "Search for target file",
     "pasteCellFailed": "Failed to paste cell value",
     "pasteCellFailedLog": "Paste cell failed:",
-    "pasteCellFormulaDisabled": "Formulas cannot be overwritten"
+    "pasteCellFormulaDisabled": "Formulas cannot be overwritten",
+    "openTemporaryParentView": "Open parent group"
   },
   "treeTitleCell": {
     "expandRow": "Expand row",
@@ -670,7 +671,8 @@
     "settingsMenuImportCsvLabel": "Import CSV into table",
     "settingsMenuImportCsvAsTableLabel": "Import CSV as new table",
     "settingsMenuHelpLabel": "Open help note",
-    "unnamedViewLabel": "Unnamed view"
+    "unnamedViewLabel": "Unnamed view",
+    "closeViewAriaLabel": "Close view {{name}}"
   },
   "rowOrder": {
     "menuLabel": "Reorder rows (physical)",
@@ -734,6 +736,8 @@
     "duplicateNameSuffix": "copy",
     "duplicateNotice": "Duplicated view: {{name}}",
     "duplicateModalTitle": "Duplicate view: {{name}}",
+    "menuSaveTemporary": "Save as regular view",
+    "saveTemporaryNotice": "Saved view: {{name}}",
     "menuEditDefault": "Edit default view",
     "menuResetDefault": "Reset default view",
     "editDefaultModalTitle": "Edit default view"

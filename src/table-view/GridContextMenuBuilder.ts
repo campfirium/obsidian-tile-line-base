@@ -32,6 +32,7 @@ interface MenuBuilderOptions {
 		insertAbove: () => void;
 		insertBelow: () => void;
 		insertChild?: () => void;
+		openTemporaryParentView?: () => void;
 		hierarchyAction?: {
 			labelKey: Parameters<typeof t>[0];
 			icon: string;
@@ -222,6 +223,9 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 	addItem('gridInteraction.insertRowBelow', 'arrow-down', options.actions.insertBelow);
 	addItem('gridInteraction.insertChildEntry', 'indent', options.actions.insertChild, {
 		disabled: !options.actions.insertChild
+	});
+	addItem('gridInteraction.openTemporaryParentView', 'filter', options.actions.openTemporaryParentView, {
+		disabled: !options.actions.openTemporaryParentView
 	});
 	if (options.actions.hierarchyAction) {
 		addItem(

@@ -37,6 +37,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 			onContextMenu: (filterView, event) => {
 				view.filterViewController.openFilterViewMenu(filterView, event);
 			},
+			onClose: (viewId) => {
+				view.filterViewController.deleteFilterView(viewId);
+			},
 			onReorder: (draggedId, targetId) => {
 				view.filterViewController.reorderFilterViews(draggedId, targetId);
 			},

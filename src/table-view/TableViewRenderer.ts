@@ -210,7 +210,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.schemaDirty = false;
 		view.sparseCleanupRequired = false;
 	}
-	if (!view.filterViewState || view.filterViewState.views.length === 0) {
+	if (view.filterStateStore.getPersistableState().views.length === 0) {
 		view.filterStateStore.loadFromSettings();
 		view.filterViewState = view.filterStateStore.getState();
 	}
@@ -220,7 +220,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	syncTagGroupState(view);
 	view.tagGroupController.syncWithAvailableViews();
 	syncTagGroupState(view);
-	if (!view.galleryFilterViewState || view.galleryFilterViewState.views.length === 0) {
+	if (view.galleryFilterStateStore.getPersistableState().views.length === 0) {
 		view.galleryFilterStateStore.loadFromSettings();
 		view.galleryFilterViewState = view.galleryFilterStateStore.getState();
 	}

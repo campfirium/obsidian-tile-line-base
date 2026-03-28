@@ -514,7 +514,7 @@
     "pasteCellFailed": "Failed to paste cell value",
     "pasteCellFailedLog": "Paste cell failed:",
     "pasteCellFormulaDisabled": "Formulas cannot be overwritten",
-    "openTemporaryParentView": "Open parent group"
+    "openTemporaryParentView": "View this group"
   },
   "treeTitleCell": {
     "expandRow": "Expand row",

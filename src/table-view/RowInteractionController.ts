@@ -629,8 +629,15 @@ export class RowInteractionController {
 			targetRowParentEntryId: event.targetRow?.[PARENT_ENTRY_ID_FIELD] ?? null,
 			displayedRowOrder: displayedOrder
 		});
+		if (!hasFullDisplayedOrder && movesHierarchyBranch && sourceIndex !== null) {
+			if (this.applyBranchPartialDisplayedOrder(blocks, sourceIndex, draggedIndexes, displayedOrder)) {
+				return;
+			}
+			// If the partial branch handler couldn't resolve, do nothing —
+			// we must not blindly reorder when hidden rows exist.
+			return;
+		}
 		if (!hasFullDisplayedOrder && movesHierarchyBranch) {
-			// Branch reorder still requires the full displayed list so hidden rows are not reordered by accident.
 			return;
 		}
 		if (hasFullDisplayedOrder && sourceIndex !== null && movesHierarchyBranch) {
@@ -906,6 +913,120 @@ export class RowInteractionController {
 			undo: { rowIndex: insertionIndex, field: focusField ?? null },
 			redo: { rowIndex: insertionIndex, field: focusField ?? null }
 		});
+		return true;
+	}
+
+	/**
+	 * Handle branch (parent + children) reorder in a partial (filtered /
+	 * collapsed) view.  We use the visible blocks to find where the parent
+	 * ended up among non-branch rows, then move the entire branch to that
+	 * position in the full block list.
+	 */
+	private applyBranchPartialDisplayedOrder(
+		blocks: H2Block[],
+		sourceIndex: number,
+		draggedIndexes: number[],
+		displayedOrder: Array<string | number> | null
+	): boolean {
+		const visibleBlocks = this.buildPartialOrderedBlocksFromDisplayedOrder(blocks, displayedOrder);
+		const anchorBlock = blocks[sourceIndex] ?? null;
+		if (!visibleBlocks || !anchorBlock) {
+			return false;
+		}
+
+		const visibleIndex = visibleBlocks.indexOf(anchorBlock);
+		if (visibleIndex < 0) {
+			return false;
+		}
+
+		const draggedIndexSet = new Set(draggedIndexes);
+		const draggedBlockSet = new Set(draggedIndexes.map(i => blocks[i]).filter(Boolean));
+
+		// Find the first non-branch visible row before the anchor.
+		let targetBlock: H2Block | null = null;
+		let position: 'before' | 'after' = 'after';
+		for (let i = visibleIndex - 1; i >= 0; i--) {
+			const b = visibleBlocks[i];
+			if (b && !draggedBlockSet.has(b)) {
+				targetBlock = b;
+				position = 'after';
+				break;
+			}
+		}
+		if (!targetBlock) {
+			for (let i = visibleIndex + 1; i < visibleBlocks.length; i++) {
+				const b = visibleBlocks[i];
+				if (b && !draggedBlockSet.has(b)) {
+					targetBlock = b;
+					position = 'before';
+					break;
+				}
+			}
+		}
+		if (!targetBlock) {
+			return false;
+		}
+
+		const targetIndex = blocks.indexOf(targetBlock);
+		if (targetIndex < 0 || draggedIndexSet.has(targetIndex)) {
+			return false;
+		}
+
+		// #5 check: block branch drops into child groups.
+		const targetParentEntryId = String(targetBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		const targetEntryId = String(targetBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		let blockedByChildGroup = false;
+		if (targetParentEntryId) {
+			blockedByChildGroup = true;
+		} else if (position === 'after' && targetEntryId) {
+			const nextIdx = targetIndex + 1;
+			const nextBlk = nextIdx < blocks.length ? blocks[nextIdx] : null;
+			if (nextBlk && !draggedIndexSet.has(nextIdx)) {
+				const nextPid = String(nextBlk.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+				if (nextPid === targetEntryId) {
+					blockedByChildGroup = true;
+				}
+			}
+		}
+		if (blockedByChildGroup) {
+			this.refreshGridData();
+			return true;
+		}
+
+		const orderedBlocks = this.buildReorderedBlockList(blocks, draggedIndexes, targetIndex, position);
+		if (!orderedBlocks || this.isSameBlockOrder(blocks, orderedBlocks)) {
+			return false;
+		}
+
+		const orderedInsertionIndex = orderedBlocks.indexOf(anchorBlock);
+		if (orderedInsertionIndex < 0) {
+			return false;
+		}
+
+		const focusField = this.resolveFocusField();
+		this.history.applyRowOrderChange(orderedBlocks, {
+			undo: { rowIndex: sourceIndex, field: focusField ?? null },
+			redo: { rowIndex: orderedInsertionIndex, field: focusField ?? null }
+		});
+
+		const reorderedBlocks = this.dataStore.getBlocks();
+		const insertionIndex = reorderedBlocks.indexOf(anchorBlock);
+		if (insertionIndex < 0) {
+			return false;
+		}
+
+		this.logDragDebug('branch-partial-displayed-order', {
+			filePath: this.getCurrentFilePath(),
+			sourceIndex,
+			targetIndex,
+			position,
+			draggedIndexes,
+			insertionIndex
+		});
+
+		this.refreshGridData();
+		this.focusRow(insertionIndex, focusField);
+		this.scheduleSave();
 		return true;
 	}
 
@@ -1268,6 +1389,12 @@ export class RowInteractionController {
 		return { parentEntryId: '' };
 	}
 
+	/**
+	 * Resolve placement for a single row in a partial (filtered / collapsed)
+	 * view.  The rules mirror `resolveParentByPosition` but work with the
+	 * visible neighbours instead of physical neighbours, so the behaviour is
+	 * consistent regardless of whether hidden rows exist.
+	 */
 	private resolvePartialSingleRowPlacement(
 		sourceBlock: H2Block,
 		blocks: H2Block[],
@@ -1275,29 +1402,57 @@ export class RowInteractionController {
 		nextVisibleBlock: H2Block | null
 	): PartialSingleRowPlacement | null {
 		const sourceParentEntryId = String(sourceBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+
 		if (previousVisibleBlock) {
 			const previousVisibleIndex = blocks.indexOf(previousVisibleBlock);
 			if (previousVisibleIndex < 0) {
 				return null;
 			}
-			const previousParentEntryId = String(
+			const prevParentEntryId = String(
 				previousVisibleBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? ''
 			).trim();
-			if (previousParentEntryId) {
+
+			if (prevParentEntryId) {
+				// Previous visible row is a child → adopt its parent.
 				return {
-					parentResolution: { parentEntryId: previousParentEntryId },
+					parentResolution: { parentEntryId: prevParentEntryId },
 					targetIndex: previousVisibleIndex,
 					position: 'after'
 				};
 			}
-			const previousEntryId = String(previousVisibleBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
-			if (previousEntryId) {
+
+			// Previous visible row is top-level.
+			const prevEntryId = String(previousVisibleBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+			const nextParentEntryId = nextVisibleBlock
+				? String(nextVisibleBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim()
+				: '';
+
+			if (prevEntryId && nextParentEntryId === prevEntryId) {
+				// #2/#7: Next visible row is a child of the previous top-level row
+				// → landed inside a parent group → become its child.
 				return {
-					parentResolution: { parentEntryId: sourceParentEntryId },
+					parentResolution: { parentEntryId: prevEntryId },
 					targetIndex: previousVisibleIndex,
 					position: 'after'
 				};
 			}
+
+			if (sourceParentEntryId && prevEntryId) {
+				// #6: Source is a child, landed between two top-level rows
+				// → attach to the previous top-level row.
+				return {
+					parentResolution: { parentEntryId: prevEntryId },
+					targetIndex: previousVisibleIndex,
+					position: 'after'
+				};
+			}
+
+			// #1: Source is top-level, landed between top-level rows → stay top-level.
+			return {
+				parentResolution: { parentEntryId: '' },
+				targetIndex: previousVisibleIndex,
+				position: 'after'
+			};
 		}
 
 		if (nextVisibleBlock) {

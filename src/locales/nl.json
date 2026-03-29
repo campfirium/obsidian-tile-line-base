@@ -454,7 +454,9 @@
     "menuTitle": "Verborgen kolommen tonen",
     "empty": "Geen verborgen kolommen",
     "hideNotice": "Kolom verborgen: {{name}}",
-    "showNotice": "Kolom weergegeven: {{name}}"
+    "showNotice": "Kolom weergegeven: {{name}}",
+    "hideMarkdownOnlyNotice": "Verborgen: {{name}} (alleen Markdown-weergave)",
+    "showMarkdownOnlyNotice": "Weergegeven: {{name}} (alleen Markdown-weergave)"
   },
   "columnSettings": {
     "menuTitle": "Kolominstellingen",

@@ -454,7 +454,9 @@
     "menuTitle": "Mostrar colunas ocultas",
     "empty": "Nenhuma coluna oculta",
     "hideNotice": "Coluna ocultada: {{name}}",
-    "showNotice": "Coluna exibida: {{name}}"
+    "showNotice": "Coluna exibida: {{name}}",
+    "hideMarkdownOnlyNotice": "Oculta: {{name}} (somente visualização Markdown)",
+    "showMarkdownOnlyNotice": "Exibida: {{name}} (somente visualização Markdown)"
   },
   "columnSettings": {
     "menuTitle": "Configurações da coluna",

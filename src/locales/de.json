@@ -454,7 +454,9 @@
     "menuTitle": "Ausgeblendete Spalten anzeigen",
     "empty": "Keine ausgeblendeten Spalten",
     "hideNotice": "Spalte ausgeblendet: {{name}}",
-    "showNotice": "Spalte eingeblendet: {{name}}"
+    "showNotice": "Spalte eingeblendet: {{name}}",
+    "hideMarkdownOnlyNotice": "Ausgeblendet: {{name}} (nur Markdown-Ansicht)",
+    "showMarkdownOnlyNotice": "Eingeblendet: {{name}} (nur Markdown-Ansicht)"
   },
   "columnSettings": {
     "menuTitle": "Spalteneinstellungen",

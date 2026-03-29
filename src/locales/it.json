@@ -454,7 +454,9 @@
     "menuTitle": "Mostra le colonne nascoste",
     "empty": "Nessuna colonna nascosta",
     "hideNotice": "Colonna nascosta: {{name}}",
-    "showNotice": "Colonna visualizzata: {{name}}"
+    "showNotice": "Colonna visualizzata: {{name}}",
+    "hideMarkdownOnlyNotice": "Nascosta: {{name}} (solo vista Markdown)",
+    "showMarkdownOnlyNotice": "Mostrata: {{name}} (solo vista Markdown)"
   },
   "columnSettings": {
     "menuTitle": "Impostazioni colonna",

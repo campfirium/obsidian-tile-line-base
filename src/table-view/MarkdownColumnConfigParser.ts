@@ -1,6 +1,7 @@
 import type { ColumnConfig } from './MarkdownBlockParser';
 import { normalizeDateFormatPreset, normalizeTimeFormatPreset } from '../utils/datetime';
 import { normalizeFormulaFormatPreset } from './formulaFormatPresets';
+import { normalizeEntryFieldName } from './entryFields';
 
 
 export function parseColumnDefinition(line: string): ColumnConfig | null {
@@ -39,9 +40,9 @@ export function parseColumnDefinition(line: string): ColumnConfig | null {
 		index = closingIndex + 1;
 	}
 
-	const normalizedName = nameBuilder.trim();
+	const normalizedName = normalizeEntryFieldName(nameBuilder.trim());
 	if (normalizedName.length === 0) {
-		config.name = trimmed;
+		config.name = normalizeEntryFieldName(trimmed);
 	} else {
 		config.name = normalizedName.replace(/\s+/g, ' ');
 	}

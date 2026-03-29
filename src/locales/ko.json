@@ -454,7 +454,9 @@
     "menuTitle": "숨긴 열 표시",
     "empty": "숨긴 열이 없습니다",
     "hideNotice": "열을 숨겼습니다: {{name}}",
-    "showNotice": "열을 표시했습니다: {{name}}"
+    "showNotice": "열을 표시했습니다: {{name}}",
+    "hideMarkdownOnlyNotice": "숨김: {{name}} (Markdown 보기 전용)",
+    "showMarkdownOnlyNotice": "표시: {{name}} (Markdown 보기 전용)"
   },
   "columnSettings": {
     "menuTitle": "열 설정",

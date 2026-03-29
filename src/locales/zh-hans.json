@@ -454,7 +454,9 @@
     "menuTitle": "显示隐藏列",
     "empty": "没有隐藏的列",
     "hideNotice": "已隐藏列：{{name}}",
-    "showNotice": "已显示列：{{name}}"
+    "showNotice": "已显示列：{{name}}",
+    "hideMarkdownOnlyNotice": "已隐藏：{{name}}（仅 Markdown 视图）",
+    "showMarkdownOnlyNotice": "已显示：{{name}}（仅 Markdown 视图）"
   },
   "columnSettings": {
     "menuTitle": "列设置",

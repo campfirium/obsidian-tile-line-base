@@ -7,7 +7,6 @@ import { isReservedColumnId } from '../grid/systemColumnUtils';
 import type { TableHistoryManager, BlockSnapshot } from './TableHistoryManager';
 import type { RowDragEndPayload } from '../grid/GridAdapter';
 import { COLLAPSED_STATE_FIELD, ENTRY_ID_FIELD, PARENT_ENTRY_ID_FIELD } from './entryFields';
-import { reorderBlocksPreservingHierarchy } from './HierarchySort';
 import { appendDragDebugLog } from '../utils/dragDebugLog';
 
 const logger = getLogger('table-view:row-interaction');
@@ -634,6 +633,11 @@ export class RowInteractionController {
 			// Branch reorder still requires the full displayed list so hidden rows are not reordered by accident.
 			return;
 		}
+		if (hasFullDisplayedOrder && sourceIndex !== null && movesHierarchyBranch) {
+			if (this.applyBranchDisplayedOrder(blocks, sourceIndex, draggedIndexes, displayedOrder)) {
+				return;
+			}
+		}
 		if (hasFullDisplayedOrder && sourceIndex !== null && !movesHierarchyBranch) {
 			if (this.applySingleRowDisplayedOrder(blocks, sourceIndex, displayedOrder, targetIndex)) {
 				return;
@@ -644,21 +648,6 @@ export class RowInteractionController {
 				return;
 			}
 		}
-		if (hasFullDisplayedOrder && sourceIndex !== null && movesHierarchyBranch) {
-			const orderedBlocks = this.buildOrderedBlocksFromDisplayedOrder(blocks, displayedOrder);
-			if (!orderedBlocks || this.isSameBlockOrder(blocks, orderedBlocks)) {
-				return;
-			}
-			const focusField = this.resolveFocusField();
-			const sourceBlock = blocks[sourceIndex] ?? null;
-			const nextIndex = sourceBlock ? orderedBlocks.indexOf(sourceBlock) : -1;
-			this.history.applyRowOrderChange(orderedBlocks, {
-				undo: { rowIndex: sourceIndex, field: focusField ?? null },
-				redo: { rowIndex: nextIndex >= 0 ? nextIndex : sourceIndex, field: focusField ?? null }
-			});
-			return;
-		}
-
 		if (targetIndex === null) {
 			if (typeof event.overIndex === 'number' && event.overIndex >= 0) {
 				targetIndex = this.clampIndex(event.overIndex, 0, blocks.length - 1);
@@ -783,7 +772,6 @@ export class RowInteractionController {
 			.map((index) => blocks[index])
 			.filter((block): block is H2Block => Boolean(block));
 		const anchorBlock = movedBlocks[0] ?? null;
-		const targetBlock = blocks[targetIndex] ?? null;
 		if (!anchorBlock) {
 			return null;
 		}
@@ -811,7 +799,7 @@ export class RowInteractionController {
 					reorderedBlocks,
 					insertionIndex,
 					anchorBlock,
-					this.resolveDropParentForChild(anchorBlock, targetBlock)
+					this.resolveParentByPosition(reorderedBlocks, insertionIndex, String(anchorBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim())
 				);
 
 		if (hierarchyChanges.length === 0) {
@@ -852,6 +840,7 @@ export class RowInteractionController {
 		const nextVisibleBlock =
 			visibleIndex < visibleBlocks.length - 1 ? visibleBlocks[visibleIndex + 1] ?? null : null;
 		const placement = this.resolvePartialSingleRowPlacement(
+			anchorBlock,
 			blocks,
 			previousVisibleBlock,
 			nextVisibleBlock
@@ -920,6 +909,155 @@ export class RowInteractionController {
 		return true;
 	}
 
+	/**
+	 * Handle branch (parent + children) reorder using the displayed order.
+	 *
+	 * AG Grid's rowDragManaged only moves the parent row visually.  We use
+	 * displayedOrder to figure out where the parent ended up among the
+	 * non-branch rows, then relocate the entire branch to that position.
+	 */
+	private applyBranchDisplayedOrder(
+		blocks: H2Block[],
+		sourceIndex: number,
+		draggedIndexes: number[],
+		displayedOrder: Array<string | number>
+	): boolean {
+		const anchorBlock = blocks[sourceIndex] ?? null;
+		if (!anchorBlock) {
+			return false;
+		}
+
+		// Build a rowId→block map so we can interpret displayedOrder.
+		const blockByRowId = new Map<string, H2Block>();
+		for (let i = 0; i < blocks.length; i++) {
+			const b = blocks[i];
+			if (b) {
+				blockByRowId.set(String(i), b);
+			}
+		}
+
+		// Find the anchor (parent) row's position in the AG Grid displayed order.
+		const anchorRowId = String(sourceIndex);
+		const anchorDisplayIdx = displayedOrder.indexOf(anchorRowId);
+		if (anchorDisplayIdx < 0) {
+			return false;
+		}
+
+		// Look at the row just before the anchor in displayedOrder to find the
+		// insertion target.  Skip over any rows that are part of the branch
+		// itself (children that might still be adjacent).
+		const draggedIndexSet = new Set(draggedIndexes);
+		let targetBlock: H2Block | null = null;
+		let position: 'before' | 'after' = 'after';
+		for (let i = anchorDisplayIdx - 1; i >= 0; i--) {
+			const block = blockByRowId.get(String(displayedOrder[i]));
+			if (!block) {
+				return false;
+			}
+			const blockOrigIndex = blocks.indexOf(block);
+			if (!draggedIndexSet.has(blockOrigIndex)) {
+				targetBlock = block;
+				position = 'after';
+				break;
+			}
+		}
+		if (!targetBlock) {
+			// Anchor moved to the very top — find the first non-branch row
+			// to insert before.
+			for (let i = anchorDisplayIdx + 1; i < displayedOrder.length; i++) {
+				const block = blockByRowId.get(String(displayedOrder[i]));
+				if (!block) {
+					return false;
+				}
+				const blockOrigIndex = blocks.indexOf(block);
+				if (!draggedIndexSet.has(blockOrigIndex)) {
+					targetBlock = block;
+					position = 'before';
+					break;
+				}
+			}
+		}
+		if (!targetBlock) {
+			return false;
+		}
+
+		const targetIndex = blocks.indexOf(targetBlock);
+		if (targetIndex < 0 || draggedIndexSet.has(targetIndex)) {
+			return false;
+		}
+
+		// #5: A parent (branch) must not be dropped inside another parent's
+		// child group.  Two cases:
+		// (a) target row itself is a child → landing in the middle of a group.
+		// (b) target row is a top-level row, position is 'after', and the
+		//     next non-branch row is a child of that target → landing between
+		//     a parent and its first child.
+		const targetParentEntryId = String(targetBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		const targetEntryId = String(targetBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		let blockedByChildGroup = false;
+		if (targetParentEntryId) {
+			blockedByChildGroup = true;
+		} else if (position === 'after' && targetEntryId) {
+			// Check whether the row right after target is its child.
+			const nextIdx = targetIndex + 1;
+			const nextBlk = nextIdx < blocks.length ? blocks[nextIdx] : null;
+			if (nextBlk && !draggedIndexSet.has(nextIdx)) {
+				const nextPid = String(nextBlk.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+				if (nextPid === targetEntryId) {
+					blockedByChildGroup = true;
+				}
+			}
+		}
+		if (blockedByChildGroup) {
+			this.logDragDebug('branch-drop-into-child-group-blocked', {
+				filePath: this.getCurrentFilePath(),
+				sourceIndex,
+				targetIndex,
+				targetParentEntryId
+			});
+			this.refreshGridData();
+			return true;
+		}
+
+		const orderedBlocks = this.buildReorderedBlockList(blocks, draggedIndexes, targetIndex, position);
+		if (!orderedBlocks || this.isSameBlockOrder(blocks, orderedBlocks)) {
+			return false;
+		}
+
+		const orderedInsertionIndex = orderedBlocks.indexOf(anchorBlock);
+		if (orderedInsertionIndex < 0) {
+			return false;
+		}
+
+		const focusField = this.resolveFocusField();
+		this.history.applyRowOrderChange(orderedBlocks, {
+			undo: { rowIndex: sourceIndex, field: focusField ?? null },
+			redo: { rowIndex: orderedInsertionIndex, field: focusField ?? null }
+		});
+
+		const reorderedBlocks = this.dataStore.getBlocks();
+		const insertionIndex = reorderedBlocks.indexOf(anchorBlock);
+		if (insertionIndex < 0) {
+			return false;
+		}
+
+		this.logDragDebug('branch-displayed-order', {
+			filePath: this.getCurrentFilePath(),
+			sourceIndex,
+			targetIndex,
+			position,
+			draggedIndexes,
+			orderedInsertionIndex,
+			insertionIndex,
+			anchorEntryId: anchorBlock.data?.[ENTRY_ID_FIELD] ?? null
+		});
+
+		this.refreshGridData();
+		this.focusRow(insertionIndex, focusField);
+		this.scheduleSave();
+		return true;
+	}
+
 	private applySingleRowDisplayedOrder(
 		blocks: H2Block[],
 		sourceIndex: number,
@@ -961,7 +1099,7 @@ export class RowInteractionController {
 			reorderedBlocks,
 			insertionIndex,
 			anchorBlock,
-			this.resolveDropParentForChild(anchorBlock, targetBlock)
+			this.resolveParentByPosition(reorderedBlocks, insertionIndex, String(anchorBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim())
 		);
 		this.logDragDebug('single-row-displayed-order', {
 			filePath: this.getCurrentFilePath(),
@@ -1018,14 +1156,15 @@ export class RowInteractionController {
 				nextParentRowIndex = resolvedParentRowIndex;
 				nextParentBlock = blocks[resolvedParentRowIndex] ?? null;
 			}
-		} else if (!hasChildren) {
-			nextParentRowIndex = this.findNearestPreviousTopLevelRowIndex(blocks, rowIndex);
-			if (nextParentRowIndex !== null) {
-				nextParentBlock = blocks[nextParentRowIndex] ?? null;
-				nextParentEntryId = String(nextParentBlock?.data?.[ENTRY_ID_FIELD] ?? '').trim();
-				if (!nextParentEntryId) {
-					nextParentBlock = null;
-					nextParentRowIndex = null;
+		} else {
+			nextParentEntryId = currentParentEntryId;
+			if (!hasChildren && currentParentEntryId.length > 0) {
+				const currentParentIndex = blocks.findIndex(
+					(candidate) => String(candidate?.data?.[ENTRY_ID_FIELD] ?? '').trim() === currentParentEntryId
+				);
+				if (currentParentIndex >= 0) {
+					nextParentRowIndex = currentParentIndex;
+					nextParentBlock = blocks[currentParentIndex] ?? null;
 				}
 			}
 		}
@@ -1069,33 +1208,73 @@ export class RowInteractionController {
 		return changes;
 	}
 
-	private resolveDropParentForChild(
-		sourceBlock: H2Block,
-		targetBlock: H2Block | null
+	/**
+	 * Resolve parent for a row based on its actual position in the block list
+	 * after reordering. This is more reliable than using AG Grid's overNode
+	 * because it looks at the row's real neighbors instead of the unstable
+	 * drop target reported by the grid.
+	 *
+	 * Applicable to BOTH top-level and child source rows.
+	 *
+	 * Rules (based on the previous row at the new position):
+	 * - No previous row (position 0) → top-level.
+	 * - Previous row is a child → adopt its parent (become sibling).
+	 * - Previous row is a top-level row AND the next row is its child
+	 *   → become its child (landed inside a parent group).
+	 * - Previous row is a top-level row AND the next row is NOT its child
+	 *   → top-level (landed between two top-level rows).
+	 */
+	private resolveParentByPosition(
+		blocks: H2Block[],
+		rowIndex: number,
+		sourceParentEntryId: string
 	): DragParentResolution | null {
-		const sourceParentEntryId = String(sourceBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
-		if (!sourceParentEntryId || !targetBlock || targetBlock === sourceBlock) {
+		if (rowIndex <= 0) {
+			// Dropped at the very top → top-level.
+			return { parentEntryId: '' };
+		}
+
+		const previousBlock = blocks[rowIndex - 1];
+		if (!previousBlock) {
 			return null;
 		}
 
-		const targetParentEntryId = String(targetBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
-		if (targetParentEntryId) {
-			return { parentEntryId: targetParentEntryId };
+		const prevParentEntryId = String(previousBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+		if (prevParentEntryId) {
+			// Previous row is a child → adopt its parent (become sibling).
+			return { parentEntryId: prevParentEntryId };
 		}
 
-		const targetEntryId = String(targetBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
-		if (!targetEntryId) {
-			return null;
+		// Previous row is top-level. Check the next row to decide.
+		const prevEntryId = String(previousBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
+		const nextBlock = rowIndex + 1 < blocks.length ? blocks[rowIndex + 1] : null;
+		const nextParentEntryId = nextBlock
+			? String(nextBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim()
+			: '';
+
+		if (prevEntryId && nextParentEntryId === prevEntryId) {
+			// Next row is a child of the previous top-level row
+			// → we landed inside a parent group → become its child.
+			return { parentEntryId: prevEntryId };
 		}
 
-		return { parentEntryId: targetEntryId };
+		// #6: Source was a child, landed between two top-level rows
+		// → stay as a child of the previous top-level row.
+		if (sourceParentEntryId && prevEntryId) {
+			return { parentEntryId: prevEntryId };
+		}
+
+		// Source is top-level, landed between top-level rows → stay top-level.
+		return { parentEntryId: '' };
 	}
 
 	private resolvePartialSingleRowPlacement(
+		sourceBlock: H2Block,
 		blocks: H2Block[],
 		previousVisibleBlock: H2Block | null,
 		nextVisibleBlock: H2Block | null
 	): PartialSingleRowPlacement | null {
+		const sourceParentEntryId = String(sourceBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
 		if (previousVisibleBlock) {
 			const previousVisibleIndex = blocks.indexOf(previousVisibleBlock);
 			if (previousVisibleIndex < 0) {
@@ -1114,7 +1293,7 @@ export class RowInteractionController {
 			const previousEntryId = String(previousVisibleBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
 			if (previousEntryId) {
 				return {
-					parentResolution: { parentEntryId: previousEntryId },
+					parentResolution: { parentEntryId: sourceParentEntryId },
 					targetIndex: previousVisibleIndex,
 					position: 'after'
 				};
@@ -1251,17 +1430,6 @@ export class RowInteractionController {
 		);
 		orderedBlocks.splice(insertionIndex, 0, ...movedBlocks);
 		return orderedBlocks;
-	}
-
-	private buildOrderedBlocksFromDisplayedOrder(
-		blocks: H2Block[],
-		displayedOrder: Array<string | number>
-	): H2Block[] | null {
-		const rawOrderedBlocks = this.buildRawOrderedBlocksFromDisplayedOrder(blocks, displayedOrder);
-		if (!rawOrderedBlocks) {
-			return null;
-		}
-		return reorderBlocksPreservingHierarchy(rawOrderedBlocks);
 	}
 
 	private buildRawOrderedBlocksFromDisplayedOrder(

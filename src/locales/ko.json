@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "일반",
     "quickLinksTitle": "빠른 링크",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "피드백, 동영상, GitHub 지원을 위한 주요 프로젝트 링크를 엽니다.",
     "quickLinksFeedbackLabel": "피드백",
     "quickLinksVideosLabel": "영상",
     "quickLinksStarLabel": "스타",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "지금은 소개, 더 많은 영상은 나중에 (YouTube)",
     "quickLinksStarTooltip": "도움이 되었다면 GitHub Star는 큰 힘이 됩니다",
     "interfaceLanguageLabel": "인터페이스 언어",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "TileLineBase에서 사용할 언어를 선택하거나 Obsidian의 현재 언어를 따릅니다.",
     "interfaceLanguageOptionAuto": "Obsidian 언어 따르기",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",

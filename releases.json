@@ -1,4 +1,14 @@
 {
+  "0.9.11": {
+    "date": "2026-03-29",
+    "info": "",
+    "new": [],
+    "improved": [
+      "Parent-child row dragging now works in filtered views."
+    ],
+    "fixed": [],
+    "changed": []
+  },
   "0.9.10": {
     "date": "2026-03-28",
     "info": "",

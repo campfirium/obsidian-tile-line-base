@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "General",
     "quickLinksTitle": "Enlaces rápidos",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "Abre los enlaces principales del proyecto para comentarios, videos y apoyo en GitHub.",
     "quickLinksFeedbackLabel": "Comentarios",
     "quickLinksVideosLabel": "Vídeos",
     "quickLinksStarLabel": "Estrella",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "Intro ahora, más videos más adelante (YouTube)",
     "quickLinksStarTooltip": "Si esto ayuda, una estrella en GitHub significa mucho",
     "interfaceLanguageLabel": "Idioma de la interfaz",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "Elige el idioma de TileLineBase o sigue el idioma actual de Obsidian.",
     "interfaceLanguageOptionAuto": "Usar idioma de Obsidian",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",

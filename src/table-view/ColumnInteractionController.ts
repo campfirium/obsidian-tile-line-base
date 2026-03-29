@@ -449,6 +449,7 @@ export class ColumnInteractionController {
 		}
 		const target = field.trim();
 		const isStatusColumn = target === 'status';
+		const isParentEntryColumn = target === PARENT_ENTRY_FIELD;
 		if (!target || (isReservedColumnId(target) && !isStatusColumn)) {
 			return;
 		}
@@ -489,7 +490,13 @@ export class ColumnInteractionController {
 		schema.columnConfigs = normalized;
 		this.dataStore.setColumnConfigs(normalized);
 
-		const noticeKey = hidden ? 'columnVisibility.hideNotice' : 'columnVisibility.showNotice';
+		const noticeKey = isParentEntryColumn
+			? hidden
+				? 'columnVisibility.hideMarkdownOnlyNotice'
+				: 'columnVisibility.showMarkdownOnlyNotice'
+			: hidden
+				? 'columnVisibility.hideNotice'
+				: 'columnVisibility.showNotice';
 		this.persistColumnStructureChange({ notice: t(noticeKey, { name: target }) });
 	}
 }

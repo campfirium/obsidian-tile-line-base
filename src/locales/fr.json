@@ -454,7 +454,9 @@
     "menuTitle": "Afficher les colonnes masquées",
     "empty": "Aucune colonne masquée",
     "hideNotice": "Colonne masquée : {{name}}",
-    "showNotice": "Colonne affichée : {{name}}"
+    "showNotice": "Colonne affichée : {{name}}",
+    "hideMarkdownOnlyNotice": "Masquée : {{name}} (vue Markdown uniquement)",
+    "showMarkdownOnlyNotice": "Affichée : {{name}} (vue Markdown uniquement)"
   },
   "columnSettings": {
     "menuTitle": "Paramètres de colonne",

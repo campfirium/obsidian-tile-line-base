@@ -127,8 +127,11 @@ export function createAgGridOptions({
 			isRowDragActive = true;
 		},
 		onRowDragEnd: (event: RowDragEndEvent) => {
-			isRowDragActive = false;
-			onRowDragEnd(event);
+			try {
+				onRowDragEnd(event);
+			} finally {
+				isRowDragActive = false;
+			}
 		},
 		onRowDragCancel: (_event: RowDragCancelEvent) => {
 			isRowDragActive = false;

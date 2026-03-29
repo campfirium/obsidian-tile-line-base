@@ -99,7 +99,8 @@ export function initializeTableView(view: TableView): void {
 		focusRow: (rowIndex, field) => view.focusManager.focusRow(rowIndex, field ?? null),
 		scheduleSave: () => { view.markUserMutation('row-interaction'); view.persistenceService.scheduleSave(); },
 		getActiveFilterPrefills: () => getActiveFilterPrefills(view),
-		history: view.historyManager
+		history: view.historyManager,
+		getCurrentFilePath: () => view.file?.path ?? null
 	});
 	view.rowMigrationController = new RowMigrationController({
 		app: view.app,

@@ -967,30 +967,35 @@ export class RowInteractionController {
 			return false;
 		}
 
-		const targetIndex = blocks.indexOf(targetBlock);
+		let targetIndex = blocks.indexOf(targetBlock);
 		if (targetIndex < 0 || draggedIndexSet.has(targetIndex)) {
 			return false;
 		}
 
-		// #5 check: block branch drops into child groups.
+		// When a branch lands inside another parent's child group, redirect
+		// it to after the last child of that group.
 		const targetParentEntryId = String(targetBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
 		const targetEntryId = String(targetBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
-		let blockedByChildGroup = false;
+		let groupParentEntryId = '';
 		if (targetParentEntryId) {
-			blockedByChildGroup = true;
+			groupParentEntryId = targetParentEntryId;
 		} else if (position === 'after' && targetEntryId) {
 			const nextIdx = targetIndex + 1;
 			const nextBlk = nextIdx < blocks.length ? blocks[nextIdx] : null;
 			if (nextBlk && !draggedIndexSet.has(nextIdx)) {
 				const nextPid = String(nextBlk.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
 				if (nextPid === targetEntryId) {
-					blockedByChildGroup = true;
+					groupParentEntryId = targetEntryId;
 				}
 			}
 		}
-		if (blockedByChildGroup) {
-			this.refreshGridData();
-			return true;
+		if (groupParentEntryId) {
+			const lastChildIdx = this.findLastChildIndexOfGroup(blocks, groupParentEntryId, draggedIndexSet);
+			if (lastChildIdx >= 0) {
+				targetBlock = blocks[lastChildIdx] ?? targetBlock;
+				targetIndex = lastChildIdx;
+				position = 'after';
+			}
 		}
 
 		const orderedBlocks = this.buildReorderedBlockList(blocks, draggedIndexes, targetIndex, position);
@@ -1102,42 +1107,44 @@ export class RowInteractionController {
 			return false;
 		}
 
-		const targetIndex = blocks.indexOf(targetBlock);
+		let targetIndex = blocks.indexOf(targetBlock);
 		if (targetIndex < 0 || draggedIndexSet.has(targetIndex)) {
 			return false;
 		}
 
-		// #5: A parent (branch) must not be dropped inside another parent's
-		// child group.  Two cases:
-		// (a) target row itself is a child → landing in the middle of a group.
-		// (b) target row is a top-level row, position is 'after', and the
-		//     next non-branch row is a child of that target → landing between
-		//     a parent and its first child.
+		// When a branch lands inside another parent's child group, redirect
+		// it to after the last child of that group (i.e. place the branch
+		// right after the target group, not inside it).
 		const targetParentEntryId = String(targetBlock.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
 		const targetEntryId = String(targetBlock.data?.[ENTRY_ID_FIELD] ?? '').trim();
-		let blockedByChildGroup = false;
+		let groupParentEntryId = '';
 		if (targetParentEntryId) {
-			blockedByChildGroup = true;
+			// Target is a child → the group's parent is targetParentEntryId.
+			groupParentEntryId = targetParentEntryId;
 		} else if (position === 'after' && targetEntryId) {
-			// Check whether the row right after target is its child.
 			const nextIdx = targetIndex + 1;
 			const nextBlk = nextIdx < blocks.length ? blocks[nextIdx] : null;
 			if (nextBlk && !draggedIndexSet.has(nextIdx)) {
 				const nextPid = String(nextBlk.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
 				if (nextPid === targetEntryId) {
-					blockedByChildGroup = true;
+					// Inserting between a parent and its first child.
+					groupParentEntryId = targetEntryId;
 				}
 			}
 		}
-		if (blockedByChildGroup) {
-			this.logDragDebug('branch-drop-into-child-group-blocked', {
+		if (groupParentEntryId) {
+			const lastChildIdx = this.findLastChildIndexOfGroup(blocks, groupParentEntryId, draggedIndexSet);
+			if (lastChildIdx >= 0) {
+				targetBlock = blocks[lastChildIdx] ?? targetBlock;
+				targetIndex = lastChildIdx;
+				position = 'after';
+			}
+			this.logDragDebug('branch-redirected-after-child-group', {
 				filePath: this.getCurrentFilePath(),
 				sourceIndex,
 				targetIndex,
-				targetParentEntryId
+				groupParentEntryId
 			});
-			this.refreshGridData();
-			return true;
 		}
 
 		const orderedBlocks = this.buildReorderedBlockList(blocks, draggedIndexes, targetIndex, position);
@@ -1644,6 +1651,28 @@ export class RowInteractionController {
 		}
 
 		return visibleBlocks;
+	}
+
+	/**
+	 * Given a child row at `childIndex`, find the index of the last
+	 * consecutive child that belongs to the same parent group.
+	 */
+	private findLastChildIndexOfGroup(
+		blocks: H2Block[],
+		parentEntryId: string,
+		draggedIndexSet?: Set<number>
+	): number {
+		let lastIndex = -1;
+		for (let i = 0; i < blocks.length; i++) {
+			if (draggedIndexSet?.has(i)) {
+				continue;
+			}
+			const pid = String(blocks[i]?.data?.[PARENT_ENTRY_ID_FIELD] ?? '').trim();
+			if (pid === parentEntryId) {
+				lastIndex = i;
+			}
+		}
+		return lastIndex;
 	}
 
 	private isSameBlockOrder(current: H2Block[], next: H2Block[]): boolean {

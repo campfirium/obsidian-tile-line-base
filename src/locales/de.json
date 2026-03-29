@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "Allgemein",
     "quickLinksTitle": "Schnelllinks",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "Öffnet die wichtigsten Projektlinks für Feedback, Videos und GitHub-Unterstützung.",
     "quickLinksFeedbackLabel": "Rückmeldung",
     "quickLinksVideosLabel": "Videos",
     "quickLinksStarLabel": "Stern",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "Intro jetzt, mehr Videos später (YouTube)",
     "quickLinksStarTooltip": "Wenn das hilft, bedeutet ein GitHub-Star viel",
     "interfaceLanguageLabel": "Oberflächensprache",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "Wähle die Sprache für TileLineBase oder folge der aktuellen Obsidian-Sprache.",
     "interfaceLanguageOptionAuto": "Obsidian-Sprache verwenden",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -454,7 +454,9 @@
     "menuTitle": "Ausgeblendete Spalten anzeigen",
     "empty": "Keine ausgeblendeten Spalten",
     "hideNotice": "Spalte ausgeblendet: {{name}}",
-    "showNotice": "Spalte eingeblendet: {{name}}"
+    "showNotice": "Spalte eingeblendet: {{name}}",
+    "hideMarkdownOnlyNotice": "Ausgeblendet: {{name}} (nur Markdown-Ansicht)",
+    "showMarkdownOnlyNotice": "Eingeblendet: {{name}} (nur Markdown-Ansicht)"
   },
   "columnSettings": {
     "menuTitle": "Spalteneinstellungen",

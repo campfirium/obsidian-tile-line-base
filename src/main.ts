@@ -34,6 +34,7 @@ import { snapshotLeaf } from './plugin/utils/snapshotLeaf';
 import { syncLocale } from './plugin/LocaleSync';
 import { RightSidebarController } from './plugin/RightSidebarController';
 import { resolveEnvironmentLocale } from './i18n/localeEnvironment';
+import { initializeDragDebugLog } from './utils/dragDebugLog';
 
 const logger = getLogger('plugin:main');
 
@@ -56,6 +57,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 	async onload() {
 		setPluginContext(this);
+		await initializeDragDebugLog(this);
 		this.settingsService = new SettingsService(this);
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);

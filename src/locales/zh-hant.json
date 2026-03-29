@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "一般",
     "quickLinksTitle": "快速連結",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "開啟專案的主要連結，方便回報問題、查看影片與支援 GitHub。",
     "quickLinksFeedbackLabel": "回饋",
     "quickLinksVideosLabel": "影片",
     "quickLinksStarLabel": "星標",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "入門影片已上線，更多內容陸續更新（YouTube）",
     "quickLinksStarTooltip": "如果這個插件對你有幫助，歡迎在 GitHub 上點個 Star，這對我們很重要",
     "interfaceLanguageLabel": "介面語言",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "選擇 TileLineBase 使用的語言，或跟隨目前的 Obsidian 語言。",
     "interfaceLanguageOptionAuto": "跟隨 Obsidian 語言",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -454,7 +454,9 @@
     "menuTitle": "顯示隱藏欄",
     "empty": "沒有隱藏的欄位",
     "hideNotice": "已隱藏欄：{{name}}",
-    "showNotice": "已顯示欄：{{name}}"
+    "showNotice": "已顯示欄：{{name}}",
+    "hideMarkdownOnlyNotice": "已隱藏：{{name}}（僅 Markdown 視圖）",
+    "showMarkdownOnlyNotice": "已顯示：{{name}}（僅 Markdown 視圖）"
   },
   "columnSettings": {
     "menuTitle": "欄位設定",

@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "一般",
     "quickLinksTitle": "クイックリンク",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "フィードバック、動画、GitHub サポート用の主要なプロジェクトリンクを開きます。",
     "quickLinksFeedbackLabel": "フィードバック",
     "quickLinksVideosLabel": "動画",
     "quickLinksStarLabel": "スター",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "今はイントロ、後でさらに動画（YouTube）",
     "quickLinksStarTooltip": "役に立ったら GitHub の Star をお願いします",
     "interfaceLanguageLabel": "インターフェースの言語",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "TileLineBase で使う言語を選ぶか、Obsidian の現在の言語に合わせます。",
     "interfaceLanguageOptionAuto": "Obsidian の言語に合わせる",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -454,7 +454,9 @@
     "menuTitle": "非表示の列を表示",
     "empty": "非表示の列はありません",
     "hideNotice": "列を非表示にしました: {{name}}",
-    "showNotice": "列を表示しました: {{name}}"
+    "showNotice": "列を表示しました: {{name}}",
+    "hideMarkdownOnlyNotice": "非表示: {{name}}（Markdownビューのみ）",
+    "showMarkdownOnlyNotice": "表示: {{name}}（Markdownビューのみ）"
   },
   "columnSettings": {
     "menuTitle": "列の設定",

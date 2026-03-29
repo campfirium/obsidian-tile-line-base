@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "Generale",
     "quickLinksTitle": "Link rapidi",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "Apre i link principali del progetto per feedback, video e supporto su GitHub.",
     "quickLinksFeedbackLabel": "Segnalazioni",
     "quickLinksVideosLabel": "Video",
     "quickLinksStarLabel": "Stella",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "Intro ora, altri video più avanti (YouTube)",
     "quickLinksStarTooltip": "Se ti è utile, una stella su GitHub significa molto",
     "interfaceLanguageLabel": "Lingua dell'interfaccia",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "Scegli la lingua di TileLineBase oppure segui la lingua attuale di Obsidian.",
     "interfaceLanguageOptionAuto": "Usa la lingua di Obsidian",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -454,7 +454,9 @@
     "menuTitle": "Mostra le colonne nascoste",
     "empty": "Nessuna colonna nascosta",
     "hideNotice": "Colonna nascosta: {{name}}",
-    "showNotice": "Colonna visualizzata: {{name}}"
+    "showNotice": "Colonna visualizzata: {{name}}",
+    "hideMarkdownOnlyNotice": "Nascosta: {{name}} (solo vista Markdown)",
+    "showMarkdownOnlyNotice": "Mostrata: {{name}} (solo vista Markdown)"
   },
   "columnSettings": {
     "menuTitle": "Impostazioni colonna",

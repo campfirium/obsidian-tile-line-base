@@ -283,7 +283,7 @@
   "settings": {
     "generalHeading": "常规",
     "quickLinksTitle": "快速链接",
-    "quickLinksDesc": "",
+    "quickLinksDesc": "打开项目的主要链接，方便反馈问题、查看视频和支持 GitHub。",
     "quickLinksFeedbackLabel": "反馈",
     "quickLinksVideosLabel": "视频",
     "quickLinksStarLabel": "星标",
@@ -291,7 +291,7 @@
     "quickLinksVideosTooltip": "入门视频已上线，更多内容陆续更新（YouTube）",
     "quickLinksStarTooltip": "如果这个插件对你有帮助，欢迎在 GitHub 上点个 Star，这对我们很重要",
     "interfaceLanguageLabel": "界面语言",
-    "interfaceLanguageDesc": "",
+    "interfaceLanguageDesc": "选择 TileLineBase 使用的语言，或跟随当前 Obsidian 语言。",
     "interfaceLanguageOptionAuto": "跟随 Obsidian 语言",
     "interfaceLanguageOptionEn": "English",
     "interfaceLanguageOptionDe": "Deutsch",
@@ -454,7 +454,9 @@
     "menuTitle": "显示隐藏列",
     "empty": "没有隐藏的列",
     "hideNotice": "已隐藏列：{{name}}",
-    "showNotice": "已显示列：{{name}}"
+    "showNotice": "已显示列：{{name}}",
+    "hideMarkdownOnlyNotice": "已隐藏：{{name}}（仅 Markdown 视图）",
+    "showMarkdownOnlyNotice": "已显示：{{name}}（仅 Markdown 视图）"
   },
   "columnSettings": {
     "menuTitle": "列设置",

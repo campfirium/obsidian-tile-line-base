@@ -454,7 +454,9 @@
     "menuTitle": "Pokaż ukryte kolumny",
     "empty": "Brak ukrytych kolumn",
     "hideNotice": "Ukryto kolumnę: {{name}}",
-    "showNotice": "Wyświetlono kolumnę: {{name}}"
+    "showNotice": "Wyświetlono kolumnę: {{name}}",
+    "hideMarkdownOnlyNotice": "Ukryto: {{name}} (tylko widok Markdown)",
+    "showMarkdownOnlyNotice": "Wyświetlono: {{name}} (tylko widok Markdown)"
   },
   "columnSettings": {
     "menuTitle": "Ustawienia kolumn",

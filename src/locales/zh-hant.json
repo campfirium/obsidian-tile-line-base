@@ -454,7 +454,9 @@
     "menuTitle": "顯示隱藏欄",
     "empty": "沒有隱藏的欄位",
     "hideNotice": "已隱藏欄：{{name}}",
-    "showNotice": "已顯示欄：{{name}}"
+    "showNotice": "已顯示欄：{{name}}",
+    "hideMarkdownOnlyNotice": "已隱藏：{{name}}（僅 Markdown 視圖）",
+    "showMarkdownOnlyNotice": "已顯示：{{name}}（僅 Markdown 視圖）"
   },
   "columnSettings": {
     "menuTitle": "欄位設定",

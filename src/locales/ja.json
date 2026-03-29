@@ -454,7 +454,9 @@
     "menuTitle": "非表示の列を表示",
     "empty": "非表示の列はありません",
     "hideNotice": "列を非表示にしました: {{name}}",
-    "showNotice": "列を表示しました: {{name}}"
+    "showNotice": "列を表示しました: {{name}}",
+    "hideMarkdownOnlyNotice": "非表示: {{name}}（Markdownビューのみ）",
+    "showMarkdownOnlyNotice": "表示: {{name}}（Markdownビューのみ）"
   },
   "columnSettings": {
     "menuTitle": "列の設定",

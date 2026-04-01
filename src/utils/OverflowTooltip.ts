@@ -15,6 +15,7 @@ interface TooltipState {
 const TOOLTIP_MIN_WIDTH = 420;
 const TOOLTIP_MARGIN = 10;
 const MIN_CELL_WIDTH = 160;
+const CELL_EDGE_SAFE_GAP = 28;
 
 const TOOLTIP_HALF_BLANK_CLASS = 'tlb-overflow-tooltip--half-blank';
 const TOOLTIP_SPACER_CLASS = 'tlb-overflow-tooltip__spacer';
@@ -153,22 +154,67 @@ function clearTooltipContent(state: TooltipState): void {
 	state.container.classList.remove(TOOLTIP_HALF_BLANK_CLASS);
 }
 
-function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Window): void {
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max);
+}
+
+function resolveVisibleCellRect(cellRect: DOMRect, viewportWidth: number): DOMRect {
+	const visibleLeft = clamp(cellRect.left, TOOLTIP_MARGIN, Math.max(TOOLTIP_MARGIN, viewportWidth - TOOLTIP_MARGIN));
+	const visibleRight = clamp(cellRect.right, TOOLTIP_MARGIN, Math.max(TOOLTIP_MARGIN, viewportWidth - TOOLTIP_MARGIN));
+	const left = Math.min(visibleLeft, visibleRight);
+	const right = Math.max(visibleLeft, visibleRight);
+	const width = Math.max(0, right - left);
+	return new DOMRect(left, cellRect.top, width, cellRect.height);
+}
+
+function resolvePreservedCellEdge(cellRect: DOMRect, tooltipLeft: number, tooltipWidth: number): number {
+	const tooltipRight = tooltipLeft + tooltipWidth;
+	const openLeft = Math.max(0, Math.min(cellRect.right, tooltipLeft) - cellRect.left);
+	const openRight = Math.max(0, cellRect.right - Math.max(cellRect.left, tooltipRight));
+	return Math.max(openLeft, openRight);
+}
+
+function resolveHorizontalPosition(cellRect: DOMRect, tooltipWidth: number, viewportWidth: number): number {
+	const visibleCellRect = resolveVisibleCellRect(cellRect, viewportWidth);
+	const minLeft = TOOLTIP_MARGIN;
+	const maxLeft = Math.max(minLeft, viewportWidth - tooltipWidth - TOOLTIP_MARGIN);
+	if (maxLeft <= minLeft) {
+		return minLeft;
+	}
+
+	const candidates = [
+		visibleCellRect.left + CELL_EDGE_SAFE_GAP,
+		visibleCellRect.right - CELL_EDGE_SAFE_GAP - tooltipWidth
+	].map((desiredLeft) => {
+		const left = clamp(desiredLeft, minLeft, maxLeft);
+		return {
+			left,
+			preservedEdge: resolvePreservedCellEdge(visibleCellRect, left, tooltipWidth),
+			adjustment: Math.abs(left - desiredLeft)
+		};
+	});
+
+	candidates.sort((a, b) => {
+		if (b.preservedEdge !== a.preservedEdge) {
+			return b.preservedEdge - a.preservedEdge;
+		}
+		return a.adjustment - b.adjustment;
+	});
+
+	return candidates[0]?.left ?? minLeft;
+}
+
+function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Window, cellRect?: DOMRect): void {
 	const containerRect = container.getBoundingClientRect();
 	let top = targetRect.bottom + TOOLTIP_MARGIN;
-	let left = targetRect.left;
 
 	const viewportHeight = view.innerHeight;
 	const viewportWidth = view.innerWidth;
+	const anchorRect = cellRect ?? targetRect;
+	let left = resolveHorizontalPosition(anchorRect, containerRect.width, viewportWidth);
 
 	if (top + containerRect.height > viewportHeight) {
 		top = targetRect.top - containerRect.height - TOOLTIP_MARGIN;
-	}
-	if (left + containerRect.width > viewportWidth - TOOLTIP_MARGIN) {
-		left = viewportWidth - containerRect.width - TOOLTIP_MARGIN;
-	}
-	if (left < TOOLTIP_MARGIN) {
-		left = TOOLTIP_MARGIN;
 	}
 	if (top < TOOLTIP_MARGIN) {
 		top = TOOLTIP_MARGIN;
@@ -180,6 +226,7 @@ function positionTooltip(container: HTMLElement, targetRect: DOMRect, view: Wind
 
 interface TooltipWidthOptions {
 	columnWidth?: number;
+	cellRect?: DOMRect;
 }
 
 export function showOverflowTooltip(target: HTMLElement, content: string, options?: TooltipWidthOptions): void {
@@ -233,7 +280,8 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 		if (state.currentTarget !== target) {
 			return;
 		}
-		positionTooltip(state.container, target.getBoundingClientRect(), view);
+		const nextRect = target.getBoundingClientRect();
+		positionTooltip(state.container, nextRect, view, options?.cellRect ?? nextRect);
 		state.container.classList.add('is-visible');
 	});
 
@@ -245,7 +293,8 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 				}
 				replaceTooltipLineBreaks(state.container);
 				markTooltipBlankLines(state.container);
-				positionTooltip(state.container, target.getBoundingClientRect(), view);
+				const nextRect = target.getBoundingClientRect();
+				positionTooltip(state.container, nextRect, view, options?.cellRect ?? nextRect);
 			})
 			.catch(() => undefined);
 	}

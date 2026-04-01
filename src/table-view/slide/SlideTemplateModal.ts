@@ -644,11 +644,12 @@ export class SlideTemplateModal extends Modal {
 		heading: string,
 		value: SlideLayoutConfig,
 		onChange: (next: SlideLayoutConfig) => void,
-		options?: { includeTypography?: boolean }
+		options?: { includeTypography?: boolean; includeImageHeightControl?: boolean }
 	): void {
 		if (heading) container.createDiv({ cls: 'tlb-slide-template__cell-head', text: heading });
 		const layout = container.createDiv({ cls: 'tlb-slide-template__layout-lines' });
 		const includeTypography = options?.includeTypography ?? true;
+		const includeImageHeightControl = options?.includeImageHeightControl === true;
 
 		const addSelectRow = (parent: HTMLElement, label: string, update: (val: string) => void) => {
 			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
@@ -660,23 +661,29 @@ export class SlideTemplateModal extends Modal {
 		const numberRow = (
 			parent: HTMLElement,
 			labelText: string,
-			current: number,
+			current: number | undefined,
 			min: number,
 			max: number,
 			step: number,
-			assign: (val: number) => void,
-			disabled = false
+			assign: (val: number | undefined) => void,
+			disabled = false,
+			allowEmpty = false
 		) => {
 			const field = parent.createDiv({ cls: 'tlb-slide-template__layout-field' });
 			const labelEl = field.createDiv({ cls: 'tlb-slide-template__mini-label', text: labelText });
 			const input = field.createEl('input', {
 				type: 'number',
-				value: String(current),
 				attr: { min: String(min), max: String(max), step: String(step) },
 				cls: 'tlb-slide-template__layout-number'
 			});
+			input.value = current == null ? '' : String(current);
 			input.disabled = disabled;
 			input.addEventListener('input', () => {
+				if (allowEmpty && input.value.trim() === '') {
+					assign(undefined);
+					onChange({ ...value });
+					return;
+				}
 				const next = Number(input.value);
 				if (Number.isFinite(next)) {
 					assign(next);
@@ -712,7 +719,11 @@ export class SlideTemplateModal extends Modal {
 			0,
 			100,
 			1,
-			(v) => (value.insetPct = clampPct(v)),
+			(v) => {
+				if (v != null) {
+					value.insetPct = clampPct(v);
+				}
+			},
 			value.align === 'center'
 		);
 		const insetInput = insetField.input;
@@ -731,7 +742,7 @@ export class SlideTemplateModal extends Modal {
 			onChange({ ...value });
 		});
 
-		const row2 = layoutRow('two');
+		const row2 = layoutRow(includeImageHeightControl ? 'three' : 'two');
 		numberRow(
 			row2,
 			t('slideView.templateModal.topOffsetLabel'),
@@ -739,13 +750,39 @@ export class SlideTemplateModal extends Modal {
 			0,
 			100,
 			1,
-			(v) => (value.topPct = clampPct(v))
+			(v) => {
+				if (v != null) {
+					value.topPct = clampPct(v);
+				}
+			}
 		);
-		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => (value.widthPct = clampPct(v)));
+		numberRow(row2, t('slideView.templateModal.widthPctLabel'), value.widthPct, 0, 100, 1, (v) => {
+			if (v != null) {
+				value.widthPct = clampPct(v);
+			}
+		});
+
+		if (includeImageHeightControl) {
+			numberRow(
+				row2,
+				t('slideView.templateModal.imageHeightPxLabel'),
+				value.imageHeightPx,
+				40,
+				2000,
+				10,
+				(v) => (value.imageHeightPx = v),
+				false,
+				true
+			);
+		}
 
 		if (includeTypography) {
 			const row3 = layoutRow('three');
-			numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => (value.fontSize = v));
+			numberRow(row3, t('slideView.templateModal.fontSizeLabel'), value.fontSize, 0.1, 10, 0.1, (v) => {
+				if (v != null) {
+					value.fontSize = v;
+				}
+			});
 			numberRow(
 				row3,
 				t('slideView.templateModal.fontWeightLabel'),
@@ -753,9 +790,17 @@ export class SlideTemplateModal extends Modal {
 				100,
 				900,
 				50,
-				(v) => (value.fontWeight = v)
+				(v) => {
+					if (v != null) {
+						value.fontWeight = v;
+					}
+				}
 			);
-			numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => (value.lineHeight = v));
+			numberRow(row3, t('slideView.templateModal.lineHeightLabel'), value.lineHeight, 0.5, 3, 0.1, (v) => {
+				if (v != null) {
+					value.lineHeight = v;
+				}
+			});
 		}
 	}
 
@@ -1033,7 +1078,7 @@ export class SlideTemplateModal extends Modal {
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.single.withImage.imageLayout ?? getDefaultBodyLayout(),
 				(next) => (this.template.single.withImage.imageLayout = next),
-				{ includeTypography: this.imageTypographyEnabled }
+				{ includeTypography: this.imageTypographyEnabled, includeImageHeightControl: this.onCardSizeChange != null }
 			);
 		}
 	}
@@ -1127,7 +1172,7 @@ export class SlideTemplateModal extends Modal {
 				t('slideView.templateModal.imageLayoutLabel'),
 				this.template.split.withImage.imageLayout ?? getDefaultBodyLayout(),
 				(next) => (this.template.split.withImage.imageLayout = next),
-				{ includeTypography: this.imageTypographyEnabled }
+				{ includeTypography: this.imageTypographyEnabled, includeImageHeightControl: this.onCardSizeChange != null }
 			);
 		}
 	}

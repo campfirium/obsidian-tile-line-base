@@ -217,6 +217,7 @@
       "titleLayoutLabel": "Title layout",
       "bodyLayoutLabel": "Body layout",
       "widthPctLabel": "Width (%)",
+      "imageHeightPxLabel": "Height (px)",
       "topPctLabel": "Top (%)",
       "alignLeft": "Left",
       "alignCenter": "Center",

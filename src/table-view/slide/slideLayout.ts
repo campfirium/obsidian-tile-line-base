@@ -8,6 +8,7 @@ export interface ComputedLayout {
 	lineHeight: number;
 	fontSize: number;
 	fontWeight: number;
+	imageHeightPx?: number;
 	centerFromTop?: boolean;
 }
 
@@ -32,8 +33,12 @@ export function computeLayout(layout: unknown, kind: 'title' | 'body'): Computed
 	const lineHeight = Number.isFinite(source.lineHeight) ? Number(source.lineHeight) : defaults.lineHeight;
 	const fontSize = Number.isFinite(source.fontSize) ? Number(source.fontSize) : defaults.fontSize;
 	const fontWeight = Number.isFinite(source.fontWeight) ? Number(source.fontWeight) : defaults.fontWeight;
+	const imageHeightPx =
+		Number.isFinite(source.imageHeightPx) && Number(source.imageHeightPx) > 0
+			? Math.round(Number(source.imageHeightPx))
+			: undefined;
 	const centerFromTop = Boolean(source.centerFromTop);
-	return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight, centerFromTop };
+	return { widthPct, topPct, insetPct, align, lineHeight, fontSize, fontWeight, imageHeightPx, centerFromTop };
 }
 
 export function applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slideEl: HTMLElement): void {

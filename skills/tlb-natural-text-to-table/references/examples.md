@@ -17,15 +17,11 @@ Source:
 Output:
 
 ```md
-## task: Write docs
-owner: Maya
-status: doing
-due: Friday
+## entry: Write docs
+description: owner: Maya; status: doing; due: Friday
 
-## task: Fix sync bug
-owner: Leon
-status: todo
-due:
+## entry: Fix sync bug
+description: owner: Leon; status: todo
 ```
 
 ## People Notes -> TLB
@@ -45,14 +41,42 @@ Ben
 Output:
 
 ```md
-## person: Alice
-team: Design
-focus: onboarding
+## entry: Alice
+description: Team: Design; Focus: onboarding
 
-## person: Ben
-team: Engineering
-focus: sync
+## entry: Ben
+description: Team: Engineering; Focus: sync
 ```
+
+## Parent Child Blocks For Conversion Assistant
+
+Source:
+
+```md
+- 装修厨房
+  - 选瓷砖
+  - 联系师傅
+```
+
+Output:
+
+```md
+## entry: 装修厨房
+
+## entry: 选瓷砖
+TLBparent: 装修厨房
+description:
+
+## entry: 联系师傅
+TLBparent: 装修厨房
+description:
+```
+
+Rule:
+
+- Field names added by the skill stay in English.
+- Extracted values stay in the source language.
+- Parent and child rows share the same primary field name.
 
 ## Mixed Content -> Split Or Ask
 

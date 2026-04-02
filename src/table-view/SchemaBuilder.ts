@@ -8,6 +8,7 @@ import {
 	PARENT_ENTRY_ID_FIELD,
 	STATUS_CHANGED_FIELD
 } from './entryFields';
+import { resolveTemporaryParentHints } from './ParentHintResolver';
 
 export interface Schema {
 	columnNames: string[];
@@ -86,6 +87,9 @@ export class SchemaBuilder {
 			if (ensureHiddenEntryFields(block)) {
 				schemaDirty = true;
 			}
+		}
+		if (resolveTemporaryParentHints(blocks)) {
+			schemaDirty = true;
 		}
 		normalizeStatusFieldOnConfigs(columnConfigs);
 		const hiddenConfigFields = new Set<string>(

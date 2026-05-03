@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -eu
+
+msg_file="$1"
+subject="$(sed -n '1p' "$msg_file")"
+
+case "$subject" in
+	[0-9][0-9][0-9][0-9][0-9][0-9]\ *)
+		echo "Commit subject must not start with a six-digit sequence prefix in this repository." >&2
+		echo "Use a plain subject, for example: add clipboard append action" >&2
+		exit 1
+		;;
+esac

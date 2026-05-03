@@ -3,7 +3,6 @@
   "version": "0.9.12",
   "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "main": "dist/main.js",
-  "packageManager": "npm@11.12.0",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "npm run lint && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run check:release",

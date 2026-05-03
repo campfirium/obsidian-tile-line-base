@@ -31,6 +31,19 @@ let totalBytes = 0;
 
 const clampSize = (value: number): number => Math.max(MIN_SIZE, Math.round(value));
 
+const resolveRenderedMediaSize = (img: HTMLImageElement, fallback: MediaSize): MediaSize => {
+	const container = img.closest('.tlb-slide-full__block--image');
+	if (!(container instanceof HTMLElement)) {
+		return fallback;
+	}
+	const width = container.clientWidth;
+	const height = container.clientHeight;
+	if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+		return fallback;
+	}
+	return { width, height };
+};
+
 const normalizeSize = (size: MediaSize): MediaSize => {
 	const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
 	const targetWidth = clampSize(size.width);
@@ -314,14 +327,18 @@ export function optimizeGalleryMediaElements(
 		img.classList.add('tlb-gallery-media');
 		const original = img.dataset.tlbOriginalSrc ?? img.currentSrc ?? img.src;
 		if (!original) return;
+		const renderedSize = resolveRenderedMediaSize(img, { width: targetW, height: targetH });
+		const normalizedImageSize = normalizeSize(renderedSize);
+		const imageTargetW = clampSize(normalizedImageSize.width);
+		const imageTargetH = clampSize(normalizedImageSize.height);
 		const sourceKey = normalizeSourceKey(original);
-		const key = buildDbKey(sourceKey, { width: targetW, height: targetH });
+		const key = buildDbKey(sourceKey, { width: imageTargetW, height: imageTargetH });
 		if (img.dataset.tlbOptimizedKey === key) {
 			return;
 		}
 		img.dataset.tlbOptimizedKey = key;
 		img.dataset.tlbOriginalSrc = original;
-		setImageAttributes(img, { width: targetW, height: targetH });
+		setImageAttributes(img, { width: imageTargetW, height: imageTargetH });
 		const cachedEntry = resolvedCache.get(key);
 		const shouldForceEager = options?.isFirstBatch || Boolean(cachedEntry?.url);
 		if (shouldForceEager) {
@@ -332,7 +349,7 @@ export function optimizeGalleryMediaElements(
 			touchEntry(key, cachedEntry.size, cachedEntry.url);
 			return;
 		}
-		const task = getOptimizedUrl(original, { width: targetW, height: targetH }).then((optimized) => {
+		const task = getOptimizedUrl(original, { width: imageTargetW, height: imageTargetH }).then((optimized) => {
 			if (!optimized || !img.isConnected) return;
 			if (img.dataset.tlbOptimizedKey !== key) return;
 			img.src = optimized;

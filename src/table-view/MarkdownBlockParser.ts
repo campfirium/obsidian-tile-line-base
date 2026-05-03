@@ -167,14 +167,9 @@ export class MarkdownBlockParser {
 					const fenced = isTildeFenceMarker(nextFence)
 						? consumeTildeFencedBlock(lines, index + 1, nextFence)
 						: null;
-					if (fenced) { currentBlock.data[parsedHeadingField.key] = fenced.value; index = fenced.endIndex; }
-					else {
-						const invalid = buildInvalidSection(lines, index, 'invalidField');
-						invalidSections.push(invalid);
-						skipUntil = Math.max(skipUntil, invalid.endLine);
-						currentBlock = null;
-						currentBlockStartLine = -1;
-						continue;
+					if (fenced) {
+						currentBlock.data[parsedHeadingField.key] = fenced.value;
+						index = fenced.endIndex;
 					}
 				}
 				continue;
@@ -254,7 +249,7 @@ ${section.text}`;
 			if (!parsedHeading) {
 				return false;
 			}
-			if (parsedHeading.key.length === 0 || (parsedHeading.value.length === 0 && (block.data[parsedHeading.key] ?? '').trim().length === 0)) {
+			if (parsedHeading.key.length === 0) {
 				return false;
 			}
 			if (headingKey === null) {

@@ -21,6 +21,7 @@ export interface FilterViewBarCallbacks {
 	onExportCsv(button: HTMLElement): void;
 	onImportCsv(button: HTMLElement): void;
 	onImportCsvAsTable(button: HTMLElement): void;
+	onAppendFromClipboard(): void;
 	onAdjustColumnWidths(): void;
 	onDefaultViewMenu(button: HTMLElement, event?: MouseEvent): void;
 	onEditDefaultView(): void;
@@ -44,9 +45,11 @@ export class FilterViewBar {
 	private readonly actionsEl: HTMLElement;
 	private readonly addButtonEl: HTMLButtonElement;
 	private readonly settingsButtonEl: HTMLButtonElement;
+	private readonly appendClipboardButtonEl: HTMLButtonElement;
 	private readonly searchEl: HTMLElement;
 	private readonly addClickHandler: () => void;
 	private readonly settingsMenuClickHandler: (event: MouseEvent) => void;
+	private readonly appendClipboardClickHandler: (event: MouseEvent) => void;
 	private readonly adjustWidthsHandler: () => void;
 	private tagGroupState: FilterViewBarTagGroupState = {
 		activeGroupId: null,
@@ -86,6 +89,21 @@ export class FilterViewBar {
 			this.options.callbacks.onCreate();
 		};
 		this.addButtonEl.addEventListener('click', this.addClickHandler);
+
+		const appendClipboardLabel = t('appendClipboard.buttonLabel');
+		this.appendClipboardButtonEl = this.actionsEl.createEl('button', {
+			cls: 'tlb-filter-view-button tlb-filter-view-button--append-clipboard'
+		});
+		this.appendClipboardButtonEl.setAttribute('type', 'button');
+		this.appendClipboardButtonEl.setAttribute('aria-label', appendClipboardLabel);
+		this.appendClipboardButtonEl.setAttribute('title', appendClipboardLabel);
+		setIcon(this.appendClipboardButtonEl, 'clipboard-plus');
+		this.appendClipboardClickHandler = (event: MouseEvent) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.options.callbacks.onAppendFromClipboard();
+		};
+		this.appendClipboardButtonEl.addEventListener('click', this.appendClipboardClickHandler);
 
 		const settingsButtonLabel = t('filterViewBar.settingsMenuAriaLabel');
 		this.settingsButtonEl = this.actionsEl.createEl('button', {
@@ -232,6 +250,7 @@ export class FilterViewBar {
 	destroy(): void {
 		this.tagGroupButtonEl.removeEventListener('click', this.tagGroupClickHandler);
 		this.addButtonEl.removeEventListener('click', this.addClickHandler);
+		this.appendClipboardButtonEl.removeEventListener('click', this.appendClipboardClickHandler);
 		this.settingsButtonEl.removeEventListener('click', this.settingsMenuClickHandler);
 		this.rootEl.remove();
 	}

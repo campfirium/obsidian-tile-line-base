@@ -146,9 +146,10 @@ export function renderGalleryDisplayCard(options: {
 		for (const img of page.imageBlocks) {
 			const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image tlb-gallery-media-container' });
 			imageBlock.style.textAlign = page.imageLayout.align;
-			const targetHeight = Math.max(40, Math.round(cardWidth / (16 / 9)));
+			const targetHeight = Math.max(40, page.imageLayout.imageHeightPx ?? Math.round(cardWidth / (16 / 9)));
 			imageBlock.style.height = `${targetHeight}px`;
 			imageBlock.style.minHeight = `${targetHeight}px`;
+			imageBlock.style.setProperty('--tlb-gallery-image-max-height', `${targetHeight}px`);
 			void renderMarkdownBlock(app, img, imageBlock, sourcePath, markdownComponents).catch(() => undefined);
 		}
 		applyLayout(imageWrapper, page.imageLayout);

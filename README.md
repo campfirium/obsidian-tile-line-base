@@ -114,6 +114,14 @@ TileLineBase is currently in **Early Beta** and is not yet available via Obsidia
 
 </details>
 
+## Development
+
+For local development, install dependencies with `npm ci`.
+
+Use `npm install <package>` only when you are intentionally adding, removing, or upgrading a dependency and need to refresh `package-lock.json`.
+
+After dependency changes, run `npm run deps:hardening:check`.
+
 ## Tips & Tweaks
 
 - [Status Icon and Row Background Customization](docs/status-snippet-guide.md)

@@ -48,6 +48,7 @@
       "titleLayoutLabel": "Titel-lay-out",
       "bodyLayoutLabel": "Body-lay-out",
       "widthPctLabel": "Breedte (%)",
+      "imageHeightPxLabel": "Hoogte (px)",
       "topPctLabel": "Boven (%)",
       "alignLeft": "Links",
       "alignCenter": "Midden",
@@ -98,6 +99,15 @@
     "openMarkdownView": "Bewerken",
     "openTableViewFromFileMenu": "Openen in TileLineBase-weergave",
     "switchViewMenu": "Weergave: {{mode}}"
+  },
+  "appendClipboard": {
+    "buttonLabel": "Toevoegen vanaf klembord",
+    "clipboardUnavailable": "Klembord is in deze context niet beschikbaar.",
+    "emptyNotice": "Het klembord is leeg.",
+    "invalidNotice": "De klembordinhoud bestaat niet uit geldige TileLineBase-items.",
+    "noFileNotice": "Het huidige bestand is niet beschikbaar.",
+    "successNotice": "Klembordtekst toegevoegd.",
+    "failureNotice": "Klembordtekst toevoegen is mislukt."
   },
   "galleryView": {
     "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
@@ -263,6 +273,7 @@
     "exportCsv": "Huidige tabel als CSV exporteren",
     "importCsv": "CSV in huidige tabel importeren",
     "importCsvAsTable": "CSV als nieuwe tabel importeren",
+    "appendFromClipboard": "Toevoegen vanaf klembord",
     "toggleTableView": "Tabelweergave schakelen",
     "openKanbanView": "TileLineBase-kanbanweergave openen",
     "openSlideView": "TileLineBase-diaweergave openen",

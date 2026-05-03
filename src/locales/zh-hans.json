@@ -14,6 +14,15 @@
     "openTableViewFromFileMenu": "在 TileLineBase 视图中打开",
     "switchViewMenu": "视图: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "从剪贴板追加",
+    "clipboardUnavailable": "当前环境无法访问剪贴板。",
+    "emptyNotice": "剪贴板为空。",
+    "invalidNotice": "剪贴板内容不是有效的 TileLineBase 条目。",
+    "noFileNotice": "当前文件不可用。",
+    "successNotice": "已追加剪贴板文本。",
+    "failureNotice": "追加剪贴板文本失败。"
+  },
   "galleryView": {
     "emptyState": "还没有卡片。可在表格视图中新增行来填充此画廊。",
     "processingHint": "正在准备画廊卡片...",
@@ -210,6 +219,7 @@
       "titleLayoutLabel": "标题布局",
       "bodyLayoutLabel": "正文布局",
       "widthPctLabel": "宽度（%）",
+      "imageHeightPxLabel": "高度（px）",
       "topPctLabel": "顶部位置（%）",
       "alignLeft": "居左",
       "alignCenter": "居中",
@@ -264,6 +274,7 @@
     "importCsv": "将 CSV 导入当前表格",
     "toggleTableView": "切换表格视图",
     "importCsvAsTable": "导入 CSV 并创建新表格",
+    "appendFromClipboard": "从剪贴板追加",
     "openKanbanView": "打开 TileLineBase 看板视图",
     "openSlideView": "打开 TileLineBase 幻灯片视图",
     "openGalleryView": "打开 TileLineBase 画廊视图"

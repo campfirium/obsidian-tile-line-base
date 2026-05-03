@@ -36,6 +36,9 @@ export function renderGalleryFilterControls(
 				view.galleryTagGroupController?.openTagGroupMenu(button);
 			},
 			onOpenSettings: options?.onOpenSettings,
+			onAppendFromClipboard: () => {
+				void view.appendFromClipboard();
+			},
 			onDefaultViewMenu: (button, event) => {
 				const handler =
 					options?.onDefaultViewMenu ??

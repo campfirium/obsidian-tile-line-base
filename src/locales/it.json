@@ -14,6 +14,15 @@
     "openTableViewFromFileMenu": "Apri nella vista TileLineBase",
     "switchViewMenu": "Vista: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "Aggiungi dagli appunti",
+    "clipboardUnavailable": "Gli appunti non sono disponibili in questo contesto.",
+    "emptyNotice": "Gli appunti sono vuoti.",
+    "invalidNotice": "Il contenuto degli appunti non è composto da voci TileLineBase valide.",
+    "noFileNotice": "Il file corrente non è disponibile.",
+    "successNotice": "Testo degli appunti aggiunto.",
+    "failureNotice": "Impossibile aggiungere il testo degli appunti."
+  },
   "galleryView": {
     "emptyState": "Ancora nessuna scheda. Aggiungi righe dalla vista tabella per popolare questa galleria.",
     "processingHint": "Preparazione delle schede della galleria...",
@@ -210,6 +219,7 @@
       "titleLayoutLabel": "Layout del titolo",
       "bodyLayoutLabel": "Layout del corpo",
       "widthPctLabel": "Larghezza (%)",
+      "imageHeightPxLabel": "Altezza (px)",
       "topPctLabel": "Parte superiore (%)",
       "alignLeft": "Sinistra",
       "alignCenter": "Centro",
@@ -263,6 +273,7 @@
     "exportCsv": "Esporta la tabella corrente in CSV",
     "importCsv": "Importa un CSV nella tabella corrente",
     "importCsvAsTable": "Importa un CSV come nuova tabella",
+    "appendFromClipboard": "Aggiungi dagli appunti",
     "toggleTableView": "Attiva/disattiva la vista tabella",
     "openKanbanView": "Apri la vista kanban TileLineBase",
     "openSlideView": "Apri la vista diapositive di TileLineBase",

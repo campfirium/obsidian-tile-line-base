@@ -353,7 +353,8 @@
 .tlb-filter-view-actions {
   flex: 0 0 auto;
   display: flex;
-  gap: calc(var(--ag-grid-size, 8px) * 0.75);
+  align-items: center;
+  gap: calc(var(--ag-grid-size, 8px) * 0.25);
 }
 
 .tlb-filter-view-search {
@@ -536,7 +537,7 @@
 }
 
 .tlb-gallery-card__slide .tlb-slide-full__block--image {
-	aspect-ratio: 16 / 9;
+	width: 100%;
 }
 
 .tlb-gallery-card__slide .tlb-slide-full__block--image p {
@@ -548,7 +549,6 @@
 	width: 100%;
 	height: 100%;
 	max-height: none;
-	aspect-ratio: 16 / 9;
 	object-fit: cover;
 }
 .tlb-gallery-card--empty {
@@ -1296,6 +1296,13 @@
   box-shadow: none !important;
 }
 
+.tlb-filter-view-actions .tlb-filter-view-button--append-clipboard:hover,
+.tlb-filter-view-actions .tlb-filter-view-button--settings:hover {
+	background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+	border-color: transparent !important;
+	box-shadow: none !important;
+}
+
 .tlb-filter-view-button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--ag-focus-border-color, var(--interactive-accent)) 80%, transparent);
   outline-offset: 2px;
@@ -1326,14 +1333,39 @@
   padding-left: calc(var(--ag-grid-size, 8px) * 1.25);
 }
 
-.tlb-filter-view-button--settings {
+.tlb-filter-view-actions .tlb-filter-view-button--settings {
 	min-width: auto;
-	width: auto;
+	width: calc(var(--ag-grid-size, 8px) * 3.5);
+	height: calc(var(--ag-grid-size, 8px) * 4.5);
+	justify-content: center;
+	padding: 0;
+	border-color: transparent !important;
+	border-radius: var(--ag-border-radius, 6px);
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+.tlb-filter-view-actions .tlb-filter-view-button--append-clipboard {
+	min-width: auto;
+	width: calc(var(--ag-grid-size, 8px) * 3.5);
+	height: calc(var(--ag-grid-size, 8px) * 4.5);
+	justify-content: center;
+	padding: 0;
+	border-color: transparent !important;
+	border-radius: var(--ag-border-radius, 6px);
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+.tlb-filter-view-button--append-clipboard svg {
+	width: 18px !important;
+	height: 18px !important;
+	stroke-width: 1.8;
 }
 
 .tlb-filter-view-button--settings svg {
-	width: 13px !important;
-	height: 13px !important;
+	width: 20px !important;
+	height: 20px !important;
 	stroke-width: 1.8;
 }
 
@@ -1470,9 +1502,9 @@
 }
 
 .tlb-filter-view-button--settings .tlb-filter-view-button__icon svg {
-	width: 12px !important;
-	height: 12px !important;
-	stroke-width: 1.6;
+	width: 20px !important;
+	height: 20px !important;
+	stroke-width: 1.8;
 }
 
 .tlb-filter-view-button__label {

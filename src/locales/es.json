@@ -14,6 +14,15 @@
     "openTableViewFromFileMenu": "Abrir en la vista de TileLineBase",
     "switchViewMenu": "Vista: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "Añadir desde el portapapeles",
+    "clipboardUnavailable": "El portapapeles no está disponible en este contexto.",
+    "emptyNotice": "El portapapeles está vacío.",
+    "invalidNotice": "El contenido del portapapeles no son entradas válidas de TileLineBase.",
+    "noFileNotice": "El archivo actual no está disponible.",
+    "successNotice": "Texto del portapapeles añadido.",
+    "failureNotice": "No se pudo añadir el texto del portapapeles."
+  },
   "galleryView": {
     "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
     "processingHint": "Preparando tarjetas de la galería...",
@@ -210,6 +219,7 @@
       "titleLayoutLabel": "Diseño del título",
       "bodyLayoutLabel": "Diseño del cuerpo",
       "widthPctLabel": "Ancho (%)",
+      "imageHeightPxLabel": "Altura (px)",
       "topPctLabel": "Margen superior (%)",
       "alignLeft": "Izquierda",
       "alignCenter": "Centro",
@@ -263,6 +273,7 @@
     "exportCsv": "Exportar la tabla actual como CSV",
     "importCsv": "Importar un CSV en la tabla actual",
     "importCsvAsTable": "Importar CSV como nueva tabla",
+    "appendFromClipboard": "Añadir desde el portapapeles",
     "toggleTableView": "Alternar vista de tabla",
     "openKanbanView": "Abrir la vista Kanban de TileLineBase",
     "openSlideView": "Abrir la vista de diapositivas de TileLineBase",

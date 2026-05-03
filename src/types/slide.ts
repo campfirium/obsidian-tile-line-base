@@ -38,6 +38,7 @@ export interface SlideLayoutConfig {
 	lineHeight: number;
 	fontSize: number;
 	fontWeight: number;
+	imageHeightPx?: number;
 }
 
 export interface SlideViewConfig {
@@ -103,6 +104,17 @@ const normalizeNumber = (value: unknown, fallback: number): number => {
 	return Number.isFinite(num) ? num : fallback;
 };
 
+const normalizeOptionalPixelNumber = (value: unknown): number | undefined => {
+	if (value === '' || value == null) {
+		return undefined;
+	}
+	const num = typeof value === 'number' ? value : Number(value);
+	if (!Number.isFinite(num) || num <= 0) {
+		return undefined;
+	}
+	return Math.round(num);
+};
+
 const DEFAULT_TITLE_LAYOUT: SlideLayoutConfig = {
 	widthPct: 80,
 	topPct: 12,
@@ -150,7 +162,8 @@ const normalizeLayout = (value: unknown, defaults: SlideLayoutConfig): SlideLayo
 		align,
 		lineHeight,
 		fontSize,
-		fontWeight
+		fontWeight,
+		imageHeightPx: normalizeOptionalPixelNumber(raw.imageHeightPx)
 	};
 };
 

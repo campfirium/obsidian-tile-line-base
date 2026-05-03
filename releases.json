@@ -1,4 +1,20 @@
 {
+  "0.9.12": {
+    "date": "2026-05-03",
+    "info": "",
+    "new": [
+      "Clipboard content in a supported format can now be appended in any view with one click."
+    ],
+    "improved": [
+      "Parent-child entries now work in Markdown view.",
+      "Gallery views now support custom image heights."
+    ],
+    "fixed": [
+      "Long text tooltips no longer block cell editing.",
+      "Entries with empty primary fields now parse correctly."
+    ],
+    "changed": []
+  },
   "0.9.11": {
     "date": "2026-03-29",
     "info": "",

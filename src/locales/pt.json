@@ -14,6 +14,15 @@
     "openTableViewFromFileMenu": "Abrir na visualização do TileLineBase",
     "switchViewMenu": "Vista: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "Adicionar da área de transferência",
+    "clipboardUnavailable": "Área de transferência indisponível neste contexto.",
+    "emptyNotice": "A área de transferência está vazia.",
+    "invalidNotice": "O conteúdo da área de transferência não são entradas TileLineBase válidas.",
+    "noFileNotice": "O arquivo atual está indisponível.",
+    "successNotice": "Texto da área de transferência adicionado.",
+    "failureNotice": "Falha ao adicionar o texto da área de transferência."
+  },
   "galleryView": {
     "emptyState": "Ainda não há cartões. Adicione linhas da visualização de tabela para preencher esta galeria.",
     "processingHint": "Preparando cartões da galeria...",
@@ -210,6 +219,7 @@
       "titleLayoutLabel": "Layout do título",
       "bodyLayoutLabel": "Layout do corpo",
       "widthPctLabel": "Largura (%)",
+      "imageHeightPxLabel": "Altura (px)",
       "topPctLabel": "Superior (%)",
       "alignLeft": "Esquerda",
       "alignCenter": "Centro",
@@ -263,6 +273,7 @@
     "exportCsv": "Exportar a tabela atual como CSV",
     "importCsv": "Importar CSV na tabela atual",
     "importCsvAsTable": "Importar CSV como nova tabela",
+    "appendFromClipboard": "Adicionar da área de transferência",
     "toggleTableView": "Alternar visualização da tabela",
     "openKanbanView": "Abrir a visualização Kanban do TileLineBase",
     "openSlideView": "Abrir a visualização de slides do TileLineBase",

@@ -48,6 +48,7 @@
       "titleLayoutLabel": "제목 레이아웃",
       "bodyLayoutLabel": "본문 레이아웃",
       "widthPctLabel": "너비 (%)",
+      "imageHeightPxLabel": "높이(px)",
       "topPctLabel": "위쪽 (%)",
       "alignLeft": "왼쪽",
       "alignCenter": "가운데",
@@ -98,6 +99,15 @@
     "openMarkdownView": "편집",
     "openTableViewFromFileMenu": "TileLineBase 보기에서 열기",
     "switchViewMenu": "보기: {{mode}}"
+  },
+  "appendClipboard": {
+    "buttonLabel": "클립보드에서 추가",
+    "clipboardUnavailable": "이 환경에서는 클립보드를 사용할 수 없습니다.",
+    "emptyNotice": "클립보드가 비어 있습니다.",
+    "invalidNotice": "클립보드 내용이 유효한 TileLineBase 항목이 아닙니다.",
+    "noFileNotice": "현재 파일을 사용할 수 없습니다.",
+    "successNotice": "클립보드 텍스트를 추가했습니다.",
+    "failureNotice": "클립보드 텍스트를 추가하지 못했습니다."
   },
   "galleryView": {
     "emptyState": "아직 카드가 없습니다. 테이블 보기에서 행을 추가해 이 갤러리를 채우세요.",
@@ -263,6 +273,7 @@
     "exportCsv": "현재 테이블을 CSV로 내보내기",
     "importCsv": "현재 테이블에 CSV 가져오기",
     "importCsvAsTable": "CSV를 새 테이블로 가져오기",
+    "appendFromClipboard": "클립보드에서 추가",
     "toggleTableView": "테이블 보기 토글",
     "openKanbanView": "TileLineBase 칸반 보기 열기",
     "openSlideView": "TileLineBase 슬라이드 보기 열기",

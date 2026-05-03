@@ -102,8 +102,9 @@ export class OverflowTooltipController {
 			return;
 		}
 		this.currentAnchor = anchor;
-		const columnWidth = cell.getBoundingClientRect().width;
-		showOverflowTooltip(anchor, text, { columnWidth });
+		const cellRect = cell.getBoundingClientRect();
+		const columnWidth = cellRect.width;
+		showOverflowTooltip(anchor, text, { columnWidth, cellRect });
 	}
 
 	private handleLeave(_cell: HTMLElement): void {

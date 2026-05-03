@@ -14,6 +14,15 @@
     "openTableViewFromFileMenu": "Ouvrir dans la vue TileLineBase",
     "switchViewMenu": "Vue: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "Ajouter depuis le presse-papiers",
+    "clipboardUnavailable": "Le presse-papiers n'est pas disponible dans ce contexte.",
+    "emptyNotice": "Le presse-papiers est vide.",
+    "invalidNotice": "Le contenu du presse-papiers ne correspond pas à des entrées TileLineBase valides.",
+    "noFileNotice": "Le fichier actuel est indisponible.",
+    "successNotice": "Texte du presse-papiers ajouté.",
+    "failureNotice": "Impossible d'ajouter le texte du presse-papiers."
+  },
   "galleryView": {
     "emptyState": "Aucune carte pour le moment. Ajoutez des lignes depuis la vue tableau pour alimenter cette galerie.",
     "processingHint": "Préparation des cartes de la galerie...",
@@ -210,6 +219,7 @@
       "titleLayoutLabel": "Disposition du titre",
       "bodyLayoutLabel": "Disposition du corps",
       "widthPctLabel": "Largeur (%)",
+      "imageHeightPxLabel": "Hauteur (px)",
       "topPctLabel": "Haut (%)",
       "alignLeft": "Gauche",
       "alignCenter": "Centre",
@@ -263,6 +273,7 @@
     "exportCsv": "Exporter le tableau actuel en CSV",
     "importCsv": "Importer un CSV dans le tableau actuel",
     "importCsvAsTable": "Importer un CSV comme nouveau tableau",
+    "appendFromClipboard": "Ajouter depuis le presse-papiers",
     "toggleTableView": "Basculer la vue tableau",
     "openKanbanView": "Ouvrir la vue kanban TileLineBase",
     "openSlideView": "Ouvrir la vue diapositive TileLineBase",

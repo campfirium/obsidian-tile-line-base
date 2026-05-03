@@ -48,6 +48,7 @@
       "titleLayoutLabel": "Układ tytułu",
       "bodyLayoutLabel": "Układ treści",
       "widthPctLabel": "Szerokość (%)",
+      "imageHeightPxLabel": "Wysokość (px)",
       "topPctLabel": "Góra (%)",
       "alignLeft": "Lewo",
       "alignCenter": "Środek",
@@ -98,6 +99,15 @@
     "openMarkdownView": "Edytuj",
     "openTableViewFromFileMenu": "Otwórz w widoku TileLineBase",
     "switchViewMenu": "Widok: {{mode}}"
+  },
+  "appendClipboard": {
+    "buttonLabel": "Dołącz ze schowka",
+    "clipboardUnavailable": "Schowek jest niedostępny w tym kontekście.",
+    "emptyNotice": "Schowek jest pusty.",
+    "invalidNotice": "Zawartość schowka nie jest prawidłowymi wpisami TileLineBase.",
+    "noFileNotice": "Bieżący plik jest niedostępny.",
+    "successNotice": "Tekst ze schowka został dołączony.",
+    "failureNotice": "Nie udało się dołączyć tekstu ze schowka."
   },
   "galleryView": {
     "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
@@ -263,6 +273,7 @@
     "exportCsv": "Eksportuj bieżącą tabelę do CSV",
     "importCsv": "Zaimportuj CSV do bieżącej tabeli",
     "importCsvAsTable": "Zaimportuj CSV jako nową tabelę",
+    "appendFromClipboard": "Dołącz ze schowka",
     "toggleTableView": "Przełącz widok tabeli",
     "openKanbanView": "Otwórz widok kanban TileLineBase",
     "openSlideView": "Otwórz widok slajdów TileLineBase",

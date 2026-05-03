@@ -16,6 +16,7 @@ interface KanbanToolbarOptions {
 	onCreateBoard: () => void | Promise<void>;
 	onEditBoard: (boardId: string) => void | Promise<void>;
 	onOpenBoardMenu: (boardId: string, event: MouseEvent) => void | Promise<void>;
+	onAppendFromClipboard: () => void | Promise<void>;
 	onOpenSettings: (button: HTMLButtonElement, event: MouseEvent) => void;
 }
 
@@ -34,8 +35,10 @@ export class KanbanToolbar {
 	private readonly searchEl: HTMLElement;
 	private readonly actionsEl: HTMLElement;
 	private readonly addButtonEl: HTMLButtonElement;
+	private readonly appendClipboardButtonEl: HTMLButtonElement;
 	private readonly settingsButtonEl: HTMLButtonElement;
 	private readonly addClickHandler: (event: MouseEvent) => void;
+	private readonly appendClipboardClickHandler: (event: MouseEvent) => void;
 	private readonly settingsClickHandler: (event: MouseEvent) => void;
 	private readonly boardListeners: ListenerEntry[] = [];
 	private boards: KanbanToolbarBoard[] = [];
@@ -66,6 +69,21 @@ export class KanbanToolbar {
 		this.options.renderQuickFilter(this.searchEl);
 
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
+		const appendClipboardLabel = t('appendClipboard.buttonLabel');
+		this.appendClipboardButtonEl = this.actionsEl.createEl('button', {
+			cls: 'tlb-filter-view-button tlb-filter-view-button--append-clipboard'
+		});
+		this.appendClipboardButtonEl.setAttribute('type', 'button');
+		this.appendClipboardButtonEl.setAttribute('aria-label', appendClipboardLabel);
+		this.appendClipboardButtonEl.setAttribute('title', appendClipboardLabel);
+		setIcon(this.appendClipboardButtonEl, 'clipboard-plus');
+		this.appendClipboardClickHandler = (event: MouseEvent) => {
+			event.preventDefault();
+			event.stopPropagation();
+			void this.options.onAppendFromClipboard();
+		};
+		this.appendClipboardButtonEl.addEventListener('click', this.appendClipboardClickHandler);
+
 		this.settingsButtonEl = this.actionsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--settings'
 		});
@@ -102,6 +120,7 @@ export class KanbanToolbar {
 		}
 		this.boardListeners.length = 0;
 		this.addButtonEl.removeEventListener('click', this.addClickHandler);
+		this.appendClipboardButtonEl.removeEventListener('click', this.appendClipboardClickHandler);
 		this.settingsButtonEl.removeEventListener('click', this.settingsClickHandler);
 		this.rootEl.remove();
 	}

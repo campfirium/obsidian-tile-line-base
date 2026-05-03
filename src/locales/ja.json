@@ -48,6 +48,7 @@
       "titleLayoutLabel": "タイトルレイアウト",
       "bodyLayoutLabel": "本文レイアウト",
       "widthPctLabel": "幅 (%)",
+      "imageHeightPxLabel": "高さ (px)",
       "topPctLabel": "上 (%)",
       "alignLeft": "左",
       "alignCenter": "中央",
@@ -98,6 +99,15 @@
     "openMarkdownView": "編集",
     "openTableViewFromFileMenu": "TileLineBase ビューで開く",
     "switchViewMenu": "ビュー: {{mode}}"
+  },
+  "appendClipboard": {
+    "buttonLabel": "クリップボードから追加",
+    "clipboardUnavailable": "この環境ではクリップボードが利用できません。",
+    "emptyNotice": "クリップボードは空です。",
+    "invalidNotice": "クリップボードの内容は有効な TileLineBase エントリではありません。",
+    "noFileNotice": "現在のファイルを利用できません。",
+    "successNotice": "クリップボードのテキストを追加しました。",
+    "failureNotice": "クリップボードのテキストを追加できませんでした。"
   },
   "galleryView": {
     "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
@@ -263,6 +273,7 @@
     "exportCsv": "現在のテーブルを CSV にエクスポート",
     "importCsv": "CSV を現在のテーブルに取り込む",
     "importCsvAsTable": "CSV を新しいテーブルとして取り込む",
+    "appendFromClipboard": "クリップボードから追加",
     "toggleTableView": "テーブルビューを切り替える",
     "openKanbanView": "TileLineBase のカンバンビューを開く",
     "openSlideView": "TileLineBase のスライドビューを開く",

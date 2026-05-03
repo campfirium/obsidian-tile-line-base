@@ -14,6 +14,15 @@
     "openTableViewFromFileMenu": "In TileLineBase-Ansicht öffnen",
     "switchViewMenu": "Ansicht: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "Aus Zwischenablage anhängen",
+    "clipboardUnavailable": "Zwischenablage ist in diesem Kontext nicht verfügbar.",
+    "emptyNotice": "Die Zwischenablage ist leer.",
+    "invalidNotice": "Der Inhalt der Zwischenablage besteht nicht aus gültigen TileLineBase-Einträgen.",
+    "noFileNotice": "Aktuelle Datei ist nicht verfügbar.",
+    "successNotice": "Text aus der Zwischenablage angehängt.",
+    "failureNotice": "Text aus der Zwischenablage konnte nicht angehängt werden."
+  },
   "galleryView": {
     "emptyState": "Noch keine Karten. Füge Zeilen aus der Tabellenansicht hinzu, um diese Galerie zu füllen.",
     "processingHint": "Galeriekarten werden vorbereitet...",
@@ -210,6 +219,7 @@
       "titleLayoutLabel": "Titellayout",
       "bodyLayoutLabel": "Textlayout",
       "widthPctLabel": "Breite (%)",
+      "imageHeightPxLabel": "Höhe (px)",
       "topPctLabel": "Abstand oben (%)",
       "alignLeft": "Links",
       "alignCenter": "Zentriert",
@@ -263,6 +273,7 @@
     "exportCsv": "Aktuelle Tabelle als CSV exportieren",
     "importCsv": "CSV in aktuelle Tabelle importieren",
     "importCsvAsTable": "CSV als neue Tabelle importieren",
+    "appendFromClipboard": "Aus Zwischenablage anhängen",
     "toggleTableView": "Tabellenansicht umschalten",
     "openKanbanView": "TileLineBase-Kanban-Ansicht öffnen",
     "openSlideView": "TileLineBase-Folienansicht öffnen",

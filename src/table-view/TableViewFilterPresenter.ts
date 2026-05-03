@@ -65,6 +65,9 @@ export function renderFilterViewControls(view: TableView, container: Element): v
 					openAfterCreate: true
 				});
 			},
+			onAppendFromClipboard: () => {
+				void view.appendFromClipboard();
+			},
 			onAdjustColumnWidths: () => {
 				const adapter = view.gridAdapter;
 				if (adapter && typeof adapter.fillColumnsToMinimumWidth === 'function') {

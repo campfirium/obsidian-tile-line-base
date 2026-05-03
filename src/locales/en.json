@@ -15,6 +15,15 @@
 
     "switchViewMenu": "View: {{mode}}"
   },
+  "appendClipboard": {
+    "buttonLabel": "Append from Clipboard",
+    "clipboardUnavailable": "Clipboard is unavailable in this context.",
+    "emptyNotice": "Clipboard is empty.",
+    "invalidNotice": "Clipboard content is not valid TileLineBase entries.",
+    "noFileNotice": "Current file is unavailable.",
+    "successNotice": "Appended clipboard text.",
+    "failureNotice": "Failed to append clipboard text."
+  },
   "galleryView": {
     "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
     "processingHint": "Preparing gallery cards...",
@@ -265,6 +274,7 @@
     "exportCsv": "Export current table as CSV",
     "importCsv": "Import CSV into current table",
     "importCsvAsTable": "Import CSV as new table",
+    "appendFromClipboard": "Append from Clipboard",
     "toggleTableView": "Toggle table view",
     "openKanbanView": "Open TileLineBase kanban view",
     "openSlideView": "Open TileLineBase slide view",

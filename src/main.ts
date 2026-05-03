@@ -357,6 +357,22 @@ export default class TileLineBasePlugin extends Plugin {
 				});
 			}
 		});
+		this.addCommand({
+			id: 'append-from-clipboard',
+			name: t('commands.appendFromClipboard'),
+			checkCallback: (checking: boolean) => {
+				const view = this.getActiveTableView();
+				const canAppend = Boolean(view?.file);
+				if (checking) {
+					return canAppend;
+				}
+				if (!view || !canAppend) {
+					return false;
+				}
+				void view.appendFromClipboard();
+				return true;
+			}
+		});
 
 		this.registerEvent(
 			this.app.workspace.on('window-open', (workspaceWindow: WorkspaceWindow, win: Window) => {

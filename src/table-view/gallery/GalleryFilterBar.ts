@@ -11,6 +11,7 @@ interface GalleryFilterBarCallbacks {
 	onReorder(draggedId: string, targetId: string): void;
 	onOpenTagGroupMenu(button: HTMLElement): void;
 	onOpenSettings?: (button: HTMLElement, event: MouseEvent) => void;
+	onAppendFromClipboard?: () => void;
 	onDefaultViewMenu?: (button: HTMLElement, event?: MouseEvent) => void;
 	onEditDefaultView?: () => void;
 }
@@ -28,10 +29,12 @@ export class GalleryFilterBar {
 	private readonly tagGroupLabelEl: HTMLSpanElement;
 	private readonly addButtonEl: HTMLButtonElement;
 	private readonly actionsEl: HTMLElement;
+	private readonly appendClipboardButtonEl: HTMLButtonElement;
 	private readonly settingsButtonEl: HTMLButtonElement;
 	private readonly searchEl: HTMLElement;
 	private readonly tagGroupClickHandler: (event: MouseEvent) => void;
 	private readonly addClickHandler: () => void;
+	private readonly appendClipboardClickHandler: (event: MouseEvent) => void;
 	private readonly settingsClickHandler: (event: MouseEvent) => void;
 	private tagGroupState: FilterViewBarTagGroupState = {
 		activeGroupId: null,
@@ -59,6 +62,21 @@ export class GalleryFilterBar {
 		this.searchEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-search' });
 		this.options.renderQuickFilter(this.searchEl);
 		this.actionsEl = this.rootEl.createDiv({ cls: 'tlb-filter-view-actions' });
+		const appendClipboardLabel = t('appendClipboard.buttonLabel');
+		this.appendClipboardButtonEl = this.actionsEl.createEl('button', {
+			cls: 'tlb-filter-view-button tlb-filter-view-button--append-clipboard'
+		});
+		this.appendClipboardButtonEl.setAttribute('type', 'button');
+		this.appendClipboardButtonEl.setAttribute('aria-label', appendClipboardLabel);
+		this.appendClipboardButtonEl.setAttribute('title', appendClipboardLabel);
+		setIcon(this.appendClipboardButtonEl, 'clipboard-plus');
+		this.appendClipboardClickHandler = (event: MouseEvent) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.options.callbacks.onAppendFromClipboard?.();
+		};
+		this.appendClipboardButtonEl.addEventListener('click', this.appendClipboardClickHandler);
+
 		this.settingsButtonEl = this.actionsEl.createEl('button', {
 			cls: 'tlb-filter-view-button tlb-filter-view-button--settings'
 		});
@@ -170,6 +188,7 @@ export class GalleryFilterBar {
 	destroy(): void {
 		this.tagGroupButtonEl.removeEventListener('click', this.tagGroupClickHandler);
 		this.addButtonEl.removeEventListener('click', this.addClickHandler);
+		this.appendClipboardButtonEl.removeEventListener('click', this.appendClipboardClickHandler);
 		this.settingsButtonEl.removeEventListener('click', this.settingsClickHandler);
 		this.rootEl.remove();
 	}

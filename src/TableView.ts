@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownView, Menu } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, Menu, Notice } from "obsidian";
 import type { ColumnState } from "ag-grid-community";
 import type { GridAdapter } from "./grid/GridAdapter";
 import { getLogger } from "./utils/logger";
@@ -54,12 +54,14 @@ import { DEFAULT_KANBAN_LANE_WIDTH } from "./table-view/kanban/kanbanWidth";
 import { buildTableViewTabTitle } from "./utils/viewTitle";
 import { ConversionSessionManager } from "./table-view/ConversionSessionManager";
 import { refreshTableViewDisplayText } from "./table-view/viewDisplayText";
+import { appendTextFromClipboardToFile } from "./table-view/AppendFromClipboard";
 import type { SlideViewConfig } from "./types/slide";
 import { normalizeSlideViewConfig } from "./types/slide";
 import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
 import { RowOrderController } from "./table-view/row-sort/RowOrderController";
 import type { MagicMigrationController } from "./table-view/MagicMigrationController";
 import { getPluginContext } from "./pluginContext";
+import { t } from "./i18n";
 export const TABLE_VIEW_TYPE = "tile-line-base-table"; const logger = getLogger("view:table");
 export interface TableViewState extends Record<string, unknown> { filePath: string; }
 export class TableView extends ItemView {
@@ -300,6 +302,40 @@ export class TableView extends ItemView {
 		this.persistenceService?.scheduleSave();
 	}
 	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> { await this.viewModeManager.setActiveViewMode(mode); }
+	public async appendFromClipboard(): Promise<void> {
+		const file = this.file;
+		if (!file) {
+			new Notice(t('appendClipboard.noFileNotice'));
+			return;
+		}
+		const ownerDoc = this.containerEl.ownerDocument ?? document;
+		const navigatorLike = ownerDoc.defaultView?.navigator ?? navigator;
+		const clipboard = navigatorLike?.clipboard;
+		if (!clipboard?.readText) {
+			new Notice(t('appendClipboard.clipboardUnavailable'));
+			return;
+		}
+		try {
+			if (this.persistenceService?.hasPendingSave()) {
+				await this.persistenceService.save();
+			}
+			const text = await clipboard.readText();
+			const nextContent = await appendTextFromClipboardToFile({
+				app: this.app,
+				file,
+				text,
+				getBackupManager: () => getPluginContext()?.getBackupManager() ?? null,
+				markSelfMutation: (targetFile) => this.refreshCoordinator.markSelfMutation(targetFile),
+				replaceConversionBaseline: (content) => this.replaceConversionBaseline(content)
+			});
+			if (nextContent !== null) {
+				await this.render();
+			}
+		} catch (error) {
+			logger.error('Failed to append clipboard to file', error);
+			new Notice(t('appendClipboard.failureNotice'));
+		}
+	}
 	public captureConversionBaseline(content: string): void { this.conversionSession.captureBaseline(content); }
 	public replaceConversionBaseline(content: string): void { this.conversionSession.replaceBaseline(content); }
 	public markUserMutation(reason?: string): void { this.conversionSession.markUserMutation(reason); }

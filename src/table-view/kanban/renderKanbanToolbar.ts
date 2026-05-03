@@ -42,6 +42,9 @@ export function renderKanbanToolbar(view: TableView, container: HTMLElement): vo
 				void view.kanbanBoardController.openBoardMenu(target, event);
 			}
 		},
+		onAppendFromClipboard: () => {
+			void view.appendFromClipboard();
+		},
 		onOpenSettings: (button, event) => {
 			event.preventDefault();
 			const menu = new Menu();

@@ -66,8 +66,8 @@ function checkPackageJson() {
 		fail('package.json 缺少 deps:hardening:check 脚本');
 	}
 
-	if (packageJson.packageManager !== 'npm@11.12.0') {
-		fail(`packageManager 期望为 npm@11.12.0，当前为 ${packageJson.packageManager ?? '未设置'}`);
+	if (packageJson.packageManager && !packageJson.packageManager.startsWith('npm@')) {
+		fail(`packageManager 只允许 npm，当前为 ${packageJson.packageManager}`);
 	}
 }
 

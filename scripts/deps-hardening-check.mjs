@@ -101,13 +101,33 @@ function checkInstallScriptPackages() {
 }
 
 function runAudit() {
-	try {
-		execFileSync('npm', ['audit', '--omit=dev'], {
+	const maxAttempts = 3;
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+		const result = spawnSync('npm', ['audit', '--omit=dev'], {
 			cwd: rootDir,
-			stdio: 'inherit'
+			encoding: 'utf8'
 		});
-	} catch {
-		fail('npm audit --omit=dev 未通过');
+
+		if (result.stdout) {
+			process.stdout.write(result.stdout);
+		}
+
+		if (result.status === 0) {
+			return;
+		}
+
+		const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+		const canRetry = /audit endpoint returned an error|socket disconnected|ECONNRESET|ETIMEDOUT/i.test(output);
+		if (!canRetry || attempt === maxAttempts) {
+			if (result.stderr) {
+				process.stderr.write(result.stderr);
+			}
+			fail('npm audit --omit=dev 未通过');
+			return;
+		}
+
+		console.warn(`npm audit --omit=dev 网络失败，正在重试 (${attempt + 1}/${maxAttempts})`);
 	}
 }
 
@@ -122,8 +142,10 @@ function runDepsScan() {
 	}
 }
 
-function getNpmVersionTimes() {
-	const output = execFileSync('npm', ['view', 'npm', 'time', '--json'], {
+const minReleaseAgeProbePackages = ['npm', 'eslint', 'typescript-eslint', 'vite', '@types/node'];
+
+function getPackageVersionTimes(packageName) {
+	const output = execFileSync('npm', ['view', packageName, 'time', '--json'], {
 		cwd: rootDir,
 		encoding: 'utf8',
 		stdio: ['ignore', 'pipe', 'inherit']
@@ -135,7 +157,7 @@ function isStableSemver(version) {
 	return /^\d+\.\d+\.\d+$/.test(version);
 }
 
-function pickMinReleaseAgeCandidates(timeMap) {
+function pickMinReleaseAgeCandidates(timeMap, packageName) {
 	const now = Date.now();
 	const cutoffMs = 7 * 24 * 60 * 60 * 1000;
 	const versions = Object.entries(timeMap)
@@ -152,17 +174,28 @@ function pickMinReleaseAgeCandidates(timeMap) {
 	const aged = versions.find((entry) => now - entry.publishedMs >= cutoffMs);
 
 	if (!tooRecent || !aged) {
-		fail('无法从 npm registry 自动挑出 min-release-age 探针版本');
 		return null;
 	}
 
-	return { tooRecent, aged };
+	return { packageName, tooRecent, aged };
 }
 
-function runInstallProbe(tempDir, version) {
+function pickMinReleaseAgeProbe() {
+	for (const packageName of minReleaseAgeProbePackages) {
+		const candidates = pickMinReleaseAgeCandidates(getPackageVersionTimes(packageName), packageName);
+		if (candidates) {
+			return candidates;
+		}
+	}
+
+	fail('无法从 npm registry 自动挑出 min-release-age 探针版本');
+	return null;
+}
+
+function runInstallProbe(tempDir, packageName, version) {
 	const result = spawnSync(
 		'npm',
-		['install', `npm@${version}`, '--package-lock-only', '--ignore-scripts', '--audit=false', '--fund=false'],
+		['install', `${packageName}@${version}`, '--package-lock-only', '--ignore-scripts', '--audit=false', '--fund=false'],
 		{
 			cwd: tempDir,
 			encoding: 'utf8'
@@ -176,7 +209,7 @@ function runInstallProbe(tempDir, version) {
 }
 
 function checkMinReleaseAgeProbe() {
-	const candidates = pickMinReleaseAgeCandidates(getNpmVersionTimes());
+	const candidates = pickMinReleaseAgeProbe();
 	if (!candidates) return;
 
 	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tlb-min-release-age-'));
@@ -199,22 +232,22 @@ function checkMinReleaseAgeProbe() {
 			['audit=false', 'fund=false', 'save-exact=true', 'min-release-age=7'].join('\n')
 		);
 
-		const blockedProbe = runInstallProbe(tempDir, candidates.tooRecent.version);
+		const blockedProbe = runInstallProbe(tempDir, candidates.packageName, candidates.tooRecent.version);
 		if (blockedProbe.status === 0) {
 			fail(
-				`min-release-age 探针失败：过新版本 npm@${candidates.tooRecent.version} 未被拦住`
+				`min-release-age 探针失败：过新版本 ${candidates.packageName}@${candidates.tooRecent.version} 未被拦住`
 			);
 		}
 
-		const allowedProbe = runInstallProbe(tempDir, candidates.aged.version);
+		const allowedProbe = runInstallProbe(tempDir, candidates.packageName, candidates.aged.version);
 		if (allowedProbe.status !== 0) {
 			fail(
-				`min-release-age 探针失败：已过冷却期的 npm@${candidates.aged.version} 未通过`
+				`min-release-age 探针失败：已过冷却期的 ${candidates.packageName}@${candidates.aged.version} 未通过`
 			);
 		}
 
 		console.log(
-			`min-release-age 探针通过：拦截 npm@${candidates.tooRecent.version}，放行 npm@${candidates.aged.version}`
+			`min-release-age 探针通过：拦截 ${candidates.packageName}@${candidates.tooRecent.version}，放行 ${candidates.packageName}@${candidates.aged.version}`
 		);
 	} finally {
 		fs.rmSync(tempDir, { recursive: true, force: true });

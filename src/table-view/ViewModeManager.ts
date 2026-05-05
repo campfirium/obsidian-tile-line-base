@@ -96,8 +96,8 @@ export class ViewModeManager {
 			this.view.activeViewMode = mode;
 			this.view.refreshDisplayText();
 			this.updateButtons();
-			void this.view.persistenceService?.saveConfig();
 			await this.view.render();
+			void this.view.persistenceService?.saveConfig();
 		} finally {
 			this.isSwitching = false;
 		}

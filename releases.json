@@ -1,4 +1,16 @@
 {
+  "0.9.13": {
+    "date": "2026-05-05",
+    "info": "",
+    "new": [],
+    "improved": [
+      "Gallery card size changes now apply only after saving."
+    ],
+    "fixed": [
+      "Gallery settings now stay intact when switching between notes."
+    ],
+    "changed": []
+  },
   "0.9.12": {
     "date": "2026-05-03",
     "info": "",

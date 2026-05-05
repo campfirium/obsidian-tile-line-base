@@ -1,6 +1,6 @@
 {
   "name": "obsidian-tile-line-base",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "main": "dist/main.js",
   "scripts": {
@@ -37,7 +37,7 @@
     "@typescript-eslint/eslint-plugin": "8.46.2",
     "@typescript-eslint/parser": "8.46.2",
     "builtin-modules": "3.3.0",
-    "esbuild": "0.25.0",
+    "esbuild": "0.25.12",
     "eslint": "9.39.0",
     "eslint-import-resolver-typescript": "3.10.1",
     "eslint-plugin-eslint-comments": "3.2.0",

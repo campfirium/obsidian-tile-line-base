@@ -21,7 +21,7 @@ interface SlideTemplateModalOptions {
 	fieldConfigs?: ColumnConfig[] | null;
 	sampleRows?: RowData[];
 	initial: SlideTemplateConfig;
-	onSave: (next: SlideTemplateConfig) => void;
+	onSave: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => void;
 	renderIntroSection?: (container: HTMLElement) => void;
 	onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
 	allowedModes?: Array<'single' | 'split'>;
@@ -47,7 +47,7 @@ export class SlideTemplateModal extends Modal {
 	private readonly fields: string[];
 	private readonly fieldConfigs: ColumnConfig[] | null;
 	private readonly sampleRows: RowData[];
-	private readonly onSave: (next: SlideTemplateConfig) => void;
+	private readonly onSave: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => void;
 	private readonly renderIntroSection?: (container: HTMLElement) => void;
 	private readonly onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
 	private readonly getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
@@ -365,9 +365,6 @@ export class SlideTemplateModal extends Modal {
 		}
 		this.cardWidth = width;
 		this.cardHeight = height;
-		if (this.onCardSizeChange) {
-			this.onCardSizeChange({ width, height });
-		}
 	}
 
 	private getCardSizePayload(): { width: number; height: number } | null {
@@ -846,11 +843,9 @@ export class SlideTemplateModal extends Modal {
 		};
 		buildNumberInput(t('galleryView.templateModal.widthLabel'), this.cardWidth, (next) => {
 			this.cardWidth = next;
-			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
 		});
 		buildNumberInput(t('galleryView.templateModal.heightLabel'), this.cardHeight, (next) => {
 			this.cardHeight = next;
-			this.onCardSizeChange?.({ width: this.cardWidth, height: this.cardHeight });
 		});
 	}
 
@@ -912,7 +907,7 @@ export class SlideTemplateModal extends Modal {
 			text: t('slideView.templateModal.saveLabel')
 		});
 		saveButton.addEventListener('click', () => {
-			this.onSave(this.template);
+			this.onSave(this.template, this.getCardSizePayload());
 			this.close();
 		});
 

@@ -112,15 +112,19 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				view.markUserMutation('gallery-template');
 				view.persistenceService.scheduleSave();
 			},
-			onSave: (nextTemplate) => {
+			onSave: (nextTemplate, cardSize) => {
 				const nextConfig = enforceSingleWithImageConfig(
 					normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 				);
+				const width = normalizeSize(cardSize?.width ?? active.cardWidth, DEFAULT_CARD_WIDTH);
+				const height = normalizeSize(cardSize?.height ?? active.cardHeight, DEFAULT_CARD_HEIGHT);
 				view.galleryTemplateTouched = true;
 				view.shouldAutoFillGalleryDefaults = false;
 				view.galleryViewStore.updateTemplate(active.def.id, nextConfig);
+				view.galleryViewStore.updateCardSize(active.def.id, { width, height });
 				view.galleryConfig = nextConfig;
 				view.galleryController?.updateConfig(nextConfig);
+				view.galleryController?.setCardSize({ width, height });
 				view.markUserMutation('gallery-template');
 				view.persistenceService.scheduleSave();
 			},

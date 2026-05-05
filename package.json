@@ -1,6 +1,6 @@
 {
   "name": "obsidian-tile-line-base",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "main": "dist/main.js",
   "scripts": {

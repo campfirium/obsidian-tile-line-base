@@ -65,7 +65,7 @@ export class TagGroupController {
 		this.defaultGroupId = this.store.getDefaultGroupId();
 	}
 
-	syncWithAvailableViews(): void {
+	syncWithAvailableViews(): boolean {
 		let filterState = this.getFilterViewState();
 		filterState = ensureStatusBaseline({
 			filterState,
@@ -75,7 +75,7 @@ export class TagGroupController {
 			isStatusBaselineSeeded: this.isStatusBaselineSeeded,
 			markStatusBaselineSeeded: this.markStatusBaselineSeeded
 		});
-		this.store.syncWithFilterViews(filterState, t('tagGroups.defaultGroupName'));
+		return this.store.syncWithFilterViews(filterState, t('tagGroups.defaultGroupName'));
 	}
 
 	openTagGroupMenu(anchorEl: HTMLElement): void {

@@ -120,7 +120,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.params = params;
 
 		// �� AG Grid �ĵ�Ԫ��Ԫ�ػ�ȡ��ȷ�� document��֧�� pop-out ���ڣ�
-		const doc = (params.eGridCell?.ownerDocument || document);
+		const doc = (params.eGridCell?.ownerDocument || activeDocument);
 		this.hostCell = params.eGridCell ?? null;
 		if (this.hostCell) {
 			this.hostCell.setAttribute('data-tlb-tooltip-disabled', 'true');
@@ -200,7 +200,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		}
 		this.eGui.setAttribute('data-status', status);
 
-		const doc = this.eGui.ownerDocument || document;
+		const doc = this.eGui.ownerDocument || activeDocument;
 		const iconContainer = doc.createElement('span');
 		iconContainer.className = 'tlb-status-icon';
 		this.eGui.appendChild(iconContainer);
@@ -409,7 +409,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		};
 
 		// �ӳ���Ӽ����������⵱ǰ�Ҽ��¼���������?
-		setTimeout(() => {
+			(ownerDoc.defaultView ?? window).setTimeout(() => {
 			if (this.documentClickHandler) {
 				ownerDoc.addEventListener('click', this.documentClickHandler, { capture: true });
 				ownerDoc.addEventListener('contextmenu', this.documentClickHandler, { capture: true });
@@ -435,7 +435,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 		// �Ƴ� document �ĵ��������?
 		if (this.documentClickHandler) {
-			const ownerDoc = this.eGui?.ownerDocument || document;
+			const ownerDoc = this.eGui?.ownerDocument || activeDocument;
 			ownerDoc.removeEventListener('click', this.documentClickHandler);
 			ownerDoc.removeEventListener('contextmenu', this.documentClickHandler);
 			this.documentClickHandler = undefined;

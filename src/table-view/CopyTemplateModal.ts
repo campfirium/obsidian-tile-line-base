@@ -2,6 +2,11 @@ import { App, Modal, Setting } from 'obsidian';
 import { t } from '../i18n';
 import { FormulaFieldSuggester } from './FormulaFieldSuggester';
 
+function isHTMLElementForDocument(value: unknown, ownerDoc: Document): value is HTMLElement {
+	const HTMLElementCtor = ownerDoc.defaultView?.HTMLElement;
+	return HTMLElementCtor != null && value instanceof HTMLElementCtor;
+}
+
 interface CopyTemplateModalOptions {
 	initialTemplate: string;
 	availableFields: string[];
@@ -28,12 +33,12 @@ export class CopyTemplateModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl, modalEl } = this;
-		const ownerDoc = contentEl.ownerDocument ?? document;
+		const ownerDoc = contentEl.ownerDocument ?? activeDocument;
 
 		const trigger = this.options.triggerElement;
-		if (trigger && trigger instanceof HTMLElement) {
+		if (isHTMLElementForDocument(trigger, ownerDoc)) {
 			this.returnFocusTarget = trigger;
-		} else if (ownerDoc.activeElement instanceof HTMLElement) {
+		} else if (isHTMLElementForDocument(ownerDoc.activeElement, ownerDoc)) {
 			this.returnFocusTarget = ownerDoc.activeElement;
 		}
 

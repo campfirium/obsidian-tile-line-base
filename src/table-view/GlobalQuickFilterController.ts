@@ -168,7 +168,7 @@ export class GlobalQuickFilterController {
                 }
 
                 const input = this.inputEl;
-                const isFocused = document.activeElement === input;
+                const isFocused = activeDocument.activeElement === input;
                 input.value = value;
                 if (isFocused) {
                         const caret = typeof input.selectionEnd === 'number' ? Math.min(value.length, input.selectionEnd) : value.length;

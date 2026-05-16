@@ -16,7 +16,8 @@ export function findRenderedLinkElement(target: EventTarget | null): HTMLElement
 		return null;
 	}
 	const link = element.closest('a, .internal-link, .external-link, [data-href]');
-	return link instanceof HTMLElement ? link : null;
+	const HTMLElementCtor = element.ownerDocument.defaultView?.HTMLElement;
+	return HTMLElementCtor && link instanceof HTMLElementCtor ? link : null;
 }
 
 export function tryOpenRenderedInternalLink(

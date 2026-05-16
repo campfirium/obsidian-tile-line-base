@@ -60,7 +60,7 @@ export function createTimeCellEditor() {
 
 		init(params: ICellEditorParams): void {
 			this.params = params;
-			const doc = params.eGridCell?.ownerDocument || document;
+			const doc = params.eGridCell?.ownerDocument || activeDocument;
 			this.initialValue = String(params.value ?? '').trim();
 			this.lastValidValue = this.determineInitialValidValue(this.initialValue);
 

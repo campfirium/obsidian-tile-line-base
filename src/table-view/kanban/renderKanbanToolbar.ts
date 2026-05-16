@@ -81,7 +81,7 @@ export function renderKanbanToolbar(view: TableView, container: HTMLElement): vo
 			menu.showAtPosition({
 				x: rect.left + win.scrollX,
 				y: rect.bottom + win.scrollY
-			});
+			}, ownerDoc);
 		}
 	});
 

@@ -61,9 +61,10 @@ export class MagicMigrationModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl, modalEl } = this;
-		const ownerDoc = contentEl.ownerDocument ?? document;
+		const ownerDoc = contentEl.ownerDocument ?? activeDocument;
 		const activeElement = ownerDoc.activeElement;
-		if (activeElement instanceof HTMLElement) {
+		const HTMLElementCtor = ownerDoc.defaultView?.HTMLElement;
+		if (HTMLElementCtor && activeElement instanceof HTMLElementCtor) {
 			this.returnFocusTarget = activeElement;
 		}
 
@@ -218,7 +219,7 @@ export class MagicMigrationModal extends Modal {
 		if (options.actionSlot) {
 			options.actionSlot(actions);
 		}
-		wrapper.createEl('div', { text: options.helper, cls: 'tlb-conversion-helper' });
+		wrapper.createDiv({ text: options.helper, cls: 'tlb-conversion-helper' });
 		const textarea = ownerDoc.createElement('textarea');
 		textarea.value = options.value;
 		textarea.rows = options.rows;
@@ -299,7 +300,7 @@ export class MagicMigrationModal extends Modal {
 		if (!this.sourceContentEl) {
 			return;
 		}
-		const ownerDoc = this.sourceContentEl.ownerDocument ?? document;
+		const ownerDoc = this.sourceContentEl.ownerDocument ?? activeDocument;
 		const selection = ownerDoc.getSelection();
 		const anchorNode = selection?.anchorNode;
 		if (!selection || selection.isCollapsed || !anchorNode || !this.sourceContentEl.contains(anchorNode)) {
@@ -531,7 +532,7 @@ export class MagicMigrationModal extends Modal {
 		while (this.sourceContentEl.firstChild) {
 			this.sourceContentEl.removeChild(this.sourceContentEl.firstChild);
 		}
-		const ownerDoc = this.sourceContentEl.ownerDocument ?? document;
+		const ownerDoc = this.sourceContentEl.ownerDocument ?? activeDocument;
 		this.sourceContentEl.append(ownerDoc.createTextNode(prefix));
 		const highlight = ownerDoc.createElement('span');
 		highlight.className = 'tlb-source-inline-highlight';

@@ -48,7 +48,7 @@ export class GridInteractionController {
 		this.cellClipboard = new GridCellClipboardController({
 			dataStore: deps.dataStore,
 			rowInteraction: deps.rowInteraction,
-			getOwnerDocument: () => this.container?.ownerDocument ?? document,
+			getOwnerDocument: () => this.container?.ownerDocument ?? activeDocument,
 			writeClipboard: (payload, successKey, options) =>
 				this.clipboardHelper.writeClipboard(payload, successKey, options)
 		});
@@ -117,7 +117,8 @@ export class GridInteractionController {
 		}
 
 		const headerElement = target.closest('.ag-header-cell, .ag-header-group-cell');
-		if (headerElement instanceof HTMLElement) {
+		const HTMLElementCtor = target.ownerDocument.defaultView?.HTMLElement;
+		if (HTMLElementCtor && headerElement instanceof HTMLElementCtor) {
 			const headerColId = headerElement.getAttribute('col-id');
 			if (headerColId && headerColId !== 'status' && headerColId !== '#') {
 				event.preventDefault();
@@ -221,7 +222,7 @@ export class GridInteractionController {
 		});
 
 		this.contextMenu = menu;
-		const ownerDoc = this.container?.ownerDocument ?? document;
+		const ownerDoc = this.container?.ownerDocument ?? activeDocument;
 		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDoc);
 	}
 	async copySection(blockIndex: number): Promise<void> {

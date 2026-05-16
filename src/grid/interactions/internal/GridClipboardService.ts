@@ -74,7 +74,7 @@ export class GridClipboardService {
 
 		event.preventDefault?.();
 		event.stopPropagation?.();
-		const doc = this.getFocusedDocument() || document;
+		const doc = this.getFocusedDocument() || activeDocument;
 		this.copyTextToClipboard(doc, text);
 		this.stopCellEditing();
 	}

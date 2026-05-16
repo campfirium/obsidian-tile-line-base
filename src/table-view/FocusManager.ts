@@ -31,7 +31,8 @@ interface PendingFocusRequest {
  */
 export class FocusManager {
 	private pendingRequest: PendingFocusRequest | null = null;
-	private retryTimer: ReturnType<typeof setTimeout> | null = null;
+	private retryTimer: number | null = null;
+	private retryTimerWindow: Window | null = null;
 
 	constructor(private readonly deps: FocusManagerDeps) {}
 
@@ -93,8 +94,9 @@ export class FocusManager {
 
 	clearPendingFocus(reason?: string): void {
 		if (this.retryTimer) {
-			clearTimeout(this.retryTimer);
+			(this.retryTimerWindow ?? this.getTimerWindow()).clearTimeout(this.retryTimer);
 			this.retryTimer = null;
+			this.retryTimerWindow = null;
 		}
 
 		if (this.pendingRequest) {
@@ -126,8 +128,9 @@ export class FocusManager {
 
 		const effectiveDelay = Math.max(0, delay);
 		if (this.retryTimer) {
-			clearTimeout(this.retryTimer);
+			(this.retryTimerWindow ?? this.getTimerWindow()).clearTimeout(this.retryTimer);
 			this.retryTimer = null;
+			this.retryTimerWindow = null;
 		}
 
 		logger.trace('[FocusDebug]', 'scheduleFocusAttempt', {
@@ -139,10 +142,18 @@ export class FocusManager {
 			pendingVerification: request.pendingVerification
 		});
 
-		this.retryTimer = setTimeout(() => {
+		const timerWindow = this.getTimerWindow();
+		this.retryTimerWindow = timerWindow;
+		this.retryTimer = timerWindow.setTimeout(() => {
 			this.retryTimer = null;
+			this.retryTimerWindow = null;
 			this.attemptFocusOnPendingRow();
 		}, effectiveDelay);
+	}
+
+	private getTimerWindow(): Window {
+		const globalWithActiveWindow = window as typeof window & { activeWindow?: Window };
+		return globalWithActiveWindow.activeWindow ?? window;
 	}
 
 	private attemptFocusOnPendingRow(): void {

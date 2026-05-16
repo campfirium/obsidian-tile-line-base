@@ -10,7 +10,7 @@ interface CryptoLike {
 }
 
 export async function computeBackupHash(data: Uint8Array): Promise<string> {
-	const cryptoApi = (globalThis as { crypto?: CryptoLike }).crypto;
+	const cryptoApi = (window as { crypto?: CryptoLike }).crypto;
 	if (cryptoApi?.subtle) {
 		const digest = await cryptoApi.subtle.digest('SHA-256', data);
 		return arrayBufferToHex(digest);

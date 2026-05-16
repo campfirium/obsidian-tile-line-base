@@ -37,6 +37,11 @@ export class ColumnInteractionController {
 		this.persistColumnStructureChange = deps.persistColumnStructureChange;
 	}
 
+	private getEventOwnerDocument(event: MouseEvent): Document {
+		const target = event.currentTarget ?? event.target;
+		return (target as { ownerDocument?: Document } | null)?.ownerDocument ?? activeDocument;
+	}
+
 	handleColumnHeaderContextMenu(field: string, event: MouseEvent): void {
 		const schema = this.getSchema();
 		if (!schema) {
@@ -73,6 +78,7 @@ export class ColumnInteractionController {
 
 	private openColumnHeaderMenu(field: string, event: MouseEvent): void {
 		const menu = new Menu();
+		const ownerDocument = this.getEventOwnerDocument(event);
 		menu.addItem((item) => {
 			item.setTitle(t('columnInteraction.menuEdit')).setIcon('pencil').onClick(() => {
 				this.openColumnEditModal(field);
@@ -99,27 +105,29 @@ export class ColumnInteractionController {
 				this.removeColumn(field);
 			});
 		});
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 	}
 
 	private openStatusColumnMenu(event: MouseEvent): void {
 		const menu = new Menu();
+		const ownerDocument = this.getEventOwnerDocument(event);
 		menu.addItem((item) => {
 			item.setTitle(t('columnInteraction.menuHide')).setIcon('eye-off').onClick(() => {
 				this.setColumnHidden('status', true);
 			});
 		});
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 	}
 
 	private openParentEntryColumnMenu(event: MouseEvent): void {
 		const menu = new Menu();
+		const ownerDocument = this.getEventOwnerDocument(event);
 		menu.addItem((item) => {
 			item.setTitle(t('columnInteraction.menuHide')).setIcon('eye-off').onClick(() => {
 				this.setColumnHidden(PARENT_ENTRY_FIELD, true);
 			});
 		});
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 	}
 
 	private openIndexHeaderMenu(event: MouseEvent): void {
@@ -134,11 +142,12 @@ export class ColumnInteractionController {
 		const hiddenColumns = schema.columnNames.filter((name) => hiddenSet.has(name));
 
 		const menu = new Menu();
+		const ownerDocument = this.getEventOwnerDocument(event);
 		if (hiddenColumns.length === 0) {
 			menu.addItem((item) => {
 				item.setTitle(t('columnVisibility.empty')).setDisabled(true);
 			});
-			menu.showAtPosition({ x: event.pageX, y: event.pageY });
+			menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 			return;
 		}
 
@@ -147,13 +156,13 @@ export class ColumnInteractionController {
 				this.openHiddenColumnChooser(hiddenColumns, {
 					x: event.pageX + 12,
 					y: event.pageY + 12
-				});
+				}, ownerDocument);
 			});
 		});
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 	}
 
-	private openHiddenColumnChooser(hiddenColumns: string[], anchor: { x: number; y: number }): void {
+	private openHiddenColumnChooser(hiddenColumns: string[], anchor: { x: number; y: number }, ownerDocument: Document): void {
 		if (hiddenColumns.length === 0) {
 			return;
 		}
@@ -165,7 +174,7 @@ export class ColumnInteractionController {
 				});
 			});
 		}
-		menu.showAtPosition(anchor);
+		menu.showAtPosition(anchor, ownerDocument);
 	}
 
 	openColumnSettingsMenu(anchor: HTMLElement): void {
@@ -241,7 +250,7 @@ export class ColumnInteractionController {
 		menu.showAtPosition({
 			x: rect.left + win.scrollX,
 			y: rect.bottom + win.scrollY
-		});
+		}, ownerDocument);
 	}
 
 	private openColumnEditModal(field: string): void {

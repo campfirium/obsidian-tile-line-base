@@ -39,8 +39,8 @@ export class RowMigrationTargetModal extends SuggestModal<TFile> {
 			event.stopPropagation();
 			this.resolveSelection(file);
 		};
-		el.createEl('div', { text: file.basename });
-		el.createEl('div', { text: file.path, cls: 'tlb-row-migration-target__path' });
+		el.createDiv({ text: file.basename });
+		el.createDiv({ text: file.path, cls: 'tlb-row-migration-target__path' });
 		el.addEventListener('click', choose);
 		el.addEventListener('keydown', (event) => {
 			if (event.key === 'Enter' || event.key === ' ') {

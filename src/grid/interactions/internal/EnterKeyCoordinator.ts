@@ -101,12 +101,13 @@ export class EnterKeyCoordinator {
 		})();
 
 		const nextColId = resolvedColId ?? fallbackColId ?? '#';
+		const ownerWindow = this.focus.getDocument()?.defaultView ?? window;
 
-		setTimeout(() => {
+		ownerWindow.setTimeout(() => {
 			if (typeof api.stopEditing === 'function') {
 				api.stopEditing();
 			}
-			setTimeout(() => {
+			ownerWindow.setTimeout(() => {
 				try {
 					callback(nextColId);
 					this.focus.setPendingFocusShift({ rowDelta: 1, colDelta: 0 });

@@ -35,7 +35,7 @@ export function installTableViewGridF2Keybinding(view: TableView): void {
 			return;
 		}
 
-		const ownerDoc = container.ownerDocument ?? document;
+		const ownerDoc = container.ownerDocument ?? activeDocument;
 		const target = event.target as HTMLElement | null;
 		const activeEl = ownerDoc.activeElement as HTMLElement | null;
 		if (!isInsideGrid(container, target) && !isInsideGrid(container, activeEl)) {
@@ -68,7 +68,7 @@ export function installTableViewGridF2Keybinding(view: TableView): void {
 			return;
 		}
 
-		const ownerDoc = container.ownerDocument ?? document;
+		const ownerDoc = container.ownerDocument ?? activeDocument;
 		const target = event.target as HTMLElement | null;
 		const activeEl = ownerDoc.activeElement as HTMLElement | null;
 

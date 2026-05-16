@@ -418,7 +418,7 @@ export class FilterViewBar {
 		menu.showAtPosition({
 			x: rect.left + win.scrollX,
 			y: rect.bottom + win.scrollY
-		});
+		}, ownerDoc);
 	}
 
 	private getStatusFromFilterView(view: FilterViewDefinition): TaskStatus | null {

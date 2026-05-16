@@ -83,7 +83,7 @@ export class TagGroupController {
 		const filterState = this.getFilterViewState();
 		const state = this.store.getState();
 		const menu = new Menu();
-		const doc = anchorEl.ownerDocument ?? document;
+		const doc = anchorEl.ownerDocument ?? activeDocument;
 
 		const activeViewId = filterState.activeViewId ?? null;
 
@@ -171,6 +171,8 @@ export class TagGroupController {
 
 		this.syncWithAvailableViews();
 		const menu = new Menu();
+		const target = event.currentTarget ?? event.target;
+		const ownerDocument = (target as { ownerDocument?: Document } | null)?.ownerDocument ?? activeDocument;
 		const state = this.store.getState();
 		const groups = state.groups;
 		let renderedGroup = false;
@@ -205,7 +207,7 @@ export class TagGroupController {
 				});
 		});
 
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 	}
 
 	handleFilterViewRemoval(viewId: string): void {

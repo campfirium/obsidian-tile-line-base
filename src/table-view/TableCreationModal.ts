@@ -1,6 +1,11 @@
 ﻿import { App, Modal, Setting } from 'obsidian';
 import { t } from '../i18n';
 
+function isHTMLElementForDocument(value: unknown, ownerDoc: Document): value is HTMLElement {
+	const HTMLElementCtor = ownerDoc.defaultView?.HTMLElement;
+	return HTMLElementCtor != null && value instanceof HTMLElementCtor;
+}
+
 interface TableCreationModalOptions {
 	initialName: string;
 	initialRows: number;
@@ -120,7 +125,7 @@ export class TableCreationModal extends Modal {
 
 		const focusTarget = (nameInput ?? rowsInput ?? columnsInput) as HTMLInputElement | null;
 		if (focusTarget) {
-			const doc = contentEl.ownerDocument ?? document;
+			const doc = contentEl.ownerDocument ?? activeDocument;
 			const raf = doc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
 			const applyFocus = () => focusTarget.focus({ preventScroll: true });
 			if (typeof raf === 'function') {
@@ -237,11 +242,11 @@ export class TableCreationModal extends Modal {
 	}
 
 	private prepareReturnFocusTarget(): void {
-		const ownerDoc = this.contentEl.ownerDocument ?? document;
+		const ownerDoc = this.contentEl.ownerDocument ?? activeDocument;
 		const trigger = this.options.triggerElement;
-		if (trigger && trigger instanceof HTMLElement) {
+		if (isHTMLElementForDocument(trigger, ownerDoc)) {
 			this.returnFocusTarget = trigger;
-		} else if (ownerDoc.activeElement instanceof HTMLElement) {
+		} else if (isHTMLElementForDocument(ownerDoc.activeElement, ownerDoc)) {
 			this.returnFocusTarget = ownerDoc.activeElement;
 		}
 	}
@@ -260,7 +265,6 @@ export class TableCreationModal extends Modal {
 		}
 	};
 }
-
 
 
 

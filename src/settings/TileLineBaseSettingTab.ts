@@ -434,7 +434,7 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		const doc = containerEl.ownerDocument;
 		const styles = doc.defaultView ? doc.defaultView.getComputedStyle(doc.body) : null;
 		const primary = styles?.getPropertyValue('--background-primary')?.trim() ?? '';
-		const parsed = this.toHex(primary);
+		const parsed = this.toHex(primary, doc);
 		return parsed ?? '#000000';
 	}
 
@@ -443,16 +443,16 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		const isDarkMode = doc.body.classList.contains('theme-dark');
 		const styles = doc.defaultView ? doc.defaultView.getComputedStyle(doc.body) : null;
 		const primary = styles?.getPropertyValue('--background-primary')?.trim() ?? '';
-		const primaryColor = this.toHex(primary) ?? '#000000';
+		const primaryColor = this.toHex(primary, doc) ?? '#000000';
 		return computeRecommendedStripeColor(primaryColor, isDarkMode);
 	}
 
-	private toHex(value: string | null | undefined): string | null {
+	private toHex(value: string | null | undefined, ownerDoc: Document = this.containerEl.ownerDocument): string | null {
 		if (!value) return null;
-		const el = document.createElement('div');
+		const el = ownerDoc.createElement('div');
 		el.style.color = value;
-		document.body.appendChild(el);
-		const computed = getComputedStyle(el).color;
+		ownerDoc.body.appendChild(el);
+		const computed = ownerDoc.defaultView?.getComputedStyle(el).color ?? '';
 		el.remove();
 		const parts = computed.match(/[\d.]+/g);
 		if (!parts || parts.length < 3) {

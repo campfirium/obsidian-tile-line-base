@@ -124,11 +124,11 @@ export function openDefaultViewMenu(options: DefaultViewMenuOptions): void {
 		});
 	}
 
-	const ownerDoc = options.anchor.ownerDocument ?? document;
+	const ownerDoc = options.anchor.ownerDocument ?? activeDocument;
 	const win = ownerDoc.defaultView ?? window;
 	const rect = options.anchor.getBoundingClientRect();
 	const x = options.event ? options.event.pageX : rect.left + win.scrollX + rect.width / 2;
 	const y = options.event ? options.event.pageY : rect.bottom + win.scrollY;
 
-	menu.showAtPosition({ x, y });
+	menu.showAtPosition({ x, y }, ownerDoc);
 }

@@ -152,6 +152,8 @@ export class FilterViewController {
 
 	openFilterViewMenu(view: FilterViewDefinition, event: MouseEvent): void {
 		const menu = new Menu();
+		const target = event.currentTarget ?? event.target;
+		const ownerDocument = (target as { ownerDocument?: Document } | null)?.ownerDocument ?? activeDocument;
 		if (view.isTemporary) {
 			menu.addItem((item) => {
 				item.setTitle(t('filterViewController.menuSaveTemporary')).setIcon('save').onClick(() => {
@@ -194,7 +196,7 @@ export class FilterViewController {
 			});
 		}
 
-		menu.showAtPosition({ x: event.pageX, y: event.pageY });
+		menu.showAtPosition({ x: event.pageX, y: event.pageY }, ownerDocument);
 	}
 
 	async updateFilterView(viewId: string): Promise<void> {

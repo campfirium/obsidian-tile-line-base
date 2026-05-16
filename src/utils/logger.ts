@@ -55,7 +55,7 @@ type Listener = (config: LoggingConfig) => void;
 const listeners = new Set<Listener>();
 
 function readGlobalConfig(): LoggingConfig {
-	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (globalThis as Record<string, unknown>);
+	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (window as unknown as Record<string, unknown>);
 	const stored = globalObj[GLOBAL_STORAGE_KEY];
 	if (stored && typeof stored === 'object') {
 		return normalizeLoggingConfig(stored as Partial<LoggingConfig>);
@@ -66,7 +66,7 @@ function readGlobalConfig(): LoggingConfig {
 }
 
 function writeGlobalConfig(config: LoggingConfig): void {
-	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (globalThis as Record<string, unknown>);
+	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (window as unknown as Record<string, unknown>);
 	globalObj[GLOBAL_STORAGE_KEY] = config;
 }
 
@@ -121,7 +121,7 @@ function shouldLog(scope: string, level: LogLevelName): boolean {
 
 function makePrinter(scope: string, level: LogLevelName): (...args: unknown[]) => void {
 	const method = LOG_METHOD[level];
-	const globalConsole = typeof globalThis === 'undefined' ? null : globalThis.console;
+	const globalConsole = typeof globalThis === 'undefined' ? null : window.console;
 	const consoleMethod = globalConsole && typeof globalConsole[method] === 'function'
 		? globalConsole[method].bind(globalConsole)
 		: globalConsole && typeof globalConsole.log === 'function'
@@ -238,7 +238,7 @@ export interface LoggerConsoleBridgeOptions {
 }
 
 export function installLoggerConsoleBridge(options?: LoggerConsoleBridgeOptions): void {
-	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (globalThis as Record<string, unknown>);
+	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (window as unknown as Record<string, unknown>);
 	const existing = globalObj[CONSOLE_BRIDGE_KEY] as LoggerConsoleBridge | undefined;
 	if (existing) {
 		return;

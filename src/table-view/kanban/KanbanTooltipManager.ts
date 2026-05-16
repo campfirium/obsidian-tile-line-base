@@ -92,7 +92,7 @@ export class KanbanTooltipManager {
 		anchor.setAttr('aria-describedby', tooltip.id);
 		this.anchorEl = anchor;
 		this.attachGlobalListeners(doc);
-		requestAnimationFrame(() => {
+		window.requestAnimationFrame(() => {
 			if (this.anchorEl !== anchor) {
 				return;
 			}

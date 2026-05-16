@@ -39,7 +39,7 @@ export function createTextCellEditor() {
 		init(params: ICellEditorParams): void {
 			this.params = params;
 
-			const doc = params.eGridCell?.ownerDocument || document;
+			const doc = params.eGridCell?.ownerDocument || activeDocument;
 			const cellRect = params.eGridCell?.getBoundingClientRect();
 			this.minHeight = Math.max(36, cellRect?.height ?? 36);
 			const rawWidth = Math.max(MIN_CELL_WIDTH, Math.round(cellRect?.width ?? MIN_CELL_WIDTH));
@@ -142,7 +142,7 @@ export function createTextCellEditor() {
 			this.adjustHeight();
 			this.positionPopup();
 
-			const doc = this.eInput.ownerDocument ?? document;
+			const doc = this.eInput.ownerDocument ?? activeDocument;
 			const win = doc.defaultView ?? window;
 			const handler = () => {
 				this.measureWrapperChrome();
@@ -201,7 +201,7 @@ export function createTextCellEditor() {
 				return;
 			}
 			const textarea = this.eInput;
-			const doc = textarea.ownerDocument ?? document;
+			const doc = textarea.ownerDocument ?? activeDocument;
 			const win = doc.defaultView ?? window;
 			const cellRect = this.params?.eGridCell?.getBoundingClientRect();
 
@@ -240,7 +240,7 @@ export function createTextCellEditor() {
 				return;
 			}
 
-			const doc = this.wrapper.ownerDocument ?? document;
+			const doc = this.wrapper.ownerDocument ?? activeDocument;
 			const win = doc.defaultView ?? window;
 			const viewportWidth = win.innerWidth;
 			const viewportHeight = win.innerHeight;
@@ -323,7 +323,7 @@ export function createTextCellEditor() {
 				this.wrapperChrome = 0;
 				return;
 			}
-			const doc = this.wrapper.ownerDocument ?? document;
+			const doc = this.wrapper.ownerDocument ?? activeDocument;
 			const win = doc.defaultView ?? window;
 			const styles = win.getComputedStyle(this.wrapper);
 			const parseLength = (value: string | null) => {

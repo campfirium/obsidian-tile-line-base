@@ -52,7 +52,7 @@ export class CompositionCaptureManager {
 		this.debug('composition:setContainer', { hasContainer: Boolean(container) });
 		this.container = container;
 		if (container) {
-			this.focus.setDocument(container.ownerDocument || document);
+			this.focus.setDocument(container.ownerDocument || activeDocument);
 		}
 	}
 
@@ -195,7 +195,7 @@ export class CompositionCaptureManager {
 			this.focus.setEditing(false);
 		}
 
-		const doc = this.focus.getDocument() ?? this.container?.ownerDocument ?? document;
+		const doc = this.focus.getDocument() ?? this.container?.ownerDocument ?? activeDocument;
 		const target = this.resolveEditingTarget(gridApi, doc);
 		if (!target) {
 			this.debug('composition:startEditingFromShortcut:noTarget', { source });

@@ -127,9 +127,10 @@ function markTooltipBlankLines(container: HTMLElement): void {
 
 function replaceTooltipLineBreaks(container: HTMLElement): void {
 	const breaks = Array.from(container.querySelectorAll('br'));
+	const HTMLElementCtor = container.ownerDocument.defaultView?.HTMLElement;
 	for (const br of breaks) {
 		const prev = br.previousSibling;
-		const prevIsSpacer = prev instanceof HTMLElement && prev.classList.contains(TOOLTIP_SPACER_CLASS);
+		const prevIsSpacer = HTMLElementCtor != null && prev instanceof HTMLElementCtor && prev.classList.contains(TOOLTIP_SPACER_CLASS);
 		const prevIsBr = prev?.nodeName === 'BR';
 		if (!prevIsBr && !prevIsSpacer) {
 			continue;
@@ -230,7 +231,7 @@ interface TooltipWidthOptions {
 }
 
 export function showOverflowTooltip(target: HTMLElement, content: string, options?: TooltipWidthOptions): void {
-	const doc = target.ownerDocument ?? document;
+	const doc = target.ownerDocument ?? activeDocument;
 	const view = doc.defaultView ?? window;
 	const state = getOrCreateState(doc);
 
@@ -301,7 +302,7 @@ export function showOverflowTooltip(target: HTMLElement, content: string, option
 }
 
 export function hideOverflowTooltip(target: HTMLElement): void {
-	const doc = target.ownerDocument ?? document;
+	const doc = target.ownerDocument ?? activeDocument;
 	const view = doc.defaultView ?? window;
 	const state = getOrCreateState(doc);
 	if (state.currentTarget !== target) {

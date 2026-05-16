@@ -33,7 +33,8 @@ const clampSize = (value: number): number => Math.max(MIN_SIZE, Math.round(value
 
 const resolveRenderedMediaSize = (img: HTMLImageElement, fallback: MediaSize): MediaSize => {
 	const container = img.closest('.tlb-slide-full__block--image');
-	if (!(container instanceof HTMLElement)) {
+	const HTMLElementCtor = img.ownerDocument.defaultView?.HTMLElement;
+	if (!HTMLElementCtor || !(container instanceof HTMLElementCtor)) {
 		return fallback;
 	}
 	const width = container.clientWidth;
@@ -242,7 +243,7 @@ async function buildResizedObjectUrl(source: string, size: MediaSize): Promise<{
 		if (img.naturalWidth <= targetW && img.naturalHeight <= targetH) {
 			return null;
 		}
-		const canvas = document.createElement('canvas');
+		const canvas = img.ownerDocument.createElement('canvas');
 		canvas.width = targetW;
 		canvas.height = targetH;
 		const ctx = canvas.getContext('2d');

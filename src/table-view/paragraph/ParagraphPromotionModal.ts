@@ -112,7 +112,7 @@ export class ParagraphPromotionModal extends Modal {
 		label.setText(t('paragraphPromotion.folderLabel'));
 
 		const selectorRow = section.createDiv({ cls: 'tlb-paragraph-promotion-folder__selector' });
-		this.folderDisplay = selectorRow.createEl('span', { cls: 'tlb-paragraph-promotion-folder__value' });
+		this.folderDisplay = selectorRow.createSpan({ cls: 'tlb-paragraph-promotion-folder__value' });
 		this.folderDisplay.setText(this.targetFolder || t('paragraphPromotion.folderCurrentDefault'));
 
 		const chooseButton = selectorRow.createEl('button', {

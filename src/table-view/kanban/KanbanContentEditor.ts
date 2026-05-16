@@ -19,6 +19,7 @@ export interface ContentEditorHandle {
 
 export function renderContentSettingsEditor(options: ContentEditorOptions): ContentEditorHandle {
 	const root = options.container.createDiv({ cls: 'tlb-kanban-content-settings' });
+	const ownerWindow = root.ownerDocument.defaultView ?? window;
 	const header = root.createDiv({ cls: 'tlb-kanban-content-settings__header' });
 	header.createSpan({
 		cls: 'tlb-kanban-content-settings__title',
@@ -40,9 +41,12 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 	let lastFocusedInput: HTMLInputElement | HTMLTextAreaElement | null = null;
 
 	const resolveActiveInput = (): HTMLInputElement | HTMLTextAreaElement | null => {
-		const active = document.activeElement as HTMLElement | null;
+		const ownerDoc = root.ownerDocument;
+		const active = ownerDoc.activeElement;
+		const InputCtor = ownerDoc.defaultView?.HTMLInputElement;
+		const TextAreaCtor = ownerDoc.defaultView?.HTMLTextAreaElement;
 		if (active && root.contains(active)) {
-			if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+			if ((InputCtor && active.instanceOf(InputCtor)) || (TextAreaCtor && active.instanceOf(TextAreaCtor))) {
 				return active;
 			}
 		}
@@ -92,7 +96,7 @@ export function renderContentSettingsEditor(options: ContentEditorOptions): Cont
 			refreshInsertButton();
 		});
 		inputEl.addEventListener('blur', () => {
-			setTimeout(() => {
+			ownerWindow.setTimeout(() => {
 				refreshInsertButton();
 			}, 0);
 		});

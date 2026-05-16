@@ -127,7 +127,7 @@ export class AgGridInteractionController {
 		this.composition.setContainer(container);
 		const ownerDoc = container?.ownerDocument ?? null;
 		this.pasteExit.bindDocument(ownerDoc);
-		this.focusAccess.setDocument(ownerDoc ?? document);
+		this.focusAccess.setDocument(ownerDoc ?? activeDocument);
 	}
 	onViewportResize(callback: (reason: ViewportResizeReason) => void): () => void {
 		return this.viewport.onViewportResize(callback);
@@ -251,7 +251,7 @@ const columnId = column?.getColId?.() ?? (event as { columnId?: string | null })
 			columnId
 		});
 
-		this.focusAccess.setDocument(this.container?.ownerDocument || document);
+		this.focusAccess.setDocument(this.container?.ownerDocument || activeDocument);
 
 		if (event.rowIndex == null || columnId == null) {
 			this.focusAccess.setCoordinates(null, null);

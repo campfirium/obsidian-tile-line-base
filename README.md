@@ -2,7 +2,7 @@
 
 > **The Native Plain-Text Database for Obsidian**
 
-![Platform](https://img.shields.io/badge/Platform-Desktop_Only-critical) ![Version](https://img.shields.io/github/v/release/campfirium/obsidian-tile-line-base?label=Beta)
+![Platform](https://img.shields.io/badge/Platform-Desktop_Only-critical) ![Version](https://img.shields.io/github/v/release/campfirium/obsidian-tile-line-base?label=Version)
 
 ![TileLineBase hero banner](docs/assets/hero-banner.jpg)
 
@@ -33,7 +33,7 @@ One set of records, four powerful ways to interact:
 
 ![TileLineBase kanban mode view](docs/assets/kanban-view.jpg)
 
-- **Gallery View (Beta):** Visualize notes as fully customizable cards. **Design custom layouts** with the **Template Engine**, and streamline organization via **View Groups** and **Right-click actions**.
+- **Gallery View:** Visualize notes as fully customizable cards. **Design custom layouts** with the **Template Engine**, and streamline organization via **View Groups** and **Right-click actions**.
 
 ![TileLineBase gallery mode view](docs/assets/gallery-view.jpg)
 
@@ -41,8 +41,9 @@ One set of records, four powerful ways to interact:
 
 ![TileLineBase slide mode view](docs/assets/slides-view.jpg)
 
+#### Hierarchical Rows
 
-
+Use **Parent-Child Row Mode** to keep related records grouped in a two-level hierarchy, while still working naturally with filtered table views.
 
 #### Smart Fields
 
@@ -51,8 +52,6 @@ Basic **inline formulas** (simple arithmetic), **intelligent date/time parsing**
 #### Built-in GTD Workflow
 
 Comes with **built-in task status fields** (Todo, In Progress, Done, On Hold, Someday, Canceled), providing corresponding filtered view groups and Kanban views by default, enabling **immediate and easy task management**.
-
-
 
 ### A Database Native to Text
 
@@ -87,7 +86,7 @@ Supports **CSV import/export**, compatible with mainstream spreadsheet software,
 
 #### Efficient LLM Communication
 
-Uses a **clear, self-contained plain-text format** that can interact seamlessly with **Large Language Models (LLM)** without additional processing
+Uses a **clear, self-contained plain-text format** that can interact seamlessly with **Large Language Models (LLM)** without additional processing.
 
 ## Safety & Architecture
 
@@ -97,22 +96,13 @@ Uses a **clear, self-contained plain-text format** that can interact seamlessly 
 
 ## Installation
 
-TileLineBase is currently in **Early Beta** and is not yet available via Obsidian's Community Plugins list. You can install it via **BRAT** or manually:
+TileLineBase is available from Obsidian's **Community Plugins** directory.
 
-### Via BRAT (Recommended)
-1. Install **BRAT** from Community Plugins.
-2. Run command `BRAT: Add a beta plugin for testing`.
-3. Enter URL: `https://github.com/campfirium/obsidian-tile-line-base`
+1. Open **Settings → Community plugins → Browse** in Obsidian.
+2. Search for **TileLineBase**.
+3. Install and enable the plugin.
 
-<details>
-<summary><strong>Manual Installation (Click to expand)</strong></summary>
-
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [Latest Release](https://github.com/campfirium/obsidian-tile-line-base/releases).
-2. Create a folder `obsidian-tile-line-base` in your vault's `.obsidian/plugins/` directory.
-3. Move the files into that folder.
-4. Reload Obsidian and enable the plugin.
-
-</details>
+TileLineBase is desktop-only. It is not designed for Obsidian mobile.
 
 ## Development
 

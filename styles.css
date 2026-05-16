@@ -978,16 +978,16 @@
 .tlb-filter-view-bar .tlb-filter-view-icon-nav,
 .tlb-gallery-toolbar .tlb-filter-view-icon-nav,
 .tlb-kanban-toolbar .tlb-filter-view-icon-nav,
-.tlb-filter-view-icon-nav {
+button.tlb-filter-view-icon-nav.tlb-filter-view-icon-nav {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	width: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
 	height: var(--tlb-filter-view-icon-nav-size, var(--tlb-filter-view-icon-cell-size, 32px));
 	border-radius: var(--radius-s);
-	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
-	background: transparent !important;
-	color: var(--text-muted) !important;
+	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+	background: transparent;
+	color: var(--text-muted);
 	transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
 	justify-self: center;
 	align-self: center;
@@ -1015,14 +1015,14 @@
 .tlb-filter-view-bar .tlb-filter-view-icon-nav:not(:disabled):hover,
 .tlb-gallery-toolbar .tlb-filter-view-icon-nav:not(:disabled):hover,
 .tlb-kanban-toolbar .tlb-filter-view-icon-nav:not(:disabled):hover,
-.tlb-filter-view-icon-nav:not(:disabled):hover,
+button.tlb-filter-view-icon-nav.tlb-filter-view-icon-nav:not(:disabled):hover,
 .tlb-filter-view-bar .tlb-filter-view-icon-nav:not(:disabled):focus-visible,
 .tlb-gallery-toolbar .tlb-filter-view-icon-nav:not(:disabled):focus-visible,
 .tlb-kanban-toolbar .tlb-filter-view-icon-nav:not(:disabled):focus-visible,
-.tlb-filter-view-icon-nav:not(:disabled):focus-visible {
-	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
-	background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
-	color: var(--text-normal) !important;
+button.tlb-filter-view-icon-nav.tlb-filter-view-icon-nav:not(:disabled):focus-visible {
+	border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+	background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
+	color: var(--text-normal);
 }
 
 .tlb-filter-view-icon-nav--prev {
@@ -1249,18 +1249,18 @@
 .tlb-filter-view-bar .tlb-filter-view-button:hover,
 .tlb-gallery-toolbar .tlb-filter-view-button:hover,
 .tlb-kanban-toolbar .tlb-filter-view-button:hover,
-.tlb-filter-view-button:hover {
-  background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
-  color: var(--text-normal) !important;
-  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
-  box-shadow: none !important;
+button.tlb-filter-view-button.tlb-filter-view-button:hover {
+  background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
+  color: var(--text-normal);
+  border-color: color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+  box-shadow: none;
 }
 
-.tlb-filter-view-actions .tlb-filter-view-button--append-clipboard:hover,
-.tlb-filter-view-actions .tlb-filter-view-button--settings:hover {
-	background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
-	border-color: transparent !important;
-	box-shadow: none !important;
+.tlb-filter-view-actions button.tlb-filter-view-button--append-clipboard:hover,
+.tlb-filter-view-actions button.tlb-filter-view-button--settings:hover {
+	background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
+	border-color: transparent;
+	box-shadow: none;
 }
 
 .tlb-filter-view-button:focus-visible {
@@ -1461,9 +1461,9 @@
 	stroke-width: 1.8;
 }
 
-.tlb-filter-view-button--settings .tlb-filter-view-button__icon svg {
-	width: 20px !important;
-	height: 20px !important;
+button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
+	width: 20px;
+	height: 20px;
 	stroke-width: 1.8;
 }
 
@@ -1492,9 +1492,9 @@
 	outline: none;
 }
 
-.tlb-filter-view-button__close svg {
-	width: 10px !important;
-	height: 10px !important;
+.tlb-filter-view-button .tlb-filter-view-button__close > svg {
+	width: 10px;
+	height: 10px;
 	stroke-width: 2.2;
 }
 
@@ -4874,20 +4874,20 @@
 }
 
 .tlb-new-card-modal {
-	padding: 0 !important;
+	padding: 0;
 	overflow: hidden;
 	position: relative;
 }
 
 .tlb-new-card-modal-container {
-	width: 500px !important;
+	width: 500px;
 	max-width: 90vw;
-	padding: 0 !important;
+	padding: 0;
 	--tlb-new-card-hpad: var(--size-4-6, 24px);
 }
 
 .tlb-new-card-modal .tlb-modal-content {
-	padding: 0 var(--tlb-new-card-hpad) !important;
+	padding: 0 var(--tlb-new-card-hpad);
 }
 
 .tlb-new-card-modal .tlb-modal-footer {
@@ -4895,13 +4895,13 @@
 }
 
 .tlb-new-card-modal-container .modal-close-button {
-	right: var(--tlb-new-card-hpad) !important;
+	right: var(--tlb-new-card-hpad);
 	z-index: 2;
 	pointer-events: auto;
 }
 
 .tlb-modal-content {
-	padding: 0 !important;
+	padding: 0;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -4947,11 +4947,11 @@
 .tlb-field-input,
 .tlb-field-textarea {
 	width: 100%;
-	background-color: var(--background-modifier-form-field) !important;
-	border: 1px solid var(--background-modifier-border) !important;
-	color: var(--text-normal) !important;
+	background-color: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
 	border-radius: 6px;
-	padding: 5px 10px !important;
+	padding: 5px 10px;
 	font-size: 12px;
 	line-height: 1.4;
 	transition: all 0.2s ease;
@@ -4967,7 +4967,7 @@
 .tlb-kanban-add-card-modal__input:focus,
 .tlb-field-input:focus,
 .tlb-field-textarea:focus {
-	border-color: var(--interactive-accent) !important;
+	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
 }
 
@@ -4992,7 +4992,7 @@
 }
 
 .modal-close-button {
-	position: absolute !important;
+	position: absolute;
 	top: 10px;
 	right: 10px;
 	background: transparent;
@@ -5432,10 +5432,10 @@
 }
 
 .tlb-slide-full__title {
-	font-size: var(--tlb-gallery-title-font-size, 32px);
-	line-height: var(--tlb-gallery-title-line-height, 1.25);
-	text-align: center;
-	font-weight: var(--tlb-gallery-title-font-weight, 800);
+	font-size: var(--tlb-slide-title-font-size, var(--tlb-gallery-title-font-size, 32px));
+	line-height: var(--tlb-slide-title-line-height, var(--tlb-gallery-title-line-height, 1.25));
+	text-align: var(--tlb-slide-title-text-align, center);
+	font-weight: var(--tlb-slide-title-font-weight, var(--tlb-gallery-title-font-weight, 800));
 	margin: 0;
 	word-break: break-word;
 	color: var(--tlb-slide-text-color, var(--text-normal));
@@ -5443,8 +5443,10 @@
 	z-index: 3;
 }
 .tlb-slide-full__cover {
-	font-weight: 700;
-	text-align: center;
+	font-size: var(--tlb-slide-title-font-size, 2.2rem);
+	line-height: var(--tlb-slide-title-line-height, 1.15);
+	font-weight: var(--tlb-slide-title-font-weight, 700);
+	text-align: var(--tlb-slide-title-text-align, center);
 	word-break: break-word;
 	color: var(--tlb-slide-text-color, var(--text-normal));
 	z-index: 4;
@@ -5483,8 +5485,10 @@
 	padding: 14px 16px;
 	background: transparent;
 	border-radius: 0;
-	font-size: var(--tlb-gallery-body-font-size, 17px);
-	line-height: var(--tlb-gallery-body-line-height, 1.5);
+	font-size: var(--tlb-slide-body-font-size, var(--tlb-gallery-body-font-size, 17px));
+	line-height: var(--tlb-slide-body-line-height, var(--tlb-gallery-body-line-height, 1.5));
+	font-weight: var(--tlb-slide-body-font-weight, var(--tlb-gallery-body-font-weight, 400));
+	text-align: var(--tlb-slide-body-text-align, var(--tlb-gallery-body-text-align, left));
 	word-break: break-word;
 	white-space: pre-wrap;
 	color: var(--tlb-slide-text-color, var(--text-normal));
@@ -5526,6 +5530,7 @@
 	justify-content: flex-start;
 	gap: 0;
 	overflow: hidden;
+	text-align: var(--tlb-slide-image-text-align, center);
 }
 .tlb-slide-full__block--image p {
 	margin: 0;
@@ -6295,8 +6300,8 @@
 	background-color: var(--interactive-accent);
 }
 
-.tlb-color-input {
-	display: inline-block !important;
+input.tlb-color-input[type="color"] {
+	display: inline-block;
 	appearance: none;
 	-webkit-appearance: none;
 	width: 26px;
@@ -6323,27 +6328,27 @@
 	border-radius: 50%;
 }
 
-.tlb-gallery-edit .tlb-slide-full__editable-title,
-.tlb-gallery-edit .tlb-slide-full__editable-block.tlb-gallery-edit__block {
-	font-size: var(--tlb-gallery-title-font-size, 18px) !important;
-	line-height: var(--tlb-gallery-title-line-height, 1.25) !important;
-	font-weight: var(--tlb-gallery-title-font-weight, 700) !important;
-	text-align: left !important;
+.tlb-gallery-card__slide.tlb-gallery-edit .tlb-slide-full__editable-title.tlb-gallery-edit__title,
+.tlb-gallery-card__slide.tlb-gallery-edit .tlb-slide-full__editable-block.tlb-gallery-edit__block {
+	font-size: var(--tlb-gallery-title-font-size, 18px);
+	line-height: var(--tlb-gallery-title-line-height, 1.25);
+	font-weight: var(--tlb-gallery-title-font-weight, 700);
+	text-align: left;
 }
 
-.tlb-gallery-edit .tlb-slide-full__editable-body,
-.tlb-gallery-edit .tlb-slide-full__editable-block {
-	font-size: var(--tlb-gallery-body-font-size, 12px) !important;
-	line-height: var(--tlb-gallery-body-line-height, 1.4) !important;
-	font-weight: var(--tlb-gallery-body-font-weight, 400) !important;
-	text-align: left !important;
-	padding: 0 !important;
-	margin: 0 !important;
+.tlb-gallery-card__slide.tlb-gallery-edit .tlb-slide-full__editable-body.tlb-gallery-edit__body,
+.tlb-gallery-card__slide.tlb-gallery-edit .tlb-slide-full__editable-block.tlb-gallery-edit__block {
+	font-size: var(--tlb-gallery-body-font-size, 12px);
+	line-height: var(--tlb-gallery-body-line-height, 1.4);
+	font-weight: var(--tlb-gallery-body-font-weight, 400);
+	text-align: left;
+	padding: 0;
+	margin: 0;
 }
 
-.tlb-gallery-edit .tlb-slide-full__editable-input {
-	font-size: inherit !important;
-	line-height: inherit !important;
+.tlb-gallery-card__slide.tlb-gallery-edit .tlb-slide-full__editable-input {
+	font-size: inherit;
+	line-height: inherit;
 }
 
 .tlb-magic-inline__body--stack {

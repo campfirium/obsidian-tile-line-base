@@ -1,7 +1,7 @@
 import { t } from '../../i18n';
 import type { RowData } from '../../grid/GridAdapter';
 import type { SlidePage } from './SlidePageBuilder';
-import type { ComputedLayout } from './slideLayout';
+import { applyTextLayoutVars, type ComputedLayout } from './slideLayout';
 
 export type TemplateSegment = { type: 'text'; value: string } | { type: 'field'; field: string; value: string };
 
@@ -24,12 +24,13 @@ export function renderSlideEditForm(options: {
 }): void {
 	options.state.template = { title: [], body: [] };
 	const editingTemplate = options.state.template;
+	const isGalleryEdit = options.container.hasClass('tlb-gallery-edit');
 	const titleLine = options.container.createDiv({
-		cls: 'tlb-slide-full__title tlb-slide-full__editable-title' + (options.container.hasClass('tlb-gallery-edit') ? ' tlb-gallery-edit__title' : '')
+		cls: 'tlb-slide-full__title tlb-slide-full__editable-title' + (isGalleryEdit ? ' tlb-gallery-edit__title' : '')
 	});
-	titleLine.style.lineHeight = `${options.page.titleLayout.lineHeight}`;
-	titleLine.style.fontSize = `${options.page.titleLayout.fontSize}rem`;
-	titleLine.style.fontWeight = String(options.page.titleLayout.fontWeight);
+	if (!isGalleryEdit) {
+		applyTextLayoutVars(titleLine, options.page.titleLayout, 'title');
+	}
 	options.position(titleLine, options.page.titleLayout, options.container);
 	renderTemplateSegments(
 		titleLine,
@@ -42,12 +43,11 @@ export function renderSlideEditForm(options: {
 		editingTemplate.title
 	);
 
-	const bodyContainer = options.container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' + (options.container.hasClass('tlb-gallery-edit') ? ' tlb-gallery-edit__body' : '') });
-	const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' + (options.container.hasClass('tlb-gallery-edit') ? ' tlb-gallery-edit__block' : '') });
-	bodyBlock.style.lineHeight = `${options.page.textLayout.lineHeight}`;
-	bodyBlock.style.fontSize = `${options.page.textLayout.fontSize}rem`;
-	bodyBlock.style.fontWeight = String(options.page.textLayout.fontWeight);
-	bodyBlock.style.textAlign = options.page.textLayout.align;
+	const bodyContainer = options.container.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__editable-body' + (isGalleryEdit ? ' tlb-gallery-edit__body' : '') });
+	const bodyBlock = bodyContainer.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__editable-block' + (isGalleryEdit ? ' tlb-gallery-edit__block' : '') });
+	if (!isGalleryEdit) {
+		applyTextLayoutVars(bodyBlock, options.page.textLayout, 'body');
+	}
 	const bodyLines = options.page.templateRef.bodyTemplate.split(/\r?\n/);
 	if (bodyLines.length === 0) {
 		bodyLines.push('');

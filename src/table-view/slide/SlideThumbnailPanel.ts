@@ -1,7 +1,7 @@
 import { App, Component, type EventRef } from 'obsidian';
 import { buildSlideMarkdown, renderMarkdownBlock } from './SlideRenderUtils';
 import { t } from '../../i18n';
-import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
+import { applyLayoutStyles, applyTextLayoutVars, type ComputedLayout } from './slideLayout';
 import { computeOverlayBackground } from './SlideColorUtils';
 import { THUMBNAIL_STYLES } from './thumbnailStyles';
 
@@ -180,9 +180,7 @@ export class SlideThumbnailPanel {
             const titleEl = this.ownerDocument.createElement('div');
             titleEl.className = 'tlb-slide-full__title';
             titleEl.textContent = slide.title ?? '';
-            titleEl.style.lineHeight = `${slide.titleLayout.lineHeight}`;
-            titleEl.style.fontSize = `${slide.titleLayout.fontSize}rem`;
-            titleEl.style.fontWeight = String(slide.titleLayout.fontWeight);
+            applyTextLayoutVars(titleEl, slide.titleLayout, 'title');
             slideEl.appendChild(titleEl);
             const { textEl, imageEl } = this.renderSlideBodies(slide, slideEl);
 
@@ -245,10 +243,7 @@ export class SlideThumbnailPanel {
             textEl.className = 'tlb-slide-full__content tlb-slide-full__layer--text';
             const bodyBlock = this.ownerDocument.createElement('div');
             bodyBlock.className = 'tlb-slide-full__block tlb-slide-full__block--text tlb-slide-thumb__block--text';
-            bodyBlock.style.lineHeight = `${slide.textLayout.lineHeight}`;
-            bodyBlock.style.fontSize = `${slide.textLayout.fontSize}rem`;
-            bodyBlock.style.fontWeight = String(slide.textLayout.fontWeight);
-            bodyBlock.style.textAlign = slide.textLayout.align;
+            applyTextLayoutVars(bodyBlock, slide.textLayout, 'body');
             const markdown = buildSlideMarkdown(slide.textBlocks);
             void renderMarkdownBlock(this.app, markdown, bodyBlock, this.sourcePath, this.markdownComponents);
             textEl.appendChild(bodyBlock);
@@ -261,7 +256,7 @@ export class SlideThumbnailPanel {
             for (const img of slide.imageBlocks) {
                 const imageBlock = this.ownerDocument.createElement('div');
                 imageBlock.className = 'tlb-slide-full__block tlb-slide-full__block--image tlb-slide-thumb__block--image';
-                imageBlock.style.textAlign = slide.imageLayout.align;
+                applyTextLayoutVars(imageBlock, slide.imageLayout, 'image');
                 void renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
                 imageEl.appendChild(imageBlock);
             }

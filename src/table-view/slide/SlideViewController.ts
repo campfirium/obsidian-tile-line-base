@@ -5,7 +5,7 @@ import type { SlideViewConfig } from '../../types/slide';
 import { SlideScaleManager } from './SlideScaleManager';
 import { SlideThumbnailPanel, type SlideThumbnail } from './SlideThumbnailPanel';
 import { buildSlidePages, type SlidePage } from './SlidePageBuilder';
-import { applyLayoutStyles, type ComputedLayout } from './slideLayout';
+import { applyLayoutStyles, applyTextLayoutVars, type ComputedLayout } from './slideLayout';
 import { COVER_HIDDEN_CLASS, COVER_LAYOUT, resolveSourceTitle } from './slideCover';
 import { renderSlideEditForm, serializeTemplateSegments, type EditState } from './slideTemplateEditing';
 import { applyLayoutWithWatcher, buildSlideMarkdown, renderMarkdownBlock, resetRenderArtifacts } from './SlideRenderUtils';
@@ -317,9 +317,7 @@ export class SlideViewController {
 		const isEditing = this.isEditingPage(page) && page.editable;
 		if (!isEditing) {
 			const titleEl = slide.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
-			titleEl.style.lineHeight = `${page.titleLayout.lineHeight}`;
-			titleEl.style.fontSize = `${page.titleLayout.fontSize}rem`;
-			titleEl.style.fontWeight = String(page.titleLayout.fontWeight);
+			applyTextLayoutVars(titleEl, page.titleLayout, 'title');
 			applyLayout(titleEl, page.titleLayout, slide);
 		}
 		if (isEditing) {
@@ -355,17 +353,14 @@ export class SlideViewController {
 						this.sourcePath,
 						this.markdownComponents
 					).catch(() => undefined);
-					bodyBlock.style.lineHeight = `${page.textLayout.lineHeight}`;
-					bodyBlock.style.fontSize = `${page.textLayout.fontSize}rem`;
-					bodyBlock.style.fontWeight = String(page.textLayout.fontWeight);
-					bodyBlock.style.textAlign = page.textLayout.align;
+					applyTextLayoutVars(bodyBlock, page.textLayout, 'body');
 					applyLayout(content, page.textLayout, slide);
 				}
 				if (page.imageBlocks.length > 0) {
 					const imageWrapper = slide.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--image' });
 					for (const img of page.imageBlocks) {
 						const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image' });
-						imageBlock.style.textAlign = page.imageLayout.align;
+						applyTextLayoutVars(imageBlock, page.imageLayout, 'image');
 						void renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);
 					}
 					applyLayout(imageWrapper, page.imageLayout, slide);
@@ -492,9 +487,7 @@ export class SlideViewController {
 		const backgroundColor = (this.config.template.backgroundColor ?? '').trim();
 		this.applySlideColors(slide, textColor, backgroundColor);
 		const cover = slide.createDiv({ cls: 'tlb-slide-full__cover', text: title });
-		cover.style.lineHeight = `${COVER_LAYOUT.lineHeight}`;
-		cover.style.fontSize = `${COVER_LAYOUT.fontSize}rem`;
-		cover.style.fontWeight = String(COVER_LAYOUT.fontWeight);
+		applyTextLayoutVars(cover, COVER_LAYOUT, 'title');
 		applyLayoutWithWatcher(
 			this.renderCleanup,
 			cover,

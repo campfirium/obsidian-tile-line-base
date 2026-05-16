@@ -4140,8 +4140,8 @@
 
 /* prevent parent ag-popup-editor from adding extra border/shadow thickness */
 .ag-popup-editor {
-	border: none !important;
-	box-shadow: none !important;
+	border: none;
+	box-shadow: none;
 	background: transparent;
 }
 

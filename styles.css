@@ -5356,7 +5356,7 @@
 	height: var(--tlb-slide-control-size);
 	border-radius: 50%;
 	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 75%, transparent);
-	background: transparent !important;
+	background: transparent;
 	color: var(--text-muted);
 	display: inline-flex;
 	align-items: center;
@@ -5369,8 +5369,8 @@
 }
 
 .tlb-slide-full__btn svg {
-	width: var(--tlb-slide-control-icon) !important;
-	height: var(--tlb-slide-control-icon) !important;
+	width: var(--tlb-slide-control-icon);
+	height: var(--tlb-slide-control-icon);
 	stroke-width: var(--tlb-slide-control-stroke);
 }
 

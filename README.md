@@ -96,13 +96,9 @@ Uses a **clear, self-contained plain-text format** that can interact seamlessly 
 
 ## Installation
 
-TileLineBase is available from Obsidian's **Community Plugins** directory.
+Install TileLineBase from the [Obsidian Community Plugins page](https://community.obsidian.md/plugins/tile-line-base) or open it directly in Obsidian with `obsidian://show-plugin?id=tile-line-base`.
 
-1. Open **Settings → Community plugins → Browse** in Obsidian.
-2. Search for **TileLineBase**.
-3. Install and enable the plugin.
-
-TileLineBase is desktop-only. It is not designed for Obsidian mobile.
+TileLineBase is desktop-only.
 
 ## Development
 

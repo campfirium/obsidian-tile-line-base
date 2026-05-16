@@ -3263,14 +3263,14 @@
   font-weight: 500;
 }
 .ag-dnd-ghost {
-  background: var(--background-secondary) !important;
-  color: var(--text-muted) !important;
-  border: 1px solid var(--background-modifier-border) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--background-modifier-box-shadow, #000000) 12%, transparent) !important;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--background-modifier-box-shadow, #000000) 12%, transparent);
 }
 .ag-dnd-ghost-icon {
-  color: var(--text-faint) !important;
+  color: var(--text-faint);
 }
 .ag-theme-quartz .ag-standard-button,
 .ag-theme-quartz-dark .ag-standard-button,

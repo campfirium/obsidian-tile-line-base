@@ -288,15 +288,6 @@
   --tlb-odd-row-base: var(--background-secondary, var(--background-primary));
 }
 
-/* AG Grid ������Ҫ��ȷ�ĸ߶ȣ�ǳɫ����ɫ���⣩ */
-.tlb-table-container.ag-theme-quartz,
-.tlb-table-container.ag-theme-quartz-dark,
-.tlb-table-container.ag-theme-quartz-auto-dark {
-  width: 100%;
-  min-height: 400px;
-  /* ά�� flex: 1 ���֣�������С�߶ȱ�֤������ʱҲ��չʾ���� */
-}
-
 /* ���뷨����򣺱����?AG Grid ������ʽһ�µ������� */
 .tlb-ime-capture {
   position: fixed;
@@ -3010,12 +3001,6 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz-auto-dark .ag-chart-settings-nav-bar {
   border-top: var(--ag-borders-secondary) var(--ag-secondary-border-color);
 }
-.ag-theme-quartz .ag-charts-format-sub-level-group-title-bar,
-.ag-theme-quartz-dark .ag-charts-format-sub-level-group-title-bar,
-.ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group-title-bar {
-  background: none;
-  font-weight: 500;
-}
 .ag-theme-quartz .ag-chart-data-section .ag-label:not(.ag-group-title-bar),
 .ag-theme-quartz .ag-chart-format-section .ag-label:not(.ag-group-title-bar),
 .ag-theme-quartz-dark .ag-chart-data-section .ag-label:not(.ag-group-title-bar),
@@ -3056,7 +3041,6 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz .ag-charts-format-top-level-group .ag-charts-format-top-level-group-container,
 .ag-theme-quartz .ag-charts-format-top-level-group-item,
 .ag-theme-quartz .ag-charts-format-sub-level-group,
-.ag-theme-quartz .ag-charts-format-sub-level-group-title-bar,
 .ag-theme-quartz .ag-charts-format-sub-level-group-container,
 .ag-theme-quartz .ag-charts-format-sub-level-group-item:last-child,
 .ag-theme-quartz .ag-charts-format-sub-level-group-container > *,
@@ -3071,7 +3055,6 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz-dark .ag-charts-format-top-level-group .ag-charts-format-top-level-group-container,
 .ag-theme-quartz-dark .ag-charts-format-top-level-group-item,
 .ag-theme-quartz-dark .ag-charts-format-sub-level-group,
-.ag-theme-quartz-dark .ag-charts-format-sub-level-group-title-bar,
 .ag-theme-quartz-dark .ag-charts-format-sub-level-group-container,
 .ag-theme-quartz-dark .ag-charts-format-sub-level-group-item:last-child,
 .ag-theme-quartz-dark .ag-charts-format-sub-level-group-container > *,
@@ -3086,7 +3069,6 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz-auto-dark .ag-charts-format-top-level-group .ag-charts-format-top-level-group-container,
 .ag-theme-quartz-auto-dark .ag-charts-format-top-level-group-item,
 .ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group,
-.ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group-title-bar,
 .ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group-container,
 .ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group-item:last-child,
 .ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group-container > *,
@@ -3131,6 +3113,9 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz-dark .ag-charts-format-sub-level-group-title-bar,
 .ag-theme-quartz-auto-dark .ag-charts-format-sub-level-group-title-bar {
   padding: var(--ag-widget-vertical-spacing) 0;
+  margin: 0;
+  background: none;
+  font-weight: 500;
 }
 .ag-theme-quartz .ag-charts-format-sub-level-group-container,
 .ag-theme-quartz-dark .ag-charts-format-sub-level-group-container,
@@ -3313,6 +3298,7 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz-auto-dark .ag-column-drop-cell-button {
   min-width: 0;
   margin: 0;
+  opacity: 0.75;
 }
 .ag-theme-quartz .ag-column-drop-cell-drag-handle,
 .ag-theme-quartz-dark .ag-column-drop-cell-drag-handle,
@@ -3391,11 +3377,6 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .ag-theme-quartz-auto-dark .ag-paging-number,
 .ag-theme-quartz-auto-dark .ag-paging-row-summary-panel-number {
   font-weight: 500;
-}
-.ag-theme-quartz .ag-column-drop-cell-button,
-.ag-theme-quartz-dark .ag-column-drop-cell-button,
-.ag-theme-quartz-auto-dark .ag-column-drop-cell-button {
-  opacity: 0.75;
 }
 .ag-theme-quartz .ag-column-drop-cell-button:hover,
 .ag-theme-quartz-dark .ag-column-drop-cell-button:hover,
@@ -3796,6 +3777,8 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 .tlb-table-container.ag-theme-quartz,
 .tlb-table-container.ag-theme-quartz-dark,
 .tlb-table-container.ag-theme-quartz-auto-dark {
+	width: 100%;
+	min-height: 400px;
 	--tlb-grid-surface: var(--tlb-grid-surface-resolved, var(--background-primary));
 	--tlb-grid-foreground: var(--tlb-grid-foreground-resolved, var(--text-normal));
 	--tlb-grid-accent: var(--tlb-grid-accent-resolved, var(--interactive-accent, #6aa5ff));

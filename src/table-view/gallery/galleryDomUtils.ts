@@ -1,6 +1,7 @@
 import type { App, Component } from 'obsidian';
 import type { SlidePage } from '../slide/SlidePageBuilder';
 import { buildSlideMarkdown, renderMarkdownBlock } from '../slide/SlideRenderUtils';
+import { applyTextLayoutVars } from '../slide/slideLayout';
 
 export interface GalleryDomState {
 	gridEl: HTMLElement | null;
@@ -92,13 +93,6 @@ export function renderGalleryDisplayCard(options: {
 	slideEl: HTMLElement;
 	page: SlidePage;
 	applyLayout: (el: HTMLElement, layout: SlidePage['titleLayout']) => void;
-	titleFontSize: string;
-	titleLineHeight: number;
-	titleFontWeight: number;
-	bodyFontSize: string;
-	bodyLineHeight: number;
-	bodyFontWeight: number;
-	textAlign: string;
 	cardWidth: number;
 	markdownComponents: Component[];
 }): void {
@@ -108,20 +102,10 @@ export function renderGalleryDisplayCard(options: {
 		slideEl,
 		page,
 		applyLayout,
-		titleFontSize,
-		titleLineHeight,
-		titleFontWeight,
-		bodyFontSize,
-		bodyLineHeight,
-		bodyFontWeight,
-		textAlign,
 		cardWidth,
 		markdownComponents
 	} = options;
 	const titleEl = slideEl.createDiv({ cls: 'tlb-slide-full__title', text: page.title });
-	titleEl.style.lineHeight = `${titleLineHeight}`;
-	titleEl.style.fontSize = titleFontSize;
-	titleEl.style.fontWeight = String(titleFontWeight);
 	applyLayout(titleEl, page.titleLayout);
 
 	if (page.textBlocks.length === 0 && page.imageBlocks.length === 0) {
@@ -134,10 +118,6 @@ export function renderGalleryDisplayCard(options: {
 	if (page.textBlocks.length > 0) {
 		const content = slideEl.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--text' });
 		const bodyBlock = content.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--text' });
-		bodyBlock.style.lineHeight = `${bodyLineHeight}`;
-		bodyBlock.style.fontSize = bodyFontSize;
-		bodyBlock.style.fontWeight = String(bodyFontWeight);
-		bodyBlock.style.textAlign = textAlign;
 		void renderMarkdownBlock(app, buildSlideMarkdown(page.textBlocks), bodyBlock, sourcePath, markdownComponents);
 		applyLayout(content, page.textLayout);
 	}
@@ -146,7 +126,7 @@ export function renderGalleryDisplayCard(options: {
 		const imageWrapper = slideEl.createDiv({ cls: 'tlb-slide-full__content tlb-slide-full__layer--image' });
 		for (const img of page.imageBlocks) {
 			const imageBlock = imageWrapper.createDiv({ cls: 'tlb-slide-full__block tlb-slide-full__block--image tlb-gallery-media-container' });
-			imageBlock.style.textAlign = page.imageLayout.align;
+			applyTextLayoutVars(imageBlock, page.imageLayout, 'image');
 			const targetHeight = Math.max(40, page.imageLayout.imageHeightPx ?? Math.round(cardWidth / (16 / 9)));
 			imageBlock.style.height = `${targetHeight}px`;
 			imageBlock.style.minHeight = `${targetHeight}px`;

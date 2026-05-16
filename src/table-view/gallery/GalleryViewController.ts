@@ -348,6 +348,7 @@ export class GalleryViewController {
 			slideEl.style.setProperty('--tlb-gallery-body-font-size', bodyFontSize);
 			slideEl.style.setProperty('--tlb-gallery-body-line-height', `${page.textLayout.lineHeight}`);
 			slideEl.style.setProperty('--tlb-gallery-body-font-weight', String(page.textLayout.fontWeight));
+			slideEl.style.setProperty('--tlb-gallery-body-text-align', page.textLayout.align);
 			const bodyGapPx = Math.max(4, Math.round(TEMPLATE_FONT_BASE_PX * 1.2));
 			slideEl.style.setProperty('--tlb-gallery-body-gap', `${bodyGapPx}px`);
 			const imageMaxHeight = Math.max(40, this.cardHeight - 24);
@@ -384,13 +385,6 @@ export class GalleryViewController {
 					slideEl,
 					page,
 					applyLayout,
-					titleFontSize,
-					titleLineHeight: page.titleLayout.lineHeight,
-					titleFontWeight: page.titleLayout.fontWeight,
-					bodyFontSize,
-					bodyLineHeight: page.textLayout.lineHeight,
-					bodyFontWeight: page.textLayout.fontWeight,
-					textAlign: page.textLayout.align,
 					cardWidth: this.cardWidth,
 					markdownComponents: entry.slot.markdownComponents
 				});

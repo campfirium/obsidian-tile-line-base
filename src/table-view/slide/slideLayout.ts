@@ -89,3 +89,16 @@ export function applyLayoutStyles(el: HTMLElement, layout: ComputedLayout, slide
 		});
 	}
 }
+
+export function applyTextLayoutVars(el: HTMLElement, layout: ComputedLayout, kind: 'title' | 'body' | 'image'): void {
+	const prefix = `--tlb-slide-${kind}`;
+	const props: Record<string, string> = {
+		[`${prefix}-text-align`]: layout.align
+	};
+	if (kind !== 'image') {
+		props[`${prefix}-line-height`] = String(layout.lineHeight);
+		props[`${prefix}-font-size`] = `${layout.fontSize}rem`;
+		props[`${prefix}-font-weight`] = String(layout.fontWeight);
+	}
+	applyCssProps(el, props);
+}

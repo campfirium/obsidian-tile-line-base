@@ -25,8 +25,6 @@ interface MenuBuilderOptions {
 		migrateSelection?: {
 			moveToNew: () => void;
 			copyToNew: () => void;
-			moveToExisting: () => void;
-			copyToExisting: () => void;
 		};
 		promoteToNote?: () => void;
 		insertAbove: () => void;
@@ -189,16 +187,6 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 							subItem.setTitle(t('gridInteraction.migrateMenuCopyToNew'));
 							subItem.setIcon('copy');
 							subItem.onClick(withClose(migrateActions.copyToNew, options.actions.close));
-						});
-						submenu.addItem((subItem) => {
-							subItem.setTitle(t('gridInteraction.migrateMenuMoveToExisting'));
-							subItem.setIcon('corner-down-right');
-							subItem.onClick(withClose(migrateActions.moveToExisting, options.actions.close));
-						});
-						submenu.addItem((subItem) => {
-							subItem.setTitle(t('gridInteraction.migrateMenuCopyToExisting'));
-							subItem.setIcon('corner-down-right');
-							subItem.onClick(withClose(migrateActions.copyToExisting, options.actions.close));
 						});
 
 						submenu.showAtPosition({ x, y }, ownerDoc);

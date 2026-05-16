@@ -135,12 +135,6 @@ export function createGridContextMenu(params: GridContextMenuParams): Menu | nul
 						},
 						copyToNew: () => {
 							void params.rowMigration.copySelectionToNewFile(migrateIndexes);
-						},
-						moveToExisting: () => {
-							void params.rowMigration.moveSelectionToExistingFile(migrateIndexes);
-						},
-						copyToExisting: () => {
-							void params.rowMigration.copySelectionToExistingFile(migrateIndexes);
 						}
 					}
 				: undefined,

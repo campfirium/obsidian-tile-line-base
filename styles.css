@@ -1200,13 +1200,13 @@
 }
 
 .tlb-filter-view-search__clear[hidden] {
-	display: none !important;
+	display: none;
 }
 
 .tlb-filter-view-search__icon svg {
 	display: block;
-	width: var(--tlb-quick-filter-icon-size, 16px) !important;
-	height: var(--tlb-quick-filter-icon-size, 16px) !important;
+	width: var(--tlb-quick-filter-icon-size, 16px);
+	height: var(--tlb-quick-filter-icon-size, 16px);
 	stroke: currentColor;
 	stroke-width: 1.75;
 	fill: none;
@@ -1215,8 +1215,8 @@
 
 .tlb-filter-view-search__clear svg {
 	display: block;
-	width: var(--tlb-quick-filter-clear-size, 20px) !important;
-	height: var(--tlb-quick-filter-clear-size, 20px) !important;
+	width: var(--tlb-quick-filter-clear-size, 20px);
+	height: var(--tlb-quick-filter-clear-size, 20px);
 	stroke: currentColor;
 	stroke-width: 1.6;
 	fill: none;
@@ -1231,9 +1231,9 @@
   align-items: center;
   gap: calc(var(--ag-grid-size, 8px) * 0.5);
   border-radius: var(--ag-border-radius, 6px);
-  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent) !important;
-  background: transparent !important;
-  color: var(--text-muted) !important;
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+  background: transparent;
+  color: var(--text-muted);
   padding: calc(var(--ag-grid-size, 8px) * 0.5) calc(var(--ag-grid-size, 8px) * 1.25);
  font-size: var(--ag-font-size, 12px);
  line-height: 1.4;
@@ -1243,7 +1243,7 @@
   transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
   font-weight: 500;
   position: relative;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .tlb-filter-view-bar .tlb-filter-view-button:hover,
@@ -1272,11 +1272,11 @@
 .tlb-gallery-toolbar .tlb-filter-view-button.is-active,
 .tlb-kanban-toolbar .tlb-filter-view-button.is-active,
 .tlb-filter-view-button.is-active {
-  background: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 12%, transparent) !important;
-  color: var(--text-normal) !important;
-  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 24%, var(--background-modifier-border)) !important;
+  background: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 12%, transparent);
+  color: var(--text-normal);
+  border-color: color-mix(in srgb, var(--interactive-accent, #6aa5ff) 24%, var(--background-modifier-border));
   font-weight: 700;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .tlb-filter-view-button.is-active .tlb-filter-view-button__icon {
@@ -1299,10 +1299,10 @@
 	height: calc(var(--ag-grid-size, 8px) * 4.5);
 	justify-content: center;
 	padding: 0;
-	border-color: transparent !important;
+	border-color: transparent;
 	border-radius: var(--ag-border-radius, 6px);
-	background: transparent !important;
-	box-shadow: none !important;
+	background: transparent;
+	box-shadow: none;
 }
 
 .tlb-filter-view-actions .tlb-filter-view-button--append-clipboard {
@@ -1311,21 +1311,21 @@
 	height: calc(var(--ag-grid-size, 8px) * 4.5);
 	justify-content: center;
 	padding: 0;
-	border-color: transparent !important;
+	border-color: transparent;
 	border-radius: var(--ag-border-radius, 6px);
-	background: transparent !important;
-	box-shadow: none !important;
+	background: transparent;
+	box-shadow: none;
 }
 
 .tlb-filter-view-button--append-clipboard svg {
-	width: 18px !important;
-	height: 18px !important;
+	width: 18px;
+	height: 18px;
 	stroke-width: 1.8;
 }
 
 .tlb-filter-view-button--settings svg {
-	width: 20px !important;
-	height: 20px !important;
+	width: 20px;
+	height: 20px;
 	stroke-width: 1.8;
 }
 
@@ -1456,8 +1456,8 @@
 }
 
 .tlb-filter-view-button__icon svg {
-	width: 13px !important;
-	height: 13px !important;
+	width: 13px;
+	height: 13px;
 	stroke-width: 1.8;
 }
 

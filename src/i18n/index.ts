@@ -59,7 +59,7 @@ const GLOBAL_LOCALE_KEY = '__TILE_LINE_BASE_ACTIVE_LOCALE__';
 const globalScope: Record<string, LocaleCode | undefined> =
 	typeof window !== 'undefined'
 		? (window as unknown as Record<string, LocaleCode | undefined>)
-		: (globalThis as unknown as Record<string, LocaleCode | undefined>);
+		: (window as unknown as Record<string, LocaleCode | undefined>);
 
 let activeLocale: LocaleCode = globalScope[GLOBAL_LOCALE_KEY] ?? FALLBACK_LOCALE;
 const hasOwn = <T extends object>(target: T, property: PropertyKey): boolean =>

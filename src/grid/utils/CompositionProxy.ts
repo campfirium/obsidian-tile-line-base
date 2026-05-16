@@ -19,7 +19,7 @@ export class CompositionProxy {
 	private asciiTimer: number | null = null;
 	private keyHandler?: (event: KeyboardEvent) => void;
 
-	constructor(ownerDocument: Document = document) {
+	constructor(ownerDocument: Document = activeDocument) {
 		this.ownerDocument = ownerDocument;
 
 		const el = ownerDocument.createElement('textarea');

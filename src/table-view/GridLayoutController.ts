@@ -16,8 +16,8 @@ type ResizeSource =
 export class GridLayoutController {
 	private container: HTMLElement | null = null;
 	private resizeObserver: ResizeObserver | null = null;
-	private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-	private sizeCheckInterval: ReturnType<typeof setInterval> | null = null;
+	private resizeTimeout: number | null = null;
+	private sizeCheckInterval: number | null = null;
 	private windowResizeHandler: (() => void) | null = null;
 	private visualViewportResizeHandler: (() => void) | null = null;
 	private visualViewportTarget: VisualViewport | null = null;
@@ -71,12 +71,12 @@ export class GridLayoutController {
 		}
 
 		if (this.sizeCheckInterval) {
-			clearInterval(this.sizeCheckInterval);
+			this.getTimerWindow().clearInterval(this.sizeCheckInterval);
 			this.sizeCheckInterval = null;
 		}
 
 		if (this.resizeTimeout) {
-			clearTimeout(this.resizeTimeout);
+			this.getTimerWindow().clearTimeout(this.resizeTimeout);
 			this.resizeTimeout = null;
 		}
 
@@ -145,13 +145,14 @@ export class GridLayoutController {
 
 	private startSizePolling(container: HTMLElement): void {
 		if (this.sizeCheckInterval) {
-			clearInterval(this.sizeCheckInterval);
+			this.getTimerWindow().clearInterval(this.sizeCheckInterval);
 		}
 
 		this.lastContainerWidth = container.offsetWidth;
 		this.lastContainerHeight = container.offsetHeight;
 
-		this.sizeCheckInterval = setInterval(() => {
+		const ownerWindow = this.getTimerWindow();
+		this.sizeCheckInterval = ownerWindow.setInterval(() => {
 			if (!container.isConnected) {
 				return;
 			}
@@ -181,7 +182,7 @@ export class GridLayoutController {
 
 		this.pendingSizeUpdateHandle =
 			typeof requestAnimationFrame === 'function'
-				? requestAnimationFrame(() => this.applyContainerSize(container))
+				? window.requestAnimationFrame(() => this.applyContainerSize(container))
 				: null;
 
 		if (this.pendingSizeUpdateHandle === null) {
@@ -191,7 +192,8 @@ export class GridLayoutController {
 
 	private applyContainerSize(container: HTMLElement): void {
 		const layoutHost = container.closest('.tlb-table-view-content') ?? container.parentElement;
-		const layoutHostElement = layoutHost instanceof HTMLElement ? layoutHost : null;
+		const HTMLElementCtor = container.ownerDocument.defaultView?.HTMLElement;
+		const layoutHostElement = HTMLElementCtor && layoutHost instanceof HTMLElementCtor ? layoutHost : null;
 
 		let targetHeight = 0;
 		if (layoutHostElement) {
@@ -222,10 +224,11 @@ export class GridLayoutController {
 
 	private scheduleColumnResize(source: ResizeSource): void {
 		if (this.resizeTimeout) {
-			clearTimeout(this.resizeTimeout);
+			this.getTimerWindow().clearTimeout(this.resizeTimeout);
 		}
 
-		this.resizeTimeout = setTimeout(() => {
+		const ownerWindow = this.getTimerWindow();
+		this.resizeTimeout = ownerWindow.setTimeout(() => {
 			this.gridController.markLayoutDirty();
 			this.gridController.resizeColumns();
 
@@ -234,16 +237,20 @@ export class GridLayoutController {
 				source === 'visualViewport resize' ||
 				source === 'workspace resize'
 			) {
-				setTimeout(() => {
+				ownerWindow.setTimeout(() => {
 					this.gridController.resizeColumns();
 				}, 200);
 
-				setTimeout(() => {
+				ownerWindow.setTimeout(() => {
 					this.gridController.resizeColumns();
 				}, 500);
 			}
 
 			this.resizeTimeout = null;
 		}, 150);
+	}
+
+	private getTimerWindow(): Window {
+		return this.container?.ownerDocument.defaultView ?? window;
 	}
 }

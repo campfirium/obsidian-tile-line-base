@@ -43,7 +43,7 @@ export interface GridMountOptions {
 export class GridController {
 	private gridAdapter: GridAdapter | null = null;
 	private tableContainer: HTMLElement | null = null;
-	private initialResizeTimers: Array<ReturnType<typeof setTimeout>> = [];
+	private initialResizeTimers: number[] = [];
 
 	mount(
 		container: HTMLElement,
@@ -145,11 +145,12 @@ export class GridController {
 
 	private scheduleInitialResizes(): void {
 		this.clearResizeTimers();
+		const ownerWindow = this.tableContainer?.ownerDocument.defaultView ?? window;
 		const attemptResize = () => {
 			this.resizeColumns();
 		};
 		for (const delay of [100, 300, 800]) {
-			const handle = setTimeout(attemptResize, delay);
+			const handle = ownerWindow.setTimeout(attemptResize, delay);
 			this.initialResizeTimers.push(handle);
 		}
 	}
@@ -158,8 +159,9 @@ export class GridController {
 		if (this.initialResizeTimers.length === 0) {
 			return;
 		}
+		const ownerWindow = this.tableContainer?.ownerDocument.defaultView ?? window;
 		for (const handle of this.initialResizeTimers) {
-			clearTimeout(handle);
+			ownerWindow.clearTimeout(handle);
 		}
 		this.initialResizeTimers = [];
 	}

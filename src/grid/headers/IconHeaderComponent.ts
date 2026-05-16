@@ -20,7 +20,7 @@ export class IconHeaderComponent implements IHeaderComp {
 	private srLabelEl: HTMLSpanElement | null = null;
 
 	init(params: IconHeaderParams): void {
-		const doc = params.eGridHeader?.ownerDocument || document;
+		const doc = params.eGridHeader?.ownerDocument || activeDocument;
 
 		this.eGui = doc.createElement('div');
 		this.eGui.classList.add('ag-header-cell-label', 'tlb-header-icon-only');

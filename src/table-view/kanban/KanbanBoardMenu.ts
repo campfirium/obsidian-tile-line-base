@@ -10,6 +10,8 @@ interface KanbanBoardMenuOptions {
 
 export function showKanbanBoardMenu(options: KanbanBoardMenuOptions): void {
 	const menu = new Menu();
+	const target = options.event.currentTarget ?? options.event.target;
+	const ownerDocument = (target as { ownerDocument?: Document } | null)?.ownerDocument ?? activeDocument;
 	menu.addItem((item) => {
 		item
 			.setTitle(t('kanbanView.toolbar.editBoardLabel'))
@@ -31,5 +33,5 @@ export function showKanbanBoardMenu(options: KanbanBoardMenuOptions): void {
 	menu.showAtPosition({
 		x: options.event.clientX,
 		y: options.event.clientY
-	});
+	}, ownerDocument);
 }

@@ -18,6 +18,11 @@ import {
 
 export type ColumnFieldType = 'text' | 'date' | 'time' | 'image' | 'formula';
 
+function isHTMLElementForDocument(value: unknown, ownerDoc: Document): value is HTMLElement {
+	const HTMLElementCtor = ownerDoc.defaultView?.HTMLElement;
+	return HTMLElementCtor != null && value instanceof HTMLElementCtor;
+}
+
 export interface ColumnEditorResult {
 	name: string;
 	type: ColumnFieldType;
@@ -72,12 +77,12 @@ export class ColumnEditorModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		const ownerDoc = contentEl.ownerDocument ?? document;
+		const ownerDoc = contentEl.ownerDocument ?? activeDocument;
 
 		const providedTrigger = this.options.triggerElement;
-		if (providedTrigger && providedTrigger instanceof HTMLElement) {
+		if (isHTMLElementForDocument(providedTrigger, ownerDoc)) {
 			this.returnFocusTarget = providedTrigger;
-		} else if (ownerDoc.activeElement instanceof HTMLElement) {
+		} else if (isHTMLElementForDocument(ownerDoc.activeElement, ownerDoc)) {
 			this.returnFocusTarget = ownerDoc.activeElement;
 		} else {
 			this.returnFocusTarget = null;
@@ -166,10 +171,10 @@ export class ColumnEditorModal extends Modal {
 		this.formulaSetting.setDesc(t('columnEditorModal.formulaDescription'));
 		this.formulaSetting.controlEl.empty();
 
-		const textareaWrapper = document.createElement('div');
+		const textareaWrapper = ownerDoc.createElement('div');
 		textareaWrapper.className = 'tlb-column-formula-input-wrapper';
 
-		const textarea = document.createElement('textarea');
+		const textarea = ownerDoc.createElement('textarea');
 		textarea.className = 'tlb-column-formula-input';
 		textarea.rows = 4;
 		textarea.placeholder = t('columnEditorModal.formulaPlaceholder');

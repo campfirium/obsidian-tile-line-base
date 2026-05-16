@@ -88,7 +88,7 @@ export function importTableFromCsv(view: TableView): void {
 		return;
 	}
 
-	const ownerDocument = view.containerEl.ownerDocument ?? document;
+	const ownerDocument = view.containerEl.ownerDocument ?? activeDocument;
 	const inputEl = ownerDocument.createElement('input');
 	inputEl.type = 'file';
 	inputEl.accept = '.csv,text/csv';
@@ -131,7 +131,7 @@ export function importTableFromCsv(view: TableView): void {
 }
 
 export function importCsvAsNewTable(app: App, options: ImportCsvAsNewTableOptions = {}): void {
-	const ownerDocument = options.triggerElement?.ownerDocument ?? document;
+	const ownerDocument = options.triggerElement?.ownerDocument ?? activeDocument;
 	const inputEl = ownerDocument.createElement('input');
 	inputEl.type = 'file';
 	inputEl.accept = '.csv,text/csv';
@@ -249,7 +249,7 @@ function serializeCsvRow(values: string[]): string {
 }
 
 function triggerDownload(view: TableView, content: string, fileName: string): void {
-	const ownerDocument = view.containerEl.ownerDocument ?? document;
+	const ownerDocument = view.containerEl.ownerDocument ?? activeDocument;
 	const blob = new Blob([UTF8_BOM, content], { type: 'text/csv;charset=utf-8;' });
 	const url = URL.createObjectURL(blob);
 	const anchor = ownerDocument.createElement('a');

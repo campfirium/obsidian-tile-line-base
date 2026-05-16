@@ -122,7 +122,7 @@ export class AgGridAdapter implements GridAdapter {
 		});
 		this.columnService.setContainer(container);
 
-		const ownerDocument = container.ownerDocument ?? document;
+		const ownerDocument = container.ownerDocument ?? activeDocument;
 		const popupParent = this.ensurePopupParent(ownerDocument, container);
 
 		const colDefs = this.columnService.buildColumnDefs(columns);
@@ -274,7 +274,7 @@ export class AgGridAdapter implements GridAdapter {
 	}
 
 	private hideGridTooltips(): void {
-		const ownerDocument = this.containerEl?.ownerDocument ?? document;
+		const ownerDocument = this.containerEl?.ownerDocument ?? activeDocument;
 		const popupRoot = ownerDocument.querySelector('.tlb-grid-popup-root');
 		if (!popupRoot) {
 			return;

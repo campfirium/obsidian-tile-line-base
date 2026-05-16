@@ -78,7 +78,7 @@ export class SlideThumbnailPanel {
 
     constructor(options: SlideThumbnailPanelOptions) {
         this.options = options;
-        this.ownerDocument = options.host.ownerDocument ?? document;
+        this.ownerDocument = options.host.ownerDocument ?? activeDocument;
         this.ownerWindow = this.ownerDocument.defaultView ?? null;
         this.app = options.app;
         this.sourcePath = options.sourcePath;

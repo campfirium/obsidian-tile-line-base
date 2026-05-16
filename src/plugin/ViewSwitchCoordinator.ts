@@ -334,7 +334,7 @@ export class ViewSwitchCoordinator {
 			return eventView;
 		}
 
-		const globalWithActiveWindow = globalThis as typeof globalThis & { activeWindow?: Window };
+		const globalWithActiveWindow = window as typeof window & { activeWindow?: Window };
 		const maybeActiveWindow = globalWithActiveWindow.activeWindow;
 		if (maybeActiveWindow) {
 			return maybeActiveWindow;

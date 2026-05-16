@@ -308,7 +308,7 @@ export class TableView extends ItemView {
 			new Notice(t('appendClipboard.noFileNotice'));
 			return;
 		}
-		const ownerDoc = this.containerEl.ownerDocument ?? document;
+		const ownerDoc = this.containerEl.ownerDocument ?? activeDocument;
 		const navigatorLike = ownerDoc.defaultView?.navigator ?? navigator;
 		const clipboard = navigatorLike?.clipboard;
 		if (!clipboard?.readText) {

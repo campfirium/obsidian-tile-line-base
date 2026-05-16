@@ -25,7 +25,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 
 	init(params: ICellRendererParams<RowData>): void {
 		this.params = params;
-		const doc = params.eGridCell?.ownerDocument ?? document;
+		const doc = params.eGridCell?.ownerDocument ?? activeDocument;
 
 		this.eGui = doc.createElement('div');
 		this.eGui.className = 'tlb-tree-title-cell';
@@ -95,7 +95,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 			return;
 		}
 
-		const doc = this.params.eGridCell?.ownerDocument ?? document;
+		const doc = this.params.eGridCell?.ownerDocument ?? activeDocument;
 		const fragment = doc.createDocumentFragment();
 
 		for (const segment of segments) {
@@ -279,7 +279,8 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 	}
 
 	private getLinkFromEventTarget(target: EventTarget | null): DetectedCellLink | null {
-		if (!(target instanceof HTMLElement)) {
+		const HTMLElementCtor = this.textEl.ownerDocument.defaultView?.HTMLElement;
+		if (!HTMLElementCtor || !(target instanceof HTMLElementCtor)) {
 			return null;
 		}
 		const anchor = target.closest<HTMLElement>('.tlb-link-cell__anchor');

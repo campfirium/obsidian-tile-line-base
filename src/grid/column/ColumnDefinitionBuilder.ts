@@ -44,7 +44,8 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 		suppressMovable: true,
 		cellRenderer: (params: ICellRendererParams) => {
 			const value = params.value ?? '';
-			const container = document.createElement('span');
+			const ownerDocument = params.eGridCell?.ownerDocument ?? activeDocument;
+			const container = ownerDocument.createElement('span');
 			container.classList.add('tlb-row-drag-handle');
 			container.textContent = String(value);
 			return container;

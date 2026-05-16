@@ -33,6 +33,7 @@ interface SlideTemplateModalOptions {
 	onCardSizeChange?: (size: { width: number; height: number }) => void;
 	getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
 	buildBuiltInTemplate?: (fields: string[], fieldConfigs?: ColumnConfig[] | null, sampleRows?: RowData[]) => SlideTemplateConfig;
+	preserveContentOnGlobalDefault?: boolean;
 	renderExtraSections?: (container: HTMLElement) => void;
 }
 
@@ -52,6 +53,7 @@ export class SlideTemplateModal extends Modal {
 	private readonly onSaveDefault?: (next: SlideTemplateConfig, cardSize?: { width: number; height: number } | null) => Promise<void> | void;
 	private readonly getGlobalDefault?: () => { template: SlideTemplateConfig; cardWidth?: number | null; cardHeight?: number | null } | null;
 	private readonly buildBuiltInTemplate: (fields: string[], fieldConfigs?: ColumnConfig[] | null, sampleRows?: RowData[]) => SlideTemplateConfig;
+	private readonly preserveContentOnGlobalDefault: boolean;
 	private readonly allowedModes: Set<'single' | 'split'> | null;
 	private readonly allowedSingleBranches: Set<'withoutImage' | 'withImage'> | null;
 	private readonly allowedSplitBranches: Set<'withoutImage' | 'withImage'> | null;
@@ -95,6 +97,7 @@ export class SlideTemplateModal extends Modal {
 			opts.buildBuiltInTemplate ??
 			((templateFields, templateConfigs, templateRows) =>
 				buildBuiltInSlideTemplate(templateFields, templateConfigs, templateRows));
+		this.preserveContentOnGlobalDefault = opts.preserveContentOnGlobalDefault === true;
 		this.allowedModes = opts.allowedModes ? new Set(opts.allowedModes) : null;
 		this.allowedSingleBranches = opts.allowedSingleBranches ? new Set(opts.allowedSingleBranches) : null;
 		this.allowedSplitBranches = opts.allowedSplitBranches ? new Set(opts.allowedSplitBranches) : null;
@@ -304,7 +307,7 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private getClipboard(): Clipboard | null {
-		const ownerDoc = this.contentEl.ownerDocument ?? document;
+		const ownerDoc = this.contentEl.ownerDocument ?? activeDocument;
 		const navigatorLike =
 			ownerDoc.defaultView?.navigator ?? (typeof navigator === 'undefined' ? null : navigator);
 		return navigatorLike?.clipboard ?? null;
@@ -472,10 +475,10 @@ export class SlideTemplateModal extends Modal {
 			new Notice(t('slideView.templateModal.noGlobalDefault'));
 			return;
 		}
-		const preset = mergeSlideTemplateFields(
-			globalConfig.template,
-			this.buildBuiltInTemplate(this.fields, this.fieldConfigs, this.sampleRows)
-		);
+		const fieldTemplate = this.preserveContentOnGlobalDefault
+			? this.template
+			: this.buildBuiltInTemplate(this.fields, this.fieldConfigs, this.sampleRows);
+		const preset = mergeSlideTemplateFields(globalConfig.template, fieldTemplate);
 		this.applyPresetStyles(preset, globalConfig);
 	}
 
@@ -923,13 +926,15 @@ export class SlideTemplateModal extends Modal {
 			this.refreshInsertButton();
 		});
 		input.addEventListener('blur', () => {
-			setTimeout(() => this.refreshInsertButton(), 0);
+			this.contentEl.ownerDocument.defaultView?.setTimeout(() => this.refreshInsertButton(), 0);
 		});
 	}
 
 	private resolveActiveInput(): HTMLTextAreaElement | null {
-		const active = document.activeElement;
-		if (active instanceof HTMLTextAreaElement && this.contentEl.contains(active)) {
+		const ownerDoc = this.contentEl.ownerDocument ?? activeDocument;
+		const active = ownerDoc.activeElement;
+		const TextAreaCtor = ownerDoc.defaultView?.HTMLTextAreaElement;
+		if (TextAreaCtor && active instanceof TextAreaCtor && this.contentEl.contains(active)) {
 			return active;
 		}
 		if (this.lastFocusedInput && this.contentEl.contains(this.lastFocusedInput)) {
@@ -979,7 +984,7 @@ export class SlideTemplateModal extends Modal {
 	}
 
 	private resolveThemeDefaults(): void {
-		const owner = this.contentEl.ownerDocument ?? document;
+		const owner = this.contentEl.ownerDocument ?? activeDocument;
 		const root = owner.body ?? owner.documentElement;
 		const styles = owner.defaultView?.getComputedStyle(root);
 		const textDefault = styles?.getPropertyValue('--text-normal')?.trim();

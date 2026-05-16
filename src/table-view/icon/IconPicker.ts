@@ -98,7 +98,7 @@ class IconPicker {
 
 	constructor(options: IconPickerOptions) {
 		this.options = options;
-		this.doc = options.container.ownerDocument ?? document;
+		this.doc = options.container.ownerDocument ?? activeDocument;
 		this.wrapper = options.container.createDiv({ cls: 'tlb-icon-picker tlb-icon-picker--inline' });
 		this.triggerEl = this.wrapper.createEl('button', {
 			type: 'button',
@@ -210,7 +210,7 @@ class IconPicker {
 		this.cleanupFns.push(() => this.doc.defaultView?.removeEventListener('scroll', resizeHandler, true));
 		this.positionPanel();
 		this.options.onOpen?.();
-		setTimeout(() => {
+		this.getOwnerWindow().setTimeout(() => {
 			if (this.iconInputEl) {
 				this.iconInputEl.focus({ preventScroll: true });
 				this.iconInputEl.select();
@@ -247,6 +247,10 @@ class IconPicker {
 		this.iconInputEl = null;
 		this.triggerEl.focus({ preventScroll: true });
 		this.options.onClose?.();
+	}
+
+	private getOwnerWindow(): Window {
+		return this.doc.defaultView ?? window;
 	}
 
 	private ensureIconOptions(): string[] {

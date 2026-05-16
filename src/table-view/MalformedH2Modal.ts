@@ -37,11 +37,11 @@ export class MalformedH2Modal extends Modal {
 
 		const container = contentEl.createDiv({ cls: 'tlb-malformed-container' });
 		container.createEl('h3', { text: t('magicMigration.unstructuredTitle'), cls: 'tlb-malformed-heading' });
-		container.createEl('div', {
+		container.createDiv({
 			text: t('magicMigration.unstructuredBody', { sectionCount: this.params.convertibleCount }),
 			cls: 'tlb-malformed-summary'
 		});
-		container.createEl('div', { text: t('magicMigration.unstructuredInstruction'), cls: 'tlb-malformed-reason' });
+		container.createDiv({ text: t('magicMigration.unstructuredInstruction'), cls: 'tlb-malformed-reason' });
 
 		const sectionsEl = container.createDiv({ cls: 'tlb-malformed-sections scrollable' });
 		const updateRows = (textarea: HTMLTextAreaElement): void => {
@@ -59,7 +59,7 @@ export class MalformedH2Modal extends Modal {
 			});
 		}
 
-		container.createEl('div', { text: t('magicMigration.unstructuredHint'), cls: 'tlb-malformed-hint' });
+		container.createDiv({ text: t('magicMigration.unstructuredHint'), cls: 'tlb-malformed-hint' });
 
 		const actions = container.createDiv({ cls: 'tlb-malformed-actions' });
 		const saveButton = actions.createEl('button', { cls: 'mod-cta', text: t('magicMigration.unstructuredEditConvert') });

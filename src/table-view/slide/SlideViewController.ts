@@ -200,12 +200,12 @@ export class SlideViewController {
 				}
 			}
 		};
-		const owner = this.root.ownerDocument ?? document;
+		const owner = this.root.ownerDocument ?? activeDocument;
 		owner.addEventListener('keydown', handler);
 		this.cleanup.push(() => owner.removeEventListener('keydown', handler));
 	}
 	private attachFullscreenWatcher(): void {
-		const doc = this.root.ownerDocument ?? document;
+		const doc = this.root.ownerDocument ?? activeDocument;
 		const listener = () => {
 			if (!doc.fullscreenElement && this.isFullscreen) {
 				this.isFullscreen = false;
@@ -401,8 +401,8 @@ export class SlideViewController {
 	}
 	private exitFullscreen(): void {
 		if (!this.isFullscreen) return;
-		if (document.fullscreenElement) {
-			void document.exitFullscreen();
+		if (activeDocument.fullscreenElement) {
+			void activeDocument.exitFullscreen();
 		}
 		this.isFullscreen = false;
 		this.root.removeClass('tlb-slide-full--fullscreen');

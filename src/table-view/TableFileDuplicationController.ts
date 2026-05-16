@@ -122,7 +122,7 @@ export class TableFileDuplicationController {
 	}
 
 	private triggerDownload(content: string, fileName: string): void {
-		const ownerDocument = this.options.getOwnerDocument() ?? document;
+		const ownerDocument = this.options.getOwnerDocument() ?? activeDocument;
 		const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
 		const anchor = ownerDocument.createElement('a');

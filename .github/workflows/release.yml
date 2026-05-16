@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      attestations: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -32,6 +34,14 @@ jobs:
 
       - name: Build plugin
         run: npm run build
+
+      - name: Generate artifact attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/main.js
+            dist/styles.css
+            manifest.json
 
       - name: Generate release notes from releases.json
         run: node scripts/genReleaseNotes.mjs "${GITHUB_REF_NAME}"

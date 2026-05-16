@@ -129,7 +129,7 @@ export function renderTemplateSegments(
 	for (const segment of segments) {
 		if (segment.type === 'text') {
 			if (segment.value) {
-				const input = container.createEl('span', {
+				const input = container.createSpan({
 					text: segment.value,
 					cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-text',
 					attr: { contenteditable: 'true' }
@@ -140,7 +140,7 @@ export function renderTemplateSegments(
 				collect.push(segment);
 			}
 		} else {
-			const input = container.createEl('span', {
+			const input = container.createSpan({
 				text: segment.value,
 				cls: 'tlb-slide-full__editable-input tlb-slide-full__editable-input--field',
 				attr: { contenteditable: 'true' }

@@ -1,4 +1,14 @@
 {
+  "0.9.14": {
+    "date": "2026-05-16",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [
+      "Gallery status groups now restore correctly."
+    ],
+    "changed": []
+  },
   "0.9.13": {
     "date": "2026-05-05",
     "info": "",

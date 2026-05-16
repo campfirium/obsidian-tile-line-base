@@ -138,7 +138,7 @@ export class KanbanViewController {
 		this.recomputeVisibleRows();
 		this.quickFilterValue = this.quickFilterManager.getValue();
 
-		ensureFontScaleStyles(this.container.ownerDocument ?? document);
+		ensureFontScaleStyles(this.container.ownerDocument ?? activeDocument);
 		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.rootEl.style.setProperty('--tlb-kanban-font-scale', `${this.fontScale}`);
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });

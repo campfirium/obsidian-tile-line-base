@@ -205,7 +205,7 @@ export class FormulaFieldSuggester {
 	private renderList(): void {
 		this.listEl.textContent = '';
 		this.matches.forEach((match, index) => {
-			const item = document.createElement('li');
+			const item = this.listEl.ownerDocument.createElement('li');
 			item.className = 'tlb-formula-field-suggest-item';
 			if (index === this.activeIndex) {
 				item.classList.add('is-active');

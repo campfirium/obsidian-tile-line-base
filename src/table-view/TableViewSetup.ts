@@ -142,7 +142,7 @@ export function initializeTableView(view: TableView): void {
 		scheduleSave: () => { view.markUserMutation('paragraph-promotion'); view.persistenceService.scheduleSave(); }
 	});
 	view.tableCreationController = new TableCreationController({ app: view.app, getCurrentFile: () => view.file });
-	view.fileDuplicationController = new TableFileDuplicationController({ app: view.app, configManager: view.configManager, persistence: view.persistenceService, getCurrentFile: () => view.file, getOwnerDocument: () => view.containerEl.ownerDocument ?? document });
+	view.fileDuplicationController = new TableFileDuplicationController({ app: view.app, configManager: view.configManager, persistence: view.persistenceService, getCurrentFile: () => view.file, getOwnerDocument: () => view.containerEl.ownerDocument ?? activeDocument });
 	view.magicMigrationController = new MagicMigrationController(view);
 	view.kanbanBoardController = new KanbanBoardController({ app: view.app, view, store: view.kanbanBoardStore });
 	view.globalQuickFilterController = new GlobalQuickFilterController({ getGridAdapter: () => view.gridAdapter, quickFilterManager: view.globalQuickFilterManager });

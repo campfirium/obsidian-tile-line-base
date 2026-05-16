@@ -218,7 +218,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.tagGroupStore.loadFromSettings();
 	}
 	syncTagGroupState(view);
-	view.tagGroupController.syncWithAvailableViews();
+	const tagGroupsChanged = view.tagGroupController.syncWithAvailableViews();
 	syncTagGroupState(view);
 	if (view.galleryFilterStateStore.getPersistableState().views.length === 0) {
 		view.galleryFilterStateStore.loadFromSettings();
@@ -228,8 +228,12 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.galleryTagGroupStore.loadFromSettings();
 	}
 	syncGalleryTagGroupState(view);
-	view.galleryTagGroupController.syncWithAvailableViews();
+	const galleryTagGroupsChanged = view.galleryTagGroupController.syncWithAvailableViews();
 	syncGalleryTagGroupState(view);
+	if (tagGroupsChanged || galleryTagGroupsChanged) {
+		view.markUserMutation('tag-group-state-repair');
+		void view.persistenceService.saveConfig();
+	}
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();
 	view.initialColumnState = null;

@@ -68,8 +68,8 @@ function hasBooleanStringValue(value: unknown): boolean {
 }
 
 function createEntryId(): string {
-	if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
-		return globalThis.crypto.randomUUID();
+	if (typeof window.crypto !== 'undefined' && typeof window.crypto.randomUUID === 'function') {
+		return window.crypto.randomUUID();
 	}
 
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {

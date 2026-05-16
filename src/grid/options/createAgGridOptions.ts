@@ -48,7 +48,7 @@ export function createAgGridOptions({
 	let isRowDragActive = false;
 
 	return {
-		popupParent: popupParent ?? ownerDocument?.body ?? document.body,
+		popupParent: popupParent ?? ownerDocument?.body ?? activeDocument.body,
 		rowHeight: DEFAULT_ROW_HEIGHT,
 		rowDragManaged: true,
 		rowDragMultiRow: false,

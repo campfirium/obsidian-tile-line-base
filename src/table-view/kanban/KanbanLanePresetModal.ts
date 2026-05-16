@@ -62,7 +62,7 @@ class KanbanLanePresetModal extends Modal {
 					this.submit();
 				}
 			});
-			setTimeout(() => text.inputEl.focus(), 0);
+			this.contentEl.ownerDocument.defaultView?.setTimeout(() => text.inputEl.focus(), 0);
 		});
 
 		this.errorEl = contentEl.createEl('p', { cls: 'tlb-form-message is-error' });

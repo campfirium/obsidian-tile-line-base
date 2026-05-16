@@ -66,7 +66,7 @@ export class GridBulkFillModal extends Modal {
 			);
 		}
 
-		this.errorEl = contentEl.createEl('div', { cls: 'tlb-bulk-fill-modal-error' });
+		this.errorEl = contentEl.createDiv({ cls: 'tlb-bulk-fill-modal-error' });
 
 		const buttonSetting = new Setting(contentEl);
 		buttonSetting.addButton((button) =>

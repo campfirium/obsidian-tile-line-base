@@ -36,14 +36,14 @@ class BackupRestoreModal extends Modal {
 		this.manager = manager;
 	}
 
-	async onOpen(): Promise<void> {
+	onOpen(): void {
 		const fileName = this.view.file?.basename ?? '';
 		this.titleEl.setText(t('backup.modalTitle', { file: fileName }));
 		this.contentEl.empty();
 		this.modalEl.addClass('tlb-backup-modal');
 		this.contentEl.addClass('tlb-backup-modal__content');
 		this.listEl = this.contentEl.createDiv({ cls: 'tlb-backup-modal__list' });
-		await this.renderEntries();
+		void this.renderEntries();
 	}
 
 	onClose(): void {

@@ -163,7 +163,7 @@ export function buildGridContextMenu(options: MenuBuilderOptions): Menu {
 						evt.stopPropagation();
 						const dom = (item as unknown as { dom?: HTMLElement }).dom;
 						const rect = dom?.getBoundingClientRect();
-						const ownerDoc = dom?.ownerDocument ?? document;
+						const ownerDoc = dom?.ownerDocument ?? activeDocument;
 						const defaultView = ownerDoc.defaultView ?? window;
 						const x = rect ? rect.right + 8 : evt.pageX ?? defaultView.innerWidth / 2;
 						const y = rect ? rect.top : evt.pageY ?? defaultView.innerHeight / 2;

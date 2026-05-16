@@ -22,7 +22,7 @@ interface SyncThemeOptions {
 }
 
 export function syncGridContainerTheme(container: HTMLElement, options?: SyncThemeOptions): { isDarkMode: boolean; themeClass: string } {
-	const ownerDocument = options?.ownerDocument ?? container.ownerDocument ?? document;
+	const ownerDocument = options?.ownerDocument ?? container.ownerDocument ?? activeDocument;
 	const isDarkMode = typeof options?.isDarkMode === 'boolean'
 		? options.isDarkMode
 		: ownerDocument.body.classList.contains('theme-dark');
@@ -51,7 +51,7 @@ const getOrCreatePopupRoot = (doc: Document): HTMLElement => {
 };
 
 export function syncGridPopupRoot(container: HTMLElement, options?: SyncThemeOptions): HTMLElement {
-	const ownerDocument = options?.ownerDocument ?? container.ownerDocument ?? document;
+	const ownerDocument = options?.ownerDocument ?? container.ownerDocument ?? activeDocument;
 	const isDarkMode = typeof options?.isDarkMode === 'boolean'
 		? options.isDarkMode
 		: ownerDocument.body.classList.contains('theme-dark');

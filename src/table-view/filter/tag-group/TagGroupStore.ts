@@ -142,7 +142,8 @@ export class TagGroupStore {
 		return new Set<string>(active.viewIds);
 	}
 
-	syncWithFilterViews(filterState: FileFilterViewState, defaultGroupName: string): void {
+	syncWithFilterViews(filterState: FileFilterViewState, defaultGroupName: string): boolean {
+		const before = JSON.stringify(this.state);
 		this.setDefaultGroupLabel(defaultGroupName);
 		const views = Array.isArray(filterState.views) ? filterState.views : [];
 		const idSet = new Set<string>(this.collectViewIds(views));
@@ -172,6 +173,9 @@ export class TagGroupStore {
 			if (!metadata.defaultSeeded) {
 				defaultIds = this.seedDefaultGroupViewIds(defaultIds, filterState, idSet, metadata);
 			}
+			if (defaultIds.length === 0) {
+				defaultIds = this.repairEmptyDefaultGroupViewIds(filterState, idSet, metadata);
+			}
 			if (!metadata.defaultSeeded && defaultIds.length === 0 && idSet.size > 0) {
 				defaultIds = this.collectViewIds(views);
 				metadata.defaultSeeded = defaultIds.length > 0;
@@ -185,6 +189,7 @@ export class TagGroupStore {
 				state.activeGroupId = DEFAULT_TAG_GROUP_ID;
 			}
 		});
+		return JSON.stringify(this.state) !== before;
 	}
 
 	private normalizeGroupOrder(groups: TagGroupDefinition[]): TagGroupDefinition[] {
@@ -425,6 +430,19 @@ export class TagGroupStore {
 			metadata.defaultSeeded = true;
 		}
 		return seeded;
+	}
+
+	private repairEmptyDefaultGroupViewIds(
+		filterState: FileFilterViewState,
+		idSet: Set<string>,
+		metadata: FileTagGroupMetadata
+	): string[] {
+		const baselineIds = this.collectStatusBaselineViewIds(filterState, idSet);
+		if (baselineIds.length === 0) {
+			return [];
+		}
+		metadata.defaultSeeded = true;
+		return baselineIds;
 	}
 
 	private collectStatusBaselineViewIds(filterState: FileFilterViewState, idSet: Set<string>): string[] {

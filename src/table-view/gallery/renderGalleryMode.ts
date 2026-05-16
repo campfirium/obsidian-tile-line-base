@@ -156,7 +156,8 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 					cardWidth: globalCardSize?.width ?? undefined,
 					cardHeight: globalCardSize?.height ?? undefined
 				};
-			}
+			},
+			preserveContentOnGlobalDefault: true
 		});
 		modal.open();
 	};

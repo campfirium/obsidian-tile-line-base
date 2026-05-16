@@ -3863,9 +3863,9 @@
 
 .tlb-table-container.tlb-force-odd-row-stripe .ag-row.ag-row-odd:not(.ag-row-hover):not(.ag-row-selected) .ag-cell {
   background-color: var(
-		--tlb-odd-row-override,
-		var(--ag-odd-row-background-color, var(--tlb-odd-row-base, var(--tlb-grid-surface)))
-	) !important;
+			--tlb-odd-row-override,
+			var(--ag-odd-row-background-color, var(--tlb-odd-row-base, var(--tlb-grid-surface)))
+		);
 }
 
 .ag-theme-quartz .ag-cell-focus:not(.ag-cell-inline-editing),

@@ -230,5 +230,15 @@
     ],
     "fixed": [],
     "changed": []
+  },
+  "0.9.15": {
+    "date": "2026-05-16",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [],
+    "changed": [
+      "Removed the row migration option for existing files; use copy and append from clipboard for cross-file moves."
+    ]
   }
 }

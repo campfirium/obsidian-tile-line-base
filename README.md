@@ -2,8 +2,6 @@
 
 > **The Native Plain-Text Database for Obsidian**
 
-![Platform](https://img.shields.io/badge/Platform-Desktop_Only-critical) ![Version](https://img.shields.io/github/v/release/campfirium/obsidian-tile-line-base?label=Version)
-
 ![TileLineBase hero banner](docs/assets/hero-banner.jpg)
 
 Build **multidimensional tables** right inside your Markdown notes. **Zero Frontmatter. Zero code.**

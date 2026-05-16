@@ -125,7 +125,15 @@ Feel free to use whichever space works best for you.
 
 ## Acknowledgements
 
-Special thanks to [AG Grid](https://www.ag-grid.com/) for providing excellent grid functionalities, which significantly enhanced the table interactions in TileLineBase.
+TileLineBase is built on top of excellent open-source work:
+
+- [Obsidian](https://obsidian.md/) and the Obsidian plugin API.
+- [AG Grid](https://www.ag-grid.com/) for the core table interaction model.
+- [Lucide](https://lucide.dev/) for the icon set used by Obsidian and TileLineBase icon workflows.
+- [SortableJS](https://sortablejs.github.io/Sortable/) for drag-and-drop interactions.
+- [monkey-around](https://github.com/pjeby/monkey-around) for runtime patching support in the Obsidian plugin ecosystem.
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party component and license notes.
 
 ## License
 

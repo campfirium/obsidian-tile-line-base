@@ -240,5 +240,15 @@
     "changed": [
       "Removed the row migration option for existing files; use copy and append from clipboard for cross-file moves."
     ]
+  },
+  "0.9.16": {
+    "date": "2026-05-16",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [],
+    "changed": [
+      "Maintenance update for Obsidian community review readiness."
+    ]
   }
 }

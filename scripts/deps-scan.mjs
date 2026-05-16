@@ -21,6 +21,7 @@ const dependencyChecks = {
 	'eslint-plugin-obsidianmd': ['eslint-plugin-obsidianmd'],
 	'jsonc-eslint-parser': ['jsonc-eslint-parser'],
 	obsidian: ['obsidian'],
+	stylelint: ['stylelint.config.mjs', 'lint:css'],
 	terser: ['terser'],
 	'ts-node': ['ts-node'],
 	tslib: ['tslib'],

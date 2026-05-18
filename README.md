@@ -1,16 +1,16 @@
 <p align="center">
-  <a href="README.md"><img alt="English" src="https://img.shields.io/badge/static/v1?label=&amp;message=English&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.de.md"><img alt="Deutsch" src="https://img.shields.io/badge/static/v1?label=&amp;message=Deutsch&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.es.md"><img alt="Español" src="https://img.shields.io/badge/static/v1?label=&amp;message=Espa%C3%B1ol&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.fr.md"><img alt="Français" src="https://img.shields.io/badge/static/v1?label=&amp;message=Fran%C3%A7ais&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.it.md"><img alt="Italiano" src="https://img.shields.io/badge/static/v1?label=&amp;message=Italiano&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.ja.md"><img alt="日本語" src="https://img.shields.io/badge/static/v1?label=&amp;message=%E6%97%A5%E6%9C%AC%E8%AA%9E&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.ko.md"><img alt="한국어" src="https://img.shields.io/badge/static/v1?label=&amp;message=%ED%95%9C%EA%B5%AD%EC%96%B4&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.nl.md"><img alt="Nederlands" src="https://img.shields.io/badge/static/v1?label=&amp;message=Nederlands&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.pl.md"><img alt="Polski" src="https://img.shields.io/badge/static/v1?label=&amp;message=Polski&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.pt.md"><img alt="Português" src="https://img.shields.io/badge/static/v1?label=&amp;message=Portugu%C3%AAs&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.zh-hans.md"><img alt="简体中文" src="https://img.shields.io/badge/static/v1?label=&amp;message=%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87&amp;color=59636e&amp;style=flat-square"></a>
-  <a href="README.zh-hant.md"><img alt="繁體中文" src="https://img.shields.io/badge/static/v1?label=&amp;message=%E7%B9%81%E9%AB%94%E4%B8%AD%E6%96%87&amp;color=59636e&amp;style=flat-square"></a>
+  <a href="README.md"><img alt="English" src="https://img.shields.io/badge/English-59636e?style=flat-square"></a>
+  <a href="README.de.md"><img alt="Deutsch" src="https://img.shields.io/badge/Deutsch-59636e?style=flat-square"></a>
+  <a href="README.es.md"><img alt="Español" src="https://img.shields.io/badge/Espa%C3%B1ol-59636e?style=flat-square"></a>
+  <a href="README.fr.md"><img alt="Français" src="https://img.shields.io/badge/Fran%C3%A7ais-59636e?style=flat-square"></a>
+  <a href="README.it.md"><img alt="Italiano" src="https://img.shields.io/badge/Italiano-59636e?style=flat-square"></a>
+  <a href="README.ja.md"><img alt="日本語" src="https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-59636e?style=flat-square"></a>
+  <a href="README.ko.md"><img alt="한국어" src="https://img.shields.io/badge/%ED%95%9C%EA%B5%AD%EC%96%B4-59636e?style=flat-square"></a>
+  <a href="README.nl.md"><img alt="Nederlands" src="https://img.shields.io/badge/Nederlands-59636e?style=flat-square"></a>
+  <a href="README.pl.md"><img alt="Polski" src="https://img.shields.io/badge/Polski-59636e?style=flat-square"></a>
+  <a href="README.pt.md"><img alt="Português" src="https://img.shields.io/badge/Portugu%C3%AAs-59636e?style=flat-square"></a>
+  <a href="README.zh-hans.md"><img alt="简体中文" src="https://img.shields.io/badge/%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-59636e?style=flat-square"></a>
+  <a href="README.zh-hant.md"><img alt="繁體中文" src="https://img.shields.io/badge/%E7%B9%81%E9%AB%94%E4%B8%AD%E6%96%87-59636e?style=flat-square"></a>
 </p>
 
 # TileLineBase

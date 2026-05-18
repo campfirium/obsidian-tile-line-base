@@ -1,10 +1,17 @@
-<details>
-<summary>Read this README in another language</summary>
-
-[English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [日本語](README.ja.md)<br>
-[한국어](README.ko.md) · [Nederlands](README.nl.md) · [Polski](README.pl.md) · [Português](README.pt.md) · [简体中文](README.zh-hans.md) · [繁體中文](README.zh-hant.md)
-
-</details>
+<p align="center">
+  <a href="README.md"><kbd>EN</kbd></a>
+  <a href="README.de.md"><kbd>DE</kbd></a>
+  <a href="README.es.md"><kbd>ES</kbd></a>
+  <a href="README.fr.md"><kbd>FR</kbd></a>
+  <a href="README.it.md"><kbd>IT</kbd></a>
+  <a href="README.ja.md"><kbd>JA</kbd></a>
+  <a href="README.ko.md"><kbd>KO</kbd></a>
+  <a href="README.nl.md"><kbd>NL</kbd></a>
+  <a href="README.pl.md"><kbd>PL</kbd></a>
+  <a href="README.pt.md"><kbd>PT</kbd></a>
+  <a href="README.zh-hans.md"><kbd>简中</kbd></a>
+  <a href="README.zh-hant.md"><kbd>繁中</kbd></a>
+</p>
 
 # TileLineBase
 

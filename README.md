@@ -1,3 +1,23 @@
+<details>
+<summary>Read this README in another language</summary>
+
+| Language | README |
+| --- | --- |
+| English | [README.md](README.md) |
+| Deutsch | [README.de.md](README.de.md) |
+| Español | [README.es.md](README.es.md) |
+| Français | [README.fr.md](README.fr.md) |
+| Italiano | [README.it.md](README.it.md) |
+| 日本語 | [README.ja.md](README.ja.md) |
+| 한국어 | [README.ko.md](README.ko.md) |
+| Nederlands | [README.nl.md](README.nl.md) |
+| Polski | [README.pl.md](README.pl.md) |
+| Português | [README.pt.md](README.pt.md) |
+| 简体中文 | [README.zh-hans.md](README.zh-hans.md) |
+| 繁體中文 | [README.zh-hant.md](README.zh-hant.md) |
+
+</details>
+
 # TileLineBase
 
 > **The Native Plain-Text Database for Obsidian**

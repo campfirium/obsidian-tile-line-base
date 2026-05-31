@@ -1,0 +1,46 @@
+title: "[Idea]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape TileLineBase. For ideas that already exist, please add a thumbs-up reaction instead of posting "+1".
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the workflow, friction, or missing capability.
+      placeholder: When I use TileLineBase to..., I need...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What would you like TileLineBase to do?
+      placeholder: It would help if...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Pick the closest area.
+      options:
+        - Table view
+        - Kanban view
+        - Gallery view
+        - Slide view
+        - Import or export
+        - Settings or customization
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references
+      description: Share screenshots, sample Markdown, related plugins, or comparable tools.
+      placeholder: Optional links, mockups, or sample data.
+    validations:
+      required: false

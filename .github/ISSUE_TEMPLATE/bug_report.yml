@@ -1,0 +1,80 @@
+name: Bug report
+description: Report bugs and crashes in TileLineBase
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are mainly for bugs and crashes.
+
+        For feature requests or ideas, please open a post in the Feature requests & ideas discussion category and upvote with a thumbs-up reaction.
+        For general questions or how-to help, please use the Q&A discussion category.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug or crash.
+      placeholder: TileLineBase did...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest steps that reproduce the issue.
+      placeholder: |
+        1. Open a note with...
+        2. Switch to...
+        3. Click...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+      placeholder: I expected...
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample Markdown or screenshots
+      description: Paste a small sample note, screenshot, or screen recording if it helps. Remove private data first.
+      placeholder: Optional sample or media.
+    validations:
+      required: false
+  - type: input
+    id: plugin-version
+    attributes:
+      label: TileLineBase version
+      placeholder: "0.9.16"
+    validations:
+      required: true
+  - type: input
+    id: obsidian-version
+    attributes:
+      label: Obsidian version
+      placeholder: "1.8.7"
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console logs
+      description: Paste any relevant Obsidian developer console errors.
+      render: text
+    validations:
+      required: false

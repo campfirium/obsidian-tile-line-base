@@ -1,0 +1,22 @@
+title: "[Announcement]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Maintainer-only updates for TileLineBase releases, roadmap notes, and important project news.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should the community know?
+      placeholder: Briefly describe the update and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Add release notes, migration notes, screenshots, or links when useful.
+      placeholder: Add the main details here.
+    validations:
+      required: false

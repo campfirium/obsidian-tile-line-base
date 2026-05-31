@@ -1,10 +1,11 @@
-title: "[Show and tell]: "
+title: "[Show and tell] "
+labels: ["documentation"]
 body:
   - type: markdown
     attributes:
       value: |
         Share dashboards, workflows, templates, and examples built with TileLineBase.
-  - type: textarea
+  - type: input
     id: showcase
     attributes:
       label: What did you build?
@@ -13,11 +14,10 @@ body:
     validations:
       required: true
   - type: textarea
-    id: how-it-works
+    id: details
     attributes:
       label: How it works
       description: Share the view type, structure, sample Markdown, or settings that make it work.
-      placeholder: It uses...
     validations:
       required: false
   - type: textarea
@@ -25,6 +25,5 @@ body:
     attributes:
       label: Screenshots, links, or snippets
       description: Add images, short examples, or a demo link if you can share them.
-      placeholder: Drop screenshots or snippets here.
     validations:
       required: false

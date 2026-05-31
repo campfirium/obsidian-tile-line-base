@@ -1,10 +1,11 @@
-title: "[Chat]: "
+title: "[Chat] "
+labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
         Use this space for open-ended discussion about TileLineBase, Obsidian, plain-text databases, and productivity workflows.
-  - type: textarea
+  - type: input
     id: topic
     attributes:
       label: Topic
@@ -17,6 +18,5 @@ body:
     attributes:
       label: Context
       description: Add any background that would help others join the conversation.
-      placeholder: Optional context, links, screenshots, or examples.
     validations:
       required: false

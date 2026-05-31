@@ -1,10 +1,11 @@
-title: "[Q&A]: "
+title: "[Q&A] "
+labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
         Ask setup, workflow, and usage questions here. Please include enough context for someone to reproduce or understand your setup.
-  - type: textarea
+  - type: input
     id: question
     attributes:
       label: Question
@@ -13,18 +14,16 @@ body:
     validations:
       required: true
   - type: textarea
-    id: current-setup
+    id: setup
     attributes:
       label: Current setup
       description: Share the relevant view, settings, sample Markdown, or steps you tried.
-      placeholder: Paste a small sample or describe your setup.
     validations:
       required: false
   - type: textarea
-    id: expected-result
+    id: expected
     attributes:
       label: Expected result
       description: What result were you hoping for?
-      placeholder: I expected...
     validations:
       required: false

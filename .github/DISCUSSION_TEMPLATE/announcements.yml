@@ -1,10 +1,11 @@
-title: "[Announcement]: "
+title: "[Announcement] "
+labels: ["documentation"]
 body:
   - type: markdown
     attributes:
       value: |
         Maintainer-only updates for TileLineBase releases, roadmap notes, and important project news.
-  - type: textarea
+  - type: input
     id: summary
     attributes:
       label: Summary
@@ -17,6 +18,5 @@ body:
     attributes:
       label: Details
       description: Add release notes, migration notes, screenshots, or links when useful.
-      placeholder: Add the main details here.
     validations:
       required: false

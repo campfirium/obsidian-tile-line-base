@@ -140,6 +140,14 @@ TileLineBase 僅支援桌面端。
 請選擇最適合你的交流空間。
 
 
+## 相關專案
+
+### Foliole：容易上手的增量閱讀應用
+
+Obsidian 非常適合收集、整理與書寫筆記，但許多工作流程還會繼續延伸到 Obsidian 之外。
+
+如果說 TileLineBase 以多維表格和結構化記錄擴展了 Obsidian，那麼 [Foliole](https://github.com/campfirium/foliole) 擴展的則是閱讀的後半程：如何讓材料在合適的時間出現，在再次出現時更容易理解，更有效地進入記憶，並讓閱讀真正完成。
+
 ## 致謝
 
 TileLineBase 建立在這些優秀的開源成果之上：

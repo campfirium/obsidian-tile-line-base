@@ -140,6 +140,14 @@ Puedes:
 Usa el espacio que te resulte más cómodo.
 
 
+## Proyectos relacionados
+
+### Foliole: Una app accesible para lectura incremental
+
+Obsidian es excelente para recopilar, organizar y escribir notas, pero muchos flujos de trabajo pueden seguir extendiéndose más allá de él.
+
+Si TileLineBase amplía Obsidian con tablas multidimensionales y registros estructurados, [Foliole](https://github.com/campfirium/foliole) amplía la etapa posterior de la lectura: cómo hacer que los materiales aparezcan en el momento adecuado, sean más fáciles de entender cuando vuelven, entren en la memoria de forma más efectiva y permitan que la lectura realmente se complete.
+
 ## Agradecimientos
 
 TileLineBase se basa en excelentes proyectos de código abierto:

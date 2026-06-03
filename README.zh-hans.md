@@ -140,6 +140,14 @@ TileLineBase 仅支持桌面端。
 请选择最适合你的交流空间。
 
 
+## 相关项目
+
+### Foliole：易上手的增量阅读应用
+
+Obsidian 非常适合收集、整理和书写笔记，但很多工作流还会继续延伸到 Obsidian 之外。
+
+如果说 TileLineBase 用多维表格和结构化记录扩展了 Obsidian，那么 [Foliole](https://github.com/campfirium/foliole) 扩展的是阅读的后半程：如何让材料在合适的时间出现，在再次出现时更容易理解，更有效地进入记忆，并让阅读真正完成。
+
 ## 致谢
 
 TileLineBase 构建在这些优秀的开源项目之上：

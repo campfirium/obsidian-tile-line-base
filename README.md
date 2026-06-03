@@ -140,6 +140,14 @@ You can:
 Feel free to use whichever space works best for you.
 
 
+## Related Projects
+
+### Foliole: An approachable incremental reading app
+
+Obsidian is excellent for collecting, organizing, and writing notes, but many workflows can continue to extend beyond it.
+
+If TileLineBase extends Obsidian with multidimensional tables and structured records, [Foliole](https://github.com/campfirium/foliole) extends the later stage of reading: how to make materials appear at the right time, become easier to understand when they return, enter memory more effectively, and make reading actually complete.
+
 ## Acknowledgements
 
 TileLineBase is built on top of excellent open-source work:

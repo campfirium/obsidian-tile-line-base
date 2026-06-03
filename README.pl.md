@@ -140,6 +140,14 @@ Możesz:
 Wybierz przestrzeń, która najbardziej Ci odpowiada.
 
 
+## Powiązane projekty
+
+### Foliole: przystępna aplikacja do czytania przyrostowego
+
+Obsidian świetnie sprawdza się w zbieraniu, organizowaniu i pisaniu notatek, ale wiele przepływów pracy może wykraczać poza ten etap.
+
+Jeśli TileLineBase rozszerza Obsidian o wielowymiarowe tabele i uporządkowane rekordy, [Foliole](https://github.com/campfirium/foliole) rozszerza późniejszy etap czytania: pomaga materiałom pojawiać się we właściwym czasie, ułatwia ich zrozumienie po powrocie, skuteczniej wprowadza je do pamięci i pomaga faktycznie kończyć czytanie.
+
 ## Podziękowania
 
 TileLineBase powstał na bazie znakomitych projektów open source:

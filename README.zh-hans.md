@@ -142,7 +142,7 @@ TileLineBase 仅支持桌面端。
 
 ## 相关项目
 
-### Foliole：易上手的增量阅读应用
+### Foliole：现代的渐进阅读应用
 
 Obsidian 非常适合收集、整理和书写笔记，但很多工作流还会继续延伸到 Obsidian 之外。
 

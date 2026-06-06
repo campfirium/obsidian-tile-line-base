@@ -22,7 +22,16 @@
     "invalidNotice": "Clipboard content is not valid TileLineBase entries.",
     "noFileNotice": "Current file is unavailable.",
     "successNotice": "Appended clipboard text.",
-    "failureNotice": "Failed to append clipboard text."
+    "failureNotice": "Failed to append clipboard text.",
+    "lateralSuccess": "Added {{count}} new column(s) from clipboard.",
+    "lateralNoNewFields": "Clipboard has no new fields to add.",
+    "lateralPrimaryMismatch": "Clipboard primary field does not match the current table.",
+    "lateralEmptyPrimaryInTable": "The current table has an empty primary field value; cannot match rows.",
+    "lateralEmptyPrimaryInClipboard": "Clipboard has an empty primary field value; cannot match rows.",
+    "lateralDuplicatePrimaryInTable": "The current table has duplicate primary field values: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "Clipboard has duplicate primary field values: {{value}}.",
+    "lateralUnmatchedClipboardRow": "Clipboard row does not match the current table: {{value}}.",
+    "lateralReservedField": "Clipboard field is reserved and cannot be added: {{field}}."
   },
   "galleryView": {
     "emptyState": "No cards yet. Add rows from the table view to populate this gallery.",
@@ -450,6 +459,7 @@
     "menuEdit": "Edit column",
     "menuDuplicate": "Duplicate column",
     "menuInsert": "Insert column",
+    "menuCopyVisibleRowsToColumn": "Copy visible rows up to this column",
     "menuHide": "Hide column",
     "menuDelete": "Delete column",
     "nameEmptyError": "Column name cannot be empty",
@@ -460,7 +470,10 @@
     "duplicateSuccess": "Duplicated column: {{name}}",
     "insertFailed": "Failed to insert column, please try again later",
     "insertSuccess": "Inserted column: {{name}}",
-    "deleteSuccess": "Deleted column: {{name}}"
+    "deleteSuccess": "Deleted column: {{name}}",
+    "copyColumnsSuccess": "Copied columns to clipboard",
+    "copyColumnsFailed": "Failed to copy columns",
+    "copyColumnsEmpty": "No columns to copy"
   },
   "columnVisibility": {
     "menuTitle": "Show hidden columns",

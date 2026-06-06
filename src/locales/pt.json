@@ -21,7 +21,16 @@
     "invalidNotice": "O conteúdo da área de transferência não são entradas TileLineBase válidas.",
     "noFileNotice": "O arquivo atual está indisponível.",
     "successNotice": "Texto da área de transferência adicionado.",
-    "failureNotice": "Falha ao adicionar o texto da área de transferência."
+    "failureNotice": "Falha ao adicionar o texto da área de transferência.",
+    "lateralSuccess": "{{count}} nova(s) coluna(s) adicionada(s) da área de transferência.",
+    "lateralNoNewFields": "A área de transferência não tem novos campos para adicionar.",
+    "lateralPrimaryMismatch": "O campo principal da área de transferência não corresponde à tabela atual.",
+    "lateralEmptyPrimaryInTable": "A tabela atual tem um valor de campo principal vazio; não é possível corresponder linhas.",
+    "lateralEmptyPrimaryInClipboard": "A área de transferência tem um valor de campo principal vazio; não é possível corresponder linhas.",
+    "lateralDuplicatePrimaryInTable": "A tabela atual tem valores de campo principal duplicados: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "A área de transferência tem valores de campo principal duplicados: {{value}}.",
+    "lateralUnmatchedClipboardRow": "A linha da área de transferência não corresponde à tabela atual: {{value}}.",
+    "lateralReservedField": "O campo da área de transferência é reservado e não pode ser adicionado: {{field}}."
   },
   "galleryView": {
     "emptyState": "Ainda não há cartões. Adicione linhas da visualização de tabela para preencher esta galeria.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Coluna duplicada: {{name}}",
     "insertFailed": "Falha ao inserir a coluna, tente novamente mais tarde",
     "insertSuccess": "Coluna inserida: {{name}}",
-    "deleteSuccess": "Coluna excluída: {{name}}"
+    "deleteSuccess": "Coluna excluída: {{name}}",
+    "menuCopyVisibleRowsToColumn": "Copiar até esta coluna",
+    "copyColumnsSuccess": "Colunas copiadas para a área de transferência",
+    "copyColumnsFailed": "Falha ao copiar colunas",
+    "copyColumnsEmpty": "Nenhuma coluna para copiar"
   },
   "columnVisibility": {
     "menuTitle": "Mostrar colunas ocultas",

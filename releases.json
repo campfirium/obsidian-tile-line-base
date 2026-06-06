@@ -250,5 +250,16 @@
     "changed": [
       "Maintenance update for Obsidian community review readiness."
     ]
+  },
+  "0.9.17": {
+    "date": "2026-06-06",
+    "info": "",
+    "new": [
+      "Added a column header menu action to copy visible rows through the selected column.",
+      "Append from Clipboard can now also use the primary field to add clipboard content as new columns."
+    ],
+    "improved": [],
+    "fixed": [],
+    "changed": []
   }
 }

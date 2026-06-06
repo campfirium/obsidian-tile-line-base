@@ -21,7 +21,16 @@
     "invalidNotice": "Il contenuto degli appunti non è composto da voci TileLineBase valide.",
     "noFileNotice": "Il file corrente non è disponibile.",
     "successNotice": "Testo degli appunti aggiunto.",
-    "failureNotice": "Impossibile aggiungere il testo degli appunti."
+    "failureNotice": "Impossibile aggiungere il testo degli appunti.",
+    "lateralSuccess": "{{count}} nuova/e colonna/e aggiunta/e dagli appunti.",
+    "lateralNoNewFields": "Gli appunti non contengono nuovi campi da aggiungere.",
+    "lateralPrimaryMismatch": "Il campo principale degli appunti non corrisponde alla tabella corrente.",
+    "lateralEmptyPrimaryInTable": "La tabella corrente contiene un valore del campo principale vuoto; impossibile associare le righe.",
+    "lateralEmptyPrimaryInClipboard": "Gli appunti contengono un valore del campo principale vuoto; impossibile associare le righe.",
+    "lateralDuplicatePrimaryInTable": "La tabella corrente contiene valori del campo principale duplicati: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "Gli appunti contengono valori del campo principale duplicati: {{value}}.",
+    "lateralUnmatchedClipboardRow": "La riga degli appunti non corrisponde alla tabella corrente: {{value}}.",
+    "lateralReservedField": "Il campo degli appunti è riservato e non può essere aggiunto: {{field}}."
   },
   "galleryView": {
     "emptyState": "Ancora nessuna scheda. Aggiungi righe dalla vista tabella per popolare questa galleria.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Colonna duplicata: {{name}}",
     "insertFailed": "Impossibile inserire la colonna, riprova più tardi",
     "insertSuccess": "Colonna inserita: {{name}}",
-    "deleteSuccess": "Colonna eliminata: {{name}}"
+    "deleteSuccess": "Colonna eliminata: {{name}}",
+    "menuCopyVisibleRowsToColumn": "Copia fino a questa colonna",
+    "copyColumnsSuccess": "Colonne copiate negli appunti",
+    "copyColumnsFailed": "Impossibile copiare le colonne",
+    "copyColumnsEmpty": "Nessuna colonna da copiare"
   },
   "columnVisibility": {
     "menuTitle": "Mostra le colonne nascoste",

@@ -21,7 +21,16 @@
     "invalidNotice": "剪贴板内容不是有效的 TileLineBase 条目。",
     "noFileNotice": "当前文件不可用。",
     "successNotice": "已追加剪贴板文本。",
-    "failureNotice": "追加剪贴板文本失败。"
+    "failureNotice": "追加剪贴板文本失败。",
+    "lateralSuccess": "已从剪贴板添加 {{count}} 个新列。",
+    "lateralNoNewFields": "剪贴板没有可添加的新字段。",
+    "lateralPrimaryMismatch": "剪贴板主字段与当前表格不匹配。",
+    "lateralEmptyPrimaryInTable": "当前表格存在空的主字段值，无法匹配行。",
+    "lateralEmptyPrimaryInClipboard": "剪贴板存在空的主字段值，无法匹配行。",
+    "lateralDuplicatePrimaryInTable": "当前表格存在重复的主字段值：{{value}}。",
+    "lateralDuplicatePrimaryInClipboard": "剪贴板存在重复的主字段值：{{value}}。",
+    "lateralUnmatchedClipboardRow": "剪贴板行与当前表格不匹配：{{value}}。",
+    "lateralReservedField": "剪贴板字段为保留字段，无法添加：{{field}}。"
   },
   "galleryView": {
     "emptyState": "还没有卡片。可在表格视图中新增行来填充此画廊。",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "已复制列：{{name}}",
     "insertFailed": "插入列失败，请稍后再试",
     "insertSuccess": "已插入列：{{name}}",
-    "deleteSuccess": "已删除列：{{name}}"
+    "deleteSuccess": "已删除列：{{name}}",
+    "menuCopyVisibleRowsToColumn": "复制至此列为止",
+    "copyColumnsSuccess": "已复制列到剪贴板",
+    "copyColumnsFailed": "复制列失败",
+    "copyColumnsEmpty": "没有可复制的列"
   },
   "columnVisibility": {
     "menuTitle": "显示隐藏列",

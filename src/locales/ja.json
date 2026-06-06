@@ -107,7 +107,16 @@
     "invalidNotice": "クリップボードの内容は有効な TileLineBase エントリではありません。",
     "noFileNotice": "現在のファイルを利用できません。",
     "successNotice": "クリップボードのテキストを追加しました。",
-    "failureNotice": "クリップボードのテキストを追加できませんでした。"
+    "failureNotice": "クリップボードのテキストを追加できませんでした。",
+    "lateralSuccess": "クリップボードから新しい列を {{count}} 件追加しました。",
+    "lateralNoNewFields": "クリップボードに追加できる新しいフィールドはありません。",
+    "lateralPrimaryMismatch": "クリップボードの主フィールドが現在のテーブルと一致しません。",
+    "lateralEmptyPrimaryInTable": "現在のテーブルに空の主フィールド値があるため、行を照合できません。",
+    "lateralEmptyPrimaryInClipboard": "クリップボードに空の主フィールド値があるため、行を照合できません。",
+    "lateralDuplicatePrimaryInTable": "現在のテーブルに重複する主フィールド値があります: {{value}}。",
+    "lateralDuplicatePrimaryInClipboard": "クリップボードに重複する主フィールド値があります: {{value}}。",
+    "lateralUnmatchedClipboardRow": "クリップボードの行が現在のテーブルと一致しません: {{value}}。",
+    "lateralReservedField": "クリップボードのフィールドは予約済みのため追加できません: {{field}}。"
   },
   "galleryView": {
     "emptyState": "カードがまだありません。テーブルビューから行を追加してこのギャラリーを埋めてください。",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "列を複製しました: {{name}}",
     "insertFailed": "列の挿入に失敗しました。後でもう一度お試しください",
     "insertSuccess": "列を挿入しました: {{name}}",
-    "deleteSuccess": "列を削除しました: {{name}}"
+    "deleteSuccess": "列を削除しました: {{name}}",
+    "menuCopyVisibleRowsToColumn": "この列までコピー",
+    "copyColumnsSuccess": "列をクリップボードにコピーしました",
+    "copyColumnsFailed": "列をコピーできませんでした",
+    "copyColumnsEmpty": "コピーする列がありません"
   },
   "columnVisibility": {
     "menuTitle": "非表示の列を表示",

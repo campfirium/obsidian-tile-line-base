@@ -459,7 +459,7 @@
     "menuEdit": "Edit column",
     "menuDuplicate": "Duplicate column",
     "menuInsert": "Insert column",
-    "menuCopyVisibleRowsToColumn": "Copy visible rows up to this column",
+    "menuCopyVisibleRowsToColumn": "Copy through this column",
     "menuHide": "Hide column",
     "menuDelete": "Delete column",
     "nameEmptyError": "Column name cannot be empty",

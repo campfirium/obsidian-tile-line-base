@@ -21,7 +21,16 @@
     "invalidNotice": "El contenido del portapapeles no son entradas válidas de TileLineBase.",
     "noFileNotice": "El archivo actual no está disponible.",
     "successNotice": "Texto del portapapeles añadido.",
-    "failureNotice": "No se pudo añadir el texto del portapapeles."
+    "failureNotice": "No se pudo añadir el texto del portapapeles.",
+    "lateralSuccess": "Se añadieron {{count}} columna(s) nueva(s) desde el portapapeles.",
+    "lateralNoNewFields": "El portapapeles no tiene campos nuevos para añadir.",
+    "lateralPrimaryMismatch": "El campo principal del portapapeles no coincide con la tabla actual.",
+    "lateralEmptyPrimaryInTable": "La tabla actual tiene un valor de campo principal vacío; no se pueden emparejar filas.",
+    "lateralEmptyPrimaryInClipboard": "El portapapeles tiene un valor de campo principal vacío; no se pueden emparejar filas.",
+    "lateralDuplicatePrimaryInTable": "La tabla actual tiene valores de campo principal duplicados: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "El portapapeles tiene valores de campo principal duplicados: {{value}}.",
+    "lateralUnmatchedClipboardRow": "La fila del portapapeles no coincide con la tabla actual: {{value}}.",
+    "lateralReservedField": "El campo del portapapeles está reservado y no se puede añadir: {{field}}."
   },
   "galleryView": {
     "emptyState": "Aún no hay tarjetas. Añade filas desde la vista de tabla para llenar esta galería.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Columna duplicada: {{name}}",
     "insertFailed": "No se pudo insertar la columna, inténtalo de nuevo más tarde",
     "insertSuccess": "Columna insertada: {{name}}",
-    "deleteSuccess": "Columna eliminada: {{name}}"
+    "deleteSuccess": "Columna eliminada: {{name}}",
+    "menuCopyVisibleRowsToColumn": "Copiar hasta esta columna",
+    "copyColumnsSuccess": "Columnas copiadas al portapapeles",
+    "copyColumnsFailed": "No se pudieron copiar las columnas",
+    "copyColumnsEmpty": "No hay columnas para copiar"
   },
   "columnVisibility": {
     "menuTitle": "Mostrar columnas ocultas",

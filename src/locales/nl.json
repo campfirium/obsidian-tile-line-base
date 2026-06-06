@@ -107,7 +107,16 @@
     "invalidNotice": "De klembordinhoud bestaat niet uit geldige TileLineBase-items.",
     "noFileNotice": "Het huidige bestand is niet beschikbaar.",
     "successNotice": "Klembordtekst toegevoegd.",
-    "failureNotice": "Klembordtekst toevoegen is mislukt."
+    "failureNotice": "Klembordtekst toevoegen is mislukt.",
+    "lateralSuccess": "{{count}} nieuwe kolom(men) toegevoegd vanaf het klembord.",
+    "lateralNoNewFields": "Het klembord bevat geen nieuwe velden om toe te voegen.",
+    "lateralPrimaryMismatch": "Het primaire veld op het klembord komt niet overeen met de huidige tabel.",
+    "lateralEmptyPrimaryInTable": "De huidige tabel heeft een lege primaire veldwaarde; rijen kunnen niet worden gekoppeld.",
+    "lateralEmptyPrimaryInClipboard": "Het klembord heeft een lege primaire veldwaarde; rijen kunnen niet worden gekoppeld.",
+    "lateralDuplicatePrimaryInTable": "De huidige tabel heeft dubbele primaire veldwaarden: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "Het klembord heeft dubbele primaire veldwaarden: {{value}}.",
+    "lateralUnmatchedClipboardRow": "Klembordrij komt niet overeen met de huidige tabel: {{value}}.",
+    "lateralReservedField": "Klembordveld is gereserveerd en kan niet worden toegevoegd: {{field}}."
   },
   "galleryView": {
     "emptyState": "Nog geen kaarten. Voeg rijen toe vanuit de tabelweergave om deze galerij te vullen.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Kolom gedupliceerd: {{name}}",
     "insertFailed": "Kolom invoegen mislukt, probeer het later opnieuw",
     "insertSuccess": "Kolom ingevoegd: {{name}}",
-    "deleteSuccess": "Kolom verwijderd: {{name}}"
+    "deleteSuccess": "Kolom verwijderd: {{name}}",
+    "menuCopyVisibleRowsToColumn": "Tot deze kolom kopiëren",
+    "copyColumnsSuccess": "Kolommen naar klembord gekopieerd",
+    "copyColumnsFailed": "Kolommen kopiëren mislukt",
+    "copyColumnsEmpty": "Geen kolommen om te kopiëren"
   },
   "columnVisibility": {
     "menuTitle": "Verborgen kolommen tonen",

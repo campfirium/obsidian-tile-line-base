@@ -30,7 +30,7 @@ import type { GlobalQuickFilterController } from "./table-view/GlobalQuickFilter
 import type { TablePersistenceService } from "./table-view/TablePersistenceService";
 import { initializeTableView } from "./table-view/TableViewSetup";
 import { renderTableView } from "./table-view/TableViewRenderer";
-import { handleOnClose } from "./table-view/TableViewInteractions";
+import { handleOnClose, persistColumnStructureChange } from "./table-view/TableViewInteractions";
 import { ensureMarkdownToggle } from "./table-view/MarkdownToggle";
 import { CopyTemplateController } from "./table-view/CopyTemplateController";
 import { TableHistoryManager } from "./table-view/TableHistoryManager";
@@ -55,6 +55,7 @@ import { buildTableViewTabTitle } from "./utils/viewTitle";
 import { ConversionSessionManager } from "./table-view/ConversionSessionManager";
 import { refreshTableViewDisplayText } from "./table-view/viewDisplayText";
 import { appendTextFromClipboardToFile } from "./table-view/AppendFromClipboard";
+import { applyLateralAppendDiff, computeLateralAppendDiff, showLateralAppendFailure } from "./table-view/LateralColumnAppend";
 import type { SlideViewConfig } from "./types/slide";
 import { normalizeSlideViewConfig } from "./types/slide";
 import type { SlideViewInstance } from "./table-view/slide/renderSlideView";
@@ -302,6 +303,14 @@ export class TableView extends ItemView {
 		this.persistenceService?.scheduleSave();
 	}
 	public async setActiveViewMode(mode: 'table' | 'kanban' | 'slide' | 'gallery'): Promise<void> { await this.viewModeManager.setActiveViewMode(mode); }
+	public async writeClipboardText(text: string, ownerDocument?: Document): Promise<void> {
+		const navigatorLike = ownerDocument?.defaultView?.navigator ?? navigator;
+		const clipboard = navigatorLike?.clipboard;
+		if (!clipboard?.writeText) {
+			throw new Error('Clipboard write unavailable');
+		}
+		await clipboard.writeText(text);
+	}
 	public async appendFromClipboard(): Promise<void> {
 		const file = this.file;
 		if (!file) {
@@ -320,6 +329,31 @@ export class TableView extends ItemView {
 				await this.persistenceService.save();
 			}
 			const text = await clipboard.readText();
+			const normalizedText = text.replace(/\r\n?/g, '\n');
+			const parsedClipboard = this.markdownParser.parseH2(normalizedText);
+			const lateralResult = computeLateralAppendDiff({
+				tableBlocks: this.dataStore.getBlocks(),
+				tableFields: this.schema?.columnNames ?? [],
+				clipboardResult: parsedClipboard,
+				isStructured: this.markdownParser.hasStructuredH2Blocks(parsedClipboard.blocks)
+			});
+			if (lateralResult.shouldHandle) {
+				if (!lateralResult.ok) {
+					showLateralAppendFailure(lateralResult);
+					return;
+				}
+				const applied = applyLateralAppendDiff(this.dataStore, lateralResult.diff);
+				if (!applied) {
+					new Notice(t('appendClipboard.failureNotice'));
+					return;
+				}
+				persistColumnStructureChange(this, {
+					notice: t('appendClipboard.lateralSuccess', {
+						count: String(lateralResult.diff.newFields.length)
+					})
+				});
+				return;
+			}
 			const nextContent = await appendTextFromClipboardToFile({
 				app: this.app,
 				file,

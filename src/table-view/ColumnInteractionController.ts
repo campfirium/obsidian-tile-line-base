@@ -1,5 +1,5 @@
 import { App, Menu, Notice } from 'obsidian';
-import { ROW_ID_FIELD } from '../grid/GridAdapter';
+import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
 import { isDisplayedSystemColumn, isReservedColumnId } from '../grid/systemColumnUtils';
 import type { Schema } from './SchemaBuilder';
 import type { TableDataStore } from './TableDataStore';
@@ -13,9 +13,11 @@ interface ColumnInteractionDeps {
 	dataStore: TableDataStore;
 	columnLayoutStore: ColumnLayoutStore;
 	getSchema: () => Schema | null;
+	getVisibleRows: () => RowData[];
 	renameColumnInFilterViews: (oldName: string, newName: string) => void;
 	removeColumnFromFilterViews: (name: string) => void;
 	persistColumnStructureChange: (options?: { notice?: string }) => void;
+	writeClipboard: (text: string, ownerDocument: Document) => Promise<void>;
 }
 
 export class ColumnInteractionController {
@@ -23,18 +25,22 @@ export class ColumnInteractionController {
 	private readonly dataStore: TableDataStore;
 	private readonly columnLayoutStore: ColumnLayoutStore;
 	private readonly getSchema: () => Schema | null;
+	private readonly getVisibleRows: () => RowData[];
 	private readonly renameColumnInFilterViews: (oldName: string, newName: string) => void;
 	private readonly removeColumnFromFilterViews: (name: string) => void;
 	private readonly persistColumnStructureChange: (options?: { notice?: string }) => void;
+	private readonly writeClipboard: (text: string, ownerDocument: Document) => Promise<void>;
 
 	constructor(deps: ColumnInteractionDeps) {
 		this.app = deps.app;
 		this.dataStore = deps.dataStore;
 		this.columnLayoutStore = deps.columnLayoutStore;
 		this.getSchema = deps.getSchema;
+		this.getVisibleRows = deps.getVisibleRows;
 		this.renameColumnInFilterViews = deps.renameColumnInFilterViews;
 		this.removeColumnFromFilterViews = deps.removeColumnFromFilterViews;
 		this.persistColumnStructureChange = deps.persistColumnStructureChange;
+		this.writeClipboard = deps.writeClipboard;
 	}
 
 	private getEventOwnerDocument(event: MouseEvent): Document {
@@ -92,6 +98,11 @@ export class ColumnInteractionController {
 		menu.addItem((item) => {
 			item.setTitle(t('columnInteraction.menuInsert')).setIcon('plus').onClick(() => {
 				this.insertColumnAfter(field);
+			});
+		});
+		menu.addItem((item) => {
+			item.setTitle(t('columnInteraction.menuCopyVisibleRowsToColumn')).setIcon('copy').onClick(() => {
+				void this.copyColumnsToHere(field, ownerDocument);
 			});
 		});
 		menu.addItem((item) => {
@@ -432,6 +443,32 @@ export class ColumnInteractionController {
 		}
 		this.persistColumnStructureChange({ notice: t('columnInteraction.insertSuccess', { name: newName }) });
 		this.openColumnEditModal(newName);
+	}
+
+	private async copyColumnsToHere(field: string, ownerDocument: Document): Promise<void> {
+		const schema = this.getSchema();
+		if (!schema) {
+			return;
+		}
+		const fieldIndex = schema.columnNames.indexOf(field);
+		if (fieldIndex < 0) {
+			return;
+		}
+		const fields = schema.columnNames.slice(0, fieldIndex + 1).filter((name) => name !== 'status');
+		const rowIndexes = this.getVisibleRows()
+			.map((row) => Number.parseInt(String(row[ROW_ID_FIELD] ?? ''), 10))
+			.filter((index) => Number.isInteger(index));
+		const payload = this.dataStore.blocksToMarkdownForFields(fields, rowIndexes).trimEnd();
+		if (!payload) {
+			new Notice(t('columnInteraction.copyColumnsEmpty'));
+			return;
+		}
+		try {
+			await this.writeClipboard(payload, ownerDocument);
+			new Notice(t('columnInteraction.copyColumnsSuccess'));
+		} catch {
+			new Notice(t('columnInteraction.copyColumnsFailed'));
+		}
 	}
 
 	private removeColumn(field: string): void {

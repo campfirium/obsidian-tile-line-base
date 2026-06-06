@@ -19,6 +19,8 @@
 
 > **The Native Plain-Text Database for Obsidian**
 
+![Platform](https://img.shields.io/badge/Platform-Desktop_Only-critical) ![Version](https://img.shields.io/github/v/release/campfirium/obsidian-tile-line-base?label=Version)
+
 ![TileLineBase hero banner](docs/assets/hero-banner.jpg)
 
 Build **multidimensional tables** right inside your Markdown notes. **Zero Frontmatter. Zero code.**
@@ -111,9 +113,15 @@ Uses a **clear, self-contained plain-text format** that can interact seamlessly 
 
 ## Installation
 
-Install TileLineBase from the [Obsidian Community Plugins page](https://community.obsidian.md/plugins/tile-line-base) or open it directly in Obsidian with `obsidian://show-plugin?id=tile-line-base`.
+TileLineBase is available from Obsidian's **Community Plugins** directory.
 
-TileLineBase is desktop-only.
+1. Open **Settings → Community plugins → Browse** in Obsidian.
+2. Search for **TileLineBase**.
+3. Install and enable the plugin.
+
+You can also open the [Obsidian Community Plugins page](https://community.obsidian.md/plugins/tile-line-base) or open it directly in Obsidian with `obsidian://show-plugin?id=tile-line-base`.
+
+TileLineBase is desktop-only. It is not designed for Obsidian mobile.
 
 ## Development
 

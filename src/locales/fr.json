@@ -21,7 +21,16 @@
     "invalidNotice": "Le contenu du presse-papiers ne correspond pas à des entrées TileLineBase valides.",
     "noFileNotice": "Le fichier actuel est indisponible.",
     "successNotice": "Texte du presse-papiers ajouté.",
-    "failureNotice": "Impossible d'ajouter le texte du presse-papiers."
+    "failureNotice": "Impossible d'ajouter le texte du presse-papiers.",
+    "lateralSuccess": "{{count}} nouvelle(s) colonne(s) ajoutée(s) depuis le presse-papiers.",
+    "lateralNoNewFields": "Le presse-papiers ne contient aucun nouveau champ à ajouter.",
+    "lateralPrimaryMismatch": "Le champ principal du presse-papiers ne correspond pas à la table actuelle.",
+    "lateralEmptyPrimaryInTable": "La table actuelle contient une valeur de champ principal vide ; impossible de faire correspondre les lignes.",
+    "lateralEmptyPrimaryInClipboard": "Le presse-papiers contient une valeur de champ principal vide ; impossible de faire correspondre les lignes.",
+    "lateralDuplicatePrimaryInTable": "La table actuelle contient des valeurs de champ principal en double : {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "Le presse-papiers contient des valeurs de champ principal en double : {{value}}.",
+    "lateralUnmatchedClipboardRow": "La ligne du presse-papiers ne correspond pas à la table actuelle : {{value}}.",
+    "lateralReservedField": "Le champ du presse-papiers est réservé et ne peut pas être ajouté : {{field}}."
   },
   "galleryView": {
     "emptyState": "Aucune carte pour le moment. Ajoutez des lignes depuis la vue tableau pour alimenter cette galerie.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Colonne dupliquée : {{name}}",
     "insertFailed": "Impossible d'insérer la colonne, réessayez plus tard",
     "insertSuccess": "Colonne insérée : {{name}}",
-    "deleteSuccess": "Colonne supprimée : {{name}}"
+    "deleteSuccess": "Colonne supprimée : {{name}}",
+    "menuCopyVisibleRowsToColumn": "Copier jusqu’à cette colonne",
+    "copyColumnsSuccess": "Colonnes copiées dans le presse-papiers",
+    "copyColumnsFailed": "Impossible de copier les colonnes",
+    "copyColumnsEmpty": "Aucune colonne à copier"
   },
   "columnVisibility": {
     "menuTitle": "Afficher les colonnes masquées",

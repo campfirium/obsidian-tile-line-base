@@ -107,7 +107,16 @@
     "invalidNotice": "Zawartość schowka nie jest prawidłowymi wpisami TileLineBase.",
     "noFileNotice": "Bieżący plik jest niedostępny.",
     "successNotice": "Tekst ze schowka został dołączony.",
-    "failureNotice": "Nie udało się dołączyć tekstu ze schowka."
+    "failureNotice": "Nie udało się dołączyć tekstu ze schowka.",
+    "lateralSuccess": "Dodano {{count}} nowych kolumn ze schowka.",
+    "lateralNoNewFields": "Schowek nie zawiera nowych pól do dodania.",
+    "lateralPrimaryMismatch": "Pole główne w schowku nie pasuje do bieżącej tabeli.",
+    "lateralEmptyPrimaryInTable": "Bieżąca tabela ma pustą wartość pola głównego; nie można dopasować wierszy.",
+    "lateralEmptyPrimaryInClipboard": "Schowek ma pustą wartość pola głównego; nie można dopasować wierszy.",
+    "lateralDuplicatePrimaryInTable": "Bieżąca tabela ma zduplikowane wartości pola głównego: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "Schowek ma zduplikowane wartości pola głównego: {{value}}.",
+    "lateralUnmatchedClipboardRow": "Wiersz ze schowka nie pasuje do bieżącej tabeli: {{value}}.",
+    "lateralReservedField": "Pole ze schowka jest zarezerwowane i nie można go dodać: {{field}}."
   },
   "galleryView": {
     "emptyState": "Brak kart. Dodaj wiersze z widoku tabeli, aby wypełnić tę galerię.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Zduplikowano kolumnę: {{name}}",
     "insertFailed": "Nie udało się wstawić kolumny, spróbuj ponownie później",
     "insertSuccess": "Dodano kolumnę: {{name}}",
-    "deleteSuccess": "Usunięto kolumnę: {{name}}"
+    "deleteSuccess": "Usunięto kolumnę: {{name}}",
+    "menuCopyVisibleRowsToColumn": "Kopiuj do tej kolumny",
+    "copyColumnsSuccess": "Skopiowano kolumny do schowka",
+    "copyColumnsFailed": "Nie udało się skopiować kolumn",
+    "copyColumnsEmpty": "Brak kolumn do skopiowania"
   },
   "columnVisibility": {
     "menuTitle": "Pokaż ukryte kolumny",

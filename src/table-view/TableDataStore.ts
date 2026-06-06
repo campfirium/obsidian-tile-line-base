@@ -197,6 +197,34 @@ export class TableDataStore {
 		return blockToMarkdownInternal(this.schema, block, this.hiddenSortableFields);
 	}
 
+	blocksToMarkdownForFields(fields: string[], rowIndexes?: number[]): string {
+		if (!this.schema) {
+			return '';
+		}
+		const allowed = new Set(fields);
+		const sourceBlocks = Array.isArray(rowIndexes)
+			? rowIndexes
+				.map((index) => this.blocks[index])
+				.filter((block): block is H2Block => Boolean(block))
+			: this.blocks;
+		const scopedBlocks = sourceBlocks.map((block) => ({
+			...block,
+			data: Object.fromEntries(
+				Object.entries(block.data).filter(([name]) => allowed.has(name))
+			),
+			collapsedFields: []
+		}));
+		const scopedSchema: Schema = {
+			...this.schema,
+			columnNames: this.schema.columnNames.filter((name) => allowed.has(name)),
+			columnConfigs: this.schema.columnConfigs?.filter((config) => allowed.has(config.name))
+		};
+		return scopedBlocks
+			.map((block) => blockToMarkdownInternal(scopedSchema, block, this.hiddenSortableFields))
+			.filter((markdown) => markdown.trim().length > 0)
+			.join('\n\n');
+	}
+
 	blocksToMarkdown(): string {
 		const body = blocksToMarkdownInternal(this.schema, this.blocks, this.hiddenSortableFields);
 		const heading = this.leadingHeading ? `${this.leadingHeading}\n` : '';

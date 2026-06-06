@@ -107,7 +107,16 @@
     "invalidNotice": "클립보드 내용이 유효한 TileLineBase 항목이 아닙니다.",
     "noFileNotice": "현재 파일을 사용할 수 없습니다.",
     "successNotice": "클립보드 텍스트를 추가했습니다.",
-    "failureNotice": "클립보드 텍스트를 추가하지 못했습니다."
+    "failureNotice": "클립보드 텍스트를 추가하지 못했습니다.",
+    "lateralSuccess": "클립보드에서 새 열 {{count}}개를 추가했습니다.",
+    "lateralNoNewFields": "클립보드에 추가할 새 필드가 없습니다.",
+    "lateralPrimaryMismatch": "클립보드의 기본 필드가 현재 표와 일치하지 않습니다.",
+    "lateralEmptyPrimaryInTable": "현재 표에 빈 기본 필드 값이 있어 행을 맞출 수 없습니다.",
+    "lateralEmptyPrimaryInClipboard": "클립보드에 빈 기본 필드 값이 있어 행을 맞출 수 없습니다.",
+    "lateralDuplicatePrimaryInTable": "현재 표에 중복된 기본 필드 값이 있습니다: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "클립보드에 중복된 기본 필드 값이 있습니다: {{value}}.",
+    "lateralUnmatchedClipboardRow": "클립보드 행이 현재 표와 일치하지 않습니다: {{value}}.",
+    "lateralReservedField": "클립보드 필드는 예약되어 있어 추가할 수 없습니다: {{field}}."
   },
   "galleryView": {
     "emptyState": "아직 카드가 없습니다. 테이블 보기에서 행을 추가해 이 갤러리를 채우세요.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "열을 복제했습니다: {{name}}",
     "insertFailed": "열을 삽입하지 못했습니다. 잠시 후 다시 시도하세요",
     "insertSuccess": "열을 삽입했습니다: {{name}}",
-    "deleteSuccess": "열을 삭제했습니다: {{name}}"
+    "deleteSuccess": "열을 삭제했습니다: {{name}}",
+    "menuCopyVisibleRowsToColumn": "이 열까지 복사",
+    "copyColumnsSuccess": "열을 클립보드에 복사했습니다",
+    "copyColumnsFailed": "열을 복사하지 못했습니다",
+    "copyColumnsEmpty": "복사할 열이 없습니다"
   },
   "columnVisibility": {
     "menuTitle": "숨긴 열 표시",

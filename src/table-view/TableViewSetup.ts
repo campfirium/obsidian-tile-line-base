@@ -87,9 +87,11 @@ export function initializeTableView(view: TableView): void {
 		dataStore: view.dataStore,
 		columnLayoutStore: view.columnLayoutStore,
 		getSchema: () => view.schema,
+		getVisibleRows: () => view.filterOrchestrator.getVisibleRows(),
 		renameColumnInFilterViews: (oldName, newName) => renameColumnInFilterViews(view, oldName, newName),
 		removeColumnFromFilterViews: (name) => removeColumnFromFilterViews(view, name),
-		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options)
+		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
+		writeClipboard: (text, ownerDocument) => view.writeClipboardText(text, ownerDocument)
 	});
 	view.rowInteractionController = new RowInteractionController({
 		dataStore: view.dataStore,

@@ -21,7 +21,16 @@
     "invalidNotice": "剪貼簿內容不是有效的 TileLineBase 條目。",
     "noFileNotice": "目前檔案無法使用。",
     "successNotice": "已追加剪貼簿文字。",
-    "failureNotice": "追加剪貼簿文字失敗。"
+    "failureNotice": "追加剪貼簿文字失敗。",
+    "lateralSuccess": "已從剪貼簿新增 {{count}} 個新欄。",
+    "lateralNoNewFields": "剪貼簿沒有可新增的新欄位。",
+    "lateralPrimaryMismatch": "剪貼簿主欄位與目前表格不相符。",
+    "lateralEmptyPrimaryInTable": "目前表格有空白主欄位值，無法比對列。",
+    "lateralEmptyPrimaryInClipboard": "剪貼簿有空白主欄位值，無法比對列。",
+    "lateralDuplicatePrimaryInTable": "目前表格有重複的主欄位值：{{value}}。",
+    "lateralDuplicatePrimaryInClipboard": "剪貼簿有重複的主欄位值：{{value}}。",
+    "lateralUnmatchedClipboardRow": "剪貼簿列與目前表格不相符：{{value}}。",
+    "lateralReservedField": "剪貼簿欄位為保留欄位，無法新增：{{field}}。"
   },
   "galleryView": {
     "emptyState": "尚無卡片。可在表格視圖新增行以填充此畫廊。",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "已複製欄：{{name}}",
     "insertFailed": "插入欄失敗，請稍後再試",
     "insertSuccess": "已插入欄：{{name}}",
-    "deleteSuccess": "已刪除欄：{{name}}"
+    "deleteSuccess": "已刪除欄：{{name}}",
+    "menuCopyVisibleRowsToColumn": "複製至此欄為止",
+    "copyColumnsSuccess": "已複製欄到剪貼簿",
+    "copyColumnsFailed": "複製欄失敗",
+    "copyColumnsEmpty": "沒有可複製的欄"
   },
   "columnVisibility": {
     "menuTitle": "顯示隱藏欄",

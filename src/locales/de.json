@@ -21,7 +21,16 @@
     "invalidNotice": "Der Inhalt der Zwischenablage besteht nicht aus gültigen TileLineBase-Einträgen.",
     "noFileNotice": "Aktuelle Datei ist nicht verfügbar.",
     "successNotice": "Text aus der Zwischenablage angehängt.",
-    "failureNotice": "Text aus der Zwischenablage konnte nicht angehängt werden."
+    "failureNotice": "Text aus der Zwischenablage konnte nicht angehängt werden.",
+    "lateralSuccess": "{{count}} neue Spalte(n) aus der Zwischenablage hinzugefügt.",
+    "lateralNoNewFields": "Die Zwischenablage enthält keine neuen Felder zum Hinzufügen.",
+    "lateralPrimaryMismatch": "Primärfeld der Zwischenablage passt nicht zur aktuellen Tabelle.",
+    "lateralEmptyPrimaryInTable": "Die aktuelle Tabelle enthält einen leeren Primärfeldwert; Zeilen können nicht abgeglichen werden.",
+    "lateralEmptyPrimaryInClipboard": "Die Zwischenablage enthält einen leeren Primärfeldwert; Zeilen können nicht abgeglichen werden.",
+    "lateralDuplicatePrimaryInTable": "Die aktuelle Tabelle enthält doppelte Primärfeldwerte: {{value}}.",
+    "lateralDuplicatePrimaryInClipboard": "Die Zwischenablage enthält doppelte Primärfeldwerte: {{value}}.",
+    "lateralUnmatchedClipboardRow": "Zwischenablagenzeile passt nicht zur aktuellen Tabelle: {{value}}.",
+    "lateralReservedField": "Zwischenablagenfeld ist reserviert und kann nicht hinzugefügt werden: {{field}}."
   },
   "galleryView": {
     "emptyState": "Noch keine Karten. Füge Zeilen aus der Tabellenansicht hinzu, um diese Galerie zu füllen.",
@@ -459,7 +468,11 @@
     "duplicateSuccess": "Spalte dupliziert: {{name}}",
     "insertFailed": "Spalte konnte nicht eingefügt werden, bitte später erneut versuchen",
     "insertSuccess": "Spalte eingefügt: {{name}}",
-    "deleteSuccess": "Spalte gelöscht: {{name}}"
+    "deleteSuccess": "Spalte gelöscht: {{name}}",
+    "menuCopyVisibleRowsToColumn": "Bis zu dieser Spalte kopieren",
+    "copyColumnsSuccess": "Spalten in die Zwischenablage kopiert",
+    "copyColumnsFailed": "Spalten konnten nicht kopiert werden",
+    "copyColumnsEmpty": "Keine Spalten zum Kopieren"
   },
   "columnVisibility": {
     "menuTitle": "Ausgeblendete Spalten anzeigen",

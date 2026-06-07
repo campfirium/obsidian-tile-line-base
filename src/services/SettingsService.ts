@@ -154,6 +154,7 @@ export class SettingsService {
 	private readonly plugin: Plugin;
 	private pendingMigrations: Array<{ source: string; target: string; promise: Promise<boolean> }> = [];
 	private readonly recentRenames: Map<string, string> = new Map();
+	private saveQueue: Promise<void> = Promise.resolve();
 
 	constructor(plugin: Plugin) {
 		this.plugin = plugin;
@@ -241,17 +242,28 @@ export class SettingsService {
 		merged.pendingDeletions = this.sanitizePendingDeletionRecords(merged.pendingDeletions);
 
 		const legacyList = storedSettings.autoTableFiles;
+		let legacyMigrated = false;
 		if (Array.isArray(legacyList)) {
 			for (const path of legacyList) {
 				if (typeof path === 'string') {
-					merged.fileViewPrefs[path] = 'table';
+					if (merged.fileViewPrefs[path] !== 'table') {
+						merged.fileViewPrefs[path] = 'table';
+						legacyMigrated = true;
+					}
 				}
 			}
-			await this.plugin.saveData(merged);
+			if ('autoTableFiles' in merged) {
+				delete (merged as Record<string, unknown>).autoTableFiles;
+				legacyMigrated = true;
+			}
 		}
-
 		this.settings = merged;
-		await this.cleanupExpiredPendingDeletions();
+		if (legacyMigrated) {
+			await this.persist();
+		}
+		this.cleanupExpiredPendingDeletions().catch((error) => {
+			logger.error('Failed to cleanup expired pending deletions after settings load', error);
+		});
 		return this.settings;
 	}
 
@@ -396,7 +408,10 @@ export class SettingsService {
 	}
 
 	async persist(): Promise<void> {
-		await this.plugin.saveData(this.settings);
+		this.saveQueue = this.saveQueue
+			.catch(() => undefined)
+			.then(() => this.plugin.saveData(this.settings));
+		await this.saveQueue;
 	}
 
 	shouldAutoOpen(filePath: string): boolean {

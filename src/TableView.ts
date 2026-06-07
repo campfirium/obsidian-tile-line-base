@@ -64,7 +64,13 @@ import type { MagicMigrationController } from "./table-view/MagicMigrationContro
 import { getPluginContext } from "./pluginContext";
 import { t } from "./i18n";
 export const TABLE_VIEW_TYPE = "tile-line-base-table"; const logger = getLogger("view:table");
-export interface TableViewState extends Record<string, unknown> { filePath: string; }
+export type TableViewMode = 'table' | 'kanban' | 'slide' | 'gallery';
+export interface TableViewState extends Record<string, unknown> { filePath: string; mode?: TableViewMode; }
+
+function normalizeTableViewMode(mode: unknown): TableViewMode | null {
+	return mode === 'table' || mode === 'kanban' || mode === 'slide' || mode === 'gallery' ? mode : null;
+}
+
 export class TableView extends ItemView {
 	public file: TFile | null = null; public blocks: H2Block[] = [];
 	public schema: Schema | null = null; public schemaDirty = false;
@@ -118,6 +124,7 @@ export class TableView extends ItemView {
 	public galleryPreferencesLoaded = false; public shouldAutoFillGalleryDefaults = false; public galleryTemplateTouched = false;
 	public galleryController: GalleryViewController | null = null; public galleryToolbar: GalleryToolbar | null = null;
 	public galleryViewStore = new GalleryViewStore(null); public activeGalleryViewId: string | null = null; public galleryViewsLoaded = false;
+	public requestedViewMode: TableViewMode | null = null;
 	private viewModeManager!: ViewModeManager; public previousNonSlideMode: 'table' | 'kanban' | 'gallery' = 'table';
 	private readonly renderScheduler = new RenderScheduler(() => this.renderInternal());
 	private disposeNavigatorProbe: (() => void) | null = null;
@@ -134,6 +141,11 @@ export class TableView extends ItemView {
 		logger.debug("setState", state);
 		try {
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
+			const requestedMode = normalizeTableViewMode(state.mode);
+			this.requestedViewMode = requestedMode;
+			if (requestedMode) {
+				this.activeViewMode = requestedMode;
+			}
 			this.syncQuickFilterContext(file instanceof TFile ? file : null);
 			if (file instanceof TFile) {
 				this.file = file;
@@ -167,7 +179,7 @@ export class TableView extends ItemView {
 			this.refreshDisplayText();
 		}
 	}
-	getState(): TableViewState { return { filePath: this.file?.path ?? "" }; }
+	getState(): TableViewState { return { filePath: this.file?.path ?? "", mode: this.activeViewMode }; }
 	async render(): Promise<void> { await this.renderScheduler.run(); }
 	private async renderInternal(): Promise<void> {
 		if (this.kanbanBoardController) {

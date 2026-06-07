@@ -202,7 +202,8 @@ export class ViewSwitchCoordinator {
 				type: TABLE_VIEW_TYPE,
 				active: true,
 				state: {
-					filePath: file.path
+					filePath: file.path,
+					mode: targetMode
 				}
 			});
 			logger.debug('openTableView setViewState completed', this.describeLeaf(leaf));

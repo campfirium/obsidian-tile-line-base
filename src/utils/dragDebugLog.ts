@@ -12,6 +12,10 @@ interface DragDebugContext {
 let activeContext: DragDebugContext | null = null;
 
 export async function initializeDragDebugLog(plugin: TileLineBasePlugin): Promise<void> {
+	if (!isDragDebugLogEnabled()) {
+		activeContext = null;
+		return;
+	}
 	const adapter = plugin.app.vault.adapter;
 	const filePath = normalizePath(`${plugin.app.vault.configDir}/plugins/${plugin.manifest.id}/${LOG_FILE_NAME}`);
 	activeContext = {
@@ -41,6 +45,21 @@ export function appendDragDebugLog(event: string, payload: Record<string, unknow
 			await activeContext.adapter.write(activeContext.filePath, `${previous}${line}`);
 		})
 		.catch(() => undefined);
+}
+
+function isDragDebugLogEnabled(): boolean {
+	if (typeof window === 'undefined') {
+		return false;
+	}
+	const scope = window as Window & { __TLB_DRAG_DEBUG_LOG__?: boolean };
+	if (scope.__TLB_DRAG_DEBUG_LOG__) {
+		return true;
+	}
+	try {
+		return window.localStorage?.getItem('tlbDragDebugLog') === '1';
+	} catch {
+		return false;
+	}
 }
 
 function safeStringify(payload: Record<string, unknown>): string {

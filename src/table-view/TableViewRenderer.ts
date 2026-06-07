@@ -140,7 +140,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		}
 	}
 	if (!view.kanbanPreferencesLoaded) {
-		const preference = configBlock?.viewPreference;
+		const preference = view.requestedViewMode ?? configBlock?.viewPreference;
 		if (preference === 'kanban' || preference === 'table' || preference === 'slide' || preference === 'gallery') view.activeViewMode = preference;
 		const kanbanConfig = configBlock?.kanban;
 		view.kanbanHeightMode = sanitizeKanbanHeightMode(kanbanConfig?.heightMode);

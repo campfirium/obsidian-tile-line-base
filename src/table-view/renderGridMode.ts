@@ -26,7 +26,7 @@ interface RenderGridModeOptions {
 	plugin: RenderGridModePlugin | null;
 }
 
-export function renderGridMode(options: RenderGridModeOptions): void {
+export async function renderGridMode(options: RenderGridModeOptions): Promise<void> {
 	const { view, container, ownerDoc, primaryField, plugin } = options;
 	renderFilterViewControls(view, container);
 	container.classList.add('tlb-has-grid');
@@ -69,8 +69,8 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 	const sideBarVisible = !hideRightSidebar;
 
 	const containerWindow = ownerDoc?.defaultView ?? window;
-	const executeMount = () => {
-		const { gridAdapter, container: gridContainer } = mountGrid({
+	const executeMount = async () => {
+		const { gridAdapter, container: gridContainer } = await mountGrid({
 			gridController: view.gridController,
 			container: tableContainer,
 			columns,
@@ -116,10 +116,12 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 	};
 
 	if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
-		containerWindow.requestAnimationFrame(() => {
-			executeMount();
+		await new Promise<void>((resolve, reject) => {
+			containerWindow.requestAnimationFrame(() => {
+				void executeMount().then(resolve, reject);
+			});
 		});
-	} else {
-		executeMount();
+		return;
 	}
+	await executeMount();
 }

@@ -145,10 +145,10 @@ interface GridMountParams {
 	sideBarVisible?: boolean;
 }
 
-export function mountGrid(params: GridMountParams): { gridAdapter: GridAdapter; container: HTMLElement } {
+export async function mountGrid(params: GridMountParams): Promise<{ gridAdapter: GridAdapter; container: HTMLElement }> {
 	const { gridController, container, columns, rowData, handlers, sideBarVisible } = params;
 
-	const result = gridController.mount(container, columns, rowData, {
+	const result = await gridController.mount(container, columns, rowData, {
 		onStatusChange: handlers.onStatusChange,
 		onColumnResize: handlers.onColumnResize,
 		onCopyH2Section: handlers.onCopyH2Section,

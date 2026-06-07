@@ -1,5 +1,4 @@
 import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
-import { CompositionProxy } from '../../utils/CompositionProxy';
 import { getLogger } from '../../../utils/logger';
 import { ROW_ID_FIELD } from '../../GridAdapter';
 import { GridClipboardService } from './GridClipboardService';
@@ -13,6 +12,160 @@ import { normalizeKeyboardEvent, isPrintableKey } from './keyboardUtils';
 import type { TlbGridApi } from '../../agGridTypes';
 
 const logger = getLogger('grid:composition-capture');
+type Translate = InteractionControllerDeps['translate'];
+
+class CompositionProxy {
+	private host: HTMLTextAreaElement;
+	private ownerDocument: Document;
+	private resolve?: (text: string) => void;
+	private reject?: (err?: unknown) => void;
+	private composing = false;
+	private asciiTimer: number | null = null;
+	private keyHandler?: (event: KeyboardEvent) => void;
+	private readonly translate: Translate;
+
+	constructor(ownerDocument: Document, translate: Translate) {
+		this.ownerDocument = ownerDocument;
+		this.translate = translate;
+
+		const el = ownerDocument.createElement('textarea');
+		el.setAttribute('wrap', 'off');
+		el.setAttribute('autocomplete', 'off');
+		el.setAttribute('autocorrect', 'off');
+		el.setAttribute('autocapitalize', 'off');
+		el.setAttribute('spellcheck', 'false');
+		el.className = 'tlb-ime-capture';
+		el.rows = 1;
+		el.cols = 1;
+
+		this.host = el;
+		this.host.dataset.visible = 'false';
+		ownerDocument.body.appendChild(el);
+
+		this.host.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape') {
+				this.cancel('cancelled');
+				return;
+			}
+			this.keyHandler?.(event);
+		});
+
+		this.host.addEventListener('compositionstart', () => {
+			this.composing = true;
+			this.cancelAsciiFallback();
+			this.host.value = '';
+			try {
+				this.host.setSelectionRange(0, 0);
+			} catch (error) {
+				logger.warn(this.translate('compositionProxy.compositionResetFailed'), error);
+			}
+		});
+
+		this.host.addEventListener('compositionend', (event: CompositionEvent) => {
+			this.composing = false;
+			const text = (event.data ?? this.host.value ?? '').toString();
+			const resolve = this.resolve;
+			this.cleanup();
+			resolve?.(text);
+		});
+
+		this.host.addEventListener('input', (event) => {
+			const inputEvent = event as InputEvent;
+			if (inputEvent.isComposing || inputEvent.inputType === 'insertCompositionText') {
+				this.composing = true;
+				this.cancelAsciiFallback();
+				return;
+			}
+			if (this.composing) {
+				return;
+			}
+			this.scheduleAsciiFallback();
+		});
+	}
+
+	captureOnceAt(rect: DOMRect): Promise<string> {
+		return new Promise<string>((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+
+			const w = Math.max(8, rect.width);
+			const h = Math.max(16, rect.height);
+
+			this.host.style.setProperty('--tlb-ime-left', `${Math.max(0, rect.left)}px`);
+			this.host.style.setProperty('--tlb-ime-top', `${Math.max(0, rect.top)}px`);
+			this.host.style.setProperty('--tlb-ime-width', `${w}px`);
+			this.host.style.setProperty('--tlb-ime-height', `${h}px`);
+			this.host.style.setProperty('--tlb-ime-line-height', `${h}px`);
+
+			this.host.dataset.visible = 'true';
+			this.composing = false;
+			this.host.value = '';
+			this.host.focus();
+			try {
+				this.host.setSelectionRange(0, 0);
+			} catch (error) {
+				logger.warn(this.translate('compositionProxy.caretResetFailed'), error);
+			}
+		});
+	}
+
+	setKeyHandler(handler: ((event: KeyboardEvent) => void) | undefined): void {
+		this.keyHandler = handler;
+	}
+
+	cancel(reason?: unknown): void {
+		const reject = this.reject;
+		if (!reject && !this.resolve) {
+			this.cleanup();
+			return;
+		}
+
+		this.resolve = undefined;
+		this.reject = undefined;
+		this.cleanup();
+		reject?.(reason ?? 'cancelled');
+	}
+
+	destroy(): void {
+		this.cancel('destroyed');
+		if (this.host.parentNode) {
+			this.host.parentNode.removeChild(this.host);
+		}
+	}
+
+	private cancelAsciiFallback(): void {
+		if (this.asciiTimer != null) {
+			window.clearTimeout(this.asciiTimer);
+			this.asciiTimer = null;
+		}
+	}
+
+	private scheduleAsciiFallback(): void {
+		this.cancelAsciiFallback();
+		this.asciiTimer = window.setTimeout(() => {
+			const text = (this.host.value ?? '').toString();
+			const resolve = this.resolve;
+			this.cleanup();
+			resolve?.(text);
+		}, 180);
+	}
+
+	private cleanup(): void {
+		this.cancelAsciiFallback();
+		this.composing = false;
+		this.host.value = '';
+		this.host.dataset.visible = 'false';
+
+		const activeEl = this.ownerDocument.activeElement as HTMLElement | null;
+		if (activeEl === this.host) {
+			activeEl.blur?.();
+		}
+
+		this.resolve = undefined;
+		this.reject = undefined;
+		this.keyHandler = undefined;
+	}
+}
 
 interface CompositionManagerOptions {
 	focus: FocusStateAccess;
@@ -451,7 +604,7 @@ export class CompositionCaptureManager {
 	private getProxy(doc: Document): CompositionProxy {
 		let proxy = this.proxyByDoc.get(doc);
 		if (!proxy) {
-			proxy = new CompositionProxy(doc);
+				proxy = new CompositionProxy(doc, this.translate);
 			this.proxyByDoc.set(doc, proxy);
 			this.proxies.add(proxy);
 		}

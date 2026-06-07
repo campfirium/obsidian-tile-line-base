@@ -1,7 +1,7 @@
 import type { RowData } from '../../grid/GridAdapter';
-import { type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
+import { type SlideBodyBlock, type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
 import { computeLayout, type ComputedLayout } from './slideLayout';
-import { renderSlideTemplate, resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
+import { renderSlideTemplate, resolveDirectImage, resolveSlideContent } from './SlideContentResolver';
 
 export interface SlidePage {
 	rowIndex: number;
@@ -145,8 +145,15 @@ function buildPageFromBlocks(
 	updateTemplate: (next: SlideTextTemplate) => void,
 	imageLayout: ComputedLayout
 ): SlidePage {
-	const textBlocks = blocks.filter((block) => block.type === 'text').map((block) => block.text);
-	const imageBlocks = blocks.filter((block) => block.type === 'image').map((block) => block.markdown);
+	const textBlocks: string[] = [];
+	const imageBlocks: string[] = [];
+	for (const block of blocks) {
+		if (block.type === 'text') {
+			textBlocks.push(block.text);
+		} else {
+			imageBlocks.push(block.markdown);
+		}
+	}
 	return {
 		rowIndex,
 		title,

@@ -68,7 +68,6 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 	const hideRightSidebar = plugin?.isHideRightSidebarEnabled?.() ?? false;
 	const sideBarVisible = !hideRightSidebar;
 
-	const containerWindow = ownerDoc?.defaultView ?? window;
 	const executeMount = () => {
 		const { gridAdapter, container: gridContainer } = mountGrid({
 			gridController: view.gridController,
@@ -115,11 +114,5 @@ export function renderGridMode(options: RenderGridModeOptions): void {
 		view.gridInteractionController.attach(gridContainer);
 	};
 
-	if (containerWindow && typeof containerWindow.requestAnimationFrame === 'function') {
-		containerWindow.requestAnimationFrame(() => {
-			executeMount();
-		});
-	} else {
-		executeMount();
-	}
+	executeMount();
 }

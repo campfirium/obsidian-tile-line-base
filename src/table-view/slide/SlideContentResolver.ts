@@ -1,7 +1,5 @@
 import type { RowData } from '../../grid/GridAdapter';
-import type { SlideTextTemplate } from '../../types/slide';
-
-export type SlideBodyBlock = { type: 'text'; text: string } | { type: 'image'; markdown: string };
+import type { SlideBodyBlock, SlideTextTemplate } from '../../types/slide';
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'tif', 'tiff', 'avif', 'heic', 'heif'];
 const MARKDOWN_IMAGE_PATTERN = /^!\[[^\]]*]\([^)]+\)$/i;

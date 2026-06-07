@@ -3,7 +3,7 @@ import {
 	GridApi
 } from 'ag-grid-community';
 import { CellEditEvent, type RowData } from '../GridAdapter';
-import { TaskStatus } from '../../renderers/StatusCellRenderer';
+import type { TaskStatus } from '../../utils/status';
 import type { CellLinkClickContext } from '../../types/cellLinks';
 
 export interface GridInteractionContext {

@@ -38,6 +38,61 @@ import { initializeDragDebugLog } from './utils/dragDebugLog';
 
 const logger = getLogger('plugin:main');
 
+interface StartupProfileEntry {
+	label: string;
+	elapsedMs: number;
+	deltaMs: number;
+}
+
+function isStartupProfilingEnabled(): boolean {
+	if (typeof window === 'undefined') {
+		return false;
+	}
+	const scope = window as Window & { __TLB_STARTUP_PROFILE__?: boolean };
+	if (scope.__TLB_STARTUP_PROFILE__) {
+		return true;
+	}
+	try {
+		return window.localStorage?.getItem('tlbStartupProfile') === '1';
+	} catch {
+		return false;
+	}
+}
+
+function createStartupProfiler() {
+	const enabled = isStartupProfilingEnabled();
+	const start = typeof performance !== 'undefined' ? performance.now() : Date.now();
+	let last = start;
+	const entries: StartupProfileEntry[] = [];
+	const scope = typeof window !== 'undefined'
+		? window as Window & { __TLB_STARTUP_PROFILE_ENTRIES__?: StartupProfileEntry[] }
+		: null;
+
+	const step = (label: string): void => {
+		if (!enabled) {
+			return;
+		}
+		const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+		const entry = {
+			label,
+			elapsedMs: now - start,
+			deltaMs: now - last
+		};
+		last = now;
+		entries.push(entry);
+		if (scope) {
+			scope.__TLB_STARTUP_PROFILE_ENTRIES__ = entries;
+		}
+		try {
+			performance.mark(`tlb-startup:${label}`);
+		} catch {
+			// Performance marks are diagnostic-only.
+		}
+	};
+
+	return { step };
+}
+
 export default class TileLineBasePlugin extends Plugin {
 	private windowContextManager!: WindowContextManager;
 	private mainContext: WindowContext | null = null;
@@ -56,8 +111,12 @@ export default class TileLineBasePlugin extends Plugin {
 	private navigatorCompatModalShown = false;
 
 	async onload() {
+		const startupProfile = createStartupProfiler();
+		startupProfile.step('onload:start');
 		setPluginContext(this);
+		startupProfile.step('plugin-context');
 		await initializeDragDebugLog(this);
+		startupProfile.step('drag-debug-log');
 		this.settingsService = new SettingsService(this);
 		this.windowContextManager = new WindowContextManager(this.app);
 		this.viewCoordinator = new ViewSwitchCoordinator(this.app, this.settingsService, this.windowContextManager, this.suppressAutoSwitchUntil);
@@ -69,20 +128,17 @@ export default class TileLineBasePlugin extends Plugin {
 		);
 		this.tableTitleRefresher = new TableViewTitleRefresher(this.app, this.windowContextManager);
 		this.rightSidebarController = new RightSidebarController(this.app);
+		startupProfile.step('controllers-created');
 		await this.loadSettings();
-		await this.updateLocalizedLocalePreferenceFromEnvironment();
+		startupProfile.step('settings-loaded');
 		this.maybeNotifyNavigatorCompatibility();
+		startupProfile.step('navigator-compat-checked');
 
 		this.backupManager = new BackupManager({
 			plugin: this,
 			getSettings: () => this.settingsService.getBackupSettings()
 		});
-		try {
-			await this.backupManager.initialize();
-		} catch (error: unknown) {
-			logger.error('Failed to initialize backup manager', error);
-			this.backupManager = null;
-		}
+		startupProfile.step('backup-created');
 
 		applyLoggingConfig(this.settings.logging);
 		this.unsubscribeLogging = subscribeLoggingConfig((config) => {
@@ -97,6 +153,9 @@ export default class TileLineBasePlugin extends Plugin {
 			}
 		});
 		installLoggerConsoleBridge();
+		startupProfile.step('logging-configured');
+		this.scheduleBackupInitialization(() => startupProfile.step('backup-initialized'));
+		startupProfile.step('backup-scheduled');
 
 		logger.info('Plugin onload start');
 		logger.debug('Registering TableView view', { viewType: TABLE_VIEW_TYPE });
@@ -113,15 +172,18 @@ export default class TileLineBasePlugin extends Plugin {
 			return view;
 		});
 		logger.debug('registerView completed');
+		startupProfile.step('view-registered');
 
 		this.mainContext = this.windowContextManager.registerWindow(window) ?? { window, app: this.app };
 		this.windowContextManager.captureExistingWindows();
 		this.viewActionManager.refreshAll();
+		startupProfile.step('window-context-ready');
 
 		this.app.workspace.onLayoutReady(() => {
+			startupProfile.step('layout-ready:start');
 			this.tableTitleRefresher.refreshAll();
 			void this.applyLocaleSettings();
-			void this.updateLocalizedLocalePreferenceFromEnvironment();
+			startupProfile.step('layout-ready:scheduled');
 		});
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
@@ -137,14 +199,13 @@ export default class TileLineBasePlugin extends Plugin {
 			viewSwitch: this.viewCoordinator
 		});
 		await this.onboardingManager.runInitialOnboarding();
+		startupProfile.step('onboarding-complete');
 
 		this.registerEvent(this.app.workspace.on('file-open', (openedFile) => {
 			logger.debug('file-open event received', { file: openedFile?.path ?? null });
 			this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
 			if (openedFile instanceof TFile) {
-				window.setTimeout(() => {
-					void this.viewCoordinator.maybeSwitchToTableView(openedFile);
-				}, 0);
+				void this.viewCoordinator.maybeSwitchToTableView(openedFile);
 			}
 		}));
 		this.registerEvent(
@@ -194,31 +255,6 @@ export default class TileLineBasePlugin extends Plugin {
 				notifyNavigatorFocus(this.app, file);
 			}
 
-			const suppressUntil = this.suppressAutoSwitchUntil.get(file.path);
-			if (suppressUntil && suppressUntil > Date.now()) {
-				logger.debug('active-leaf-change: suppressed auto switch', { file: file.path });
-				return;
-			}
-			this.suppressAutoSwitchUntil.delete(file.path);
-
-			if (!this.settingsService.shouldAutoOpen(file.path)) {
-				return;
-			}
-
-			logger.debug('active-leaf-change: auto switch candidate', {
-				file: file.path,
-				leaf: snapshotLeaf(this.windowContextManager, leaf ?? null)
-			});
-
-			window.setTimeout(() => {
-				const openContext = {
-					leaf: leaf ?? null,
-					preferredWindow: this.windowContextManager.getLeafWindow(leaf ?? null),
-					workspace: this.windowContextManager.getWorkspaceForLeaf(leaf ?? null) ?? this.app.workspace,
-					trigger: 'auto' as const
-				};
-				void this.viewCoordinator.openTableView(file, openContext);
-			}, 0);
 		}));
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
@@ -390,6 +426,7 @@ export default class TileLineBasePlugin extends Plugin {
 
 		this.addSettingTab(new TileLineBaseSettingTab(this.app, this));
 		this.applyRightSidebarForLeaf(this.getMostRecentLeaf());
+		startupProfile.step('onload:end');
 	}
 
 	onunload(): void {
@@ -796,6 +833,31 @@ export default class TileLineBasePlugin extends Plugin {
 		} catch (error: unknown) {
 			logger.debug('navigator-compat: plugin-load listener unavailable', { error });
 		}
+	}
+
+	private scheduleBackupInitialization(onInitialized?: () => void): void {
+		const schedule = () => {
+			const handle = window.setTimeout(() => {
+				const manager = this.backupManager;
+				if (!manager) {
+					return;
+				}
+				void manager.initialize()
+					.then(() => {
+						onInitialized?.();
+					})
+					.catch((error: unknown) => {
+						logger.error('Failed to initialize backup manager', error);
+						if (this.backupManager === manager) {
+							this.backupManager = null;
+						}
+					});
+			}, 1000);
+			this.register(() => {
+				window.clearTimeout(handle);
+			});
+		};
+		this.app.workspace.onLayoutReady(schedule);
 	}
 
 	private async loadSettings(): Promise<void> {

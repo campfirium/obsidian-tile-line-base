@@ -8,7 +8,7 @@ import type {
 	RowDragCancelEvent,
 	RowDragEnterEvent
 } from 'ag-grid-community';
-import { normalizeStatus } from '../../renderers/StatusCellRenderer';
+import { normalizeStatus } from '../../utils/status';
 import { createTextCellEditor } from '../editors/TextCellEditor';
 import type { AgGridColumnService } from '../column/AgGridColumnService';
 import type { AgGridInteractionController } from '../interactions/AgGridInteractionController';

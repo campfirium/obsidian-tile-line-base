@@ -12,7 +12,9 @@ const LEVEL_RANK: Record<LogLevelName, number> = {
 	trace: 4
 };
 
-const LOG_METHOD: Record<LogLevelName, keyof Console> = {
+type ConsoleLogMethod = (...args: unknown[]) => void;
+
+const LOG_METHOD: Record<LogLevelName, 'error' | 'warn' | 'info' | 'debug'> = {
 	error: 'error',
 	warn: 'warn',
 	info: 'info',
@@ -119,14 +121,26 @@ function shouldLog(scope: string, level: LogLevelName): boolean {
 	return LEVEL_RANK[level] <= LEVEL_RANK[scopeLevel];
 }
 
+function resolveConsoleMethod(consoleObj: Console | null, method: 'error' | 'warn' | 'info' | 'debug'): ConsoleLogMethod {
+	if (!consoleObj) {
+		return () => {};
+	}
+	switch (method) {
+		case 'error':
+			return (...args: unknown[]) => consoleObj.error(...args);
+		case 'warn':
+			return (...args: unknown[]) => consoleObj.warn(...args);
+		case 'info':
+			return (...args: unknown[]) => consoleObj.info(...args);
+		case 'debug':
+			return (...args: unknown[]) => consoleObj.debug(...args);
+	}
+}
+
 function makePrinter(scope: string, level: LogLevelName): (...args: unknown[]) => void {
 	const method = LOG_METHOD[level];
 	const globalConsole = typeof globalThis === 'undefined' ? null : window.console;
-	const consoleMethod = globalConsole && typeof globalConsole[method] === 'function'
-		? globalConsole[method].bind(globalConsole)
-		: globalConsole && typeof globalConsole.log === 'function'
-			? globalConsole.log.bind(globalConsole)
-			: () => {};
+	const consoleMethod = resolveConsoleMethod(globalConsole, method);
 	if (__LOG_PROD__ && (level === 'info' || level === 'debug' || level === 'trace')) {
 		return (...args: unknown[]) => {
 			if (shouldLog(scope, level)) {

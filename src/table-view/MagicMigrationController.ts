@@ -164,7 +164,7 @@ export class MagicMigrationController {
 			const merged = mergeFrontmatter(context.frontmatter, markdown);
 			await this.view.app.vault.modify(context.file, merged);
 			this.view.markUserMutation('auto-default-table');
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.error('empty-note-conversion-failed', error);
 			new Notice(t('tableCreation.failureNotice'));
 			this.renderInlinePrompt(context.container, context.content, context.file);
@@ -181,14 +181,14 @@ export class MagicMigrationController {
 		let baseContent = originalContent;
 		try {
 			baseContent = await this.view.app.vault.read(file);
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.warn('Failed to read latest content before applying malformed edits', { error });
 		}
 		const updated = this.replaceMalformedSections(baseContent, edits);
 		try {
 			await this.view.app.vault.modify(file, updated);
 			new Notice(t('magicMigration.malformedSaveSuccess'));
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.error('Failed to save malformed H2 edits', { error });
 			new Notice(t('magicMigration.malformedSaveError'));
 		}
@@ -394,7 +394,7 @@ export class MagicMigrationController {
 			await this.openFileInTableView(newFile);
 			new Notice(t('magicMigration.successNotice', { fileName: newFile.basename }));
 			return true;
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.error('Magic migration failed', error);
 			new Notice(t('magicMigration.failureNotice'));
 			return false;

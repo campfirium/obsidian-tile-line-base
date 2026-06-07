@@ -408,14 +408,14 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 				const result = shell.openExternal(url);
 				const resultPromise = result instanceof Promise ? result : null;
 				if (resultPromise) {
-					resultPromise.catch((error) => {
+					resultPromise.catch((error: unknown) => {
 						this.logger.error("Failed to open quick link", { error, url });
 					});
 				}
 				return;
 			}
 			window.open(url, '_blank', 'noopener');
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.error('Failed to open quick link', { error, url });
 		}
 	}

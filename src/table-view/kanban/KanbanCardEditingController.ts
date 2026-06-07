@@ -107,7 +107,8 @@ export class KanbanCardEditingController {
 				targetFields.add('statusChanged');
 			}
 		}
-		const focusField = sanitizedUpdates.keys().next().value ?? null;
+		const firstSanitizedKey = sanitizedUpdates.keys().next();
+		const focusField = firstSanitizedKey.done === true ? null : firstSanitizedKey.value;
 
 		const recorded = this.view.historyManager.captureCellChanges(
 			[{ index: rowIndex, fields: Array.from(targetFields) }],

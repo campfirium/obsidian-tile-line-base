@@ -1,9 +1,11 @@
-import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
+import type { ICellEditorComp } from 'ag-grid-community';
 import { ROW_ID_FIELD } from '../GridAdapter';
 import { Notice, setIcon } from 'obsidian';
+import type { TlbCellEditorParams } from '../agGridTypes';
 
 import { normalizeDateInput } from '../../utils/datetime';
 import { t } from '../../i18n';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -96,7 +98,7 @@ export function createDateCellEditor() {
 		private textInput!: HTMLInputElement;
 		private triggerButton!: HTMLButtonElement;
 		private hiddenPicker!: HTMLInputElement;
-		private params!: ICellEditorParams;
+		private params!: TlbCellEditorParams;
 		private initialValue = '';
 		private lastValidValue = '';
 		private invalidNotice: Notice | null = null;
@@ -135,10 +137,10 @@ export function createDateCellEditor() {
 			}
 		};
 
-		init(params: ICellEditorParams): void {
+		init(params: TlbCellEditorParams): void {
 			this.params = params;
 			const doc = params.eGridCell?.ownerDocument || activeDocument;
-			this.initialValue = String(params.value ?? '').trim();
+			this.initialValue = formatUnknownValue(params.value ?? '').trim();
 			this.lastValidValue = this.determineInitialValidValue(this.initialValue);
 
 			this.wrapper = createWrapper(doc);
@@ -275,8 +277,7 @@ export function createDateCellEditor() {
 				return;
 			}
 			const field = this.params?.column?.getColId?.() ?? this.params?.colDef?.field ?? null;
-			const context = this.params?.context as { onAddChildRow?: (targetRowIndex: number, targetField: string | null) => void } | undefined;
-			context?.onAddChildRow?.(rowIndex, field);
+			this.params?.context?.onAddChildRow?.(rowIndex, field);
 		}
 
 	};

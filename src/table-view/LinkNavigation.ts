@@ -21,7 +21,7 @@ export function handleCellLinkOpen(view: TableView, context: CellLinkClickContex
 			} else {
 				window.open(target, '_blank', 'noopener');
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.error('Failed to open external link', {
 				error,
 				target,
@@ -35,7 +35,7 @@ export function handleCellLinkOpen(view: TableView, context: CellLinkClickContex
 	const sourcePath = view.file?.path ?? '';
 	try {
 		void view.app.workspace.openLinkText(target, sourcePath, true);
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.error('Failed to open internal link', {
 			error,
 			target,

@@ -5,7 +5,7 @@
  */
 
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
-import type { CellEditingStoppedEvent, ColumnState, GridApi, RowDragEndEvent } from 'ag-grid-community';
+import type { ColumnState, GridApi } from 'ag-grid-community';
 
 import {
 	CellEditEvent,
@@ -20,6 +20,7 @@ import {
 import type { FilterModel } from './GridAdapter';
 import { syncGridContainerTheme, syncGridPopupRoot } from './themeSync';
 import { t, type TranslationKey } from '../i18n';
+import { formatUnknownValue } from '../utils/valueFormat';
 import { AgGridColumnService } from './column/AgGridColumnService';
 import { AgGridInteractionController } from './interactions/AgGridInteractionController';
 import type { GridInteractionContext } from './interactions/types';
@@ -29,6 +30,7 @@ import { AgGridSelectionController } from './selection/AgGridSelectionController
 import { AgGridStateService } from './state/AgGridStateService';
 import { SideBarController } from './sidebar/SideBarController';
 import { OverflowTooltipController } from './tooltip/OverflowTooltipController';
+import type { TlbCellEditingStoppedEvent, TlbRowDragEndEvent } from './agGridTypes';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -132,7 +134,7 @@ export class AgGridAdapter implements GridAdapter {
 			columnService: this.columnService,
 			interaction: this.interaction,
 			getGridContext: () => this.gridContext,
-			onCellEditingStopped: (event: CellEditingStoppedEvent) => this.handleCellEdit(event),
+				onCellEditingStopped: (event) => this.handleCellEdit(event),
 			getColumnHeaderContextMenu: () => this.columnHeaderContextMenuCallback,
 			resizeColumns: () => this.resizeColumns(),
 			onRowDragEnd: (event) => this.handleRowDragEnd(event)
@@ -285,7 +287,7 @@ export class AgGridAdapter implements GridAdapter {
 		}
 	}
 
-	private handleCellEdit(event: CellEditingStoppedEvent): void {
+	private handleCellEdit(event: TlbCellEditingStoppedEvent): void {
 		this.interaction.handleCellEditingStopped();
 
 		if (!this.cellEditCallback) {
@@ -294,33 +296,34 @@ export class AgGridAdapter implements GridAdapter {
 
 		const field = event.colDef.field;
 		const rowIndex = event.node.rowIndex;
-		const newValue = event.newValue;
-		const oldValue = event.oldValue;
+			const newValue = event.newValue;
+			const oldValue = event.oldValue;
 
-		if (field && rowIndex !== null && rowIndex !== undefined) {
-			const newStr = String(newValue ?? '');
-			const oldStr = String(oldValue ?? '');
+			if (field && rowIndex !== null && rowIndex !== undefined) {
+				const newStr = formatUnknownValue(newValue ?? '');
+				const oldStr = formatUnknownValue(oldValue ?? '');
+				const rowData = event.data;
 
-			if (newStr !== oldStr) {
-				this.cellEditCallback({
-					rowIndex,
-					field,
-					newValue: newStr,
-					oldValue: oldStr,
-					rowData: event.data as RowData
-				});
+				if (newStr !== oldStr && rowData) {
+					this.cellEditCallback({
+						rowIndex,
+						field,
+						newValue: newStr,
+						oldValue: oldStr,
+						rowData
+					});
+				}
 			}
 		}
-	}
 
-	private handleRowDragEnd(event: RowDragEndEvent): void {
+	private handleRowDragEnd(event: TlbRowDragEndEvent): void {
 		if (!this.rowDragEndCallback) {
 			return;
 		}
 
 		const payload: RowDragEndPayload = {
-			draggedRow: (event.node?.data as RowData | undefined) ?? null,
-			targetRow: (event.overNode?.data as RowData | undefined) ?? null,
+			draggedRow: event.node?.data ?? null,
+			targetRow: event.overNode?.data ?? null,
 			direction: event.vDirection ?? null,
 			overIndex: typeof event.overIndex === 'number' ? event.overIndex : null,
 			displayedRowOrder: this.collectDisplayedRowOrder(event.api)

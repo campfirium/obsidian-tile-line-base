@@ -30,7 +30,7 @@ export class OnboardingManager {
 		}
 		try {
 			await this.settingsService.updateOnboardingState({ completed: true });
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.warn('onboarding: failed to update onboarding state', error);
 		}
 
@@ -57,7 +57,7 @@ export class OnboardingManager {
 			const file = await this.app.vault.create(uniquePath, content);
 			this.logger.info('onboarding: help file created', { path: uniquePath });
 			return file;
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.error('onboarding: failed to create help file', { path: uniquePath, error });
 			return null;
 		}
@@ -80,7 +80,7 @@ export class OnboardingManager {
 					return normalizePath(parentPath);
 				}
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.warn('onboarding: failed to resolve default folder', error);
 		}
 		return '';
@@ -117,7 +117,7 @@ export class OnboardingManager {
 		if (vault && typeof vault.getConfig === 'function') {
 			try {
 				return vault.getConfig(key) as T;
-			} catch (error) {
+			} catch (error: unknown) {
 				this.logger.warn('onboarding: getConfig threw error', { key, error });
 			}
 		}
@@ -127,7 +127,7 @@ export class OnboardingManager {
 	private lookupFile(path: string): TAbstractFile | null {
 		try {
 			return this.app.vault.getAbstractFileByPath(path);
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.warn('onboarding: lookup failed', { path, error });
 			return null;
 		}
@@ -153,7 +153,7 @@ export class OnboardingManager {
 		}
 		try {
 			await this.app.vault.createFolder(folderPath);
-		} catch (error) {
+		} catch (error: unknown) {
 			if ((error as { message?: string } | undefined)?.message?.includes('already exists')) {
 				return;
 			}
@@ -181,7 +181,7 @@ export class OnboardingManager {
 	private async ensurePreference(file: TFile): Promise<void> {
 		try {
 			await this.settingsService.setFileViewPreference(file.path, 'table');
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.warn('onboarding: failed to mark help file preference', { path: file.path, error });
 		}
 	}
@@ -202,7 +202,7 @@ export class OnboardingManager {
 				});
 				return;
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.warn('onboarding: failed to open help file in leaf, falling back to direct open', { path: file.path, error });
 		}
 
@@ -212,7 +212,7 @@ export class OnboardingManager {
 				workspace: this.app.workspace,
 				trigger: 'auto'
 			});
-		} catch (error) {
+		} catch (error: unknown) {
 			this.logger.error('onboarding: failed to open help file in table view', { path: file.path, error });
 		}
 	}

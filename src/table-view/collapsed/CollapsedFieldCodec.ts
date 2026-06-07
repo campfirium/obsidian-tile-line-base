@@ -124,7 +124,7 @@ function parseCollapsedBody(body: string): CollapsedFieldEntry[] {
 
 function parseCollapsedPayload(raw: string): CollapsedFieldEntry[] {
 	try {
-		const parsed = JSON.parse(raw);
+		const parsed: unknown = JSON.parse(raw);
 		if (!isRecord(parsed)) {
 			return [];
 		}

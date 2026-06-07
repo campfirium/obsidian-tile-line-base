@@ -4,12 +4,9 @@ import type {
 	CellFocusedEvent,
 	CellKeyDownEvent,
 	ColumnHeaderContextMenuEvent,
-	GridOptions,
 	PasteEndEvent,
 	RowDragCancelEvent,
-	RowDragEnterEvent,
-	RowDragEndEvent,
-	SuppressKeyboardEventParams
+	RowDragEnterEvent
 } from 'ag-grid-community';
 import { normalizeStatus } from '../../renderers/StatusCellRenderer';
 import { createTextCellEditor } from '../editors/TextCellEditor';
@@ -19,6 +16,7 @@ import type { GridInteractionContext } from '../interactions/types';
 import type { RowData } from '../GridAdapter';
 import { ROW_ID_FIELD } from '../GridAdapter';
 import { postSortNodesPreservingHierarchy } from '../../table-view/HierarchySort';
+import type { TlbGridOptions, TlbRowDragEndEvent, TlbSuppressKeyboardEventParams } from '../agGridTypes';
 
 const DEFAULT_ROW_HEIGHT = 40;
 
@@ -28,10 +26,10 @@ interface GridOptionsParams {
 	columnService: AgGridColumnService;
 	interaction: AgGridInteractionController;
 	getGridContext: () => GridInteractionContext | undefined;
-	onCellEditingStopped: (event: CellEditingStoppedEvent) => void;
+	onCellEditingStopped: (event: CellEditingStoppedEvent<RowData>) => void;
 	getColumnHeaderContextMenu: () => ((event: { field: string; domEvent: MouseEvent }) => void) | undefined;
 	resizeColumns: () => void;
-	onRowDragEnd: (event: RowDragEndEvent) => void;
+	onRowDragEnd: (event: TlbRowDragEndEvent) => void;
 }
 
 export function createAgGridOptions({
@@ -44,7 +42,7 @@ export function createAgGridOptions({
 	getColumnHeaderContextMenu,
 	resizeColumns,
 	onRowDragEnd
-}: GridOptionsParams): GridOptions {
+}: GridOptionsParams): TlbGridOptions {
 	let isRowDragActive = false;
 
 	return {
@@ -58,12 +56,12 @@ export function createAgGridOptions({
 		onFirstDataRendered: () => {
 			resizeColumns();
 		},
-		getRowId: params => String((params.data as RowData)[ROW_ID_FIELD]),
+			getRowId: params => String(params.data[ROW_ID_FIELD]),
 		context: getGridContext() || {},
 		enableBrowserTooltips: false,
 		tooltipShowDelay: 0,
 		tooltipHideDelay: 0,
-		onCellKeyDown: (event: CellKeyDownEvent) => {
+			onCellKeyDown: (event: CellKeyDownEvent<RowData>) => {
 			interaction.handleGridCellKeyDown(event);
 		},
 		singleClickEdit: false,
@@ -81,7 +79,7 @@ export function createAgGridOptions({
 		onCellEditingStarted: () => {
 			interaction.handleCellEditingStarted();
 		},
-		onCellFocused: (event: CellFocusedEvent) => {
+			onCellFocused: (event: CellFocusedEvent<RowData>) => {
 			interaction.handleCellFocused(event);
 		},
 		onColumnResized: event => {
@@ -93,12 +91,12 @@ export function createAgGridOptions({
 		onPasteEnd: (_event: PasteEndEvent) => {
 			interaction.handlePasteEnd();
 		},
-		onCellDoubleClicked: (event: CellDoubleClickedEvent) => {
+			onCellDoubleClicked: (event: CellDoubleClickedEvent<RowData>) => {
 			const colId = event.column?.getColId?.() ?? null;
 			if (colId !== '#') {
 				return;
 			}
-			const data = event.data as RowData | undefined;
+				const data = event.data;
 			const raw = data ? data[ROW_ID_FIELD] : undefined;
 			const blockIndex = raw !== undefined ? parseInt(String(raw), 10) : NaN;
 			if (Number.isNaN(blockIndex)) {
@@ -126,7 +124,7 @@ export function createAgGridOptions({
 		onRowDragEnter: (_event: RowDragEnterEvent) => {
 			isRowDragActive = true;
 		},
-		onRowDragEnd: (event: RowDragEndEvent) => {
+			onRowDragEnd: (event: TlbRowDragEndEvent) => {
 			try {
 				onRowDragEnd(event);
 			} finally {
@@ -136,7 +134,7 @@ export function createAgGridOptions({
 		onRowDragCancel: (_event: RowDragCancelEvent) => {
 			isRowDragActive = false;
 		},
-		postSortRows: (params) => {
+			postSortRows: (params) => {
 			if (isRowDragActive) {
 				return;
 			}
@@ -149,7 +147,7 @@ export function createAgGridOptions({
 			filter: false,
 			resizable: true,
 			cellEditor: createTextCellEditor(),
-			suppressKeyboardEvent: (params: SuppressKeyboardEventParams) => {
+				suppressKeyboardEvent: (params: TlbSuppressKeyboardEventParams) => {
 				return interaction.handleSuppressKeyboardEvent(params);
 			}
 		},

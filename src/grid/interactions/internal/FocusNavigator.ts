@@ -1,12 +1,13 @@
-import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
+import type { Column, EditableCallbackParams } from 'ag-grid-community';
 import { InteractionControllerDeps } from '../types';
 import { FocusStateAccess, NavigationCallbacks, DebugLogger } from '../types';
 import { ROW_ID_FIELD, RowData } from '../../GridAdapter';
 import { isReservedColumnId } from '../../systemColumnUtils';
+import type { TlbColDef, TlbGridApi } from '../../agGridTypes';
 
 interface FocusNavigatorOptions {
 	focus: FocusStateAccess;
-	getGridApi: () => GridApi | null;
+	getGridApi: () => TlbGridApi | null;
 	navigation: NavigationCallbacks;
 	deps: Pick<InteractionControllerDeps, 'getCellEditCallback' | 'getEnterAtLastRowCallback'>;
 	debug: DebugLogger;
@@ -14,7 +15,7 @@ interface FocusNavigatorOptions {
 
 export class FocusNavigator {
 	private readonly focus: FocusStateAccess;
-	private readonly getGridApi: () => GridApi | null;
+	private readonly getGridApi: () => TlbGridApi | null;
 	private readonly navigation: NavigationCallbacks;
 	private readonly deps: FocusNavigatorOptions['deps'];
 	private readonly debug: DebugLogger;
@@ -78,10 +79,11 @@ export class FocusNavigator {
 		const rowNode = gridApi.getDisplayedRowAtIndex(focusedCell.rowIndex);
 		if (!rowNode) return;
 
-		const colDef =
-			typeof focusedCell.column.getColDef === 'function'
-				? focusedCell.column.getColDef()
-				: null;
+			const column = focusedCell.column as unknown as Column<unknown>;
+			const colDef =
+				typeof focusedCell.column.getColDef === 'function'
+					? column.getColDef() as unknown as TlbColDef
+					: null;
 		if (colDef && colDef.editable === false) {
 			this.debug('navigator:handleDeleteKey:nonEditable', {
 				rowIndex: focusedCell.rowIndex,
@@ -90,15 +92,15 @@ export class FocusNavigator {
 			return;
 		}
 
-		const data = rowNode.data as RowData | undefined;
+			const data = rowNode.data;
 		if (!data) return;
 
-		if (colDef && typeof colDef.editable === 'function') {
-			const gridApiWithContext = gridApi as GridApi & { context?: unknown };
-			const editableParams: EditableCallbackParams<RowData, string, unknown> = {
-				api: gridApi,
-				column: focusedCell.column,
-				colDef,
+			if (colDef && typeof colDef.editable === 'function') {
+				const gridApiWithContext = gridApi as TlbGridApi & { context?: unknown };
+				const editableParams: EditableCallbackParams<RowData, unknown, unknown> = {
+					api: gridApi,
+					column,
+					colDef,
 				context: gridApiWithContext.context,
 				data,
 				node: rowNode,

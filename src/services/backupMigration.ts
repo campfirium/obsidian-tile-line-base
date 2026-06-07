@@ -20,7 +20,7 @@ export async function migrateLegacyEntry(context: LegacyMigrationContext): Promi
 	let legacyStat: Stat | null = null;
 	try {
 		legacyStat = await adapter.stat(legacyPath);
-	} catch (error) {
+	} catch (error: unknown) {
 		if (!isNotFoundError(error)) {
 			logger.warn('Failed to stat legacy backup entry during reconcile', {
 				entryPath: legacyPath,
@@ -38,18 +38,18 @@ export async function migrateLegacyEntry(context: LegacyMigrationContext): Promi
 	try {
 		await adapter.rename(legacyPath, entryPath);
 		migrated = true;
-	} catch (renameError) {
+	} catch (renameError: unknown) {
 		logger.warn('Failed to migrate legacy backup entry via rename, attempting copy', {
 			legacyPath,
 			entryPath,
 			error: renameError
 		});
 		try {
-			const data = await adapter.readBinary(legacyPath);
+			const data: ArrayBuffer = await adapter.readBinary(legacyPath);
 			await adapter.writeBinary(entryPath, data);
 			try {
 				await adapter.remove(legacyPath);
-			} catch (removeError) {
+			} catch (removeError: unknown) {
 				if (!isNotFoundError(removeError)) {
 					logger.warn('Failed to remove legacy entry after copy', {
 						legacyPath,
@@ -58,7 +58,7 @@ export async function migrateLegacyEntry(context: LegacyMigrationContext): Promi
 				}
 			}
 			migrated = true;
-		} catch (copyError) {
+		} catch (copyError: unknown) {
 			logger.warn('Failed to migrate legacy backup entry via copy', {
 				legacyPath,
 				entryPath,
@@ -74,9 +74,8 @@ export async function migrateLegacyEntry(context: LegacyMigrationContext): Promi
 	await removeLegacyDirectoriesIfEmpty(adapter, backupsDir, legacySegments);
 	try {
 		return await adapter.stat(entryPath);
-	} catch (statError) {
+	} catch (statError: unknown) {
 		logger.warn('Failed to stat migrated backup entry', { entryPath, error: statError });
 		return null;
 	}
 }
-

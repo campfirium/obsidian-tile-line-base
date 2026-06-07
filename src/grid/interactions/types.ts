@@ -2,7 +2,7 @@ import {
 	CellFocusedEvent,
 	GridApi
 } from 'ag-grid-community';
-import { CellEditEvent } from '../GridAdapter';
+import { CellEditEvent, type RowData } from '../GridAdapter';
 import { TaskStatus } from '../../renderers/StatusCellRenderer';
 import type { CellLinkClickContext } from '../../types/cellLinks';
 
@@ -20,7 +20,7 @@ export interface GridInteractionContext {
 }
 
 export interface InteractionControllerDeps {
-	getGridApi(): GridApi | null;
+	getGridApi(): GridApi<RowData> | null;
 	getGridContext(): GridInteractionContext | undefined;
 	getCellEditCallback(): ((event: CellEditEvent) => void) | undefined;
 	getEnterAtLastRowCallback(): ((field: string) => void) | undefined;

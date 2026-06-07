@@ -79,7 +79,7 @@ export class BackupManager {
 				await this.enforceCapacityUnsafe();
 				await this.persistIndex();
 				this.initialized = true;
-			}).catch((error) => {
+			}).catch((error: unknown) => {
 				logger.error('Failed to initialize backup manager', error);
 				this.initPromise = null;
 				throw error;
@@ -152,14 +152,14 @@ export class BackupManager {
 			let backupContent: string | null = null;
 			try {
 				backupContent = await this.adapter.read(backupPath);
-			} catch (error) {
+			} catch (error: unknown) {
 				logger.error('Failed to read backup file', { path: backupPath, error });
 				throw error;
 			}
 			try {
 				const currentContent = await this.plugin.app.vault.read(file);
 				await this.createBackupUnsafe(file.path, currentContent);
-			} catch (error) {
+			} catch (error: unknown) {
 				logger.warn('Failed to create safety backup before restore', error);
 			}
 			await this.plugin.app.vault.modify(file, backupContent);
@@ -179,7 +179,7 @@ export class BackupManager {
 			const backupPath = this.getEntryPath(file.path, target);
 			try {
 				return await this.adapter.read(backupPath);
-			} catch (error) {
+			} catch (error: unknown) {
 				logger.error('Failed to read backup file', { path: backupPath, error });
 				throw error;
 			}
@@ -241,7 +241,7 @@ export class BackupManager {
 		let previousContent: string | null = null;
 		try {
 			previousContent = await this.adapter.read(previousPath);
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.warn('Failed to read previous backup content for preview', { path: previousPath, error });
 			return { preview: null, primaryFieldValue: null };
 		}
@@ -335,7 +335,7 @@ export class BackupManager {
 		const entryPath = this.getEntryPath(filePath, entry);
 		try {
 			await this.adapter.remove(entryPath);
-		} catch (error) {
+		} catch (error: unknown) {
 			if (!this.isNotFoundError(error)) {
 				logger.warn('Failed to remove backup entry', { entryPath, error });
 			} else {
@@ -344,7 +344,7 @@ export class BackupManager {
 				try {
 					await this.adapter.remove(legacyPath);
 					await removeLegacyDirectoriesIfEmpty(this.adapter, this.backupsDir, legacySegments);
-				} catch (legacyError) {
+				} catch (legacyError: unknown) {
 					if (!this.isNotFoundError(legacyError)) {
 						logger.warn('Failed to remove legacy backup entry', { legacyPath, error: legacyError });
 					}
@@ -396,7 +396,7 @@ export class BackupManager {
 				return;
 			}
 			this.index = parsed;
-		} catch (error) {
+		} catch (error: unknown) {
 			if (this.isNotFoundError(error)) {
 				this.index = { version: INDEX_VERSION, totalSize: 0, files: {} };
 				return;
@@ -417,7 +417,7 @@ export class BackupManager {
 				let stat: Stat | null = null;
 				try {
 					stat = await this.adapter.stat(entryPath);
-				} catch (error) {
+				} catch (error: unknown) {
 					if (!this.isNotFoundError(error)) {
 						logger.warn('Failed to stat backup entry during reconcile', { entryPath, error });
 					}
@@ -468,7 +468,7 @@ export class BackupManager {
 		}
 		try {
 			await this.adapter.mkdir(path);
-		} catch (error) {
+		} catch (error: unknown) {
 			if (!this.isAlreadyExistsError(error)) {
 				throw error;
 			}

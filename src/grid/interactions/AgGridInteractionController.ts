@@ -1,7 +1,5 @@
 import {
-	CellKeyDownEvent,
-	CellFocusedEvent,
-	GridApi
+	CellFocusedEvent
 } from 'ag-grid-community';
 import { ROW_ID_FIELD, type RowData } from '../GridAdapter';
 import { CompositionCaptureManager } from './internal/CompositionCaptureManager';
@@ -18,6 +16,7 @@ import {
 	FocusShift
 } from './types';
 import { getLogger } from '../../utils/logger';
+import type { TlbCellKeyDownEvent, TlbGridApi } from '../agGridTypes';
 const logger = getLogger('grid:interaction');
 export class AgGridInteractionController {
 	private readonly deps: InteractionControllerDeps;
@@ -150,14 +149,14 @@ export class AgGridInteractionController {
 		const result = this.stopActiveEditingSession(reason ?? 'unknown');
 		return result === 'success';
 	}
-	handleGridCellKeyDown(event: CellKeyDownEvent): void {
+	handleGridCellKeyDown(event: TlbCellKeyDownEvent): void {
 		const keyEvent = normalizeKeyboardEvent(event.event);
 		if (!keyEvent) {
 			return;
 		}
 
 		if ((keyEvent.metaKey || keyEvent.ctrlKey) && !keyEvent.altKey && !keyEvent.shiftKey && keyEvent.key === 'Enter') {
-			const blockIndex = this.resolveBlockIndex(event.node?.data);
+				const blockIndex = this.resolveBlockIndex(event.node?.data);
 			this.debug('ctrlEnter:cellKeyDown', {
 				displayedRowIndex: event.node?.rowIndex ?? null,
 				blockIndex,
@@ -203,7 +202,7 @@ export class AgGridInteractionController {
 		}
 	}
 	handleSuppressKeyboardEvent(params: {
-		api: GridApi;
+			api: TlbGridApi;
 		column?: { getColId?: () => string };
 		node?: { rowIndex?: number | null };
 		event: KeyboardEvent;
@@ -243,7 +242,7 @@ export class AgGridInteractionController {
 		}
 		return handled;
 	}
-	handleCellFocused(event: CellFocusedEvent): void {
+	handleCellFocused(event: CellFocusedEvent<RowData>): void {
 		const column = event.column as { getColId?: () => string } | undefined;
 const columnId = column?.getColId?.() ?? (event as { columnId?: string | null }).columnId ?? null;
 		this.debug('handleCellFocused', {
@@ -304,9 +303,8 @@ const columnId = column?.getColId?.() ?? (event as { columnId?: string | null })
 			this.debug('stopEditing:noApi', { reason });
 			return 'noApi';
 		}
-		const apiWithEditors = api as GridApi & { getCellEditorInstances?: () => unknown[] };
-		const getEditors = apiWithEditors.getCellEditorInstances?.bind(api);
-		const editorInstances = getEditors ? getEditors() : [];
+			const apiWithEditors = api as TlbGridApi & { getCellEditorInstances?: () => unknown[] };
+			const editorInstances = apiWithEditors.getCellEditorInstances?.() ?? [];
 		const hasEditor = Array.isArray(editorInstances) && editorInstances.length > 0;
 		if (!this.editing && !hasEditor) {
 			this.debug('stopEditing:pending', { reason, editing: this.editing, hasEditor });

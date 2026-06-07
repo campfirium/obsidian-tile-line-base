@@ -49,7 +49,12 @@ const DATE_FORMAT_ALIASES: Record<LegacyDateFormatKey, DateFormatPreset> = {
 };
 
 function isLegacyDateFormatKey(value: string): value is LegacyDateFormatKey {
-	return Object.prototype.hasOwnProperty.call(DATE_FORMAT_ALIASES, value);
+	return value === 'short'
+		|| value === 'long'
+		|| value === 'month_day'
+		|| value === 'mdy_long'
+		|| value === 'dmy_long'
+		|| value === 'chinese_long';
 }
 
 type DateFormatFormatter = (parts: DateParts, locale: string) => string;
@@ -330,7 +335,7 @@ export function formatDateForDisplay(
 	const definition = getDefinition(format);
 	try {
 		return definition.formatter(parts, locale);
-	} catch (error) {
+	} catch (error: unknown) {
 		console.error('[TileLineBase] Failed to format date', { format, value, error });
 		return formatIsoFromParts(parts);
 	}

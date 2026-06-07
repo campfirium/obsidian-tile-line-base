@@ -85,7 +85,7 @@ export function formatTimeForDisplay(
 	const definition = getTimeDefinition(format);
 	try {
 		return definition.formatter(parts, locale);
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.error('[TileLineBase] Failed to format time', { format, value, error });
 		return formatIsoTime(parts);
 	}

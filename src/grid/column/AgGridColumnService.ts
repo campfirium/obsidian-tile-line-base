@@ -1,4 +1,4 @@
-import { ColDef, Column, ColumnMovedEvent, ColumnResizedEvent, ColumnState, GridApi } from 'ag-grid-community';
+import { Column, ColumnMovedEvent, ColumnResizedEvent, ColumnState, GridApi } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef, ROW_ID_FIELD, SortModelEntry } from '../GridAdapter';
 import { clampColumnWidth } from '../columnSizing';
@@ -7,6 +7,7 @@ import { ColumnAutoSizeResult, ColumnLayoutManager } from './ColumnLayoutManager
 import { applyQuickFilter as applyQuickFilterToGrid } from './QuickFilterManager';
 import { buildSortState, cloneColumnState } from './ColumnStateManager';
 import { isDisplayedSystemColumn } from '../systemColumnUtils';
+import type { TlbColDef } from '../agGridTypes';
 
 export interface ColumnServiceCallbacks {
 	onColumnResize?: (field: string, width: number) => void;
@@ -75,7 +76,7 @@ export class AgGridColumnService {
 		this.columnLayoutInitialized = false;
 	}
 
-	buildColumnDefs(columns: SchemaColumnDef[]): ColDef[] {
+	buildColumnDefs(columns: SchemaColumnDef[]): TlbColDef[] {
 		return buildAgGridColumnDefs(columns);
 	}
 

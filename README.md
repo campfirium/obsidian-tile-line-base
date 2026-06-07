@@ -110,7 +110,7 @@ We welcome feedback, suggestions, and bug reports! Feel free to:
 
 * [Open an Issue on GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues) for specific bugs or technical feedback.
 * Join general discussion about TileLineBase on the [Obsidian official forums](https://forum.obsidian.md).
-* For broader discussions, questions, or general productivity tips, visit my personal forum at [Campfirium](https://campfirium.info/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753).
+* Or join the discussion on the [Campfirium forum](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753), where broader ideas and side discussions are also welcome.
 
 
 ## Acknowledgements

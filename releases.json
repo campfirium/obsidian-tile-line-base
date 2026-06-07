@@ -269,5 +269,16 @@
     "improved": [],
     "fixed": [],
     "changed": []
+  },
+  "0.9.19": {
+    "date": "2026-06-07",
+    "info": "",
+    "new": [],
+    "improved": [
+      "Significantly reduced the time it takes to switch and render TLB views.",
+      "Significantly reduced TileLineBase’s contribution to Obsidian startup time."
+    ],
+    "fixed": [],
+    "changed": []
   }
 }

@@ -1,3 +1,4 @@
+import { AgGridAdapter } from '../grid/AgGridAdapter';
 import type {
 	GridAdapter,
 	ColumnDef,
@@ -44,17 +45,16 @@ export class GridController {
 	private tableContainer: HTMLElement | null = null;
 	private initialResizeTimers: number[] = [];
 
-	async mount(
+	mount(
 		container: HTMLElement,
 		columns: ColumnDef[],
 		rows: RowData[],
 		handlers: GridControllerHandlers,
 		options?: GridMountOptions
-	): Promise<GridMountResult> {
+	): GridMountResult {
 		this.destroy();
 
 		const sideBarVisible = options?.sideBarVisible !== false;
-		const { AgGridAdapter } = await import('../grid/AgGridAdapter');
 		const adapter = new AgGridAdapter();
 		adapter.mount(container, columns, rows, {
 			onStatusChange: handlers.onStatusChange,

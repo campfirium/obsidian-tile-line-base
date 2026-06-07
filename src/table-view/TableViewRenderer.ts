@@ -306,5 +306,5 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		return;
 	}
 	container.classList.add('tlb-has-grid');
-	await renderGridMode({ view, container, ownerDoc, primaryField, plugin });
+	renderGridMode({ view, container, ownerDoc, primaryField, plugin });
 }

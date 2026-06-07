@@ -65,6 +65,8 @@ export class SlideThumbnailPanel {
     private readonly thumbSurfaces: ThumbSurface[] = [];
 
     private scaleRaf: number | null = null;
+    private openLayoutRaf: number | null = null;
+    private openLayoutTimeout: number | null = null;
     private scrollRaf: number | null = null;
     private scrollCheckRaf: number | null = null;
     private rowHeight = 0;
@@ -284,15 +286,12 @@ export class SlideThumbnailPanel {
         this.overlay.classList.add('tlb-slide-thumb--visible');
         this.options.onVisibilityChange?.(true);
         
-        // 等待布局稳定
-        this.ownerWindow?.requestAnimationFrame(() => {
-            this.ownerWindow?.requestAnimationFrame(() => {
-                this.requestLayoutAndScale();
-                if (activeIndex != null) {
-                    this.setActive(activeIndex);
-                    this.focusActive();
-                }
-            });
+        this.scheduleOpenLayout(() => {
+            this.requestLayoutAndScale();
+            if (activeIndex != null) {
+                this.setActive(activeIndex);
+                this.focusActive();
+            }
         });
     }
 
@@ -325,6 +324,7 @@ export class SlideThumbnailPanel {
         this.items = [];
         this.cleanupSurfaces();
         this.cleanupMarkdown();
+        this.cancelOpenLayout();
         if (this.scaleRaf != null && this.ownerWindow) {
             this.ownerWindow.cancelAnimationFrame(this.scaleRaf);
         }
@@ -337,6 +337,51 @@ export class SlideThumbnailPanel {
             this.ownerWindow.cancelAnimationFrame(this.scrollCheckRaf);
         }
         this.scrollCheckRaf = null;
+    }
+
+    private scheduleOpenLayout(callback: () => void): void {
+        this.cancelOpenLayout();
+        const ownerWindow = this.ownerWindow;
+        if (!ownerWindow) {
+            callback();
+            return;
+        }
+        let settled = false;
+        const run = () => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            this.cancelOpenLayout();
+            if (!this.visible) {
+                return;
+            }
+            callback();
+        };
+        if (typeof ownerWindow.requestAnimationFrame === 'function') {
+            this.openLayoutRaf = ownerWindow.requestAnimationFrame(() => {
+                this.openLayoutRaf = ownerWindow.requestAnimationFrame(run);
+            });
+            this.openLayoutTimeout = ownerWindow.setTimeout(run, 50);
+            return;
+        }
+        this.openLayoutTimeout = ownerWindow.setTimeout(run, 0);
+    }
+
+    private cancelOpenLayout(): void {
+        if (!this.ownerWindow) {
+            this.openLayoutRaf = null;
+            this.openLayoutTimeout = null;
+            return;
+        }
+        if (this.openLayoutRaf !== null) {
+            this.ownerWindow.cancelAnimationFrame(this.openLayoutRaf);
+            this.openLayoutRaf = null;
+        }
+        if (this.openLayoutTimeout !== null) {
+            this.ownerWindow.clearTimeout(this.openLayoutTimeout);
+            this.openLayoutTimeout = null;
+        }
     }
 
     private registerSurface(surface: Omit<ThumbSurface, 'observer'>): void {

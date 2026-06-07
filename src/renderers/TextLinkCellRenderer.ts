@@ -1,19 +1,20 @@
-import type { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
+import type { ICellRendererComp } from 'ag-grid-community';
 import type { CellLinkClickContext, DetectedCellLink } from '../types/cellLinks';
 import { ROW_ID_FIELD } from '../grid/GridAdapter';
+import type { TlbCellRendererParams } from '../grid/agGridTypes';
 import { formatUnknownValue } from '../utils/valueFormat';
 import { parseCellLinkSegments } from '../utils/linkDetection';
 
 export class TextLinkCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
 	private textEl!: HTMLElement;
-	private params!: ICellRendererParams;
+	private params!: TlbCellRendererParams;
 	private currentLinks: DetectedCellLink[] = [];
 	private textClickHandler?: (event: MouseEvent) => void;
 	private textMouseDownHandler?: (event: MouseEvent) => void;
 	private textKeydownHandler?: (event: KeyboardEvent) => void;
 
-	init(params: ICellRendererParams): void {
+	init(params: TlbCellRendererParams): void {
 		this.params = params;
 		const doc = params.eGridCell?.ownerDocument ?? activeDocument;
 
@@ -31,7 +32,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		return this.eGui;
 	}
 
-	refresh(params: ICellRendererParams): boolean {
+	refresh(params: TlbCellRendererParams): boolean {
 		this.params = params;
 		this.renderContent();
 		return true;
@@ -155,7 +156,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 	}
 
 	private triggerLinkOpen(link: DetectedCellLink): void {
-		const context = this.params.context as { openCellLink?: (ctx: CellLinkClickContext) => void } | undefined;
+		const context: { openCellLink?: (ctx: CellLinkClickContext) => void } | undefined = this.params.context;
 		if (!context?.openCellLink) {
 			return;
 		}
@@ -172,7 +173,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		if (fromNode) {
 			return fromNode;
 		}
-		const data = this.params.data as Record<string, unknown> | null | undefined;
+		const data = this.params.data;
 		const fallback = data ? data[ROW_ID_FIELD] : null;
 		if (fallback == null) {
 			return null;
@@ -183,16 +184,16 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 
 	private getRawValue(): string {
 		const value = this.params.value;
-		return typeof value === 'string' ? value : value != null ? String(value) : '';
+		return typeof value === 'string' ? value : value != null ? formatUnknownValue(value) : '';
 	}
 
-	private getDisplayValue(params: ICellRendererParams): string {
+	private getDisplayValue(params: TlbCellRendererParams): string {
 		const formatted = params.valueFormatted;
 		if (typeof formatted === 'string') {
 			return formatted;
 		}
 		if (formatted != null) {
-			return String(formatted);
+			return formatUnknownValue(formatted);
 		}
 		const value = params.value;
 		if (typeof value === 'string') {
@@ -201,7 +202,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		if (value == null) {
 			return '';
 		}
-		return String(value);
+		return formatUnknownValue(value);
 	}
 }
 

@@ -11,26 +11,37 @@ import pt from '../locales/pt.json';
 import zhHans from '../locales/zh-hans.json';
 import zhHant from '../locales/zh-hant.json';
 
-const locales = {
-	en,
-	de,
-	es,
-	fr,
-	it,
-	nl,
-	pl,
-	pt,
-	ja,
-	ko,
-	'zh-hans': zhHans,
-	'zh-hant': zhHant
-} as const;
-
-type LocaleMap = typeof locales;
-export type LocaleCode = keyof LocaleMap;
+export type LocaleCode =
+	| 'en'
+	| 'de'
+	| 'es'
+	| 'fr'
+	| 'it'
+	| 'nl'
+	| 'pl'
+	| 'pt'
+	| 'ja'
+	| 'ko'
+	| 'zh-hans'
+	| 'zh-hant';
 type LocaleAliasMap = Partial<Record<string, LocaleCode>>;
-type LocaleTree = LocaleMap[LocaleCode];
+type LocaleTree = string | { readonly [key: string]: LocaleTree };
 type TranslationTree = typeof en;
+
+const locales: Record<LocaleCode, LocaleTree> = {
+	en: en as unknown as LocaleTree,
+	de: de as unknown as LocaleTree,
+	es: es as unknown as LocaleTree,
+	fr: fr as unknown as LocaleTree,
+	it: it as unknown as LocaleTree,
+	nl: nl as unknown as LocaleTree,
+	pl: pl as unknown as LocaleTree,
+	pt: pt as unknown as LocaleTree,
+	ja: ja as unknown as LocaleTree,
+	ko: ko as unknown as LocaleTree,
+	'zh-hans': zhHans as unknown as LocaleTree,
+	'zh-hant': zhHant as unknown as LocaleTree
+};
 
 type LeafPaths<T, Prefix extends string = ''> =
 	T extends string
@@ -59,11 +70,11 @@ const GLOBAL_LOCALE_KEY = '__TILE_LINE_BASE_ACTIVE_LOCALE__';
 const globalScope: Record<string, LocaleCode | undefined> =
 	typeof window !== 'undefined'
 		? (window as unknown as Record<string, LocaleCode | undefined>)
-		: (window as unknown as Record<string, LocaleCode | undefined>);
+		: {};
 
 let activeLocale: LocaleCode = globalScope[GLOBAL_LOCALE_KEY] ?? FALLBACK_LOCALE;
 const hasOwn = <T extends object>(target: T, property: PropertyKey): boolean =>
-	Object.prototype.hasOwnProperty.call(target, property);
+	Boolean(Object.prototype.hasOwnProperty.call(target, property));
 
 function getLocaleObject(locale: LocaleCode): LocaleTree {
 	return locales[locale];
@@ -82,7 +93,7 @@ function applyReplacements(template: string, replacements?: Record<string, strin
 	if (!replacements) {
 		return template;
 	}
-	return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+	return template.replace(/\{\{(\w+)\}\}/g, (match: string, key: string): string => {
 		const replacement = replacements[key];
 		return replacement !== undefined ? String(replacement) : match;
 	});

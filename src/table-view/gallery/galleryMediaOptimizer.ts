@@ -259,7 +259,7 @@ async function buildResizedObjectUrl(source: string, size: MediaSize): Promise<{
 			return null;
 		}
 		return { url: URL.createObjectURL(blob), blob };
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.debug('optimize image failed', { source, error });
 		return null;
 	}

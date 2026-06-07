@@ -8,11 +8,12 @@
  * - ֧�ֿɷ����ԣ�title, aria-label��
  */
 
-import { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
+import type { ICellRendererComp } from 'ag-grid-community';
 import { setIcon } from 'obsidian';
 import { t, type TranslationKey } from '../i18n';
 import { formatUnknownValue } from '../utils/valueFormat';
 import { getLogger } from '../utils/logger';
+import type { TlbCellRendererParams } from '../grid/agGridTypes';
 
 const logger = getLogger('renderer:status-cell');
 
@@ -100,7 +101,7 @@ const STATUS_MENU_STATUSES: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhol
  */
 export class StatusCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
-	private params!: ICellRendererParams;
+	private params!: TlbCellRendererParams;
 	private hostCell: HTMLElement | null = null;
 	private clickHandler?: (e: MouseEvent) => void;
 	private contextMenuHandler?: (e: MouseEvent) => void;
@@ -116,7 +117,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 	/**
 	 * ��ʼ����Ⱦ��
 	 */
-	init(params: ICellRendererParams): void {
+	init(params: TlbCellRendererParams): void {
 		this.params = params;
 
 		// �� AG Grid �ĵ�Ԫ��Ԫ�ػ�ȡ��ȷ�� document��֧�� pop-out ���ڣ�
@@ -521,7 +522,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 	 * ˢ����Ⱦ����֧���������£�
 	 * ���� true ��ʾ���õ�ǰʵ�������� false ��ʾ���´���ʵ��
 	 */
-	refresh(params: ICellRendererParams): boolean {
+	refresh(params: TlbCellRendererParams): boolean {
 		this.params = params;
 		this.renderIcon();
 		return true;  // ����ʵ�����������´���

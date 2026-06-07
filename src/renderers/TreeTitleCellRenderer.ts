@@ -1,12 +1,13 @@
-import type { ICellRendererComp, ICellRendererParams } from 'ag-grid-community';
+import type { ICellRendererComp } from 'ag-grid-community';
 import { setIcon } from 'obsidian';
-import { ROW_ID_FIELD, type RowData } from '../grid/GridAdapter';
+import { ROW_ID_FIELD } from '../grid/GridAdapter';
 import { ROW_COLLAPSED_FIELD, ROW_HAS_CHILDREN_FIELD, ROW_LEVEL_FIELD } from '../table-view/DisplayListBuilder';
 import type { GridInteractionContext } from '../grid/interactions/types';
 import type { DetectedCellLink } from '../types/cellLinks';
 import { t } from '../i18n';
 import { formatUnknownValue } from '../utils/valueFormat';
 import { parseCellLinkSegments } from '../utils/linkDetection';
+import type { TlbCellRendererParams } from '../grid/agGridTypes';
 
 export class TreeTitleCellRenderer implements ICellRendererComp {
 	private eGui!: HTMLElement;
@@ -14,7 +15,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 	private toggleIconEl!: HTMLElement;
 	private spacerEl!: HTMLElement;
 	private textEl!: HTMLElement;
-	private params!: ICellRendererParams<RowData>;
+	private params!: TlbCellRendererParams;
 	private currentLinks: DetectedCellLink[] = [];
 	private toggleClickHandler?: (event: MouseEvent) => void;
 	private toggleMouseDownHandler?: (event: MouseEvent) => void;
@@ -23,7 +24,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 	private textMouseDownHandler?: (event: MouseEvent) => void;
 	private textKeydownHandler?: (event: KeyboardEvent) => void;
 
-	init(params: ICellRendererParams<RowData>): void {
+	init(params: TlbCellRendererParams): void {
 		this.params = params;
 		const doc = params.eGridCell?.ownerDocument ?? activeDocument;
 
@@ -54,7 +55,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 		return this.eGui;
 	}
 
-	refresh(params: ICellRendererParams<RowData>): boolean {
+	refresh(params: TlbCellRendererParams): boolean {
 		this.params = params;
 		this.renderContent();
 		return true;
@@ -246,7 +247,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 		if (fromNode) {
 			return fromNode;
 		}
-		const data = this.params.data as Record<string, unknown> | null | undefined;
+		const data = this.params.data;
 		const fallback = data ? data[ROW_ID_FIELD] : null;
 		if (fallback == null) {
 			return null;
@@ -257,16 +258,16 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 
 	private getRawValue(): string {
 		const value = this.params.value;
-		return typeof value === 'string' ? value : value != null ? String(value) : '';
+		return typeof value === 'string' ? value : value != null ? formatUnknownValue(value) : '';
 	}
 
-	private getDisplayValue(params: ICellRendererParams): string {
+	private getDisplayValue(params: TlbCellRendererParams): string {
 		const formatted = params.valueFormatted;
 		if (typeof formatted === 'string') {
 			return formatted;
 		}
 		if (formatted != null) {
-			return String(formatted);
+			return formatUnknownValue(formatted);
 		}
 		const value = params.value;
 		if (typeof value === 'string') {
@@ -275,7 +276,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 		if (value == null) {
 			return '';
 		}
-		return String(value);
+		return formatUnknownValue(value);
 	}
 
 	private getLinkFromEventTarget(target: EventTarget | null): DetectedCellLink | null {

@@ -52,6 +52,9 @@ const deriveCardSizeFromAspect = (aspect: unknown): { width: number; height: num
 	return { width, height };
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null;
+
 interface PendingDeletionRecord {
 	path: string;
 	markedAt: number;
@@ -157,8 +160,9 @@ export class SettingsService {
 	}
 
 	async load(): Promise<TileLineBaseSettings> {
-		const data = await this.plugin.loadData();
-		const merged = Object.assign({}, DEFAULT_SETTINGS, data) as TileLineBaseSettings & { rowStripeStrength?: unknown };
+		const data: unknown = await this.plugin.loadData();
+		const storedSettings = isRecord(data) ? data : {};
+		const merged = Object.assign({}, DEFAULT_SETTINGS, storedSettings) as TileLineBaseSettings & { rowStripeStrength?: unknown };
 		merged.fileViewPrefs = { ...DEFAULT_SETTINGS.fileViewPrefs, ...(merged.fileViewPrefs ?? {}) };
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
@@ -236,7 +240,7 @@ export class SettingsService {
 				: DEFAULT_SETTINGS.navigatorCompatNoticeShown;
 		merged.pendingDeletions = this.sanitizePendingDeletionRecords(merged.pendingDeletions);
 
-		const legacyList = (data as { autoTableFiles?: unknown } | undefined)?.autoTableFiles;
+		const legacyList = storedSettings.autoTableFiles;
 		if (Array.isArray(legacyList)) {
 			for (const path of legacyList) {
 				if (typeof path === 'string') {
@@ -1125,11 +1129,17 @@ export class SettingsService {
 		if (!Array.isArray(raw)) {
 			return [];
 		}
+		const entries: readonly unknown[] = raw;
 		const map = new Map<string, PendingDeletionRecord>();
-		for (const entry of raw) {
-			const path = typeof entry?.path === 'string' ? entry.path.trim() : '';
-			const markedAt = typeof entry?.markedAt === 'number' && Number.isFinite(entry.markedAt)
-				? entry.markedAt
+		for (const entry of entries) {
+			if (!isRecord(entry)) {
+				continue;
+			}
+			const rawPath = entry.path;
+			const rawMarkedAt = entry.markedAt;
+			const path = typeof rawPath === 'string' ? rawPath.trim() : '';
+			const markedAt = typeof rawMarkedAt === 'number' && Number.isFinite(rawMarkedAt)
+				? rawMarkedAt
 				: null;
 			if (!path || markedAt === null) {
 				continue;

@@ -1,4 +1,4 @@
-import { App, TFile, WorkspaceLeaf } from "obsidian";
+import { App, TFile, WorkspaceLeaf, type OpenViewState } from "obsidian";
 import { around } from "monkey-around";
 import { getLogger } from "../utils/logger";
 
@@ -58,7 +58,7 @@ export function attachNavigatorCompatibility(
 		openFile(next: WorkspaceLeaf["openFile"]) {
 			return function patchedOpenFile(
 				file: TFile | null,
-				...rest: unknown[]
+				openState?: OpenViewState
 			): ReturnType<WorkspaceLeaf["openFile"]> {
 				const targetPath = file instanceof TFile ? file.path : null;
 				const currentPath = options.getCurrentFile()?.path ?? null;
@@ -82,7 +82,8 @@ export function attachNavigatorCompatibility(
 					}
 					return Promise.resolve();
 				}
-				return next.call(this, file, ...rest);
+				const result: unknown = next.call(this, file, openState);
+				return result instanceof Promise ? result.then(() => undefined) : Promise.resolve();
 			};
 		}
 	});
@@ -113,7 +114,7 @@ export function notifyNavigatorFocus(app: App, file: TFile): void {
 		try {
 			void apiNavigation.reveal(file);
 			return;
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.debug("navigator-compat: failed to notify via api.navigation.reveal", { error });
 		}
 	}
@@ -123,7 +124,7 @@ export function notifyNavigatorFocus(app: App, file: TFile): void {
 		try {
 			void revealActual.call(navigatorPlugin, file);
 			return;
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.debug("navigator-compat: failed to notify via revealFileInActualFolder", { error });
 		}
 	}
@@ -133,7 +134,7 @@ export function notifyNavigatorFocus(app: App, file: TFile): void {
 		try {
 			void revealNearest.call(navigatorPlugin, file);
 			return;
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.debug("navigator-compat: failed to notify via revealFileInNearestFolder", { error });
 		}
 	}
@@ -160,7 +161,7 @@ function revealInNavigatorLeaves(app: App, file: TFile): boolean {
 		try {
 			reveal.call(view, file);
 			revealed = true;
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.debug("navigator-compat: failed to reveal file in navigator view", { error });
 		}
 	}

@@ -79,7 +79,7 @@ export default class TileLineBasePlugin extends Plugin {
 		});
 		try {
 			await this.backupManager.initialize();
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.error('Failed to initialize backup manager', error);
 			this.backupManager = null;
 		}
@@ -764,9 +764,8 @@ export default class TileLineBasePlugin extends Plugin {
 
 	private getMostRecentLeaf(): WorkspaceLeaf | null {
 		const workspaceWithRecent = this.app.workspace as typeof this.app.workspace & { getMostRecentLeaf?: () => WorkspaceLeaf | null };
-		const getLeaf = workspaceWithRecent.getMostRecentLeaf;
-		if (typeof getLeaf === 'function') {
-			return getLeaf.call(this.app.workspace) ?? null;
+		if (typeof workspaceWithRecent.getMostRecentLeaf === 'function') {
+			return workspaceWithRecent.getMostRecentLeaf() ?? null;
 		}
 		return null;
 	}
@@ -790,11 +789,11 @@ export default class TileLineBasePlugin extends Plugin {
 			this.register(() => {
 				try {
 					pluginManager.off?.('load', handler);
-				} catch (error) {
+				} catch (error: unknown) {
 					logger.debug('navigator-compat: failed to remove plugin-load listener', { error });
 				}
 			});
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.debug('navigator-compat: plugin-load listener unavailable', { error });
 		}
 	}
@@ -823,13 +822,13 @@ export default class TileLineBasePlugin extends Plugin {
 		const leaves = this.app.workspace.getLeavesOfType(TABLE_VIEW_TYPE);
 		for (const leaf of leaves) {
 			const view = leaf.view;
-			if (view instanceof TableView) {
-				try {
-					await view.render();
-				} catch (error) {
-					logger.warn('Failed to refresh table view after locale change', {
-						error,
-						file: view.file?.path ?? null
+				if (view instanceof TableView) {
+					try {
+						await view.render();
+					} catch (error: unknown) {
+						logger.warn('Failed to refresh table view after locale change', {
+							error,
+							file: view.file?.path ?? null
 					});
 				}
 			}

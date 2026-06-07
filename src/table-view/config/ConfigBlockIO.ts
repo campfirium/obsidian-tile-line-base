@@ -33,7 +33,7 @@ export function readConfigCallout(content: string): ConfigCalloutPayload | null 
 		return null;
 	}
 	try {
-		const parsed = JSON.parse(match[1]);
+		const parsed: unknown = JSON.parse(match[1]);
 		if (!isRecord(parsed)) {
 			return null;
 		}

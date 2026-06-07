@@ -1,10 +1,12 @@
-import { createGrid, GridApi, GridOptions } from 'ag-grid-community';
-import type { ColDef, GridReadyEvent, ModelUpdatedEvent, RowDataUpdatedEvent } from 'ag-grid-community';
+import { createGrid } from 'ag-grid-community';
+import type { GridReadyEvent, ModelUpdatedEvent, RowDataUpdatedEvent } from 'ag-grid-community';
 import { getLogger } from '../../utils/logger';
 import type { Logger } from '../../utils/logger';
+import type { RowData } from '../GridAdapter';
+import type { TlbColDef, TlbGridApi, TlbGridOptions } from '../agGridTypes';
 
 export interface LifecycleApis {
-	gridApi: GridApi;
+	gridApi: TlbGridApi;
 	// ColumnApi is not exported in ag-grid-community typings, keep it loosely typed
 	columnApi: unknown;
 }
@@ -18,7 +20,7 @@ type ReadyHandler = (apis: LifecycleApis) => void;
 type AttachHandler = (context: LifecycleContext) => void | (() => void);
 
 interface LifecycleManagerDependencies {
-	createGrid?: (container: HTMLElement, options: GridOptions) => GridApi;
+	createGrid?: (container: HTMLElement, options: TlbGridOptions) => TlbGridApi;
 	logger?: Pick<Logger, 'error' | 'warn'>;
 }
 
@@ -30,9 +32,9 @@ const defaultLifecycleLogger = getLogger('grid:lifecycle');
  * attach/detach hooks that allow the adapter to bind DOM listeners safely.
  */
 export class AgGridLifecycleManager {
-	private readonly createGridImpl: (container: HTMLElement, options: GridOptions) => GridApi;
+	private readonly createGridImpl: (container: HTMLElement, options: TlbGridOptions) => TlbGridApi;
 	private readonly logger: Pick<Logger, 'error' | 'warn'>;
-	private gridApi: GridApi | null = null;
+	private gridApi: TlbGridApi | null = null;
 	private columnApi: unknown = null;
 	private container: HTMLElement | null = null;
 	private readonly readyHandlers: ReadyHandler[] = [];
@@ -47,48 +49,45 @@ export class AgGridLifecycleManager {
 
 	mountGrid(
 		container: HTMLElement,
-		columnDefs: ColDef[],
-		rowData: unknown[],
-		options: GridOptions
-	): void {
+			columnDefs: TlbColDef[],
+			rowData: RowData[],
+			options: TlbGridOptions
+		): void {
 		this.teardown(false);
 		this.container = container;
 
-		const mergedOptions: GridOptions = {
+			const mergedOptions: TlbGridOptions = {
 			...options,
 			columnDefs,
 			rowData
 		};
 
-		const originalOnGridReady = mergedOptions.onGridReady?.bind(undefined);
-		mergedOptions.onGridReady = (event: GridReadyEvent) => {
-			this.gridApi = event.api;
-			const eventWithColumnApi = event as GridReadyEvent & { columnApi?: unknown };
-			this.columnApi = eventWithColumnApi.columnApi ?? null;
-			try {
-				originalOnGridReady?.(event);
-			} finally {
-				this.flushReadyHandlers();
-			}
-		};
+			mergedOptions.onGridReady = (event: GridReadyEvent<RowData>) => {
+				this.gridApi = event.api;
+				const eventWithColumnApi = event as GridReadyEvent<RowData> & { columnApi?: unknown };
+				this.columnApi = eventWithColumnApi.columnApi ?? null;
+				try {
+					options.onGridReady?.(event);
+				} finally {
+					this.flushReadyHandlers();
+				}
+			};
 
-		const originalOnModelUpdated = mergedOptions.onModelUpdated?.bind(undefined);
-		mergedOptions.onModelUpdated = (event: ModelUpdatedEvent) => {
-			try {
-				originalOnModelUpdated?.(event);
-			} finally {
-				this.flushModelUpdatedHandlers();
-			}
-		};
+			mergedOptions.onModelUpdated = (event: ModelUpdatedEvent<RowData>) => {
+				try {
+					options.onModelUpdated?.(event);
+				} finally {
+					this.flushModelUpdatedHandlers();
+				}
+			};
 
-		const originalOnRowDataUpdated = mergedOptions.onRowDataUpdated?.bind(undefined);
-		mergedOptions.onRowDataUpdated = (event: RowDataUpdatedEvent) => {
-			try {
-				originalOnRowDataUpdated?.(event);
-			} finally {
-				this.flushModelUpdatedHandlers();
-			}
-		};
+			mergedOptions.onRowDataUpdated = (event: RowDataUpdatedEvent<RowData>) => {
+				try {
+					options.onRowDataUpdated?.(event);
+				} finally {
+					this.flushModelUpdatedHandlers();
+				}
+			};
 
 		try {
 			this.gridApi = this.createGridImpl(container, mergedOptions);
@@ -124,7 +123,7 @@ export class AgGridLifecycleManager {
 		this.onReady(() => callback());
 	}
 
-	withGridApi(handler: (gridApi: GridApi) => void): void {
+	withGridApi(handler: (gridApi: TlbGridApi) => void): void {
 		this.withApis(({ gridApi }) => handler(gridApi));
 	}
 
@@ -146,7 +145,7 @@ export class AgGridLifecycleManager {
 		};
 	}
 
-	getGridApi(): GridApi | null {
+	getGridApi(): TlbGridApi | null {
 		return this.gridApi;
 	}
 

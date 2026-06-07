@@ -1,6 +1,6 @@
 {
   "name": "obsidian-tile-line-base",
-  "version": "0.9.17",
+  "version": "0.9.18",
   "description": "Build multidimensional tables (Tables, Kanban, Gallery, Slides) directly from plain text. Zero Frontmatter. Zero code.",
   "main": "dist/main.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "deps:hardening:check": "node scripts/deps-hardening-check.mjs",
     "deps:scan": "node scripts/deps-scan.mjs",
     "lint": "node scripts/run-lint.mjs",
+    "lint:obsidian-strict": "node scripts/run-obsidian-strict-lint.mjs",
     "lint:css": "stylelint \"styles.css\" --max-warnings=0",
     "check:i18n-hardcoded": "node scripts/check-i18n-hardcoded.mjs",
     "test:magic": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\"}' .lab/scripts/test-magic-migration.ts",
@@ -24,7 +25,8 @@
     "mirror:obs-vault": "node .lab/scripts/mirror-obs-vault.mjs",
     "mirror:demo": "node .lab/scripts/mirror-demo.mjs",
     "version": "node version-bump.mjs && git add package.json manifest.json versions.json",
-    "check:release": "node scripts/check-release.mjs"
+    "check:release": "node scripts/check-release.mjs",
+    "check:release:obsidian": "npm run check:release && npm run lint:obsidian-strict"
   },
   "keywords": [
     "obsidian",

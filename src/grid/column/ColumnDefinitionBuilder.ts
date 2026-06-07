@@ -1,4 +1,4 @@
-import { ColDef, type ICellRendererParams, type ValueFormatterParams } from 'ag-grid-community';
+import type { ValueFormatterParams } from 'ag-grid-community';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
@@ -9,12 +9,14 @@ import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
 import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
 import { formatDateForDisplay, formatTimeForDisplay } from '../../utils/datetime';
 import { t } from '../../i18n';
+import type { TlbCellRendererParams, TlbColDef } from '../agGridTypes';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
 const PINNED_FIELDS = new Set(['任务', '任务名称', 'task', 'taskName', 'title', '标题']);
 
-export function buildAgGridColumnDefs(columns: SchemaColumnDef[]): ColDef[] {
+export function buildAgGridColumnDefs(columns: SchemaColumnDef[]): TlbColDef[] {
 	const colDefs = columns.map((schemaColumn) => {
 		if (schemaColumn.field === INDEX_FIELD) {
 			return createIndexColumnDef(schemaColumn);
@@ -32,7 +34,7 @@ export function buildAgGridColumnDefs(columns: SchemaColumnDef[]): ColDef[] {
 	return colDefs;
 }
 
-function createIndexColumnDef(column: SchemaColumnDef): ColDef {
+function createIndexColumnDef(column: SchemaColumnDef): TlbColDef {
 	return {
 		field: column.field,
 		headerName: column.headerName,
@@ -42,12 +44,12 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 		lockPinned: true,
 		lockPosition: true,
 		suppressMovable: true,
-		cellRenderer: (params: ICellRendererParams) => {
+		cellRenderer: (params: TlbCellRendererParams) => {
 			const value = params.value ?? '';
 			const ownerDocument = params.eGridCell?.ownerDocument ?? activeDocument;
 			const container = ownerDocument.createElement('span');
 			container.classList.add('tlb-row-drag-handle');
-			container.textContent = String(value);
+				container.textContent = formatUnknownValue(value);
 			return container;
 		},
 		width: 60,
@@ -66,7 +68,7 @@ function createIndexColumnDef(column: SchemaColumnDef): ColDef {
 	};
 }
 
-function createStatusColumnDef(column: SchemaColumnDef): ColDef {
+function createStatusColumnDef(column: SchemaColumnDef): TlbColDef {
 	const headerName = column.headerName ?? 'Status';
 	const headerAriaLabel = t('statusCell.headerAriaLabel');
 
@@ -102,8 +104,8 @@ function createStatusColumnDef(column: SchemaColumnDef): ColDef {
 	};
 }
 
-function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
-	const baseColDef: ColDef = {
+function createSchemaColumnDef(column: SchemaColumnDef): TlbColDef {
+	const baseColDef: TlbColDef = {
 		field: column.field,
 		headerName: column.headerName,
 		editable: column.editable,
@@ -113,7 +115,7 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 		cellClass: 'tlb-cell-truncate'
 	};
 
-	type ColumnDefWithOverrides = ColDef & SchemaColumnDef;
+	type ColumnDefWithOverrides = TlbColDef & SchemaColumnDef;
 	const mergedColDef: ColumnDefWithOverrides = { ...baseColDef, ...column };
 
 	if (!mergedColDef.cellRenderer) {
@@ -164,7 +166,7 @@ function createSchemaColumnDef(column: SchemaColumnDef): ColDef {
 	return mergedColDef;
 }
 
-function appendCellClass(existing: ColDef['cellClass'], className: string): ColDef['cellClass'] {
+function appendCellClass(existing: TlbColDef['cellClass'], className: string): TlbColDef['cellClass'] {
 	if (!existing) {
 		return className;
 	}
@@ -182,7 +184,7 @@ function appendCellClass(existing: ColDef['cellClass'], className: string): ColD
 	return existing;
 }
 
-function applyStatusColumnSizing(colDefs: ColDef[]): void {
+function applyStatusColumnSizing(colDefs: TlbColDef[]): void {
 	const statusColDef = colDefs.find((def) => def.field === STATUS_FIELD);
 	if (!statusColDef) {
 		return;

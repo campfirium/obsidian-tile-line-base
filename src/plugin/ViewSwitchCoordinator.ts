@@ -116,7 +116,7 @@ export class ViewSwitchCoordinator {
 				targetLeaf: this.describeLeaf(activeLeaf)
 			});
 			await this.openTableView(file, { leaf: activeLeaf, preferredWindow, workspace, trigger: 'auto' });
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.error('Failed to auto switch to table view', error);
 		}
 	}
@@ -207,7 +207,7 @@ export class ViewSwitchCoordinator {
 			});
 			logger.debug('openTableView setViewState completed', this.describeLeaf(leaf));
 			await this.applyViewMode(leaf, targetMode);
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.error('openTableView setViewState failed', error);
 			throw error;
 		}
@@ -375,7 +375,7 @@ export class ViewSwitchCoordinator {
 				}
 				return leaf;
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.warn('workspace.getLeaf(true) failed', error);
 		}
 
@@ -424,7 +424,7 @@ export class ViewSwitchCoordinator {
 		let content: string;
 		try {
 			content = await this.app.vault.read(file);
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.warn('shouldInterceptForConversion: read failed', { file: file.path, error });
 			return false;
 		}

@@ -132,7 +132,7 @@ export class ParagraphPromotionController {
 				usedPaths.add(createdFile.path);
 				const linkValue = this.buildLinkValue(createdFile, sourceFile);
 				successes.push({ createdFile, linkValue, rowIndex });
-			} catch (error) {
+			} catch (error: unknown) {
 				failures += 1;
 				logger.error('Failed to promote block to note', { error, rowIndex });
 			}
@@ -385,7 +385,7 @@ export class ParagraphPromotionController {
 		try {
 			const linkText = this.app.metadataCache.fileToLinktext(createdFile, sourcePath, false);
 			return `[[${linkText}]]`;
-		} catch (error) {
+		} catch (error: unknown) {
 			logger.warn('Failed to resolve linktext, falling back to basename', { error, target: createdFile.path });
 			return `[[${createdFile.basename}]]`;
 		}
@@ -438,7 +438,7 @@ export class ParagraphPromotionController {
 			try {
 				await this.app.vault.createFolder(normalized);
 				return normalized;
-			} catch (error) {
+			} catch (error: unknown) {
 				logger.error('Failed to create target folder for paragraph promotion', { error, path: normalized });
 				new Notice(t('paragraphPromotion.folderCreateFailed'));
 				return null;

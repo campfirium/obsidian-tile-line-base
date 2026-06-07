@@ -1,7 +1,7 @@
 import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
 import { CompositionProxy } from '../../utils/CompositionProxy';
 import { getLogger } from '../../../utils/logger';
-import { ROW_ID_FIELD, type RowData } from '../../GridAdapter';
+import { ROW_ID_FIELD } from '../../GridAdapter';
 import { GridClipboardService } from './GridClipboardService';
 import { FocusNavigator } from './FocusNavigator';
 import {
@@ -10,12 +10,13 @@ import {
 	InteractionControllerDeps
 } from '../types';
 import { normalizeKeyboardEvent, isPrintableKey } from './keyboardUtils';
+import type { TlbGridApi } from '../../agGridTypes';
 
 const logger = getLogger('grid:composition-capture');
 
 interface CompositionManagerOptions {
 	focus: FocusStateAccess;
-	getGridApi: () => GridApi | null;
+	getGridApi: () => TlbGridApi | null;
 	translate: InteractionControllerDeps['translate'];
 	debug: DebugLogger;
 	clipboard: GridClipboardService;
@@ -25,7 +26,7 @@ interface CompositionManagerOptions {
 
 export class CompositionCaptureManager {
 	private readonly focus: FocusStateAccess;
-	private readonly getGridApi: () => GridApi | null;
+	private readonly getGridApi: () => TlbGridApi | null;
 	private readonly translate: CompositionManagerOptions['translate'];
 	private readonly debug: DebugLogger;
 	private readonly clipboard: GridClipboardService;
@@ -374,7 +375,7 @@ export class CompositionCaptureManager {
 			return null;
 		}
 		const rowNode = gridApi.getDisplayedRowAtIndex(displayedRowIndex);
-		const data = rowNode?.data as RowData | undefined;
+			const data = rowNode?.data;
 		if (!data) {
 			return null;
 		}
@@ -386,8 +387,8 @@ export class CompositionCaptureManager {
 		return Number.isNaN(parsed) ? null : parsed;
 	}
 
-	private hasActiveGridEditor(gridApi: GridApi): boolean {
-		const gridApiWithEditors = gridApi as GridApi & { getCellEditorInstances?: () => unknown[]; getEditingCells?: () => unknown[] };
+	private hasActiveGridEditor(gridApi: TlbGridApi): boolean {
+		const gridApiWithEditors = gridApi as TlbGridApi & { getCellEditorInstances?: () => unknown[]; getEditingCells?: () => unknown[] };
 		const editorInstances = gridApiWithEditors.getCellEditorInstances?.();
 		if (Array.isArray(editorInstances)) {
 			return editorInstances.length > 0;
@@ -401,7 +402,7 @@ export class CompositionCaptureManager {
 		return false;
 	}
 
-	private isTargetEditable(gridApi: GridApi, rowIndex: number, colId: string): boolean {
+	private isTargetEditable(gridApi: TlbGridApi, rowIndex: number, colId: string): boolean {
 		const column = typeof gridApi.getColumn === 'function' ? gridApi.getColumn(colId) : null;
 		const colDef = column?.getColDef?.() as { editable?: boolean | ((params: EditableCallbackParams<Record<string, unknown>, unknown, unknown>) => boolean) } | null;
 		if (colDef?.editable === false) {
@@ -415,13 +416,12 @@ export class CompositionCaptureManager {
 					: null;
 			const data = rowNode?.data;
 			if (rowNode && data && typeof data === 'object') {
-				const record = data as Record<string, unknown>;
-				const editableResult = colDef.editable({
-					api: gridApi,
+			const editableResult = colDef.editable({
+				api: gridApi,
 					column,
 					colDef,
-					context: (gridApi as GridApi & { context?: unknown }).context,
-					data: record,
+				context: (gridApi as TlbGridApi & { context?: unknown }).context,
+				data,
 					node: rowNode,
 				});
 				if (!editableResult) {

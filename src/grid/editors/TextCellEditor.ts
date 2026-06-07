@@ -10,8 +10,10 @@
  * The factory wrapper protects against prototype issues in Obsidian pop-out windows.
  */
 
-import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
+import type { ICellEditorComp } from 'ag-grid-community';
 import { ROW_ID_FIELD } from '../GridAdapter';
+import type { TlbCellEditorParams } from '../agGridTypes';
+import { formatUnknownValue } from '../../utils/valueFormat';
 
 const MIN_POPUP_WIDTH = 420;
 const MIN_CELL_WIDTH = 160;
@@ -27,7 +29,7 @@ export function createTextCellEditor() {
 	return class implements ICellEditorComp {
 		private wrapper!: HTMLElement;
 		private eInput!: HTMLTextAreaElement;
-		private params!: ICellEditorParams;
+		private params!: TlbCellEditorParams;
 		private initialValue = '';
 		private minHeight = 40;
 		private columnWidth = MIN_CELL_WIDTH;
@@ -36,7 +38,7 @@ export function createTextCellEditor() {
 		private wrapperChrome = 0;
 		private removeGridPropagationBlock?: () => void;
 
-		init(params: ICellEditorParams): void {
+		init(params: TlbCellEditorParams): void {
 			this.params = params;
 
 			const doc = params.eGridCell?.ownerDocument || activeDocument;
@@ -86,7 +88,7 @@ export function createTextCellEditor() {
 				this.wrapper = this.eInput;
 			}
 
-			this.initialValue = String(params.value ?? '');
+			this.initialValue = formatUnknownValue(params.value ?? '');
 			this.eInput.value = this.initialValue;
 
 			this.eInput.addEventListener('input', () => {
@@ -287,8 +289,7 @@ export function createTextCellEditor() {
 				return;
 			}
 			const field = this.params?.column?.getColId?.() ?? this.params?.colDef?.field ?? null;
-			const context = this.params?.context as { onAddChildRow?: (targetRowIndex: number, targetField: string | null) => void } | undefined;
-			context?.onAddChildRow?.(rowIndex, field);
+			this.params?.context?.onAddChildRow?.(rowIndex, field);
 		}
 
 		private updateScrollableState(isScrollable: boolean): void {

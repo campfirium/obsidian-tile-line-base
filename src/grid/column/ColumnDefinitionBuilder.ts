@@ -87,7 +87,7 @@ function createStatusColumnDef(column: SchemaColumnDef): TlbColDef {
 		filter: false,
 		suppressSizeToFit: true,
 		suppressNavigable: true,
-		cellRenderer: StatusCellRenderer,
+		cellRendererSelector: () => ({ component: StatusCellRenderer }),
 		tooltipValueGetter: () => null,
 		cellStyle: {
 			textAlign: 'center',

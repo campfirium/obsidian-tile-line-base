@@ -278,14 +278,14 @@ export class ViewSwitchCoordinator {
 
 			if (file) {
 				await tableView.restoreSessionBaselineIfEligible();
+				this.suppressAutoSwitchUntil.set(file.path, Date.now() + 1000);
+				await this.settingsService.setFileViewPreference(file.path, 'markdown');
 				await leaf.setViewState({
 					type: 'markdown',
 					state: {
 						file: file.path
 					}
 				});
-				await this.settingsService.setFileViewPreference(file.path, 'markdown');
-				this.suppressAutoSwitchUntil.set(file.path, Date.now() + 1000);
 			}
 		} else {
 			const workspace = context?.app.workspace ?? this.windowContextManager.getWorkspaceForLeaf(leaf) ?? this.app.workspace;

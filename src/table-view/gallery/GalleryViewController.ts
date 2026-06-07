@@ -75,6 +75,7 @@ export class GalleryViewController {
 	private unsubscribeQuickFilter: (() => void) | null = null;
 	private readonly domState: GalleryDomState = { gridEl: null, cardEls: [] };
 	private renderRaf: number | null = null;
+	private renderTimeout: number | null = null;
 	private renderScheduled = false;
 	private destroyed = false;
 	private renderCount = 0;
@@ -180,12 +181,31 @@ export class GalleryViewController {
 			return;
 		}
 		this.renderScheduled = true;
-		const raf = typeof requestAnimationFrame === 'function'
-			? requestAnimationFrame
-			: (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
+		const ownerWindow = this.rootContainer.ownerDocument.defaultView ?? window;
+		const scheduleFrame = (callback: FrameRequestCallback): void => {
+			let settled = false;
+			const run = (timestamp: number) => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				if (this.renderTimeout !== null) {
+					ownerWindow.clearTimeout(this.renderTimeout);
+					this.renderTimeout = null;
+				}
+				callback(timestamp);
+			};
+			if (typeof ownerWindow.requestAnimationFrame === 'function') {
+				this.renderRaf = ownerWindow.requestAnimationFrame(run);
+				this.renderTimeout = ownerWindow.setTimeout(() => run(performance.now()), 50);
+				return;
+			}
+			this.renderTimeout = ownerWindow.setTimeout(() => run(performance.now()), 0);
+		};
 		const runRender = () => {
 			this.renderScheduled = false;
 			this.renderRaf = null;
+			this.renderTimeout = null;
 			if (this.destroyed) {
 				this.toggleProcessingHint(false);
 				return;
@@ -198,15 +218,16 @@ export class GalleryViewController {
 				}
 			}
 		};
-		this.renderRaf = raf(() => {
+		scheduleFrame(() => {
 			if (this.destroyed) {
 				this.renderScheduled = false;
 				this.toggleProcessingHint(false);
 				this.renderRaf = null;
+				this.renderTimeout = null;
 				return;
 			}
 			if (rebuildPages) {
-				this.renderRaf = raf(runRender);
+				scheduleFrame(runRender);
 				return;
 			}
 			runRender();
@@ -214,14 +235,19 @@ export class GalleryViewController {
 	}
 
 	private cancelScheduledRender(): void {
+		const ownerWindow = this.rootContainer.ownerDocument.defaultView ?? window;
 		if (this.renderRaf != null) {
-			if (typeof cancelAnimationFrame === 'function') {
-				cancelAnimationFrame(this.renderRaf);
+			if (typeof ownerWindow.cancelAnimationFrame === 'function') {
+				ownerWindow.cancelAnimationFrame(this.renderRaf);
 			} else {
-				window.clearTimeout(this.renderRaf);
+				ownerWindow.clearTimeout(this.renderRaf);
 			}
 		}
+		if (this.renderTimeout !== null) {
+			ownerWindow.clearTimeout(this.renderTimeout);
+		}
 		this.renderRaf = null;
+		this.renderTimeout = null;
 		this.renderScheduled = false;
 	}
 

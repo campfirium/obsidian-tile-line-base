@@ -13,11 +13,15 @@ import { setIcon } from 'obsidian';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
 import { getStatusIcon, getStatusLabel, normalizeStatus, type TaskStatus } from '../utils/status';
-import type { TlbCellRendererParams } from '../grid/agGridTypes';
+import type { TlbCellRendererParams, TlbColDef } from '../grid/agGridTypes';
 
 const logger = getLogger('renderer:status-cell');
 
 const STATUS_MENU_STATUSES: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'];
+
+export function createStatusCellRendererSelector(): NonNullable<TlbColDef['cellRendererSelector']> {
+	return () => ({ component: StatusCellRenderer });
+}
 
 /**
  * StatusCellRenderer - AG Grid �Զ��嵥Ԫ����Ⱦ��

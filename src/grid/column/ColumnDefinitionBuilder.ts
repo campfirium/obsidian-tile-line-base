@@ -5,7 +5,7 @@ import { createDateCellEditor } from '../editors/DateCellEditor';
 import { createTimeCellEditor } from '../editors/TimeCellEditor';
 import { COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
 import { IconHeaderComponent } from '../headers/IconHeaderComponent';
-import { StatusCellRenderer } from '../../renderers/StatusCellRenderer';
+import { createStatusCellRendererSelector } from '../../renderers/StatusCellRenderer';
 import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
 import { formatDateForDisplay, formatTimeForDisplay } from '../../utils/datetime';
 import { t } from '../../i18n';
@@ -87,7 +87,7 @@ function createStatusColumnDef(column: SchemaColumnDef): TlbColDef {
 		filter: false,
 		suppressSizeToFit: true,
 		suppressNavigable: true,
-		cellRendererSelector: () => ({ component: StatusCellRenderer }),
+			cellRendererSelector: createStatusCellRendererSelector(),
 		tooltipValueGetter: () => null,
 		cellStyle: {
 			textAlign: 'center',

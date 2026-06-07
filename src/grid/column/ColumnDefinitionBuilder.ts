@@ -1,16 +1,17 @@
 import type { ValueFormatterParams } from 'ag-grid-community';
+import { Menu, setIcon } from 'obsidian';
 
 import { ColumnDef as SchemaColumnDef } from '../GridAdapter';
 import { createDateCellEditor } from '../editors/DateCellEditor';
 import { createTimeCellEditor } from '../editors/TimeCellEditor';
 import { COLUMN_MIN_WIDTH, clampColumnWidth } from '../columnSizing';
 import { IconHeaderComponent } from '../headers/IconHeaderComponent';
-import { createStatusCellRendererSelector } from '../../renderers/StatusCellRenderer';
 import { createTextLinkCellRenderer } from '../../renderers/TextLinkCellRenderer';
 import { formatDateForDisplay, formatTimeForDisplay } from '../../utils/datetime';
 import { t } from '../../i18n';
 import type { TlbCellRendererParams, TlbColDef } from '../agGridTypes';
 import { formatUnknownValue } from '../../utils/valueFormat';
+import { ALL_TASK_STATUSES, getStatusIcon, getStatusLabel, normalizeStatus, type TaskStatus } from '../../utils/status';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
@@ -87,7 +88,7 @@ function createStatusColumnDef(column: SchemaColumnDef): TlbColDef {
 		filter: false,
 		suppressSizeToFit: true,
 		suppressNavigable: true,
-			cellRendererSelector: createStatusCellRendererSelector(),
+		cellRenderer: createStatusCellRenderer,
 		tooltipValueGetter: () => null,
 		cellStyle: {
 			textAlign: 'center',
@@ -102,6 +103,103 @@ function createStatusColumnDef(column: SchemaColumnDef): TlbColDef {
 			ariaLabel: headerAriaLabel
 		}
 	};
+}
+
+function createStatusCellRenderer(params: TlbCellRendererParams): HTMLElement {
+	const ownerDocument = params.eGridCell?.ownerDocument ?? activeDocument;
+	const container = ownerDocument.createElement('div');
+	container.className = 'tlb-status-cell';
+	container.tabIndex = 0;
+	container.setAttribute('role', 'button');
+	container.setAttribute('aria-haspopup', 'menu');
+	container.setAttribute('aria-keyshortcuts', 'Space Enter Shift+F10');
+	container.setAttribute('data-tlb-status-cell', 'true');
+	container.setAttribute('data-tlb-tooltip-disabled', 'true');
+	params.eGridCell?.setAttribute('data-tlb-tooltip-disabled', 'true');
+
+	renderStatusCellContent(container, params);
+
+	container.addEventListener('click', (event) => {
+		event.stopPropagation();
+		const currentStatus = normalizeStatus(params.data?.status);
+		const nextStatus: TaskStatus = currentStatus === 'todo' ? 'done' : currentStatus === 'done' ? 'todo' : 'done';
+		changeStatus(params, nextStatus);
+	});
+
+	container.addEventListener('contextmenu', (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		showStatusMenu(params, event);
+	});
+
+	container.addEventListener('keydown', (event) => {
+		const key = event.key;
+		if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+			event.preventDefault();
+			container.click();
+			return;
+		}
+		if ((key === 'F10' && event.shiftKey) || key === 'ContextMenu' || key === 'Apps') {
+			event.preventDefault();
+			const rect = container.getBoundingClientRect();
+			const menuEvent = new MouseEvent('contextmenu', {
+				bubbles: true,
+				cancelable: true,
+				clientX: rect.left + rect.width / 2,
+				clientY: rect.top + rect.height / 2
+			});
+			showStatusMenu(params, menuEvent);
+		}
+	});
+
+	return container;
+}
+
+function renderStatusCellContent(container: HTMLElement, params: TlbCellRendererParams): void {
+	const status = normalizeStatus(params.data?.status);
+	const iconId = getStatusIcon(status);
+	const label = getStatusLabel(status);
+	container.replaceChildren();
+	container.setAttribute('data-status', status);
+
+	const iconContainer = container.ownerDocument.createElement('span');
+	iconContainer.className = 'tlb-status-icon';
+	container.appendChild(iconContainer);
+	setIcon(iconContainer, iconId);
+
+	const srLabel = container.ownerDocument.createElement('span');
+	srLabel.textContent = label;
+	srLabel.className = 'tlb-visually-hidden';
+	const srId = params.node?.id != null ? `tlb-status-sr-${params.node.id}` : `tlb-status-sr-${Date.now()}`;
+	srLabel.id = srId;
+	container.appendChild(srLabel);
+	container.setAttribute('aria-labelledby', srId);
+	container.setAttribute('aria-expanded', 'false');
+}
+
+function showStatusMenu(params: TlbCellRendererParams, event: MouseEvent): void {
+	const currentStatus = normalizeStatus(params.data?.status);
+	const menu = new Menu();
+	for (const status of ALL_TASK_STATUSES) {
+		menu.addItem((item) => {
+			item
+				.setTitle(getStatusLabel(status))
+				.setIcon(getStatusIcon(status))
+				.setDisabled(status === currentStatus)
+				.onClick(() => {
+					changeStatus(params, status);
+				});
+		});
+	}
+	menu.showAtMouseEvent(event);
+}
+
+function changeStatus(params: TlbCellRendererParams, newStatus: TaskStatus): void {
+	const rowId = params.node?.id;
+	if (!rowId) {
+		return;
+	}
+	params.context?.onStatusChange?.(rowId, newStatus);
 }
 
 function createSchemaColumnDef(column: SchemaColumnDef): TlbColDef {

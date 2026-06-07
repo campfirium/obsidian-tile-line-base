@@ -1,5 +1,5 @@
 import type { FilterViewDefinition, FileFilterViewState } from '../../../types/filterView';
-import { ALL_TASK_STATUSES, normalizeStatus, type TaskStatus } from '../../../renderers/StatusCellRenderer';
+import { ALL_TASK_STATUSES, normalizeStatus, type TaskStatus } from '../../../utils/status';
 
 export function collectStatusGroupViewIds(filterState: FileFilterViewState): string[] {
 	const statusMap = new Map<TaskStatus, string>();

@@ -1,7 +1,7 @@
 ﻿import { Menu, setIcon } from 'obsidian';
 import type { FileFilterViewState, FilterViewDefinition } from '../../types/filterView';
 import { t } from '../../i18n';
-import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../renderers/StatusCellRenderer';
+import { getStatusIcon, normalizeStatus, type TaskStatus } from '../../utils/status';
 
 const DEFAULT_ALL_VIEW_ICON = 'layout-grid';
 const DEFAULT_FILTER_VIEW_ICON = 'layout-grid';

@@ -1,5 +1,6 @@
 export type SlideThemeId = 'basic';
 export type SlideMode = 'single' | 'split';
+export type SlideBodyBlock = { type: 'text'; text: string } | { type: 'image'; markdown: string };
 
 export interface SlideTextTemplate {
 	titleTemplate: string;

@@ -1,7 +1,7 @@
 import type { RowData } from '../../grid/GridAdapter';
-import { type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
+import { type SlideBodyBlock, type SlideTextTemplate, type SlideViewConfig } from '../../types/slide';
 import { computeLayout, type ComputedLayout } from './slideLayout';
-import { renderSlideTemplate, resolveDirectImage, resolveSlideContent, type SlideBodyBlock } from './SlideContentResolver';
+import { renderSlideTemplate, resolveDirectImage, resolveSlideContent } from './SlideContentResolver';
 
 export interface SlidePage {
 	rowIndex: number;

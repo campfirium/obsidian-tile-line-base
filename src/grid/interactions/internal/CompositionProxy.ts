@@ -1,5 +1,5 @@
-import { t } from '../../i18n';
-import { getLogger } from '../../utils/logger';
+import { t } from '../../../i18n';
+import { getLogger } from '../../../utils/logger';
 
 const logger = getLogger('grid:composition-proxy');
 

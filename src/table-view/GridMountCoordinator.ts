@@ -1,6 +1,6 @@
 import type { ColumnDef, GridAdapter, RowData, RowDragEndPayload, CellEditEvent, HeaderEditEvent } from '../grid/GridAdapter';
 import type { CellLinkClickContext } from '../types/cellLinks';
-import type { TaskStatus } from '../renderers/StatusCellRenderer';
+import type { TaskStatus } from '../utils/status';
 import type { Schema } from './SchemaBuilder';
 import type { ColumnConfig } from './MarkdownBlockParser';
 import type { TableDataStore } from './TableDataStore';

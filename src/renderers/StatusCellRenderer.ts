@@ -10,89 +10,12 @@
 
 import type { ICellRendererComp } from 'ag-grid-community';
 import { setIcon } from 'obsidian';
-import { t, type TranslationKey } from '../i18n';
-import { formatUnknownValue } from '../utils/valueFormat';
+import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
+import { getStatusIcon, getStatusLabel, normalizeStatus, type TaskStatus } from '../utils/status';
 import type { TlbCellRendererParams } from '../grid/agGridTypes';
 
 const logger = getLogger('renderer:status-cell');
-
-// ״̬���Ͷ���
-export type TaskStatus = 'todo' | 'done' | 'inprogress' | 'onhold' | 'someday' | 'canceled';
-export const ALL_TASK_STATUSES: readonly TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'] as const;
-
-/**
- * ״̬�淶���������ֱ���ͳһΪ��׼״ֵ̬
- */
-export function normalizeStatus(value: unknown): TaskStatus {
-	const str = formatUnknownValue(value ?? 'todo').toLowerCase().trim();
-	const normalized = str.replace(/[\s_/-]+/g, '');
-
-	// done �ı���
-	if (normalized === 'done' || normalized === 'completed') {
-		return 'done';
-	}
-
-	// inprogress �ı���
-	if (normalized === 'inprogress' || normalized === 'doing') {
-		return 'inprogress';
-	}
-
-	// onhold �ı���
-	if (normalized === 'onhold' || normalized === 'hold' || normalized === 'paused') {
-		return 'onhold';
-	}
-
-	// someday 的别�?
-	if (
-		normalized === 'someday' ||
-		normalized === 'later' ||
-		normalized === 'maybe' ||
-		normalized === 'somedaymaybe'
-	) {
-		return 'someday';
-	}
-
-	// canceled �ı���
-	if (normalized === 'canceled' || normalized === 'cancelled' || normalized === 'dropped') {
-		return 'canceled';
-	}
-
-	// Ĭ��Ϊ todo
-	return 'todo';
-}
-
-/**
- * ��ȡ״̬��Ӧ�� Lucide ͼ�� ID
- */
-export function getStatusIcon(status: TaskStatus): string {
-	const icons: Record<TaskStatus, string> = {
-		'todo': 'square',           // �� �շ���Obsidian �����б�ԭ����
-		'done': 'check-square',     // ? ����ɣ�Obsidian �����б�ԭ����
-		'inprogress': 'loader-circle',  // Use spinning loader to indicate work in progress
-		'onhold': 'pause-circle',   // ? ��ͣͼ��
-		'someday': 'circle-dashed',   // Use dashed circle to express deferred/undecided status
-		'canceled': 'x-square'      // ? ��ŷ���?
-	};
-	return icons[status] || icons['todo'];
-}
-
-/**
- * ��ȡ״̬��Ӧ�����ֱ�ǩ�����ڿɷ����Ժ͵�����
- */
-const STATUS_LABEL_KEYS: Record<TaskStatus, TranslationKey> = {
-	todo: 'statusCell.labels.todo',
-	done: 'statusCell.labels.done',
-	inprogress: 'statusCell.labels.inprogress',
-	onhold: 'statusCell.labels.onhold',
-	someday: 'statusCell.labels.someday',
-	canceled: 'statusCell.labels.canceled'
-};
-
-export function getStatusLabel(status: TaskStatus): string {
-	const key = STATUS_LABEL_KEYS[status] ?? STATUS_LABEL_KEYS.todo;
-	return t(key);
-}
 
 const STATUS_MENU_STATUSES: TaskStatus[] = ['todo', 'done', 'inprogress', 'onhold', 'someday', 'canceled'];
 

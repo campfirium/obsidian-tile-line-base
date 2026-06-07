@@ -8,7 +8,7 @@ import type {
 	RowDragEndPayload
 } from '../grid/GridAdapter';
 import type { CellLinkClickContext } from '../types/cellLinks';
-import type { TaskStatus } from '../renderers/StatusCellRenderer';
+import type { TaskStatus } from '../utils/status';
 
 export interface GridControllerHandlers {
 	onStatusChange: (rowId: string, newStatus: TaskStatus) => void;

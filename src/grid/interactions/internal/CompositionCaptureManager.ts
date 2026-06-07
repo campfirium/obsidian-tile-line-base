@@ -1,5 +1,5 @@
 import { GridApi, type EditableCallbackParams } from 'ag-grid-community';
-import { CompositionProxy } from '../../utils/CompositionProxy';
+import { CompositionProxy } from './CompositionProxy';
 import { getLogger } from '../../../utils/logger';
 import { ROW_ID_FIELD } from '../../GridAdapter';
 import { GridClipboardService } from './GridClipboardService';

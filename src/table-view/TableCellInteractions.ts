@@ -1,4 +1,4 @@
-import { normalizeStatus, type TaskStatus } from '../renderers/StatusCellRenderer';
+import { normalizeStatus, type TaskStatus } from '../utils/status';
 import type { CellEditEvent, GridAdapter } from '../grid/GridAdapter';
 import { getCurrentLocalDateTime } from '../utils/datetime';
 import { isReservedColumnId } from '../grid/systemColumnUtils';

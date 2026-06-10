@@ -1,8 +1,23 @@
+<p align="center">
+  <sub>
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.md">English</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.de.md">Deutsch</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.es.md">Español</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.fr.md">Français</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.it.md">Italiano</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.ja.md">日本語</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.ko.md">한국어</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.nl.md">Nederlands</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.pl.md">Polski</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.pt.md">Português</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.zh-hans.md">简体中文</a> ·
+    <a href="https://github.com/campfirium/obsidian-tile-line-base/blob/main/README.zh-hant.md">繁體中文</a>
+  </sub>
+</p>
+
 # TileLineBase
 
 > **The Native Plain-Text Database for Obsidian**
-
-![Platform](https://img.shields.io/badge/Platform-Desktop_Only-critical) ![Version](https://img.shields.io/github/v/release/campfirium/obsidian-tile-line-base?label=Version)
 
 ![TileLineBase hero banner](docs/assets/hero-banner.jpg)
 
@@ -96,13 +111,9 @@ Uses a **clear, self-contained plain-text format** that can interact seamlessly 
 
 ## Installation
 
-TileLineBase is available from Obsidian's **Community Plugins** directory.
+Install TileLineBase from the [Obsidian Community Plugins page](https://community.obsidian.md/plugins/tile-line-base) or open it directly in Obsidian with `obsidian://show-plugin?id=tile-line-base`.
 
-1. Open **Settings → Community plugins → Browse** in Obsidian.
-2. Search for **TileLineBase**.
-3. Install and enable the plugin.
-
-TileLineBase is desktop-only. It is not designed for Obsidian mobile.
+TileLineBase is desktop-only.
 
 ## Development
 
@@ -128,6 +139,14 @@ You can:
 
 Feel free to use whichever space works best for you.
 
+
+## Related Projects
+
+### Foliole: An approachable incremental reading app
+
+Obsidian is excellent for collecting, organizing, and writing notes, but many workflows can continue to extend beyond it.
+
+If TileLineBase extends Obsidian with multidimensional tables and structured records, [Foliole](https://github.com/campfirium/foliole) extends the later stage of reading: how to make materials appear at the right time, become easier to understand when they return, enter memory more effectively, and make reading actually complete.
 
 ## Acknowledgements
 

@@ -135,14 +135,14 @@ TileLineBase 僅支援桌面端。
 
 * 加入或發起 [Obsidian Forum thread](https://forum.obsidian.md/t/tilelinebase-the-native-plain-text-database-for-obsidian/108734) 上的討論。
 * 如果希望更正式地追蹤事項，可以在 [GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues) 開 Issue。
-* 也可以來我的個人論壇 [Campfirium](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753) 坐坐，這裡也歡迎更寬廣的想法與延伸討論。
+* 也可以加入 [Campfirium 論壇](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753) 的討論，這裡也歡迎更寬廣的想法與延伸討論。
 
 請選擇最適合你的交流空間。
 
 
 ## 相關專案
 
-### Foliole：現代的漸進閱讀應用
+### Foliole：容易上手的增量閱讀應用
 
 Obsidian 非常適合收集、整理與書寫筆記，但許多工作流程還會繼續延伸到 Obsidian 之外。
 

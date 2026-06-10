@@ -135,7 +135,7 @@ Możesz:
 
 * Dołączyć do rozmowy albo rozpocząć nową w [wątku na forum Obsidian](https://forum.obsidian.md/t/tilelinebase-the-native-plain-text-database-for-obsidian/108734).
 * Otworzyć Issue na [GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues), jeśli chcesz śledzić temat bardziej formalnie.
-* Albo zajrzeć na moje osobiste forum, [Campfirium](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753), gdzie mile widziane są także szersze pomysły i poboczne dyskusje.
+* Albo dołączyć do dyskusji na [forum Campfirium](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753), gdzie mile widziane są także szersze pomysły i poboczne dyskusje.
 
 Wybierz przestrzeń, która najbardziej Ci odpowiada.
 

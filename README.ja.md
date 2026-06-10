@@ -135,7 +135,7 @@ TileLineBase はデスクトップ専用です。
 
 * [Obsidian Forum thread](https://forum.obsidian.md/t/tilelinebase-the-native-plain-text-database-for-obsidian/108734) に参加する、または新しく会話を始める。
 * より正式に追跡したい内容は、[GitHub](https://github.com/campfirium/obsidian-tile-line-base/issues) で Issue を開く。
-* 個人フォーラム [Campfirium](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753) に立ち寄る。より広いアイデアや横道の話題も歓迎しています。
+* [Campfirium フォーラム](https://forum.campfirium.com/t/tilelinebase-v080-released-the-native-plain-text-database-for-obsidian/753) の議論に参加する。より広いアイデアや横道の話題も歓迎しています。
 
 使いやすい場所を選んでください。
 

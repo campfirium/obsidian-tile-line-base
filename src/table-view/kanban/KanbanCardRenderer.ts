@@ -112,10 +112,13 @@ const renderLinkedText = (
 		if (segment.link.type === 'internal') {
 			linkEl.addClass('internal-link');
 			linkEl.setAttribute('data-href', segment.link.target);
-		} else {
+		} else if (segment.link.type === 'external') {
 			linkEl.addClass('external-link');
 			linkEl.setAttribute('target', '_blank');
 			linkEl.setAttribute('rel', 'noopener noreferrer');
+		} else {
+			linkEl.addClass('tlb-link-cell__anchor--blocked');
+			linkEl.setAttribute('href', '#');
 		}
 		linkEl.addEventListener('pointerdown', (event) => {
 			event.stopPropagation();

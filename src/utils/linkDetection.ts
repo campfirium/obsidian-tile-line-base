@@ -1,6 +1,7 @@
 import type { CellRenderableSegment, DetectedCellLink } from '../types/cellLinks';
 
 const LINK_TOKEN_PATTERN = /\[\[([^[\]]+)\]\]|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>"')]+)/gi;
+const SAFE_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 
 export function detectPrimaryCellLink(rawValue: unknown): DetectedCellLink | null {
 	const segments = parseCellLinkSegments(rawValue);
@@ -97,7 +98,7 @@ export function parseCellLinkSegments(rawValue: unknown): CellRenderableSegment[
 					kind: 'link',
 					text: target,
 					link: {
-						type: 'external',
+						type: classifyLinkTarget(target),
 						target,
 						displayText: target,
 						sourceText: matchedText
@@ -118,21 +119,31 @@ export function parseCellLinkSegments(rawValue: unknown): CellRenderableSegment[
 	return segments.length > 0 ? segments : [{ kind: 'text', text: value }];
 }
 
-function classifyLinkTarget(target: string): DetectedCellLink['type'] {
+export function classifyLinkTarget(target: string): DetectedCellLink['type'] {
 	if (/^obsidian:\/\//i.test(target)) {
 		return 'internal';
 	}
-	if (/^(https?:\/\/|mailto:|tel:)/i.test(target)) {
-		return 'external';
-	}
-	if (/^[a-z][a-z\d+\-.]*:\/\//i.test(target)) {
+	if (isSafeExternalLinkTarget(target)) {
 		return 'external';
 	}
 	if (/^[a-z][a-z\d+\-.]*:/i.test(target) && !/^[a-z]:[\\/]/i.test(target)) {
-		return 'external';
+		return 'blocked';
 	}
 	if (target.startsWith('[[') || target.startsWith('#')) {
 		return 'internal';
 	}
 	return 'internal';
+}
+
+export function isSafeExternalLinkTarget(target: string): boolean {
+	const normalized = target.trim();
+	if (!normalized) {
+		return false;
+	}
+	try {
+		const parsed = new URL(normalized);
+		return SAFE_EXTERNAL_PROTOCOLS.has(parsed.protocol.toLowerCase());
+	} catch {
+		return false;
+	}
 }

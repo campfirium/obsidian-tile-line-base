@@ -1,13 +1,12 @@
 import type { RowData } from '../../grid/GridAdapter';
 import type { FileFilterViewState } from '../../types/filterView';
-import type { TableDataStore } from '../TableDataStore';
 import { FilterDataProcessor } from '../filter/FilterDataProcessor';
 import { getLogger } from '../../utils/logger';
+import type { SharedRowDataProvider } from '../filter/SharedRowDataProvider';
 
 interface GalleryFilterOrchestratorDeps {
-	dataStore: TableDataStore;
+	rowDataProvider: SharedRowDataProvider;
 	getFilterViewState: () => FileFilterViewState;
-	emitFormulaLimitNotice: (limit: number) => void;
 }
 
 export class GalleryFilterOrchestrator {
@@ -19,12 +18,12 @@ export class GalleryFilterOrchestrator {
 	constructor(private readonly deps: GalleryFilterOrchestratorDeps) {}
 
 	refresh(): void {
-		this.allRows = this.deps.dataStore.extractRowData({
-			onFormulaLimitExceeded: (limit) => {
-				this.deps.emitFormulaLimitNotice(limit);
-			}
-		});
+		this.allRows = this.deps.rowDataProvider.getRows();
 		this.applyActiveView();
+	}
+
+	invalidateRows(): void {
+		this.deps.rowDataProvider.invalidate();
 	}
 
 	applyActiveView(): void {

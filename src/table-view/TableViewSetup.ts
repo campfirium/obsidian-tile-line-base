@@ -33,6 +33,7 @@ import { RowOrderController } from './row-sort/RowOrderController';
 import { MagicMigrationController } from './MagicMigrationController';
 import { initializeGalleryFilters } from './gallery/initGalleryFilters';
 import { installTableViewGridF2Keybinding } from './TableViewKeymap';
+import { SharedRowDataProvider } from './filter/SharedRowDataProvider';
 const logger = getLogger('table-view:setup');
 export function initializeTableView(view: TableView): void {
 	logger.info(t('tableViewSetup.constructorStart'));
@@ -42,6 +43,10 @@ export function initializeTableView(view: TableView): void {
 
 	view.refreshCoordinator = new TableRefreshCoordinator(view);
 	view.configManager = new TableConfigManager();
+	function refreshCurrentTableRows(): void {
+		view.filterOrchestrator.invalidateRows();
+		view.filterOrchestrator.refresh();
+	}
 	view.persistenceService = new TablePersistenceService({
 		app: view.app,
 		dataStore: view.dataStore,
@@ -97,7 +102,7 @@ export function initializeTableView(view: TableView): void {
 		dataStore: view.dataStore,
 		getSchema: () => view.schema,
 		getFocusedField: () => view.gridAdapter?.getFocusedCell?.()?.field ?? null,
-		refreshGridData: () => view.filterOrchestrator.refresh(),
+		refreshGridData: refreshCurrentTableRows,
 		focusRow: (rowIndex, field) => view.focusManager.focusRow(rowIndex, field ?? null),
 		scheduleSave: () => { view.markUserMutation('row-interaction'); view.persistenceService.scheduleSave(); },
 		getActiveFilterPrefills: () => getActiveFilterPrefills(view),
@@ -118,7 +123,7 @@ export function initializeTableView(view: TableView): void {
 		filterStateStore: view.filterStateStore,
 		getSchema: () => view.schema,
 		getAvailableColumns: () => getAvailableColumns(view),
-		refreshGrid: () => view.filterOrchestrator.refresh(),
+		refreshGrid: refreshCurrentTableRows,
 		scheduleSave: () => { view.markUserMutation('column-order-physical'); view.persistenceService.scheduleSave(); }
 	});
 	view.copyTemplateController = new CopyTemplateController({
@@ -140,7 +145,7 @@ export function initializeTableView(view: TableView): void {
 		getSchema: () => view.schema,
 		getFile: () => view.file,
 		persistColumnStructureChange: (options) => persistColumnStructureChange(view, options),
-		refreshGrid: () => view.filterOrchestrator.refresh(),
+		refreshGrid: refreshCurrentTableRows,
 		scheduleSave: () => { view.markUserMutation('paragraph-promotion'); view.persistenceService.scheduleSave(); }
 	});
 	view.tableCreationController = new TableCreationController({ app: view.app, getCurrentFile: () => view.file });
@@ -149,22 +154,23 @@ export function initializeTableView(view: TableView): void {
 	view.kanbanBoardController = new KanbanBoardController({ app: view.app, view, store: view.kanbanBoardStore });
 	view.globalQuickFilterController = new GlobalQuickFilterController({ getGridAdapter: () => view.gridAdapter, quickFilterManager: view.globalQuickFilterManager });
 	view.galleryQuickFilterController = new GlobalQuickFilterController({ getGridAdapter: () => null, quickFilterManager: view.galleryQuickFilterManager });
-	view.filterOrchestrator = new FilterViewOrchestrator({
+	const emitFormulaLimitNotice = (limit: number): void => {
+		new Notice(t('tableViewSetup.formulaLimitNotice', { limit: String(limit) }));
+	};
+	const rowDataProvider = new SharedRowDataProvider({
 		dataStore: view.dataStore,
+		emitFormulaLimitNotice
+	});
+	view.filterOrchestrator = new FilterViewOrchestrator({
+		rowDataProvider,
 		getFilterViewState: () => view.filterViewState,
 		getGridAdapter: () => view.gridAdapter,
 		getSchemaColumns: () => view.schema?.columnNames ?? null,
 		reapplyGlobalQuickFilter: () => view.globalQuickFilterController.reapply(),
-		emitFormulaLimitNotice: (limit) => {
-			new Notice(t('tableViewSetup.formulaLimitNotice', { limit: String(limit) }));
-		}
 	});
 	view.galleryFilterOrchestrator = new GalleryFilterOrchestrator({
-		dataStore: view.dataStore,
+		rowDataProvider,
 		getFilterViewState: () => view.galleryFilterViewState,
-		emitFormulaLimitNotice: (limit) => {
-			new Notice(t('tableViewSetup.formulaLimitNotice', { limit: String(limit) }));
-		}
 	});
 	view.gridInteractionController = new GridInteractionController({
 		app: view.app,

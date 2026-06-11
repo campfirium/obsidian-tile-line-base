@@ -95,6 +95,9 @@ export class KanbanViewController {
 	private sortableLoadAttempted = false;
 	private sortableLoadPromise: Promise<SortableStatic | null> | null = null;
 	private tooltipManager = new KanbanTooltipManager();
+	private renderRaf: number | null = null;
+	private renderTimeout: number | null = null;
+	private renderScheduled = false;
 
 	constructor(options: KanbanViewControllerOptions) {
 		this.view = options.view;
@@ -162,6 +165,7 @@ export class KanbanViewController {
 	}
 
 	destroy(): void {
+		this.cancelScheduledRender();
 		this.tooltipManager.destroy();
 		this.unsubscribeFilter?.();
 		this.unsubscribeFilter = null;
@@ -210,12 +214,16 @@ export class KanbanViewController {
 		this.unsubscribeFilter = this.view.filterOrchestrator.addVisibleRowsListener(() => {
 			this.recomputeVisibleRows();
 			if (!this.isApplyingMutation) {
-				this.renderBoard();
+				this.requestRender();
 			}
 		});
 		this.unsubscribeQuickFilter = this.quickFilterManager.subscribe((value) => {
-			this.quickFilterValue = value ?? '';
-			this.renderBoard();
+			const nextValue = value ?? '';
+			if (this.quickFilterValue === nextValue) {
+				return;
+			}
+			this.quickFilterValue = nextValue;
+			this.requestRender();
 		});
 	}
 		private recomputeVisibleRows(): void {
@@ -233,7 +241,53 @@ export class KanbanViewController {
 		}
 	}
 
+	private requestRender(): void {
+		if (!this.boardEl || !this.boardEl.isConnected || this.renderScheduled) {
+			return;
+		}
+		this.renderScheduled = true;
+		const ownerWindow = this.boardEl.ownerDocument.defaultView ?? window;
+		let settled = false;
+		const run = () => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			if (this.renderTimeout !== null) {
+				ownerWindow.clearTimeout(this.renderTimeout);
+			}
+			this.renderRaf = null;
+			this.renderTimeout = null;
+			this.renderScheduled = false;
+			this.renderBoard();
+		};
+		if (typeof ownerWindow.requestAnimationFrame === 'function') {
+			this.renderRaf = ownerWindow.requestAnimationFrame(run);
+			this.renderTimeout = ownerWindow.setTimeout(run, 50);
+			return;
+		}
+		this.renderTimeout = ownerWindow.setTimeout(run, 16);
+	}
+
+	private cancelScheduledRender(): void {
+		const ownerWindow = this.boardEl?.ownerDocument.defaultView ?? window;
+		if (this.renderRaf !== null) {
+			if (typeof ownerWindow.cancelAnimationFrame === 'function') {
+				ownerWindow.cancelAnimationFrame(this.renderRaf);
+			} else {
+				ownerWindow.clearTimeout(this.renderRaf);
+			}
+		}
+		if (this.renderTimeout !== null) {
+			ownerWindow.clearTimeout(this.renderTimeout);
+		}
+		this.renderRaf = null;
+		this.renderTimeout = null;
+		this.renderScheduled = false;
+	}
+
 	private renderBoard(): void {
+		this.cancelScheduledRender();
 		if (!this.boardEl || !this.boardEl.isConnected) {
 			return;
 		}

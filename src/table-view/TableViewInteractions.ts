@@ -70,6 +70,7 @@ export function handleHeaderEdit(view: TableView, colIndex: number, newValue: st
 	}
 	view.columnLayoutStore.rename(oldName, trimmed);
 	renameColumnInFilterViews(view, oldName, trimmed);
+	view.filterOrchestrator.invalidateRows();
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();
 	view.markUserMutation('column-rename');
@@ -82,6 +83,7 @@ export function persistColumnStructureChange(view: TableView, options?: { notice
 	}
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();
+	view.filterOrchestrator.invalidateRows();
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();
 	if (options?.notice) {

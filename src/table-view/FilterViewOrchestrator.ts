@@ -1,16 +1,15 @@
 import type { GridAdapter, RowData, SortModelEntry } from '../grid/GridAdapter';
 import type { FileFilterViewState, SortRule } from '../types/filterView';
 import { FilterDataProcessor } from './filter/FilterDataProcessor';
-import type { TableDataStore } from './TableDataStore';
 import { getLogger } from '../utils/logger';
+import type { SharedRowDataProvider } from './filter/SharedRowDataProvider';
 
 interface FilterViewOrchestratorDeps {
-        dataStore: TableDataStore;
+        rowDataProvider: SharedRowDataProvider;
         getFilterViewState: () => FileFilterViewState;
         getGridAdapter: () => GridAdapter | null;
         getSchemaColumns: () => string[] | null;
         reapplyGlobalQuickFilter: () => void;
-        emitFormulaLimitNotice: (limit: number) => void;
 }
 
 export class FilterViewOrchestrator {
@@ -22,12 +21,12 @@ export class FilterViewOrchestrator {
         constructor(private readonly deps: FilterViewOrchestratorDeps) {}
 
 	refresh(): void {
-		this.allRows = this.deps.dataStore.extractRowData({
-			onFormulaLimitExceeded: (limit) => {
-				this.deps.emitFormulaLimitNotice(limit);
-			}
-		});
+		this.allRows = this.deps.rowDataProvider.getRows();
 		this.applyActiveView();
+	}
+
+	invalidateRows(): void {
+		this.deps.rowDataProvider.invalidate();
 	}
 
 	applyActiveView(): void {

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "name": "github-prs",
+  "enabled": true,
+  "kind": "github-pr-handoff",
+  "workspace": "D:\\C\\obsidian-tile-line-base",
+  "template": ".codex/monitors/templates/github-prs.md",
+  "defaultPriority": "normal",
+  "defaultTtlSeconds": 1800,
+  "pollIntervalSeconds": 900,
+  "repository": "campfirium/obsidian-tile-line-base",
+  "includeDrafts": false,
+  "includeNoChecks": true,
+  "failureBuckets": [
+    "fail"
+  ],
+  "dedupeKeyPattern": "obsidian-tile-line-base:github-pr:{eventId}",
+  "notes": "Consumed by scripts/github-desktop-handoff-monitor.mjs. Opens a Codex Desktop handoff when an open PR has failing checks."
+}

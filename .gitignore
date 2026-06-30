@@ -33,3 +33,5 @@ trees/
 # Private Workspace
 .lab/
 AGENTS.md
+
+.tmp/

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "github-actions",
+  "enabled": true,
+  "kind": "github-actions-handoff",
+  "workspace": "D:\\C\\obsidian-tile-line-base",
+  "template": ".codex/monitors/templates/github-actions.md",
+  "defaultPriority": "normal",
+  "defaultTtlSeconds": 1800,
+  "pollIntervalSeconds": 900,
+  "repository": "campfirium/obsidian-tile-line-base",
+  "branches": [
+    "dev",
+    "main"
+  ],
+  "workflows": [
+    "Release"
+  ],
+  "failureConclusions": [
+    "failure",
+    "timed_out",
+    "action_required"
+  ],
+  "dedupeKeyPattern": "obsidian-tile-line-base:github-actions:{eventId}",
+  "notes": "Consumed by scripts/github-desktop-handoff-monitor.mjs. First monitor run baselines existing runs; later new failures open Codex Desktop handoff threads."
+}

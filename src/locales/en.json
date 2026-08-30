@@ -402,6 +402,7 @@
     "namePlaceholder": "Enter column name",
     "typeLabel": "Column type",
     "typeTextOption": "Text",
+    "typeNumberOption": "Number",
     "typeDateOption": "Date",
     "typeTimeOption": "Time",
     "typeImageOption": "Image",

@@ -16,7 +16,7 @@ import {
 	type FormulaFormatPreset
 } from './formulaFormatPresets';
 
-export type ColumnFieldType = 'text' | 'date' | 'time' | 'image' | 'formula';
+export type ColumnFieldType = 'text' | 'number' | 'date' | 'time' | 'image' | 'formula';
 
 function isHTMLElementForDocument(value: unknown, ownerDoc: Document): value is HTMLElement {
 	const HTMLElementCtor = ownerDoc.defaultView?.HTMLElement;
@@ -107,6 +107,7 @@ export class ColumnEditorModal extends Modal {
 		typeSetting.setName(t('columnEditorModal.typeLabel'));
 		typeSetting.addDropdown((dropdown) => {
 			dropdown.addOption('text', t('columnEditorModal.typeTextOption'));
+			dropdown.addOption('number', t('columnEditorModal.typeNumberOption'));
 			dropdown.addOption('date', t('columnEditorModal.typeDateOption'));
 			dropdown.addOption('time', t('columnEditorModal.typeTimeOption'));
 			dropdown.addOption('image', t('columnEditorModal.typeImageOption'));
@@ -115,6 +116,8 @@ export class ColumnEditorModal extends Modal {
 			dropdown.onChange((value) => {
 				if (value === 'formula') {
 					this.type = 'formula';
+				} else if (value === 'number') {
+					this.type = 'number';
 				} else if (value === 'date') {
 					this.type = 'date';
 				} else if (value === 'time') {
@@ -373,6 +376,13 @@ export class ColumnEditorModal extends Modal {
 
 		if (this.type === 'image') {
 			this.options.onSubmit({ name: trimmedName, type: 'image', formula: '' });
+			this.submitted = true;
+			this.close();
+			return;
+		}
+
+		if (this.type === 'number') {
+			this.options.onSubmit({ name: trimmedName, type: 'number', formula: '' });
 			this.submitted = true;
 			this.close();
 			return;

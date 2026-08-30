@@ -12,6 +12,7 @@ import { t } from '../../i18n';
 import type { TlbCellRendererParams, TlbColDef } from '../agGridTypes';
 import { formatUnknownValue } from '../../utils/valueFormat';
 import { ALL_TASK_STATUSES, getStatusIcon, getStatusLabel, normalizeStatus, type TaskStatus } from '../../utils/status';
+import { compareNumericCellValues } from './numericComparator';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
@@ -221,6 +222,9 @@ function createSchemaColumnDef(column: SchemaColumnDef): TlbColDef {
 	}
 
 	const editorType = mergedColDef.editorType;
+	if (mergedColDef.sortType === 'number') {
+		mergedColDef.comparator = compareNumericCellValues;
+	}
 	if (editorType === 'date') {
 		const format = mergedColDef.dateFormat ?? 'iso';
 		mergedColDef.cellEditor = createDateCellEditor();
@@ -234,6 +238,7 @@ function createSchemaColumnDef(column: SchemaColumnDef): TlbColDef {
 	}
 
 	delete mergedColDef.editorType;
+	delete mergedColDef.sortType;
 	delete mergedColDef.dateFormat;
 	delete mergedColDef.timeFormat;
 

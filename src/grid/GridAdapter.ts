@@ -18,6 +18,7 @@ export interface ColumnDef {
 	headerName: string;   // 表头显示名称
 	headerTooltip?: string;  // 表头提示
 	editable: boolean;    // 是否可编辑
+	sortType?: 'number';  // Semantic sort type; stored values may remain strings.
 	editorType?: 'text' | 'date' | 'time';  // 编辑器类型
 	dateFormat?: DateFormatPreset; // 日期展示格式
 	timeFormat?: TimeFormatPreset; // 时间展示格式

@@ -48,7 +48,7 @@ import {
 import type { ExtractRowOptions, FormulaOptions } from './data-store/types';
 import { extractRowData as extractRowDataInternal } from './data-store/RowDataExtractor';
 
-export type ColumnDisplayType = 'formula' | 'date' | 'time' | 'image' | 'text';
+export type ColumnDisplayType = 'formula' | 'number' | 'date' | 'time' | 'image' | 'text';
 
 export class TableDataStore {
 	private blocks: H2Block[] = [];
@@ -113,6 +113,9 @@ export class TableDataStore {
 			return 'formula';
 		}
 		const config = this.getColumnConfig(name);
+		if (config?.type === 'number') {
+			return 'number';
+		}
 		if (config?.type === 'date') {
 			return 'date';
 		}

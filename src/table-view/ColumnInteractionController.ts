@@ -273,7 +273,9 @@ export class ColumnInteractionController {
 		const existing = configs.find((config) => config.name === field);
 		const initialType: ColumnFieldType = existing?.formula?.trim()
 			? 'formula'
-			: existing?.type === 'date'
+			: existing?.type === 'number'
+				? 'number'
+				: existing?.type === 'date'
 				? 'date'
 				: existing?.type === 'time'
 					? 'time'
@@ -359,6 +361,12 @@ export class ColumnInteractionController {
 			delete config.type;
 			delete config.dateFormat;
 			delete config.timeFormat;
+		} else if (result.type === 'number') {
+			delete config.formula;
+			delete config.formulaFormat;
+			delete config.dateFormat;
+			delete config.timeFormat;
+			config.type = 'number';
 		} else if (result.type === 'date') {
 			delete config.formula;
 			delete config.formulaFormat;
@@ -393,6 +401,7 @@ export class ColumnInteractionController {
 			delete config.dateFormat;
 			delete config.timeFormat;
 			if (
+				previousConfig?.type === 'number' ||
 				previousConfig?.type === 'date' ||
 				previousConfig?.type === 'time' ||
 				previousConfig?.type === 'text'

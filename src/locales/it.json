@@ -401,6 +401,7 @@
     "namePlaceholder": "Inserisci il nome della colonna",
     "typeLabel": "Tipo di colonna",
     "typeTextOption": "Testo",
+    "typeNumberOption": "Numero",
     "typeDateOption": "Data",
     "typeTimeOption": "Ora",
     "typeImageOption": "Immagine",

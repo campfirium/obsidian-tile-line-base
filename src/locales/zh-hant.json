@@ -401,6 +401,7 @@
     "namePlaceholder": "輸入欄名",
     "typeLabel": "欄位類型",
     "typeTextOption": "文字",
+    "typeNumberOption": "數字",
     "typeDateOption": "日期",
     "typeTimeOption": "時間",
     "typeImageOption": "圖片",

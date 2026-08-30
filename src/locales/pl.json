@@ -401,6 +401,7 @@
     "namePlaceholder": "Wpisz nazwę kolumny",
     "typeLabel": "Typ kolumny",
     "typeTextOption": "Tekst",
+    "typeNumberOption": "Liczba",
     "typeDateOption": "Data",
     "typeTimeOption": "Czas",
     "typeImageOption": "Obraz",

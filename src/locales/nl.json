@@ -401,6 +401,7 @@
     "namePlaceholder": "Voer kolomnaam in",
     "typeLabel": "Kolomtype",
     "typeTextOption": "Tekst",
+    "typeNumberOption": "Getal",
     "typeDateOption": "Datum",
     "typeTimeOption": "Tijd",
     "typeImageOption": "Afbeelding",

@@ -280,5 +280,15 @@
     ],
     "fixed": [],
     "changed": []
+  },
+  "0.9.20": {
+    "date": "2026-08-31",
+    "info": "",
+    "new": [],
+    "improved": [
+      "Columns can now use the Number type for numeric sorting and filtering."
+    ],
+    "fixed": [],
+    "changed": []
   }
 }

@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, setIcon } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, setIcon, type SettingDefinitionItem } from 'obsidian';
 import { t, getAvailableLocales, getLocaleCode, setLocale } from '../i18n';
 import { computeRecommendedStripeColor } from '../table-view/stripeStyles';
 import type { BorderColorMode, StripeColorMode } from '../types/appearance';
@@ -88,7 +88,136 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		const resolvedLocale = this.plugin.getResolvedLocale();
+		setLocale(resolvedLocale);
+		return [
+			{
+				name: t('settings.quickLinksTitle'),
+				desc: t('settings.quickLinksDesc'),
+				searchable: false,
+				render: (setting) => {
+					setting.settingEl.empty();
+					this.renderQuickLinks(setting.settingEl);
+				}
+			},
+			{
+				type: 'group',
+				heading: t('settings.generalHeading'),
+				items: [
+					{
+						name: t('settings.interfaceLanguageLabel'),
+						render: (setting) => this.configureLanguageDefinition(setting)
+					},
+					{
+						name: t('settings.hideRightSidebarLabel'),
+						desc: t('settings.hideRightSidebarDesc'),
+						render: (setting) => {
+							setting.addToggle((toggle) => {
+								toggle.setValue(this.plugin.isHideRightSidebarEnabled());
+								toggle.onChange(async (value) => this.plugin.setHideRightSidebarEnabled(value));
+							});
+						}
+					},
+					{
+						name: t('settings.hideMarkdownViewButtonsLabel'),
+						desc: t('settings.hideMarkdownViewButtonsDesc'),
+						render: (setting) => {
+							setting.addToggle((toggle) => {
+								toggle.setValue(this.plugin.isHideMarkdownViewButtonsEnabled());
+								toggle.onChange(async (value) => this.plugin.setHideMarkdownViewButtonsEnabled(value));
+							});
+						}
+					},
+					{
+						name: t('settings.saveConfigBlockInNoteLabel'),
+						desc: t('settings.saveConfigBlockInNoteDesc'),
+						render: (setting) => {
+							setting.addToggle((toggle) => {
+								toggle.setValue(this.plugin.isSaveConfigBlockInNoteEnabled());
+								toggle.onChange(async (value) => this.plugin.setSaveConfigBlockInNoteEnabled(value));
+							});
+						}
+					}
+				]
+			},
+			{
+				type: 'group',
+				heading: t('settings.tableViewHeading'),
+				items: [
+					{
+						name: t('settings.stripeColorLabel'),
+						desc: t('settings.stripeColorDesc'),
+						render: (setting) => this.configureStripeDefinition(setting)
+					},
+					{
+						name: t('settings.borderContrastLabel'),
+						desc: t('settings.borderContrastDesc'),
+						render: (setting) => {
+							setting.addSlider((slider) => {
+								const current = this.plugin.getBorderContrast();
+								slider.setLimits(0, 100, 1);
+								slider.setValue(Math.round(current * 100));
+								slider.onChange(async (value) => {
+									await this.plugin.setBorderContrast(Math.max(0, Math.min(100, value)) / 100);
+								});
+							});
+						}
+					}
+				]
+			},
+			{
+				type: 'group',
+				heading: t('settings.loggingHeading'),
+				items: [{
+					name: t('settings.loggingLevelLabel'),
+					desc: t('settings.loggingLevelDesc'),
+					render: (setting) => this.configureLoggingDefinition(setting)
+				}]
+			},
+			{
+				type: 'group',
+				heading: t('settings.compatibilityHeading'),
+				items: [{
+					name: t('settings.navigatorCompatLabel'),
+					desc: t('settings.navigatorCompatDesc'),
+					render: (setting) => {
+						setting.addToggle((toggle) => {
+							toggle.setValue(this.plugin.getNavigatorCompatibilityEnabled());
+							toggle.onChange(async (value) => this.plugin.setNavigatorCompatibilityEnabled(value));
+						});
+					}
+				}]
+			},
+			{
+				type: 'group',
+				heading: t('settings.backupHeading'),
+				items: [
+					{
+						name: t('settings.backupEnableLabel'),
+						desc: t('settings.backupEnableDesc'),
+						render: (setting) => {
+							setting.addToggle((toggle) => {
+								toggle.setValue(this.plugin.isBackupEnabled());
+								toggle.onChange(async (value) => this.plugin.setBackupEnabled(value));
+							});
+						}
+					},
+					{
+						name: t('settings.backupCapacityLabel'),
+						desc: t('settings.backupCapacityDesc'),
+						render: (setting) => this.configureBackupCapacityDefinition(setting)
+					}
+				]
+			}
+		];
+	}
+
 	display(): void {
+		this.renderLegacySettings();
+	}
+
+	private renderLegacySettings(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 		const resolvedLocale = this.plugin.getResolvedLocale();
@@ -100,6 +229,122 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 		this.renderGeneralSection(containerEl);
 		this.renderLoggingSection(containerEl);
 		this.renderBackupSection(containerEl);
+	}
+
+	private configureLanguageDefinition(setting: Setting): void {
+		const availableLocales = getAvailableLocales();
+		const isLocaleCode = (value: string): value is LocaleCode =>
+			availableLocales.includes(value as LocaleCode);
+		setting.addDropdown((dropdown) => {
+			dropdown.addOption(AUTO_LOCALE_OPTION, t('settings.interfaceLanguageOptionAuto'));
+			for (const locale of availableLocales) {
+				dropdown.addOption(locale, this.getLocaleLabel(locale));
+			}
+			dropdown.setValue(this.plugin.getLocaleOverride() ?? AUTO_LOCALE_OPTION);
+			dropdown.selectEl.setAttribute('aria-label', t('settings.interfaceLanguageLabel'));
+			dropdown.onChange(async (value) => {
+				const selectedLocale = value === AUTO_LOCALE_OPTION
+					? null
+					: isLocaleCode(value) ? value : null;
+				if (selectedLocale) {
+					await this.plugin.setLocaleOverride(selectedLocale);
+				} else {
+					await this.plugin.useLocalizedLocalePreference();
+				}
+				this.refreshDefinitions();
+			});
+		});
+	}
+
+	private configureStripeDefinition(setting: Setting): void {
+		const containerEl = setting.settingEl;
+		const stripeMode = this.normalizeStripeMode(this.plugin.getStripeColorMode());
+		const stripeCustomColor = this.plugin.getStripeCustomColor();
+		const stripeRecommended = this.getRecommendedStripeColor(containerEl);
+		const colorInput = setting.controlEl.createEl('input', { type: 'color', cls: 'tlb-color-input' });
+		const dropdown = setting.controlEl.createEl('select', { cls: 'tlb-stripe-select' });
+		const resolveStripeColor = (mode: StripeColorMode, custom: string | null): string => {
+			const primary = this.getPrimaryColor(containerEl);
+			if (mode === 'primary') return primary;
+			if (mode === 'custom') return custom ?? primary;
+			return stripeRecommended;
+		};
+		const syncControls = (mode: StripeColorMode, custom: string | null) => {
+			dropdown.value = mode;
+			colorInput.value = resolveStripeColor(mode, custom);
+			colorInput.disabled = mode !== 'custom';
+		};
+		for (const option of [
+			{ value: 'recommended', labelKey: STRIPE_COLOR_OPTION_LABEL_KEYS.recommended },
+			{ value: 'primary', labelKey: STRIPE_COLOR_OPTION_LABEL_KEYS.primary },
+			{ value: 'custom', labelKey: STRIPE_COLOR_OPTION_LABEL_KEYS.custom }
+		]) {
+			dropdown.createEl('option', { value: option.value, text: t(option.labelKey) });
+		}
+		dropdown.addEventListener('change', () => {
+			const value = this.normalizeStripeMode(dropdown.value);
+			void this.plugin.setStripeColorMode(value);
+			const latestCustom = this.plugin.getStripeCustomColor();
+			const nextColor = resolveStripeColor(value, latestCustom);
+			if (value === 'custom') {
+				void this.plugin.setStripeCustomColor(nextColor);
+			}
+			syncControls(value, latestCustom);
+		});
+		colorInput.addEventListener('input', () => {
+			if (this.normalizeStripeMode(dropdown.value) !== 'custom') {
+				dropdown.value = 'custom';
+				void this.plugin.setStripeColorMode('custom');
+			}
+			void this.plugin.setStripeCustomColor(colorInput.value);
+			syncControls('custom', colorInput.value);
+		});
+		syncControls(stripeMode, stripeCustomColor ?? null);
+	}
+
+	private configureLoggingDefinition(setting: Setting): void {
+		setting.addDropdown((dropdown) => {
+			for (const option of LOG_LEVEL_OPTIONS) {
+				dropdown.addOption(option, t(LOG_LEVEL_LABEL_KEYS[option]));
+			}
+			const current = this.plugin.getLoggingLevel();
+			if (isLogLevel(current)) dropdown.setValue(current);
+			dropdown.selectEl.setAttribute('aria-label', t('settings.loggingLevelLabel'));
+			dropdown.onChange(async (value) => {
+				if (!isLogLevel(value)) return;
+				await this.plugin.setLoggingLevel(value);
+				const latest = this.plugin.getLoggingLevel();
+				if (isLogLevel(latest) && dropdown.getValue() !== latest) {
+					dropdown.setValue(latest);
+				}
+			});
+		});
+	}
+
+	private configureBackupCapacityDefinition(setting: Setting): void {
+		setting.addText((text) => {
+			const current = this.plugin.getBackupCapacityLimit();
+			text.setValue(String(current));
+			text.setPlaceholder(String(current));
+			text.inputEl.type = 'number';
+			text.inputEl.min = '1';
+			text.inputEl.max = '10240';
+			text.inputEl.setAttribute('aria-label', t('settings.backupCapacityLabel'));
+			text.onChange(async (raw) => {
+				const parsed = Number(raw.trim());
+				if (raw.trim().length > 0 && Number.isFinite(parsed)) {
+					await this.plugin.setBackupCapacityLimit(parsed);
+				}
+			});
+			text.inputEl.addEventListener('blur', () => {
+				const updated = String(this.plugin.getBackupCapacityLimit());
+				if (text.getValue() !== updated) text.setValue(updated);
+			});
+		});
+	}
+
+	private refreshDefinitions(): void {
+		this.renderLegacySettings();
 	}
 
 	private renderQuickLinks(containerEl: HTMLElement): void {
@@ -164,7 +409,7 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					} else {
 						await this.plugin.useLocalizedLocalePreference();
 					}
-					this.display();
+					this.renderLegacySettings();
 				});
 			});
 
@@ -276,7 +521,6 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 					const normalized = Math.max(0, Math.min(100, value)) / 100;
 					await this.plugin.setBorderContrast(normalized);
 				});
-				slider.setDynamicTooltip();
 			});
 
 	}
@@ -449,7 +693,7 @@ export class TileLineBaseSettingTab extends PluginSettingTab {
 
 	private toHex(value: string | null | undefined, ownerDoc: Document = this.containerEl.ownerDocument): string | null {
 		if (!value) return null;
-		const el = ownerDoc.createElement('div');
+		const el = ownerDoc.win.createDiv();
 		el.style.color = value;
 		ownerDoc.body.appendChild(el);
 		const computed = ownerDoc.defaultView?.getComputedStyle(el).color ?? '';

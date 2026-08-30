@@ -1,6 +1,6 @@
 import type { App, WorkspaceLeaf } from 'obsidian';
 import { TFile } from 'obsidian';
-import { TABLE_VIEW_TYPE, type TableViewState } from '../TableView';
+import { TABLE_VIEW_TYPE } from '../TableView';
 import { t } from '../i18n';
 import { getLogger } from '../utils/logger';
 import type { WindowContextManager } from './WindowContextManager';
@@ -28,7 +28,7 @@ export class TableViewTitleRefresher {
 	private applyStoredTitleToLeaf(leaf: WorkspaceLeaf): void {
 		try {
 			const state = leaf.getViewState();
-			const tableState = (state?.state ?? null) as Partial<TableViewState> | null;
+			const tableState = (state?.state ?? null);
 			const filePath = typeof tableState?.filePath === 'string' ? tableState.filePath : null;
 			const title = this.resolveTitle(filePath);
 			this.setLeafTitleElements(leaf, title);
@@ -58,9 +58,8 @@ export class TableViewTitleRefresher {
 			return;
 		}
 		const elementWithSetText = element as HTMLElement & { setText?: (value: string) => void };
-		const setText = elementWithSetText.setText;
-		if (typeof setText === 'function') {
-			setText.call(element, text);
+		if (typeof elementWithSetText.setText === 'function') {
+			elementWithSetText.setText(text);
 			return;
 		}
 		element.textContent = text;

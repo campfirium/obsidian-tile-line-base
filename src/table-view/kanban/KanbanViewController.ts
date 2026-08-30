@@ -20,7 +20,6 @@ import { t } from '../../i18n';
 import { handleCellLinkOpen } from '../LinkNavigation';
 import { KanbanTooltipManager } from './KanbanTooltipManager';
 import { KanbanLaneReorderController } from './KanbanLaneReorderController';
-import { ensureFontScaleStyles } from './kanbanFontScaleStyles';
 import type { RowUpdate } from './KanbanLaneMutation';
 import { renderKanbanCard } from './KanbanCardRenderer';
 import { handleCardDragEnd, applyLaneUpdates } from './KanbanCardDragHandler';
@@ -138,7 +137,6 @@ export class KanbanViewController {
 		this.recomputeVisibleRows();
 		this.quickFilterValue = this.quickFilterManager.getValue();
 
-		ensureFontScaleStyles(this.container.ownerDocument ?? activeDocument);
 		this.rootEl = this.container.createDiv({ cls: 'tlb-kanban-root' });
 		this.rootEl.style.setProperty('--tlb-kanban-font-scale', `${this.fontScale}`);
 		this.messageEl = this.rootEl.createDiv({ cls: 'tlb-kanban-message' });
@@ -348,9 +346,9 @@ export class KanbanViewController {
 			candidate &&
 			typeof candidate === 'object' &&
 			'default' in candidate &&
-			typeof (candidate as { default: unknown }).default === 'function'
+			typeof (candidate).default === 'function'
 		) {
-			const sortable = (candidate as { default: unknown }).default as SortableStatic;
+			const sortable = (candidate).default as SortableStatic;
 			if (sortable && typeof sortable.create === 'function') {
 				return sortable;
 			}

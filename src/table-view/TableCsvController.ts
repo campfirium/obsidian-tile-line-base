@@ -89,7 +89,7 @@ export function importTableFromCsv(view: TableView): void {
 	}
 
 	const ownerDocument = view.containerEl.ownerDocument ?? activeDocument;
-	const inputEl = ownerDocument.createElement('input');
+	const inputEl = ownerDocument.win.createEl('input');
 	inputEl.type = 'file';
 	inputEl.accept = '.csv,text/csv';
 	inputEl.classList.add(HIDDEN_ELEMENT_CLASS);
@@ -132,7 +132,7 @@ export function importTableFromCsv(view: TableView): void {
 
 export function importCsvAsNewTable(app: App, options: ImportCsvAsNewTableOptions = {}): void {
 	const ownerDocument = options.triggerElement?.ownerDocument ?? activeDocument;
-	const inputEl = ownerDocument.createElement('input');
+	const inputEl = ownerDocument.win.createEl('input');
 	inputEl.type = 'file';
 	inputEl.accept = '.csv,text/csv';
 	inputEl.classList.add(HIDDEN_ELEMENT_CLASS);
@@ -252,7 +252,7 @@ function triggerDownload(view: TableView, content: string, fileName: string): vo
 	const ownerDocument = view.containerEl.ownerDocument ?? activeDocument;
 	const blob = new Blob([UTF8_BOM, content], { type: 'text/csv;charset=utf-8;' });
 	const url = URL.createObjectURL(blob);
-	const anchor = ownerDocument.createElement('a');
+	const anchor = ownerDocument.win.createEl('a');
 	anchor.href = url;
 	anchor.download = fileName || 'table.csv';
 	anchor.classList.add(HIDDEN_ELEMENT_CLASS);

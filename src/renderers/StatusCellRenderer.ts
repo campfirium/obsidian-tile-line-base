@@ -51,7 +51,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		}
 
 		// ��������Ԫ��
-		this.eGui = doc.createElement('div');
+		this.eGui = doc.win.createDiv();
 		this.eGui.className = 'tlb-status-cell';
 		this.eGui.tabIndex = 0;
 		this.eGui.setAttribute('role', 'button');
@@ -125,7 +125,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.eGui.setAttribute('data-status', status);
 
 		const doc = this.eGui.ownerDocument || activeDocument;
-		const iconContainer = doc.createElement('span');
+		const iconContainer = doc.win.createSpan();
 		iconContainer.className = 'tlb-status-icon';
 		this.eGui.appendChild(iconContainer);
 		setIcon(iconContainer, iconId);
@@ -134,7 +134,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 		if (this.srLabelElement && this.srLabelElement.isConnected) {
 			this.srLabelElement.remove();
 		}
-		const srLabel = doc.createElement('span');
+		const srLabel = doc.win.createSpan();
 		srLabel.textContent = label;
 		srLabel.className = 'tlb-visually-hidden';
 		const srId =
@@ -180,7 +180,7 @@ export class StatusCellRenderer implements ICellRendererComp {
 
 		// ��ȡ�������ڵ� document��֧���´��ڣ�
 		const ownerDoc = this.eGui.ownerDocument;
-		this.contextMenu = ownerDoc.createElement('div');
+		this.contextMenu = ownerDoc.win.createDiv();
 		const menu = this.contextMenu;
 		menu.className = 'tlb-status-context-menu';
 		menu.setAttribute('role', 'menu');
@@ -191,19 +191,19 @@ export class StatusCellRenderer implements ICellRendererComp {
 		this.focusedMenuIndex = -1;
 		for (const status of STATUS_MENU_STATUSES) {
 			const label = getStatusLabel(status);
-			const item = ownerDoc.createElement('div');
+			const item = ownerDoc.win.createDiv();
 			item.className = 'tlb-status-menu-item';
 			item.setAttribute('role', 'menuitemradio');
 			item.setAttribute('aria-label', label);
 			item.setAttribute('tabindex', '-1');
 
 			// ����ͼ������
-			const iconContainer = ownerDoc.createElement('span');
+			const iconContainer = ownerDoc.win.createSpan();
 			iconContainer.className = 'tlb-status-menu-item__icon';
 			setIcon(iconContainer, getStatusIcon(status));
 
 			// �����ı���ǩ
-			const labelSpan = ownerDoc.createElement('span');
+			const labelSpan = ownerDoc.win.createSpan();
 			labelSpan.className = 'tlb-status-menu-item__label';
 			labelSpan.textContent = label;
 

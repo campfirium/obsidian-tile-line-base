@@ -174,10 +174,10 @@ export class ColumnEditorModal extends Modal {
 		this.formulaSetting.setDesc(t('columnEditorModal.formulaDescription'));
 		this.formulaSetting.controlEl.empty();
 
-		const textareaWrapper = ownerDoc.createElement('div');
+		const textareaWrapper = ownerDoc.win.createDiv();
 		textareaWrapper.className = 'tlb-column-formula-input-wrapper';
 
-		const textarea = ownerDoc.createElement('textarea');
+		const textarea = ownerDoc.win.createEl('textarea');
 		textarea.className = 'tlb-column-formula-input';
 		textarea.rows = 4;
 		textarea.placeholder = t('columnEditorModal.formulaPlaceholder');
@@ -249,9 +249,8 @@ export class ColumnEditorModal extends Modal {
 		const focusNameInput = () => {
 			this.nameInput?.focus({ preventScroll: true });
 		};
-		const requestFrame = ownerDoc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
-		if (typeof requestFrame === 'function') {
-			requestFrame(() => focusNameInput());
+		if (ownerDoc.defaultView) {
+			ownerDoc.defaultView.requestAnimationFrame(() => focusNameInput());
 		} else {
 			window.setTimeout(focusNameInput, 0);
 		}

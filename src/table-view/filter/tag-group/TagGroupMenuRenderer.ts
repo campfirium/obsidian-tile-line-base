@@ -22,20 +22,20 @@ export interface TagGroupMenuRenderResult {
 export function renderTagGroupMenuItem(options: TagGroupMenuRenderOptions): TagGroupMenuRenderResult {
 	const { doc, group, defaultGroupId, filterState, isActiveGroup, activeViewId, displayName } = options;
 
-	const fragment = doc.createDocumentFragment();
-	const container = doc.createElement('div');
+	const fragment = doc.win.createFragment();
+	const container = doc.win.createDiv();
 	container.className = 'tlb-tag-group-menu-item';
 
-	const headerEl = doc.createElement('div');
+	const headerEl = doc.win.createDiv();
 	headerEl.className = 'tlb-tag-group-menu-item__header';
 	container.appendChild(headerEl);
 
-	const titleEl = doc.createElement('div');
+	const titleEl = doc.win.createDiv();
 	titleEl.className = 'tlb-tag-group-menu-item__name';
 	titleEl.textContent = displayName;
 	headerEl.appendChild(titleEl);
 
-	const actionsEl = doc.createElement('div');
+	const actionsEl = doc.win.createDiv();
 	actionsEl.className = 'tlb-tag-group-menu-item__actions';
 	headerEl.appendChild(actionsEl);
 
@@ -48,7 +48,7 @@ export function renderTagGroupMenuItem(options: TagGroupMenuRenderOptions): TagG
 		actionsEl.appendChild(deleteButton);
 	}
 
-	const tagsEl = doc.createElement('div');
+	const tagsEl = doc.win.createDiv();
 	tagsEl.className = 'tlb-tag-group-menu-item__tags';
 	container.appendChild(tagsEl);
 
@@ -104,7 +104,7 @@ function getFilterViewLabel(view: FilterViewDefinition): string | null {
 }
 
 function appendTag(doc: Document, container: HTMLElement, label: string, highlight: boolean): void {
-	const tagEl = doc.createElement('span');
+	const tagEl = doc.win.createSpan();
 	tagEl.className = 'tlb-tag-group-menu-item__tag';
 	if (highlight) {
 		tagEl.classList.add('is-active');
@@ -119,11 +119,11 @@ function createMenuActionButton(
 	modifierClass: string,
 	ariaLabel: string
 ): HTMLButtonElement {
-	const button = doc.createElement('button');
+	const button = doc.win.createEl('button');
 	button.type = 'button';
 	button.className = `tlb-tag-group-menu-item__action ${modifierClass}`;
 	button.setAttribute('aria-label', ariaLabel);
-	const iconEl = doc.createElement('span');
+	const iconEl = doc.win.createSpan();
 	iconEl.className = 'tlb-tag-group-menu-item__icon';
 	setIcon(iconEl, icon);
 	button.appendChild(iconEl);

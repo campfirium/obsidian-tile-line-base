@@ -152,7 +152,7 @@ export class FocusManager {
 	}
 
 	private getTimerWindow(): Window {
-		const globalWithActiveWindow = window as typeof window & { activeWindow?: Window };
+		const globalWithActiveWindow = window;
 		return globalWithActiveWindow.activeWindow ?? window;
 	}
 

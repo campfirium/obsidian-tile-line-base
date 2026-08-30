@@ -30,7 +30,7 @@ function getOrCreateState(doc: Document): TooltipState {
 		return state;
 	}
 
-	const container = doc.createElement('div');
+	const container = doc.win.createDiv();
 	container.className = 'tlb-overflow-tooltip';
 	container.hidden = true;
 	doc.body.appendChild(container);
@@ -135,7 +135,7 @@ function replaceTooltipLineBreaks(container: HTMLElement): void {
 		if (!prevIsBr && !prevIsSpacer) {
 			continue;
 		}
-		const spacer = container.ownerDocument.createElement('span');
+		const spacer = container.ownerDocument.win.createSpan();
 		spacer.className = TOOLTIP_SPACER_CLASS;
 		br.replaceWith(spacer);
 	}

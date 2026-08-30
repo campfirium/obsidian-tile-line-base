@@ -3,7 +3,6 @@ import { buildSlideMarkdown, renderMarkdownBlock } from './SlideRenderUtils';
 import { t } from '../../i18n';
 import { applyLayoutStyles, applyTextLayoutVars, type ComputedLayout } from './slideLayout';
 import { computeOverlayBackground } from './SlideColorUtils';
-import { THUMBNAIL_STYLES } from './thumbnailStyles';
 
 
 export interface SlideThumbnail {
@@ -89,8 +88,7 @@ export class SlideThumbnailPanel {
         this.overlay = options.host.createDiv({ cls: 'tlb-slide-thumb', attr: { tabindex: '-1' } });
         this.grid = this.overlay.createDiv({ cls: 'tlb-slide-thumb__grid' });
         
-        this.injectStyles();
-        this.cssChangeRef = this.app.workspace.on('css-change', () => this.applyOverlayBackground());
+		this.cssChangeRef = this.app.workspace.on('css-change', () => this.applyOverlayBackground());
         
         this.wheelHandler = (evt) => this.onWheel(evt);
         this.gridScrollHandler = () => this.onGridScroll();
@@ -110,23 +108,6 @@ export class SlideThumbnailPanel {
         });
     }
 
-    private injectStyles(): void {
-        const doc = this.ownerDocument;
-        if (!doc.head) return;
-        const styles = THUMBNAIL_STYLES.trim();
-        if (!styles) return;
-        const id = 'tlb-slide-thumb-styles';
-        const existing = doc.getElementById(id) as HTMLStyleElement | null;
-        if (existing) {
-            existing.textContent = styles;
-            return;
-        }
-        const style = doc.createElement('style');
-        style.id = id;
-        style.textContent = styles;
-        doc.head.appendChild(style);
-    }
-
     setSlides(slides: SlideThumbnail[], activeIndex: number): void {
         this.grid.empty();
         this.items = [];
@@ -144,10 +125,10 @@ export class SlideThumbnailPanel {
             return;
         }
 
-        const fragment = this.ownerDocument.createDocumentFragment();
+        const fragment = this.ownerDocument.win.createFragment();
         
         for (const slide of slides) {
-            const btn = this.ownerDocument.createElement('button');
+            const btn = this.ownerDocument.win.createEl('button');
             btn.type = 'button';
             btn.className = 'tlb-slide-thumb__item';
             btn.dataset.index = String(slide.index);
@@ -161,13 +142,13 @@ export class SlideThumbnailPanel {
                 t('slideView.thumbnailTitle', { index: String(slideNumber), title: slideTitle })
             );
 
-            const canvas = this.ownerDocument.createElement('div');
+            const canvas = this.ownerDocument.win.createDiv();
             canvas.className = 'tlb-slide-thumb__canvas';
 
-            const root = this.ownerDocument.createElement('div');
+            const root = this.ownerDocument.win.createDiv();
             root.className = 'tlb-slide-thumb__root';
 
-            const slideEl = this.ownerDocument.createElement('div');
+            const slideEl = this.ownerDocument.win.createDiv();
             slideEl.className = 'tlb-slide-full__slide tlb-slide-thumb__slide';
             if (slide.backgroundColor) {
                 slideEl.style.setProperty('--tlb-slide-card-bg', slide.backgroundColor);
@@ -179,7 +160,7 @@ export class SlideThumbnailPanel {
             canvas.appendChild(root);
             btn.appendChild(canvas);
 
-            const titleEl = this.ownerDocument.createElement('div');
+            const titleEl = this.ownerDocument.win.createDiv();
             titleEl.className = 'tlb-slide-full__title';
             titleEl.textContent = slide.title ?? '';
             applyTextLayoutVars(titleEl, slide.titleLayout, 'title');
@@ -230,9 +211,9 @@ export class SlideThumbnailPanel {
         const hasImages = slide.imageBlocks.length > 0;
 
         if (!hasText && !hasImages) {
-            textEl = this.ownerDocument.createElement('div');
+            textEl = this.ownerDocument.win.createDiv();
             textEl.className = 'tlb-slide-full__content';
-            const emptyBlock = this.ownerDocument.createElement('div');
+            const emptyBlock = this.ownerDocument.win.createDiv();
             emptyBlock.className = 'tlb-slide-full__block tlb-slide-full__block--empty';
             emptyBlock.textContent = t('slideView.emptyValue');
             textEl.appendChild(emptyBlock);
@@ -241,9 +222,9 @@ export class SlideThumbnailPanel {
         }
 
         if (hasText) {
-            textEl = this.ownerDocument.createElement('div');
+            textEl = this.ownerDocument.win.createDiv();
             textEl.className = 'tlb-slide-full__content tlb-slide-full__layer--text';
-            const bodyBlock = this.ownerDocument.createElement('div');
+            const bodyBlock = this.ownerDocument.win.createDiv();
             bodyBlock.className = 'tlb-slide-full__block tlb-slide-full__block--text tlb-slide-thumb__block--text';
             applyTextLayoutVars(bodyBlock, slide.textLayout, 'body');
             const markdown = buildSlideMarkdown(slide.textBlocks);
@@ -253,10 +234,10 @@ export class SlideThumbnailPanel {
         }
 
         if (hasImages) {
-            imageEl = this.ownerDocument.createElement('div');
+            imageEl = this.ownerDocument.win.createDiv();
             imageEl.className = 'tlb-slide-full__content tlb-slide-full__layer--image';
             for (const img of slide.imageBlocks) {
-                const imageBlock = this.ownerDocument.createElement('div');
+                const imageBlock = this.ownerDocument.win.createDiv();
                 imageBlock.className = 'tlb-slide-full__block tlb-slide-full__block--image tlb-slide-thumb__block--image';
                 applyTextLayoutVars(imageBlock, slide.imageLayout, 'image');
                 void renderMarkdownBlock(this.app, img, imageBlock, this.sourcePath, this.markdownComponents);

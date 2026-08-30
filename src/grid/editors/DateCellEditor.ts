@@ -18,13 +18,13 @@ function createSvgElement(doc: Document, tag: string, attrs: Record<string, stri
 }
 
 function createWrapper(doc: Document): HTMLDivElement {
-	const wrapper = doc.createElement('div');
+	const wrapper = doc.win.createDiv();
 	wrapper.classList.add('tlb-date-editor');
 	return wrapper;
 }
 
 function createTextInput(doc: Document, value: string): HTMLInputElement {
-	const input = doc.createElement('input');
+	const input = doc.win.createEl('input');
 	input.type = 'text';
 	input.classList.add('tlb-date-editor-input');
 	input.value = value;
@@ -71,7 +71,7 @@ function injectCalendarGlyph(button: HTMLButtonElement): void {
 }
 
 function createTriggerButton(doc: Document): HTMLButtonElement {
-	const button = doc.createElement('button');
+	const button = doc.win.createEl('button');
 	button.type = 'button';
 	button.classList.add('tlb-date-editor-button');
 	button.setAttribute('aria-label', t('dateCellEditor.openPickerLabel'));
@@ -85,7 +85,7 @@ function createTriggerButton(doc: Document): HTMLButtonElement {
 }
 
 function createHiddenPicker(doc: Document): HTMLInputElement {
-	const picker = doc.createElement('input');
+	const picker = doc.win.createEl('input');
 	picker.type = 'date';
 	picker.tabIndex = -1;
 	picker.classList.add('tlb-date-editor-hidden-picker');

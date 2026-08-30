@@ -125,7 +125,7 @@ export class TableFileDuplicationController {
 		const ownerDocument = this.options.getOwnerDocument() ?? activeDocument;
 		const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
-		const anchor = ownerDocument.createElement('a');
+		const anchor = ownerDocument.win.createEl('a');
 		anchor.href = url;
 		anchor.download = fileName;
 		anchor.classList.add('tlb-visually-hidden');

@@ -8,13 +8,13 @@ import { t } from '../../i18n';
 import { formatUnknownValue } from '../../utils/valueFormat';
 
 function createWrapper(doc: Document): HTMLDivElement {
-	const wrapper = doc.createElement('div');
+	const wrapper = doc.win.createDiv();
 	wrapper.classList.add('tlb-time-editor');
 	return wrapper;
 }
 
 function createTextInput(doc: Document, value: string): HTMLInputElement {
-	const input = doc.createElement('input');
+	const input = doc.win.createEl('input');
 	input.type = 'text';
 	input.classList.add('tlb-time-editor-input');
 	input.value = value;

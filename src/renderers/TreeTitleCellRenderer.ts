@@ -28,21 +28,21 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 		this.params = params;
 		const doc = params.eGridCell?.ownerDocument ?? activeDocument;
 
-		this.eGui = doc.createElement('div');
+		this.eGui = doc.win.createDiv();
 		this.eGui.className = 'tlb-tree-title-cell';
 
-		this.toggleEl = doc.createElement('span');
+		this.toggleEl = doc.win.createSpan();
 		this.toggleEl.className = 'tlb-tree-title-cell__toggle';
 		this.toggleEl.setAttribute('aria-hidden', 'true');
-		this.toggleIconEl = doc.createElement('span');
+		this.toggleIconEl = doc.win.createSpan();
 		this.toggleIconEl.className = 'tlb-tree-title-cell__toggle-icon';
 		this.toggleEl.appendChild(this.toggleIconEl);
 
-		this.spacerEl = doc.createElement('span');
+		this.spacerEl = doc.win.createSpan();
 		this.spacerEl.className = 'tlb-tree-title-cell__spacer';
 		this.spacerEl.setAttribute('aria-hidden', 'true');
 
-		this.textEl = doc.createElement('span');
+		this.textEl = doc.win.createSpan();
 		this.textEl.className = 'tlb-tree-title-cell__text';
 
 		this.eGui.append(this.toggleEl, this.spacerEl, this.textEl);
@@ -97,7 +97,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 		}
 
 		const doc = this.params.eGridCell?.ownerDocument ?? activeDocument;
-		const fragment = doc.createDocumentFragment();
+		const fragment = doc.win.createFragment();
 
 		for (const segment of segments) {
 			if (segment.kind === 'text') {
@@ -108,7 +108,7 @@ export class TreeTitleCellRenderer implements ICellRendererComp {
 			const linkIndex = this.currentLinks.length;
 			this.currentLinks.push(segment.link);
 
-			const anchor = doc.createElement('a');
+			const anchor = doc.win.createEl('a');
 			anchor.className = 'tlb-link-cell__anchor';
 			anchor.textContent = segment.text;
 			anchor.href = '#';

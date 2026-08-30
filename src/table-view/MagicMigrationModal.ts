@@ -220,7 +220,7 @@ export class MagicMigrationModal extends Modal {
 			options.actionSlot(actions);
 		}
 		wrapper.createDiv({ text: options.helper, cls: 'tlb-conversion-helper' });
-		const textarea = ownerDoc.createElement('textarea');
+		const textarea = ownerDoc.win.createEl('textarea');
 		textarea.value = options.value;
 		textarea.rows = options.rows;
 		textarea.className = 'tlb-conversion-textarea tlb-conversion-textarea--fixed';
@@ -241,7 +241,7 @@ export class MagicMigrationModal extends Modal {
 			text: t('magicMigration.sourcePaneHint')
 		});
 		const sourceBox = pane.createDiv({ cls: 'tlb-conversion-source' });
-		const content = ownerDoc.createElement('pre');
+		const content = ownerDoc.win.createEl('pre');
 		content.tabIndex = 0;
 		content.className = 'tlb-conversion-source__content';
 		const sourceText = this.options.sourceContent?.trim();
@@ -484,7 +484,6 @@ export class MagicMigrationModal extends Modal {
 	}
 
 	private focusSample(ownerDoc: Document): void {
-		const raf = ownerDoc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
 		const focus = () => {
 			if (this.sampleInput) {
 				this.sampleInput.focus({ preventScroll: true });
@@ -492,8 +491,8 @@ export class MagicMigrationModal extends Modal {
 				this.sampleInput.setSelectionRange(end, end);
 			}
 		};
-		if (typeof raf === 'function') {
-			raf(() => focus());
+		if (ownerDoc.defaultView) {
+			ownerDoc.defaultView.requestAnimationFrame(() => focus());
 		} else {
 			window.setTimeout(() => focus(), 0);
 		}
@@ -534,7 +533,7 @@ export class MagicMigrationModal extends Modal {
 		}
 		const ownerDoc = this.sourceContentEl.ownerDocument ?? activeDocument;
 		this.sourceContentEl.append(ownerDoc.createTextNode(prefix));
-		const highlight = ownerDoc.createElement('span');
+		const highlight = ownerDoc.win.createSpan();
 		highlight.className = 'tlb-source-inline-highlight';
 		highlight.textContent = middle;
 		this.sourceContentEl.append(highlight);

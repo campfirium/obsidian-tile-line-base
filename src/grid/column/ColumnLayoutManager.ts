@@ -131,9 +131,8 @@ export class ColumnLayoutManager {
 		}
 
 		const gridApiWithAutoSize = gridApi as GridApi & { autoSizeColumns?: (keys: string[], skipHeader?: boolean) => void };
-		const autoSizeColumns = gridApiWithAutoSize.autoSizeColumns;
-		if (typeof autoSizeColumns === 'function') {
-			autoSizeColumns.call(gridApi, keys, false);
+		if (typeof gridApiWithAutoSize.autoSizeColumns === 'function') {
+			gridApiWithAutoSize.autoSizeColumns(keys, false);
 		}
 
 		const updates: Array<{ key: string; newWidth: number }> = [];

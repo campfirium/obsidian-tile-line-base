@@ -4497,6 +4497,7 @@ button.tlb-filter-view-button--settings .tlb-filter-view-button__icon > svg {
 }
 
 .tlb-kanban-root {
+	--tlb-kanban-font-scale: 1;
 	display: flex;
 	flex-direction: column;
 	min-height: 4rem;
@@ -6500,4 +6501,30 @@ input.tlb-color-input[type="color"] {
 
 .modal.tlb-malformed-modal .tlb-magic-inline__actions {
 	justify-content: flex-end;
+}
+.tlb-kanban-root .tlb-kanban-message,
+.tlb-kanban-root .tlb-kanban-lane__count,
+.tlb-kanban-root .tlb-kanban-lane__load-more,
+.tlb-kanban-root .tlb-kanban-lane__placeholder,
+.tlb-kanban-root .tlb-kanban-card__fields,
+.tlb-kanban-root .tlb-kanban-card__field-more,
+.tlb-kanban-root .tlb-kanban-card__body,
+.tlb-kanban-root .tlb-kanban-card__tag {
+	font-size: calc(var(--font-ui-smaller) * var(--tlb-kanban-font-scale, 1));
+}
+
+.tlb-kanban-root .tlb-kanban-card {
+	font-size: calc(var(--font-ui-small, 0.95rem) * var(--tlb-kanban-font-scale, 1));
+}
+
+.tlb-kanban-root .tlb-kanban-tooltip {
+	font-size: calc(var(--font-ui-smaller, var(--font-ui-small, 0.85rem)) * 1.2 * var(--tlb-kanban-font-scale, 1));
+}
+
+.tlb-kanban-root .tlb-kanban-empty__icon {
+	font-size: calc(2rem * var(--tlb-kanban-font-scale, 1));
+}
+
+.tlb-kanban-root .tlb-kanban-empty__label {
+	font-size: calc(var(--font-ui-small) * var(--tlb-kanban-font-scale, 1));
 }

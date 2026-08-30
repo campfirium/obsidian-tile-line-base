@@ -126,10 +126,9 @@ export class TableCreationModal extends Modal {
 		const focusTarget = (nameInput ?? rowsInput ?? columnsInput) as HTMLInputElement | null;
 		if (focusTarget) {
 			const doc = contentEl.ownerDocument ?? activeDocument;
-			const raf = doc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
 			const applyFocus = () => focusTarget.focus({ preventScroll: true });
-			if (typeof raf === 'function') {
-				raf(() => applyFocus());
+			if (doc.defaultView) {
+				doc.defaultView.requestAnimationFrame(() => applyFocus());
 			} else {
 				window.setTimeout(() => applyFocus(), 0);
 			}
@@ -265,6 +264,5 @@ export class TableCreationModal extends Modal {
 		}
 	};
 }
-
 
 

@@ -57,14 +57,14 @@ export function createTextCellEditor() {
 				this.usePopup = false;
 			}
 
-			this.eInput = doc.createElement('textarea');
+			this.eInput = doc.win.createEl('textarea');
 			this.eInput.classList.add('ag-cell-edit-input', 'tlb-text-editor-input');
 			this.eInput.setAttribute('rows', '1');
 			this.updateScrollableState(false);
 			this.eInput.classList.remove('tlb-text-editor-input--inline');
 
 			if (this.usePopup) {
-				const wrapper = doc.createElement('div');
+				const wrapper = doc.win.createDiv();
 				wrapper.classList.add('tlb-text-editor-popup', 'ag-cell', 'ag-cell-inline-editing', 'ag-cell-focus');
 				// inherit current theme so popup uses the same AG/Obsidian tokens
 				const themeClass = doc.body.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';

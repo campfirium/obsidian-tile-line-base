@@ -29,18 +29,18 @@ type LocaleTree = string | { readonly [key: string]: LocaleTree };
 type TranslationTree = typeof en;
 
 const locales: Record<LocaleCode, LocaleTree> = {
-	en: en as unknown as LocaleTree,
-	de: de as unknown as LocaleTree,
-	es: es as unknown as LocaleTree,
-	fr: fr as unknown as LocaleTree,
-	it: it as unknown as LocaleTree,
-	nl: nl as unknown as LocaleTree,
-	pl: pl as unknown as LocaleTree,
-	pt: pt as unknown as LocaleTree,
-	ja: ja as unknown as LocaleTree,
-	ko: ko as unknown as LocaleTree,
-	'zh-hans': zhHans as unknown as LocaleTree,
-	'zh-hant': zhHant as unknown as LocaleTree
+	en: en,
+	de: de,
+	es: es,
+	fr: fr,
+	it: it,
+	nl: nl,
+	pl: pl,
+	pt: pt,
+	ja: ja,
+	ko: ko,
+	'zh-hans': zhHans,
+	'zh-hant': zhHant
 };
 
 type LeafPaths<T, Prefix extends string = ''> =

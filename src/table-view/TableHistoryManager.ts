@@ -363,13 +363,13 @@ export class TableHistoryManager {
 			({
 				rowIndex: move.fromIndex,
 				field: null
-			} as FocusTarget);
+			});
 		const redoFocus =
 			focus?.redo ??
 			({
 				rowIndex: move.toIndex,
 				field: null
-			} as FocusTarget);
+			});
 
 		this.record({
 			undo: () => {
@@ -393,7 +393,7 @@ export class TableHistoryManager {
 		}
 		const beforeEntries = this.buildRowOrderEntries(this.getBlocks());
 		const afterEntries = this.buildRowOrderEntries(order);
-		const defaultFocus = focus?.redo ?? focus?.undo ?? ({ rowIndex: 0, field: null } as FocusTarget);
+		const defaultFocus = focus?.redo ?? focus?.undo ?? ({ rowIndex: 0, field: null });
 
 		this.applyChange(() => {
 			this.applyRowOrder(afterEntries);

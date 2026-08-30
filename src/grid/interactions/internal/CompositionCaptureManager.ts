@@ -28,7 +28,7 @@ class CompositionProxy {
 		this.ownerDocument = ownerDocument;
 		this.translate = translate;
 
-		const el = ownerDocument.createElement('textarea');
+		const el = ownerDocument.win.createEl('textarea');
 		el.setAttribute('wrap', 'off');
 		el.setAttribute('autocomplete', 'off');
 		el.setAttribute('autocorrect', 'off');

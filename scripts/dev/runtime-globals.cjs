@@ -3,3 +3,11 @@ Object.defineProperty(globalThis, '__LOG_PROD__', {
 	writable: false,
 	configurable: true
 });
+
+if (typeof globalThis.window === 'undefined') {
+	Object.defineProperty(globalThis, 'window', {
+		value: globalThis,
+		writable: false,
+		configurable: true
+	});
+}

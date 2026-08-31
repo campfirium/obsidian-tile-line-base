@@ -96,7 +96,7 @@ export function handleStatusChange(view: TableView, rowId: string, newStatus: Ta
 		}
 	}
 
-
+	view.filterOrchestrator.invalidateRows();
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();
 	view.markUserMutation('status-change');
@@ -150,6 +150,7 @@ export function handleCellEdit(view: TableView, event: CellEditEvent): void {
 	if (!recorded) {
 		return;
 	}
+	view.filterOrchestrator.invalidateRows();
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();
 	view.markUserMutation('cell-edit');

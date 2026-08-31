@@ -200,6 +200,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	});
 	view.schema = view.dataStore.getSchema();
 	view.hiddenSortableFields = view.dataStore.getHiddenSortableFields();
+	view.filterOrchestrator.invalidateRows();
 	const dirtyFlags = view.dataStore.consumeDirtyFlags();
 	view.schemaDirty = dirtyFlags.schemaDirty;
 	view.sparseCleanupRequired = dirtyFlags.sparseCleanupRequired;

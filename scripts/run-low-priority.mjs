@@ -1,5 +1,6 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import process from 'node:process';
+import { getNpmCommand, getNpmInvocation } from './npm-command.mjs';
 
 const scriptName = process.argv[2];
 
@@ -8,11 +9,22 @@ if (!scriptName) {
 	process.exit(1);
 }
 
-const invocation = process.platform === 'linux'
-	? { command: 'nice', args: ['-n', '19', 'ionice', '-c3', 'npm', 'run', scriptName] }
-	: process.platform === 'win32'
-		? { command: 'cmd.exe', args: ['/d', '/s', '/c', `npm run ${scriptName}`] }
-		: { command: 'npm', args: ['run', scriptName] };
+function commandExists(command) {
+	const result = spawnSync(command, ['--version'], {
+		stdio: 'ignore',
+		windowsHide: true
+	});
+	return !result.error;
+}
+
+const npmCommand = getNpmCommand();
+const canUseLinuxLowPriority = process.platform === 'linux'
+	&& commandExists('nice')
+	&& commandExists('ionice');
+
+const invocation = canUseLinuxLowPriority
+	? { command: 'nice', args: ['-n', '19', 'ionice', '-c3', npmCommand, 'run', scriptName] }
+	: getNpmInvocation(['run', scriptName]);
 
 let child;
 try {

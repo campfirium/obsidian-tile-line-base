@@ -29,6 +29,7 @@ const EXCLUDED_FIELDS = new Set([
 const UTF8_BOM = '\uFEFF';
 const TABLE_FILE_EXTENSION = '.md';
 const HIDDEN_ELEMENT_CLASS = 'tlb-visually-hidden';
+const CSV_FORMULA_PREFIX_PATTERN = /^[\s]*[=+\-@]/u;
 
 interface ImportCsvAsNewTableOptions {
 	triggerElement?: HTMLElement | null;
@@ -240,12 +241,19 @@ function collectExportColumns(view: TableView): string[] {
 function serializeCsvRow(values: string[]): string {
 	return values
 		.map((value) => {
-			const safeValue = value ?? '';
-			const requiresQuote = /[",\n]/.test(safeValue) || /^\s|\s$/.test(safeValue);
+			const safeValue = escapeCsvFormulaValue(value ?? '');
+			const requiresQuote = /[",\r\n]/.test(safeValue) || /^\s|\s$/.test(safeValue);
 			const escaped = safeValue.replace(/"/g, '""');
 			return requiresQuote ? `"${escaped}"` : escaped;
 		})
 		.join(',');
+}
+
+export function escapeCsvFormulaValue(value: string): string {
+	if (!CSV_FORMULA_PREFIX_PATTERN.test(value)) {
+		return value;
+	}
+	return `'${value}`;
 }
 
 function triggerDownload(view: TableView, content: string, fileName: string): void {

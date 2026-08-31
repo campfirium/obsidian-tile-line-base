@@ -1,4 +1,4 @@
-export type DetectedCellLinkType = 'internal' | 'external';
+export type DetectedCellLinkType = 'internal' | 'external' | 'blocked';
 
 export interface DetectedCellLink {
 	type: DetectedCellLinkType;

@@ -11,6 +11,8 @@ type NormalizedSortValue = {
 	rank: number;
 };
 
+type SortValueCache = WeakMap<RowData, Map<string, NormalizedSortValue>>;
+
 export class FilterDataProcessor {
 	static applyFilterRule(rows: RowData[], rule: FilterRule): RowData[] {
 		const matchedEntryIds = new Set<string>();
@@ -53,7 +55,8 @@ export class FilterDataProcessor {
 			return [...rows];
 		}
 		const sorted = [...rows];
-		sorted.sort((a, b) => this.compareRowsForSort(a, b, effectiveRules));
+		const sortValueCache: SortValueCache = new WeakMap();
+		sorted.sort((a, b) => this.compareRowsForSort(a, b, effectiveRules, sortValueCache));
 		return reorderRowsPreservingHierarchy(sorted);
 	}
 
@@ -204,9 +207,17 @@ export class FilterDataProcessor {
 		return '';
 	}
 
-	private static compareRowsForSort(a: RowData, b: RowData, sortRules: SortRule[]): number {
+	private static compareRowsForSort(
+		a: RowData,
+		b: RowData,
+		sortRules: SortRule[],
+		sortValueCache: SortValueCache
+	): number {
 		for (const rule of sortRules) {
-			const comparison = this.compareValuesForSort(a[rule.column], b[rule.column]);
+			const comparison = this.compareNormalizedSortValues(
+				this.getCachedSortValue(a, rule.column, sortValueCache),
+				this.getCachedSortValue(b, rule.column, sortValueCache)
+			);
 			if (comparison !== 0) {
 				return rule.direction === 'desc' ? -comparison : comparison;
 			}
@@ -214,9 +225,29 @@ export class FilterDataProcessor {
 		return 0;
 	}
 
-	private static compareValuesForSort(aValue: unknown, bValue: unknown): number {
-		const normalizedA = this.normalizeSortValue(aValue);
-		const normalizedB = this.normalizeSortValue(bValue);
+	private static getCachedSortValue(
+		row: RowData,
+		column: string,
+		sortValueCache: SortValueCache
+	): NormalizedSortValue {
+		let rowCache = sortValueCache.get(row);
+		if (!rowCache) {
+			rowCache = new Map<string, NormalizedSortValue>();
+			sortValueCache.set(row, rowCache);
+		}
+		const cached = rowCache.get(column);
+		if (cached) {
+			return cached;
+		}
+		const normalized = this.normalizeSortValue(row[column]);
+		rowCache.set(column, normalized);
+		return normalized;
+	}
+
+	private static compareNormalizedSortValues(
+		normalizedA: NormalizedSortValue,
+		normalizedB: NormalizedSortValue
+	): number {
 		if (normalizedA.rank !== normalizedB.rank) {
 			return normalizedA.rank - normalizedB.rank;
 		}

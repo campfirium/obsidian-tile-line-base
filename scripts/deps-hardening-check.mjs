@@ -2,9 +2,20 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { getNpmInvocation } from './npm-command.mjs';
 
 const rootDir = process.cwd();
 const failures = [];
+
+function runNpmSync(args, options = {}) {
+	const invocation = getNpmInvocation(args);
+	return spawnSync(invocation.command, invocation.args, options);
+}
+
+function execNpmFileSync(args, options = {}) {
+	const invocation = getNpmInvocation(args);
+	return execFileSync(invocation.command, invocation.args, options);
+}
 
 function fail(message) {
 	failures.push(message);
@@ -100,40 +111,72 @@ function checkInstallScriptPackages() {
 	}
 }
 
-function runAudit() {
+function runAuditCommand(extraArgs = [], label = 'npm audit --omit=dev') {
 	const maxAttempts = 3;
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-		const result = spawnSync('npm', ['audit', '--omit=dev'], {
+		const result = runNpmSync(['audit', '--omit=dev', ...extraArgs], {
 			cwd: rootDir,
 			encoding: 'utf8'
 		});
 
-		if (result.stdout) {
-			process.stdout.write(result.stdout);
-		}
-
 		if (result.status === 0) {
-			return;
+			if (result.stdout) {
+				process.stdout.write(result.stdout);
+			}
+			return {
+				ok: true,
+				output: `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+			};
 		}
 
 		const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
 		const canRetry = /audit endpoint returned an error|socket disconnected|ECONNRESET|ETIMEDOUT/i.test(output);
 		if (!canRetry || attempt === maxAttempts) {
-			if (result.stderr) {
-				process.stderr.write(result.stderr);
-			}
-			fail('npm audit --omit=dev 未通过');
-			return;
+			return {
+				ok: false,
+				output
+			};
 		}
 
-		console.warn(`npm audit --omit=dev 网络失败，正在重试 (${attempt + 1}/${maxAttempts})`);
+		console.log(`${label} 网络失败，正在重试 (${attempt + 1}/${maxAttempts})`);
 	}
+
+	return {
+		ok: false,
+		output: ''
+	};
+}
+
+function runAudit() {
+	const defaultAudit = runAuditCommand();
+	if (defaultAudit.ok) {
+		return;
+	}
+
+	let failureOutput = defaultAudit.output;
+	if (/-\/npm\/v1\/security\/\* not implemented yet|security\/advisories\/bulk|audit endpoint returned an error/i.test(defaultAudit.output)) {
+		console.log('默认 npm registry 不支持 audit endpoint，改用官方 registry 重试 npm audit --omit=dev');
+		const officialAudit = runAuditCommand(
+			['--registry=https://registry.npmjs.org/'],
+			'npm audit --omit=dev --registry=https://registry.npmjs.org/'
+		);
+		if (officialAudit.ok) {
+			return;
+		}
+		failureOutput = officialAudit.output || defaultAudit.output;
+	}
+
+	if (failureOutput) {
+		process.stderr.write(failureOutput);
+	}
+
+	fail('npm audit --omit=dev 未通过');
 }
 
 function runDepsScan() {
 	try {
-		execFileSync('npm', ['run', 'deps:scan'], {
+		execNpmFileSync(['run', 'deps:scan'], {
 			cwd: rootDir,
 			stdio: 'inherit'
 		});
@@ -145,7 +188,7 @@ function runDepsScan() {
 const minReleaseAgeProbePackages = ['npm', 'eslint', 'typescript-eslint', 'vite', '@types/node'];
 
 function getPackageVersionTimes(packageName) {
-	const output = execFileSync('npm', ['view', packageName, 'time', '--json'], {
+	const output = execNpmFileSync(['view', packageName, 'time', '--json'], {
 		cwd: rootDir,
 		encoding: 'utf8',
 		stdio: ['ignore', 'pipe', 'inherit']
@@ -193,8 +236,7 @@ function pickMinReleaseAgeProbe() {
 }
 
 function runInstallProbe(tempDir, packageName, version) {
-	const result = spawnSync(
-		'npm',
+	const result = runNpmSync(
 		['install', `${packageName}@${version}`, '--package-lock-only', '--ignore-scripts', '--audit=false', '--fund=false'],
 		{
 			cwd: tempDir,

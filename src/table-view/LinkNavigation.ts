@@ -1,5 +1,6 @@
 import type { TableView } from '../TableView';
 import type { CellLinkClickContext } from '../types/cellLinks';
+import { isSafeExternalLinkTarget } from '../utils/linkDetection';
 import { getLogger } from '../utils/logger';
 
 const logger = getLogger('table-view:link-navigation');
@@ -11,6 +12,14 @@ export function handleCellLinkOpen(view: TableView, context: CellLinkClickContex
 	}
 
 	if (context.link.type === 'external') {
+		if (!isSafeExternalLinkTarget(target)) {
+			logger.warn('Blocked unsafe external link', {
+				target,
+				field: context.field,
+				rowId: context.rowId
+			});
+			return;
+		}
 		try {
 			type ElectronModule = { shell?: { openExternal?: (url: string) => Promise<void> | void } };
 			const electron = (window as unknown as { require?: (module: string) => ElectronModule | null })
@@ -29,6 +38,15 @@ export function handleCellLinkOpen(view: TableView, context: CellLinkClickContex
 				rowId: context.rowId
 			});
 		}
+		return;
+	}
+
+	if (context.link.type === 'blocked') {
+		logger.warn('Blocked unsafe link protocol', {
+			target,
+			field: context.field,
+			rowId: context.rowId
+		});
 		return;
 	}
 

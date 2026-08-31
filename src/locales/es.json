@@ -401,6 +401,7 @@
     "namePlaceholder": "Ingresa el nombre de la columna",
     "typeLabel": "Tipo de columna",
     "typeTextOption": "Texto",
+    "typeNumberOption": "Número",
     "typeDateOption": "Fecha",
     "typeTimeOption": "Hora",
     "typeImageOption": "Imagen",

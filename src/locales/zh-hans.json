@@ -401,6 +401,7 @@
     "namePlaceholder": "输入列名",
     "typeLabel": "列类型",
     "typeTextOption": "文本",
+    "typeNumberOption": "数字",
     "typeDateOption": "日期",
     "typeTimeOption": "时间",
     "typeImageOption": "图片",

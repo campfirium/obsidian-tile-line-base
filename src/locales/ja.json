@@ -401,6 +401,7 @@
     "namePlaceholder": "列名を入力",
     "typeLabel": "列の種類",
     "typeTextOption": "テキスト",
+    "typeNumberOption": "数値",
     "typeDateOption": "日付",
     "typeTimeOption": "時刻",
     "typeImageOption": "画像",

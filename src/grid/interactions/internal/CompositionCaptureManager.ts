@@ -28,7 +28,7 @@ class CompositionProxy {
 		this.ownerDocument = ownerDocument;
 		this.translate = translate;
 
-		const el = ownerDocument.createElement('textarea');
+		const el = ownerDocument.win.createEl('textarea');
 		el.setAttribute('wrap', 'off');
 		el.setAttribute('autocomplete', 'off');
 		el.setAttribute('autocorrect', 'off');
@@ -70,8 +70,9 @@ class CompositionProxy {
 		});
 
 		this.host.addEventListener('input', (event) => {
-			const inputEvent = event as InputEvent;
-			if (inputEvent.isComposing || inputEvent.inputType === 'insertCompositionText') {
+			const isComposing = 'isComposing' in event && event.isComposing === true;
+			const isCompositionText = 'inputType' in event && event.inputType === 'insertCompositionText';
+			if (isComposing || isCompositionText) {
 				this.composing = true;
 				this.cancelAsciiFallback();
 				return;

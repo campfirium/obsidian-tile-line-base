@@ -4,6 +4,7 @@ import type { TranslationKey } from '../../i18n';
 
 const TEXT_OPERATORS: FilterOperator[] = ['equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'endsWith', 'isEmpty', 'isNotEmpty'];
 const NUMERIC_ONLY_OPERATORS: FilterOperator[] = ['greaterThan', 'greaterOrEqual', 'lessThan', 'lessOrEqual'];
+const NUMBER_OPERATORS: FilterOperator[] = ['equals', 'notEquals', ...NUMERIC_ONLY_OPERATORS, 'isEmpty', 'isNotEmpty'];
 const DATE_OPERATORS: FilterOperator[] = ['equals', 'notEquals', 'greaterThan', 'greaterOrEqual', 'lessThan', 'lessOrEqual', 'isEmpty', 'isNotEmpty'];
 const STATUS_OPERATORS: FilterOperator[] = ['equals', 'notEquals', 'isEmpty', 'isNotEmpty'];
 
@@ -41,6 +42,9 @@ export function getOperatorsForOption(option: FilterColumnOption): FilterOperato
 	}
 	if (option.kind === 'date' || option.kind === 'time') {
 		return [...DATE_OPERATORS];
+	}
+	if (option.kind === 'number') {
+		return [...NUMBER_OPERATORS];
 	}
 	const result: FilterOperator[] = [...TEXT_OPERATORS];
 	if (option.allowNumericOperators) {

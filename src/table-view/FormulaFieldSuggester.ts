@@ -53,13 +53,13 @@ export class FormulaFieldSuggester {
 		this.ownerDocument = options.ownerDocument;
 		this.ownerWindow = this.ownerDocument.defaultView ?? window;
 
-		this.dropdownEl = this.ownerDocument.createElement('div');
+		this.dropdownEl = this.ownerDocument.win.createDiv();
 		this.dropdownEl.className = 'tlb-formula-field-suggest';
-		
+
 		this.dropdownEl.setAttribute('role', 'listbox');
 		this.dropdownEl.addEventListener('mousedown', this.handleMouseDown);
 
-		this.listEl = this.ownerDocument.createElement('ul');
+		this.listEl = this.ownerDocument.win.createEl('ul');
 		this.listEl.className = 'tlb-formula-field-suggest-list';
 		this.dropdownEl.appendChild(this.listEl);
 
@@ -205,7 +205,7 @@ export class FormulaFieldSuggester {
 	private renderList(): void {
 		this.listEl.textContent = '';
 		this.matches.forEach((match, index) => {
-			const item = this.listEl.ownerDocument.createElement('li');
+			const item = this.listEl.ownerDocument.win.createEl('li');
 			item.className = 'tlb-formula-field-suggest-item';
 			if (index === this.activeIndex) {
 				item.classList.add('is-active');

@@ -44,7 +44,7 @@ const getOrCreatePopupRoot = (doc: Document): HTMLElement => {
 	if (existing) {
 		return existing;
 	}
-	const el = doc.createElement('div');
+	const el = doc.win.createDiv();
 	el.classList.add(className);
 	doc.body.appendChild(el);
 	return el;

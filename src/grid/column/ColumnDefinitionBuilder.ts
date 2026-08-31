@@ -12,6 +12,7 @@ import { t } from '../../i18n';
 import type { TlbCellRendererParams, TlbColDef } from '../agGridTypes';
 import { formatUnknownValue } from '../../utils/valueFormat';
 import { ALL_TASK_STATUSES, getStatusIcon, getStatusLabel, normalizeStatus, type TaskStatus } from '../../utils/status';
+import { compareNumericCellValues } from './numericComparator';
 
 const INDEX_FIELD = '#';
 const STATUS_FIELD = 'status';
@@ -48,7 +49,7 @@ function createIndexColumnDef(column: SchemaColumnDef): TlbColDef {
 		cellRenderer: (params: TlbCellRendererParams) => {
 			const value = params.value ?? '';
 			const ownerDocument = params.eGridCell?.ownerDocument ?? activeDocument;
-			const container = ownerDocument.createElement('span');
+			const container = ownerDocument.win.createSpan();
 			container.classList.add('tlb-row-drag-handle');
 				container.textContent = formatUnknownValue(value);
 			return container;
@@ -107,7 +108,7 @@ function createStatusColumnDef(column: SchemaColumnDef): TlbColDef {
 
 function createStatusCellRenderer(params: TlbCellRendererParams): HTMLElement {
 	const ownerDocument = params.eGridCell?.ownerDocument ?? activeDocument;
-	const container = ownerDocument.createElement('div');
+	const container = ownerDocument.win.createDiv();
 	container.className = 'tlb-status-cell';
 	container.tabIndex = 0;
 	container.setAttribute('role', 'button');
@@ -162,12 +163,12 @@ function renderStatusCellContent(container: HTMLElement, params: TlbCellRenderer
 	container.replaceChildren();
 	container.setAttribute('data-status', status);
 
-	const iconContainer = container.ownerDocument.createElement('span');
+	const iconContainer = container.ownerDocument.win.createSpan();
 	iconContainer.className = 'tlb-status-icon';
 	container.appendChild(iconContainer);
 	setIcon(iconContainer, iconId);
 
-	const srLabel = container.ownerDocument.createElement('span');
+	const srLabel = container.ownerDocument.win.createSpan();
 	srLabel.textContent = label;
 	srLabel.className = 'tlb-visually-hidden';
 	const srId = params.node?.id != null ? `tlb-status-sr-${params.node.id}` : `tlb-status-sr-${Date.now()}`;
@@ -221,6 +222,9 @@ function createSchemaColumnDef(column: SchemaColumnDef): TlbColDef {
 	}
 
 	const editorType = mergedColDef.editorType;
+	if (mergedColDef.sortType === 'number') {
+		mergedColDef.comparator = compareNumericCellValues;
+	}
 	if (editorType === 'date') {
 		const format = mergedColDef.dateFormat ?? 'iso';
 		mergedColDef.cellEditor = createDateCellEditor();
@@ -234,6 +238,7 @@ function createSchemaColumnDef(column: SchemaColumnDef): TlbColDef {
 	}
 
 	delete mergedColDef.editorType;
+	delete mergedColDef.sortType;
 	delete mergedColDef.dateFormat;
 	delete mergedColDef.timeFormat;
 

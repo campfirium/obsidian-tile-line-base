@@ -1187,7 +1187,7 @@ export class SettingsService {
 		if (!raw || typeof raw !== 'object') {
 			return null;
 		}
-		const normalized = normalizeSlideViewConfig(raw as SlideViewConfig);
+		const normalized = normalizeSlideViewConfig(raw);
 		return isDefaultSlideViewConfig(normalized) ? null : normalized;
 	}
 

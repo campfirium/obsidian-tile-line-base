@@ -67,6 +67,8 @@ export function buildColumnDefinitions(params: ColumnBuilderParams): ColumnDef[]
 			if (columnType === 'formula') {
 				baseColDef.tooltipField = dataStore.getFormulaTooltipField(name);
 			}
+		} else if (columnType === 'number') {
+			baseColDef.sortType = 'number';
 		} else if (columnType === 'date') {
 			baseColDef.editorType = 'date';
 			baseColDef.dateFormat = dataStore.getDateFormat(name);

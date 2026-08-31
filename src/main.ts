@@ -96,7 +96,7 @@ function createStartupProfiler() {
 export default class TileLineBasePlugin extends Plugin {
 	private windowContextManager!: WindowContextManager;
 	private mainContext: WindowContext | null = null;
-	private settings: TileLineBaseSettings = DEFAULT_SETTINGS;
+	settings: TileLineBaseSettings = DEFAULT_SETTINGS;
 	private settingsService!: SettingsService;
 	private suppressAutoSwitchUntil = new Map<string, number>();
 	private viewCoordinator!: ViewSwitchCoordinator;

@@ -401,6 +401,7 @@
     "namePlaceholder": "열 이름 입력",
     "typeLabel": "열 유형",
     "typeTextOption": "텍스트",
+    "typeNumberOption": "숫자",
     "typeDateOption": "날짜",
     "typeTimeOption": "시간",
     "typeImageOption": "이미지",

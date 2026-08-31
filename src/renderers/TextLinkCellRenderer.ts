@@ -18,10 +18,10 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		this.params = params;
 		const doc = params.eGridCell?.ownerDocument ?? activeDocument;
 
-		this.eGui = doc.createElement('div');
+		this.eGui = doc.win.createDiv();
 		this.eGui.className = 'tlb-link-cell';
 
-		this.textEl = doc.createElement('span');
+		this.textEl = doc.win.createSpan();
 		this.textEl.className = 'tlb-link-cell__text';
 		this.eGui.appendChild(this.textEl);
 		this.attachTextEvents();
@@ -62,7 +62,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 		}
 
 		const doc = this.params.eGridCell?.ownerDocument ?? activeDocument;
-		const fragment = doc.createDocumentFragment();
+		const fragment = doc.win.createFragment();
 
 		for (const segment of segments) {
 			if (segment.kind === 'text') {
@@ -73,7 +73,7 @@ export class TextLinkCellRenderer implements ICellRendererComp {
 			const linkIndex = this.currentLinks.length;
 			this.currentLinks.push(segment.link);
 
-			const anchor = doc.createElement('a');
+			const anchor = doc.win.createEl('a');
 			anchor.className = 'tlb-link-cell__anchor';
 			anchor.textContent = segment.text;
 			anchor.href = '#';

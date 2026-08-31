@@ -26,7 +26,7 @@ function readMomentLocale(): string | null {
 	if (typeof window === 'undefined') {
 		return null;
 	}
-	const globalMoment = (window as typeof window & { moment?: { locale?: () => string } }).moment;
+	const globalMoment = (window).moment;
 	if (globalMoment && typeof globalMoment.locale === 'function') {
 		try {
 			return globalMoment.locale();

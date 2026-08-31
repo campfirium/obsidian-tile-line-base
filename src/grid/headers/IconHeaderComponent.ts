@@ -22,11 +22,11 @@ export class IconHeaderComponent implements IHeaderComp {
 	init(params: IconHeaderParams): void {
 		const doc = params.eGridHeader?.ownerDocument || activeDocument;
 
-		this.eGui = doc.createElement('div');
+		this.eGui = doc.win.createDiv();
 		this.eGui.classList.add('ag-header-cell-label', 'tlb-header-icon-only');
 		this.eGui.setAttribute('role', 'presentation');
 
-		this.iconEl = doc.createElement('div');
+		this.iconEl = doc.win.createDiv();
 		this.iconEl.className = 'tlb-header-icon';
 
 		setIcon(this.iconEl, params.icon);
@@ -44,7 +44,7 @@ export class IconHeaderComponent implements IHeaderComp {
 
 		const ariaLabel = params.ariaLabel ?? params.tooltip ?? null;
 		if (ariaLabel) {
-			const srLabel = doc.createElement('span');
+			const srLabel = doc.win.createSpan();
 			srLabel.textContent = ariaLabel;
 			srLabel.className = 'tlb-visually-hidden';
 			this.srLabelEl = srLabel;

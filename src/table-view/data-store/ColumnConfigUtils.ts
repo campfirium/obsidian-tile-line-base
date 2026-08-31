@@ -11,6 +11,7 @@ export function hasColumnConfigContent(config: ColumnConfig): boolean {
 		config.hide ||
 		(config.formula && config.formula.trim().length > 0) ||
 		(config.formulaFormat && config.formulaFormat !== 'auto') ||
+		config.type === 'number' ||
 		config.type === 'date' ||
 		config.type === 'time' ||
 		config.type === 'text' ||
@@ -35,7 +36,9 @@ export function serializeColumnConfig(config: ColumnConfig): string {
 	if (formatPattern) {
 		segments.push(`format: ${formatPattern}`);
 	}
-	if (config.type === 'date') {
+	if (config.type === 'number') {
+		segments.push('type: number');
+	} else if (config.type === 'date') {
 		segments.push('type: date');
 		const preset = normalizeDateFormatPreset(config.dateFormat ?? null);
 		if (preset !== 'iso') {

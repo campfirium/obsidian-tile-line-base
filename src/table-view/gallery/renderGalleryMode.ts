@@ -1,5 +1,5 @@
 import { Menu, Notice } from 'obsidian';
-import { t, type TranslationKey } from '../../i18n';
+import { t } from '../../i18n';
 import type { TableView } from '../../TableView';
 import { GalleryViewController } from './GalleryViewController';
 import { SlideTemplateModal } from '../slide/SlideTemplateModal';
@@ -42,7 +42,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				mode: 'single' as const,
 				single: {
 					withImage: unifiedWithImage,
-					withoutImage: unifiedWithImage as unknown as typeof base.template.single.withoutImage
+					withoutImage: unifiedWithImage
 				},
 				split: base.template.split
 			}
@@ -96,7 +96,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			fieldConfigs: columnConfigs,
 			sampleRows: rows,
 			initial: active.config.template,
-			titleKey: 'galleryView.templateModal.title' as TranslationKey,
+			titleKey: 'galleryView.templateModal.title',
 			allowedModes: ['single'],
 			allowedSingleBranches: ['withImage'],
 			enableImageTypography: false,

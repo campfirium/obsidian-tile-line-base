@@ -50,6 +50,20 @@ const DEFAULT_CONFIG: LoggingConfig = {
 	scopeLevels: {}
 };
 
+type LoggingConfigHost = {
+	__TILE_LINE_BASE_LOG_CONFIG__?: unknown;
+	TileLineBaseLogger?: LoggerConsoleBridge;
+};
+
+declare global {
+	interface Window {
+		__TILE_LINE_BASE_LOG_CONFIG__?: unknown;
+		TileLineBaseLogger?: LoggerConsoleBridge;
+	}
+}
+
+const fallbackConfigHost: LoggingConfigHost = {};
+
 declare const __LOG_PROD__: boolean;
 
 type Listener = (config: LoggingConfig) => void;
@@ -57,10 +71,10 @@ type Listener = (config: LoggingConfig) => void;
 const listeners = new Set<Listener>();
 
 function readGlobalConfig(): LoggingConfig {
-	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (window as unknown as Record<string, unknown>);
+	const globalObj: LoggingConfigHost = typeof window === 'undefined' ? fallbackConfigHost : window;
 	const stored = globalObj[GLOBAL_STORAGE_KEY];
 	if (stored && typeof stored === 'object') {
-		return normalizeLoggingConfig(stored as Partial<LoggingConfig>);
+		return normalizeLoggingConfig(stored);
 	}
 	const config = { ...DEFAULT_CONFIG };
 	globalObj[GLOBAL_STORAGE_KEY] = config;
@@ -68,7 +82,7 @@ function readGlobalConfig(): LoggingConfig {
 }
 
 function writeGlobalConfig(config: LoggingConfig): void {
-	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (window as unknown as Record<string, unknown>);
+	const globalObj: LoggingConfigHost = typeof window === 'undefined' ? fallbackConfigHost : window;
 	globalObj[GLOBAL_STORAGE_KEY] = config;
 }
 
@@ -139,7 +153,7 @@ function resolveConsoleMethod(consoleObj: Console | null, method: 'error' | 'war
 
 function makePrinter(scope: string, level: LogLevelName): (...args: unknown[]) => void {
 	const method = LOG_METHOD[level];
-	const globalConsole = typeof globalThis === 'undefined' ? null : window.console;
+	const globalConsole = typeof window === 'undefined' ? null : window.console;
 	const consoleMethod = resolveConsoleMethod(globalConsole, method);
 	if (__LOG_PROD__ && (level === 'info' || level === 'debug' || level === 'trace')) {
 		return (...args: unknown[]) => {
@@ -252,8 +266,8 @@ export interface LoggerConsoleBridgeOptions {
 }
 
 export function installLoggerConsoleBridge(options?: LoggerConsoleBridgeOptions): void {
-	const globalObj = typeof globalThis === 'undefined' ? {} as Record<string, unknown> : (window as unknown as Record<string, unknown>);
-	const existing = globalObj[CONSOLE_BRIDGE_KEY] as LoggerConsoleBridge | undefined;
+	const globalObj: LoggingConfigHost = typeof window === 'undefined' ? fallbackConfigHost : window;
+	const existing = globalObj[CONSOLE_BRIDGE_KEY];
 	if (existing) {
 		return;
 	}

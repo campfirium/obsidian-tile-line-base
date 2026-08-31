@@ -401,6 +401,7 @@
     "namePlaceholder": "Spaltenname eingeben",
     "typeLabel": "Spaltentyp",
     "typeTextOption": "Text",
+    "typeNumberOption": "Zahl",
     "typeDateOption": "Datum",
     "typeTimeOption": "Uhrzeit",
     "typeImageOption": "Bild",

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import eslintExperimental from 'eslint/use-at-your-own-risk';
@@ -10,22 +11,44 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 const reportPath = path.join(repoRoot, 'docs', 'obsidian-strict-lint-report.md');
+const reviewTsconfigPath = path.join(repoRoot, 'tsconfig.obsidian-review.json');
+const require = createRequire(import.meta.url);
 
-const OBSIDIAN_STRICT_RULES = {
+// Mirrors the rule families surfaced by the Obsidian review report. Keep this
+// focused on parity reporting instead of silently broadening the build gate.
+const OBSIDIAN_REVIEW_RULES = {
 	'@typescript-eslint/no-unsafe-argument': 'warn',
 	'@typescript-eslint/no-unsafe-assignment': 'warn',
 	'@typescript-eslint/no-unsafe-call': 'warn',
 	'@typescript-eslint/no-unsafe-member-access': 'warn',
 	'@typescript-eslint/no-unsafe-return': 'warn',
 	'@typescript-eslint/no-unsafe-unary-minus': 'warn',
+	'@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+	'obsidianmd/prefer-create-el': 'warn',
+	'obsidianmd/settings-tab/prefer-setting-definitions': 'warn',
 };
+
+const REVIEW_IGNORES = ['src/i18n/**', 'src/locales/**'];
+
+const isReviewIgnoredFile = (file) =>
+	file.startsWith('src/i18n/') || file.startsWith('src/locales/');
 
 const severityLabel = (severity) => (severity === 2 ? 'Error' : 'Warning');
 
 const toMarkdown = (issues) => {
+	const obsidianLintVersion = require('eslint-plugin-obsidianmd/package.json').version;
+	const obsidianApiVersion = require('obsidian/package.json').version;
+	const typeScriptEslintVersion = require('typescript-eslint/package.json').version;
+	const countsByRule = new Map();
+	for (const issue of issues) {
+		countsByRule.set(issue.ruleId, (countsByRule.get(issue.ruleId) ?? 0) + 1);
+	}
 	const lines = [
-		'Obsidian Strict Lint Report',
+		'Obsidian Review Parity Report',
 		`Generated ${new Date().toISOString()}`,
+		`eslint-plugin-obsidianmd ${obsidianLintVersion}`,
+		`obsidian ${obsidianApiVersion}`,
+		`typescript-eslint ${typeScriptEslintVersion}`,
 		`Total issues ${issues.length}`,
 		'',
 	];
@@ -35,7 +58,12 @@ const toMarkdown = (issues) => {
 		return lines.join('\n');
 	}
 
-	lines.push('| Severity | Rule | Location | Message |');
+	lines.push('| Rule | Count |');
+	lines.push('| --- | ---: |');
+	for (const [ruleId, count] of Array.from(countsByRule).sort(([a], [b]) => a.localeCompare(b))) {
+		lines.push(`| ${ruleId} | ${count} |`);
+	}
+	lines.push('', '| Severity | Rule | Location | Message |');
 	lines.push('| --- | --- | --- | --- |');
 	for (const issue of issues) {
 		const location = `${issue.file}:${issue.line ?? 'N/A'}:${issue.column ?? 'N/A'}`;
@@ -48,21 +76,20 @@ const toMarkdown = (issues) => {
 const buildStrictConfig = async () => {
 	const baseConfig = (await import(path.join(repoRoot, 'eslint.config.mjs'))).default;
 
-	return baseConfig.map((entry) => {
-		const files = Array.isArray(entry.files) ? entry.files : [];
-		const isTypeScriptEntry = files.includes('**/*.ts') || files.includes('**/*.tsx');
-		if (!isTypeScriptEntry) {
-			return entry;
-		}
-
-		return {
-			...entry,
-			rules: {
-				...entry.rules,
-				...OBSIDIAN_STRICT_RULES,
+	return [
+		...baseConfig,
+		{
+			files: ['src/**/*.{ts,tsx}'],
+			ignores: REVIEW_IGNORES,
+			languageOptions: {
+				parserOptions: {
+					project: reviewTsconfigPath,
+					tsconfigRootDir: repoRoot,
+				},
 			},
-		};
-	});
+			rules: OBSIDIAN_REVIEW_RULES,
+		},
+	];
 };
 
 const collectStrictIssues = (results) => {
@@ -70,8 +97,11 @@ const collectStrictIssues = (results) => {
 
 	for (const result of results) {
 		const file = path.relative(repoRoot, result.filePath).replace(/\\/g, '/');
+		if (isReviewIgnoredFile(file)) {
+			continue;
+		}
 		for (const message of result.messages) {
-			if (!message.ruleId || !Object.hasOwn(OBSIDIAN_STRICT_RULES, message.ruleId)) {
+			if (!message.ruleId || !Object.hasOwn(OBSIDIAN_REVIEW_RULES, message.ruleId)) {
 				continue;
 			}
 			issues.push({

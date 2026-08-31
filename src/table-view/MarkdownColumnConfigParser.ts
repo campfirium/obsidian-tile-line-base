@@ -81,7 +81,9 @@ function applyColumnConfigSegment(config: ColumnConfig, segment: string): void {
 			break;
 		case 'type': {
 			const normalizedType = value.trim().toLowerCase();
-			if (normalizedType === 'date') {
+			if (normalizedType === 'number') {
+				config.type = 'number';
+			} else if (normalizedType === 'date') {
 				config.type = 'date';
 			} else if (normalizedType === 'time') {
 				config.type = 'time';

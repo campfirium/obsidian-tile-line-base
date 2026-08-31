@@ -15,7 +15,7 @@ const getColorResolverElement = (ownerDocument: Document): HTMLElement | null =>
 	if (!ownerDocument.body) {
 		return null;
 	}
-	const el = ownerDocument.createElement('span');
+	const el = ownerDocument.win.createSpan();
 	el.classList.add('tlb-color-resolver');
 	ownerDocument.body.appendChild(el);
 	COLOR_RESOLVER_ELEMENTS.set(ownerDocument, el);

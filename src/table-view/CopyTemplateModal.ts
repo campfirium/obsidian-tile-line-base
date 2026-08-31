@@ -49,7 +49,7 @@ export class CopyTemplateModal extends Modal {
 		contentEl.createEl('p', { text: t('copyTemplate.modalDescription') });
 
 		const inputWrapper = contentEl.createDiv({ cls: 'tlb-copy-template-input-wrapper' });
-		this.textarea = ownerDoc.createElement('textarea');
+		this.textarea = ownerDoc.win.createEl('textarea');
 		this.textarea.className = 'tlb-copy-template-input';
 		this.textarea.rows = 10;
 		this.textarea.placeholder = t('copyTemplate.templatePlaceholder');
@@ -107,9 +107,8 @@ export class CopyTemplateModal extends Modal {
 			this.textarea.focus({ preventScroll: true });
 			this.textarea.setSelectionRange(this.textarea.value.length, this.textarea.value.length);
 		};
-		const raf = ownerDoc.defaultView?.requestAnimationFrame ?? window.requestAnimationFrame;
-		if (typeof raf === 'function') {
-			raf(() => focusTextarea());
+		if (ownerDoc.defaultView) {
+			ownerDoc.defaultView.requestAnimationFrame(() => focusTextarea());
 		} else {
 			window.setTimeout(() => focusTextarea(), 0);
 		}

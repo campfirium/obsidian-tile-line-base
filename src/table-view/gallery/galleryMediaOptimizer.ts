@@ -136,8 +136,9 @@ const deleteFromDB = async (key: string): Promise<void> => {
 
 const enforceLimit = (): void => {
 	while (totalBytes > MAX_CACHE_BYTES && lruKeys.size > 0) {
-		const oldest = lruKeys.keys().next().value as string | undefined;
-		if (!oldest) break;
+		const oldestEntry = lruKeys.keys().next();
+		if (oldestEntry.done) break;
+		const oldest = oldestEntry.value;
 		lruKeys.delete(oldest);
 		const size = entrySizes.get(oldest) ?? 0;
 		entrySizes.delete(oldest);
@@ -243,7 +244,7 @@ async function buildResizedObjectUrl(source: string, size: MediaSize): Promise<{
 		if (img.naturalWidth <= targetW && img.naturalHeight <= targetH) {
 			return null;
 		}
-		const canvas = img.ownerDocument.createElement('canvas');
+		const canvas = img.ownerDocument.win.createEl('canvas');
 		canvas.width = targetW;
 		canvas.height = targetH;
 		const ctx = canvas.getContext('2d');

@@ -14,7 +14,7 @@ import {
 } from './collapsed/CollapsedFieldCodec';
 import { consumeTildeFencedBlock, isTildeFenceMarker } from './MultilineFieldCodec';
 import { normalizeEntryFieldName } from './entryFields';
-export type ColumnFieldDisplayType = 'text' | 'date' | 'time' | 'image';
+export type ColumnFieldDisplayType = 'text' | 'number' | 'date' | 'time' | 'image';
 export interface ColumnConfig {
 	name: string;
 	width?: string;

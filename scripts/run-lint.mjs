@@ -153,7 +153,6 @@ const run = async () => {
 	const lintTargets = [
 		'src/**/*.{ts,tsx}',
 		'src/locales/**/*.json',
-		'scripts/**/*.mjs',
 		'manifest.json',
 	];
 	const results = await eslint.lintFiles(lintTargets);

@@ -65,11 +65,11 @@ function parseMeta(value: unknown): ConfigCalloutMeta | null {
 }
 
 function sanitizePayload(payload: unknown): Record<string, unknown> {
-	if (!payload || typeof payload !== 'object') {
+	if (!isRecord(payload)) {
 		return {};
 	}
 	const result: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+	for (const [key, value] of Object.entries(payload)) {
 		if (value === undefined) {
 			continue;
 		}

@@ -12,7 +12,7 @@ import { STATUS_BASELINE_VALUES } from './filter/statusDefaults';
 import { openBackupRestoreModal } from './BackupRestoreModal';
 import { exportTableToCsv, importCsvAsNewTable, importTableFromCsv } from './TableCsvController';
 
-export type FilterColumnKind = 'status' | 'date' | 'time' | 'text';
+export type FilterColumnKind = 'status' | 'number' | 'date' | 'time' | 'text';
 
 export interface FilterColumnOption {
 	name: string;
@@ -332,6 +332,13 @@ function createColumnOption(view: TableView, column: string, rows: RowData[]): F
 
 
 	const displayType = view.dataStore.getColumnDisplayType(column);
+	if (displayType === 'number') {
+		return {
+			name: column,
+			kind: 'number',
+			allowNumericOperators: true
+		};
+	}
 
 	if (displayType === 'date') {
 

@@ -70,8 +70,9 @@ class CompositionProxy {
 		});
 
 		this.host.addEventListener('input', (event) => {
-			const inputEvent = event as InputEvent;
-			if (inputEvent.isComposing || inputEvent.inputType === 'insertCompositionText') {
+			const isComposing = 'isComposing' in event && event.isComposing === true;
+			const isCompositionText = 'inputType' in event && event.inputType === 'insertCompositionText';
+			if (isComposing || isCompositionText) {
 				this.composing = true;
 				this.cancelAsciiFallback();
 				return;

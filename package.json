@@ -5,7 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "npm run lint && npm run lint:css && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run check:release",
+    "build": "npm run lint && npm run lint:obsidian-strict && npm run typecheck:obsidian-review && npm run lint:css && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run check:release",
     "build:low": "node scripts/run-low-priority.mjs build",
     "build:sync": "npm run build && npm run mirror:obs -- --prefer=plugin-dir",
     "build:sync:low": "node scripts/run-low-priority.mjs build:sync",
@@ -13,6 +13,7 @@
     "deps:scan": "node scripts/deps-scan.mjs",
     "lint": "node scripts/run-lint.mjs",
     "lint:obsidian-strict": "node scripts/run-obsidian-strict-lint.mjs",
+    "typecheck:obsidian-review": "tsc -p tsconfig.obsidian-review.json -noEmit -skipLibCheck",
     "lint:css": "stylelint \"styles.css\" --max-warnings=0",
     "check:i18n-hardcoded": "node scripts/check-i18n-hardcoded.mjs",
     "test:magic": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\"}' .lab/scripts/test-magic-migration.ts",

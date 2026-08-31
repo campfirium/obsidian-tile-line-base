@@ -11,6 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 const reportPath = path.join(repoRoot, 'docs', 'obsidian-strict-lint-report.md');
+const reviewTsconfigPath = path.join(repoRoot, 'tsconfig.obsidian-review.json');
 const require = createRequire(import.meta.url);
 
 // Mirrors the rule families surfaced by the Obsidian review report. Keep this
@@ -80,6 +81,12 @@ const buildStrictConfig = async () => {
 		{
 			files: ['src/**/*.{ts,tsx}'],
 			ignores: REVIEW_IGNORES,
+			languageOptions: {
+				parserOptions: {
+					project: reviewTsconfigPath,
+					tsconfigRootDir: repoRoot,
+				},
+			},
 			rules: OBSIDIAN_REVIEW_RULES,
 		},
 	];

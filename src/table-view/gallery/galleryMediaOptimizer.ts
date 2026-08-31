@@ -136,8 +136,9 @@ const deleteFromDB = async (key: string): Promise<void> => {
 
 const enforceLimit = (): void => {
 	while (totalBytes > MAX_CACHE_BYTES && lruKeys.size > 0) {
-		const oldest = lruKeys.keys().next().value as string | undefined;
-		if (!oldest) break;
+		const oldestEntry = lruKeys.keys().next();
+		if (oldestEntry.done) break;
+		const oldest = oldestEntry.value;
 		lruKeys.delete(oldest);
 		const size = entrySizes.get(oldest) ?? 0;
 		entrySizes.delete(oldest);

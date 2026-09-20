@@ -1,4 +1,5 @@
 import type { BackupIndex, StoredBackupEntry } from './backupTypes';
+import { isSafeBackupEntryId, isSafeBackupRelativePath } from './backupValidation';
 
 export function parseBackupIndex(raw: string, version: number): BackupIndex | null {
 	const parsed = JSON.parse(raw) as BackupIndex;
@@ -9,10 +10,11 @@ export function parseBackupIndex(raw: string, version: number): BackupIndex | nu
 	const index: BackupIndex = {
 		version,
 		totalSize: typeof parsed.totalSize === 'number' && parsed.totalSize >= 0 ? parsed.totalSize : 0,
-		files: {}
+		files: Object.create(null) as BackupIndex['files']
 	};
 
 	for (const [filePath, record] of Object.entries(parsed.files ?? {})) {
+		if (!isSafeBackupRelativePath(filePath)) continue;
 		if (!record || typeof record !== 'object') {
 			continue;
 		}
@@ -31,7 +33,8 @@ export function parseBackupIndex(raw: string, version: number): BackupIndex | nu
 				? entry.primaryFieldValue
 				: undefined;
 			const changePreview = typeof entry.changePreview === 'string' ? entry.changePreview : undefined;
-			if (!id || !createdAt || createdAt <= 0 || !size || size < 0 || !hash) {
+			if (!id || !isSafeBackupEntryId(id) || createdAt === null || !Number.isFinite(createdAt) || createdAt <= 0 ||
+				size === null || !Number.isFinite(size) || size < 0 || !hash) {
 				continue;
 			}
 			sanitizedEntries.push({ id, createdAt, size, hash, isInitial, primaryFieldValue, changePreview });

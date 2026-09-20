@@ -141,6 +141,7 @@ export class TableView extends ItemView {
 		logger.debug("setState", state);
 		try {
 			const file = this.app.vault.getAbstractFileByPath(state.filePath);
+			if (this.persistenceService.hasPendingSave()) await this.persistenceService.save();
 			const requestedMode = normalizeTableViewMode(state.mode);
 			this.requestedViewMode = requestedMode;
 			if (requestedMode) {
@@ -222,6 +223,7 @@ export class TableView extends ItemView {
 		return Promise.resolve();
 	}
 	async onClose(): Promise<void> {
+		if (this.persistenceService.hasPendingSave()) await this.persistenceService.save();
 		await this.restoreSessionBaselineIfEligible();
 		this.conversionSession.prepare(null);
 		if (this.markdownToggleButton) {

@@ -1,6 +1,6 @@
 import type { CellRenderableSegment, DetectedCellLink } from '../types/cellLinks';
+import { scanCellLinkTokens } from './cellLinkTokens';
 
-const LINK_TOKEN_PATTERN = /\[\[([^[\]]+)\]\]|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>"')]+)/gi;
 const SAFE_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 
 export function detectPrimaryCellLink(rawValue: unknown): DetectedCellLink | null {
@@ -31,11 +31,8 @@ export function parseCellLinkSegments(rawValue: unknown): CellRenderableSegment[
 
 	const segments: CellRenderableSegment[] = [];
 	let cursor = 0;
-	let match: RegExpExecArray | null;
-
-	LINK_TOKEN_PATTERN.lastIndex = 0;
-	while ((match = LINK_TOKEN_PATTERN.exec(value)) !== null) {
-		const matchedText = match[0] ?? '';
+	for (const match of scanCellLinkTokens(value)) {
+		const matchedText = match.text;
 		if (!matchedText) {
 			continue;
 		}
@@ -45,10 +42,7 @@ export function parseCellLinkSegments(rawValue: unknown): CellRenderableSegment[
 			segments.push({ kind: 'text', text: value.slice(cursor, start) });
 		}
 
-		const wikiInner = match[1];
-		const markdownText = match[2];
-		const markdownTarget = match[3];
-		const bareUrl = match[4];
+		const { wikiInner, markdownText, markdownTarget, bareUrl } = match;
 
 		if (wikiInner != null) {
 			const inner = wikiInner.trim();

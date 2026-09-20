@@ -66,6 +66,9 @@ interface TablePersistenceDeps {
 export class TablePersistenceService {
 	private saveTimeout: number | null = null;
 	private pendingSave = false;
+	private saveTask: Promise<void> | null = null;
+	private saveVersion = 0;
+	private disposed = false;
 
 	constructor(private readonly deps: TablePersistenceDeps) {}
 
@@ -78,6 +81,7 @@ export class TablePersistenceService {
 	}
 
 	scheduleSave(): void {
+		if (this.disposed) return;
 		if (this.deps.shouldAllowSave && !this.deps.shouldAllowSave()) {
 			logger.debug('scheduleSave:blocked');
 			return;
@@ -86,6 +90,8 @@ export class TablePersistenceService {
 			window.clearTimeout(this.saveTimeout);
 		}
 		this.pendingSave = true;
+		this.saveVersion += 1;
+		if (this.saveTask) return;
 		const delay = this.deps.getSaveDelayMs?.() ?? 500;
 		this.saveTimeout = window.setTimeout(() => {
 			this.saveTimeout = null;
@@ -110,10 +116,35 @@ export class TablePersistenceService {
 	}
 
 	hasPendingSave(): boolean {
-		return this.pendingSave;
+		return this.pendingSave || this.saveTask !== null;
 	}
 
 	async save(): Promise<void> {
+		if (this.disposed) return;
+		this.cancelScheduledSave({ resolvePending: false });
+		this.pendingSave = true;
+		this.saveVersion += 1;
+		if (!this.saveTask) {
+			// Drain edits made during any awaited backup, note, or config write.
+			this.saveTask = Promise.resolve().then(async () => {
+				try {
+					do {
+						const version = this.saveVersion;
+						await this.saveSnapshot(version);
+						if (version === this.saveVersion) break;
+					} while (this.pendingSave && !this.disposed);
+				} finally {
+					// Settle in the same microtask as the version check, leaving no
+					// gap in which a new edit could join an already completed writer.
+					this.saveTask = null;
+					this.cancelScheduledSave();
+				}
+			});
+		}
+		await this.saveTask;
+	}
+
+	private async saveSnapshot(version: number): Promise<void> {
 		if (this.deps.shouldAllowSave && !this.deps.shouldAllowSave()) {
 			logger.debug('save:blocked');
 			this.cancelScheduledSave();
@@ -147,23 +178,20 @@ export class TablePersistenceService {
 					logger.warn('Backup snapshot failed before save', error);
 				}
 			}
+			if (this.disposed || this.deps.getFile() !== targetFile ||
+				this.deps.app.vault.getAbstractFileByPath(targetFile.path) !== targetFile) return;
 			this.deps.markSelfMutation?.(targetFile);
-			if (this.shouldPersistConfigBlockInNote()) {
-				const nextContent = this.buildPersistedContent(markdown, configPayload, true);
-				await this.deps.app.vault.modify(targetFile, nextContent);
+			const nextContent = this.buildPersistedContent(markdown, configPayload, this.shouldPersistConfigBlockInNote());
+			await this.deps.app.vault.modify(targetFile, nextContent);
+			await this.saveConfigState(targetFile, configPayload);
+			// Replacing the baseline clears the session's dirty flag, so only the
+			// newest fully persisted snapshot may acknowledge user mutations.
+			if (version === this.saveVersion && this.deps.getFile() === targetFile && !this.disposed) {
 				this.deps.replaceConversionBaseline?.(nextContent);
-				await this.saveConfigState(targetFile, configPayload);
-			} else {
-				const nextContent = this.buildPersistedContent(markdown, configPayload, false);
-				await this.deps.app.vault.modify(targetFile, nextContent);
-				this.deps.replaceConversionBaseline?.(nextContent);
-				await this.saveConfigState(targetFile, configPayload);
 			}
 		} catch (error) {
 			logger.error('Failed to save file', error);
 			new Notice(t('tablePersistence.saveFailed'));
-		} finally {
-			this.cancelScheduledSave();
 		}
 	}
 
@@ -334,6 +362,7 @@ export class TablePersistenceService {
 	}
 
 	dispose(): void {
+		this.disposed = true;
 		this.cancelScheduledSave({ suppressCallback: true });
 	}
 }

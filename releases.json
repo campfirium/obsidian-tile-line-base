@@ -290,5 +290,17 @@
     ],
     "fixed": [],
     "changed": []
+  },
+  "0.9.21": {
+    "date": "2026-09-20",
+    "info": "",
+    "new": [],
+    "improved": [
+      "Link and image detection is faster in long text fields."
+    ],
+    "fixed": [
+      "Edits made while a save is in progress are now preserved."
+    ],
+    "changed": []
   }
 }

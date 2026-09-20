@@ -90,14 +90,15 @@ export function resolveDirectImage(value: string | null | undefined): string | n
 }
 
 function extractFirstImageToken(text: string): string | null {
+	// This shared global expression must start from the beginning on every call.
+	MARKDOWN_IMAGE_TOKEN_PATTERN.lastIndex = 0;
 	const candidates: string[] = [];
 	const patterns: RegExp[] = [
 		MARKDOWN_IMAGE_TOKEN_PATTERN, // markdown image
 		/!\[\[[^\]]+?]]/g, // embed image
 		/\[\[([^\]]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif))(?:\|[^\]]*)?]]/gi, // wikilink with image extension
 		/https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/gi,
-		/data:image\/[^\s]+/gi,
-		/[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/gi
+		/data:image\/[^\s]+/gi
 	];
 	for (const pattern of patterns) {
 		const match = pattern.exec(text);
@@ -107,6 +108,12 @@ function extractFirstImageToken(text: string): string | null {
 		}
 	}
 	if (candidates.length === 0) {
+		// Anchor filename detection to each token instead of retrying every suffix.
+		const imageToken = /^[^\s]+?\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|avif|heic|heif)(?:\?[^\s]*)?/i;
+		for (const token of text.matchAll(/\S+/g)) {
+			const match = imageToken.exec(token[0]);
+			if (match) return match[0];
+		}
 		return null;
 	}
 	return candidates[0].trim();

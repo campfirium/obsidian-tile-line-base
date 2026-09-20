@@ -1,4 +1,5 @@
 import { normalizePath, type DataAdapter } from 'obsidian';
+import { isSafeBackupEntryId, isSafeBackupRelativePath } from './backupValidation';
 
 const PATH_HASH_LENGTH = 12;
 const MAX_SLUG_LENGTH = 60;
@@ -37,8 +38,13 @@ function hashPath(input: string): string {
 }
 
 function joinPath(base: string, ...segments: string[]): string {
+	if (![base, ...segments].every(isSafeBackupRelativePath)) {
+		throw new Error('Invalid backup path');
+	}
 	const parts = [base, ...segments].filter((part) => part.length > 0);
-	return normalizePath(parts.join('/'));
+	const result = normalizePath(parts.join('/'));
+	if (!result.startsWith(`${normalizePath(base)}/`)) throw new Error('Backup path escapes its directory');
+	return result;
 }
 
 function isNotFoundError(error: unknown): boolean {
@@ -52,12 +58,14 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 export function buildBackupFileName(filePath: string, entryId: string, extension: string): string {
+	validateEntryPath(filePath, entryId, extension);
 	const hash = hashPath(filePath);
 	const slug = sanitizeSlug(filePath);
 	return `${hash}-${slug}-${entryId}${extension}`;
 }
 
 export function getLegacyPathSegments(filePath: string): string[] {
+	if (!isSafeBackupRelativePath(filePath)) throw new Error('Invalid backup source path');
 	const normalized = filePath.replace(/\\/g, '/');
 	const segments = normalized.split('/').filter((segment) => segment.length > 0);
 	if (segments.length === 0) {
@@ -69,7 +77,14 @@ export function getLegacyPathSegments(filePath: string): string[] {
 }
 
 export function buildLegacyEntryPath(baseDir: string, segments: string[], entryId: string, extension: string): string {
+	validateEntryPath(segments.join('/'), entryId, extension);
 	return joinPath(baseDir, ...segments, `${entryId}${extension}`);
+}
+
+function validateEntryPath(filePath: string, entryId: string, extension: string): void {
+	if (!isSafeBackupRelativePath(filePath) || !isSafeBackupEntryId(entryId) || extension !== '.tlbkp') {
+		throw new Error('Invalid backup entry path');
+	}
 }
 
 export async function removeLegacyDirectoriesIfEmpty(

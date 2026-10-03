@@ -302,5 +302,13 @@
       "Edits made while a save is in progress are now preserved."
     ],
     "changed": []
+  },
+  "0.9.22": {
+    "date": "2026-10-03",
+    "info": "Maintenance release with no user-facing changes.",
+    "new": [],
+    "improved": [],
+    "fixed": [],
+    "changed": []
   }
 }

@@ -62,9 +62,13 @@ export class TableConfigManager {
 		}
 
 		const settingsService = plugin.getSettingsService();
-		await settingsService.ensureFileSettingsForPath(file.path);
-
-		await runConfigOperation(file.path, () => this.tryImportFromConfigBlock(file));
+		try {
+			await settingsService.ensureFileSettingsForPath(file.path);
+			await runConfigOperation(file.path, () => this.tryImportFromConfigBlock(file));
+		} catch (error) {
+			// Keep rendering with saved settings and retry the unacknowledged block later.
+			logger.warn('Using stored configuration after import failure', error);
+		}
 		return this.getStoredConfig(file);
 	}
 
@@ -221,7 +225,20 @@ export class TableConfigManager {
 			if (!normalized) return;
 			const identity = stableConfigIdentity(normalized);
 			const service = plugin.getSettingsService();
-			if (service.getSettings().importedConfigBlocks[path] === identity) return;
+			const acknowledged = service.getSettings().importedConfigBlocks[path];
+			if (acknowledged) {
+				let previous = acknowledged;
+				try {
+					const parsed: unknown = JSON.parse(acknowledged);
+					previous = stableConfigIdentity(parsed);
+				} catch {
+					// An invalid old record must not suppress a valid import.
+				}
+				if (previous === identity) {
+					await service.acknowledgeConfigBlock(path, identity);
+					return;
+				}
+			}
 			if (file.path !== path || plugin.app.vault.getAbstractFileByPath(path) !== file) return;
 			await this.save(file, normalized);
 			if (file.path === path) await service.acknowledgeConfigBlock(path, identity);

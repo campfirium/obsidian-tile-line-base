@@ -198,7 +198,7 @@ export function initializeTableView(view: TableView): void {
 		getAvailableColumns: () => getAvailableColumns(view),
 		getFilterColumnOptions: () => getFilterColumnOptions(view),
 		persist: () => persistFilterViews(view),
-		persistGenerated: () => view.persistenceService.saveConfig({ writeNote: false }),
+		persistPreferences: () => view.persistenceService.saveConfig({ writeNote: false }),
 		applyActiveFilterView: () => view.filterOrchestrator.applyActiveView(),
 		syncState: () => syncFilterViewState(view),
 		renderBar: () => {
@@ -237,6 +237,7 @@ export function initializeTableView(view: TableView): void {
 			}
 		},
 		persist: () => persistTagGroups(view),
+		persistPreferences: () => view.persistenceService.saveConfig({ writeNote: false }),
 		isStatusBaselineSeeded: () => view.filterStateStore.isStatusBaselineSeeded(),
 		markStatusBaselineSeeded: () => view.filterStateStore.markStatusBaselineSeeded(),
 			cloneFilterView: (filterView, options) => view.filterViewController.cloneFilterView(filterView.id, options)

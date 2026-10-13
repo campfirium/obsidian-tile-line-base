@@ -19,7 +19,7 @@ interface FilterViewControllerOptions {
 	getAvailableColumns: () => string[];
 	getFilterColumnOptions?: () => FilterColumnOption[];
 	persist: () => Promise<void> | void;
-	persistGenerated: () => Promise<void> | void;
+	persistPreferences: () => Promise<void> | void;
 	applyActiveFilterView: () => void;
 	syncState: () => void;
 	renderBar: () => void;
@@ -55,7 +55,7 @@ export class FilterViewController {
 	private readonly getAvailableColumns: () => string[];
 	private readonly getFilterColumnOptions?: () => FilterColumnOption[];
 	private readonly persist: () => Promise<void> | void;
-	private readonly persistGenerated: () => Promise<void> | void;
+	private readonly persistPreferences: () => Promise<void> | void;
 	private readonly applyActiveFilterView: () => void;
 	private readonly syncState: () => void;
 	private readonly renderBar: () => void;
@@ -72,7 +72,7 @@ export class FilterViewController {
 		this.getAvailableColumns = options.getAvailableColumns;
 		this.getFilterColumnOptions = options.getFilterColumnOptions;
 		this.persist = options.persist;
-		this.persistGenerated = options.persistGenerated;
+		this.persistPreferences = options.persistPreferences;
 		this.applyActiveFilterView = options.applyActiveFilterView;
 		this.syncState = options.syncState;
 		this.renderBar = options.renderBar;
@@ -132,7 +132,8 @@ export class FilterViewController {
 		this.stateStore.updateState((state) => {
 			state.activeViewId = viewId;
 		});
-		this.runStateEffects({ persist: true, apply: true });
+		this.runStateEffects({ persist: false, apply: true });
+		void this.persistPreferences();
 	}
 
 	reorderFilterViews(draggedId: string, targetId: string): void {
@@ -540,7 +541,7 @@ export class FilterViewController {
 			generateId: () => this.generateFilterViewId()
 		});
 		this.runStateEffects({ persist: false, apply: false });
-		if (stateChanged) void this.persistGenerated();
+		if (stateChanged) void this.persistPreferences();
 		return resolved;
 	}
 

@@ -90,12 +90,13 @@ async function main() {
  const beforeFailure = f.settings.getSettings().importedConfigBlocks[f.file.path];
  f.contents.set(f.file.path, buildConfigCalloutBlock({ copyTemplate: 'retry' }));
  const priorTemplate = f.settings.getCopyTemplateForFile(f.file.path);
- f.fail(true); await assert.rejects(f.config.load(f.file));
+ f.fail(true); const fallback = await f.config.load(f.file);
+ assert.equal(fallback.copyTemplate, priorTemplate);
  assert.equal(f.settings.getCopyTemplateForFile(f.file.path), priorTemplate);
  assert.equal(f.settings.getSettings().importedConfigBlocks[f.file.path], beforeFailure);
  f.fail(false); assert.equal((await f.config.load(f.file)).copyTemplate, 'retry');
  assert.equal(f.settings.getFileViewPreference(f.file.path), 'table');
- console.log('PASS failed import does not acknowledge, retry works, partial block follows existing default rules');
+ console.log('PASS failed import renders saved settings, does not acknowledge, retry works, partial block follows existing default rules');
  const base = { galleryViews: { activeViewId: 'g', views: [{ id: 'g', name: 'before', groupField: 'status', template: { title: 'A', body: 'B' } }] } };
  const local = structuredClone(base); local.galleryViews.views[0].template.title = 'edited';
  const remote = structuredClone(base); remote.galleryViews.views[0].groupField = 'category'; remote.galleryViews.views[0].template.body = 'external';
@@ -144,13 +145,55 @@ async function main() {
  const { FilterStateStore } = require('../../src/table-view/filter/FilterStateStore');
  let explicitFilterEdits = 0; let generatedFilterSaves = 0;
  const filters = new FilterViewController({ app: {}, stateStore: new FilterStateStore(null), getAvailableColumns: () => ['status'],
-  persist: () => { explicitFilterEdits++; }, persistGenerated: () => { generatedFilterSaves++; },
+  persist: () => { explicitFilterEdits++; }, persistPreferences: () => { generatedFilterSaves++; },
   applyActiveFilterView() {}, syncState() {}, renderBar() {}
  });
  assert.equal(filters.ensureFilterViewsForFieldValues('status', ['todo']).length, 1);
  assert.equal(explicitFilterEdits, 0); assert.equal(generatedFilterSaves, 1);
  filters.ensureFilterViewsForFieldValues('status', ['todo']); assert.equal(generatedFilterSaves, 1);
  console.log('PASS generated status filters persist settings without becoming user edits');
+
+ const { TagGroupController } = require('../../src/table-view/filter/tag-group/TagGroupController');
+ const { TagGroupStore } = require('../../src/table-view/filter/tag-group/TagGroupStore');
+ // Both table and gallery controllers use the same activation boundary.
+ for (const scope of ['table', 'gallery']) {
+  const stateStore = new FilterStateStore(null);
+  const groupStore = new TagGroupStore(null, scope);
+  let writes = 0; let backups = 0; let selections = 0;
+  const controller = new FilterViewController({ app: {}, stateStore, getAvailableColumns: () => ['status'],
+   persist: () => { writes++; backups++; }, persistPreferences: () => { selections++; },
+   applyActiveFilterView() {}, syncState() {}, renderBar() {}
+  });
+  const [tab] = controller.ensureFilterViewsForFieldValues('status', ['todo']);
+  controller.activateFilterView(tab.id); controller.activateFilterView(null);
+  assert.equal(stateStore.getState().activeViewId, null);
+  const group = { id: 'test-group', name: 'Test', viewIds: [tab.id] };
+  groupStore.setState({ activeGroupId: null, groups: [group], metadata: {} });
+  const groups = new TagGroupController({ app: {}, store: groupStore,
+   getFilterViewState: () => stateStore.getState(), getAvailableColumns: () => ['status'], getUniqueFieldValues: () => [],
+   ensureFilterViewsForFieldValues: (field, values) => controller.ensureFilterViewsForFieldValues(field, values),
+   activateFilterView: id => controller.activateFilterView(id), renderBar() {},
+   persist: () => { writes++; backups++; }, persistPreferences: () => { selections++; },
+   isStatusBaselineSeeded: () => true, markStatusBaselineSeeded() {}, cloneFilterView: () => null
+  });
+  groups.activateGroup(group);
+  assert.equal(groupStore.getState().activeGroupId, group.id);
+  assert.equal(writes, 0); assert.equal(backups, 0); assert.ok(selections >= 4);
+  // Deleting an existing definition still takes the explicit edit boundary.
+  controller.deleteFilterView(tab.id); assert.ok(writes > 0);
+  console.log(`PASS ${scope} filter and tag-group selection stays read-only; definition deletion remains an edit`);
+ }
+ const { stableConfigIdentity } = require('../../src/table-view/config/ConfigOperations');
+ assert.equal(stableConfigIdentity({ z: 1, A: 2, a: 3 }), '{"A":2,"a":3,"z":1}');
+ // Old records may use a different key order but must still suppress stale imports.
+ const legacy = await fixture();
+ const legacyBlock = buildConfigCalloutBlock({ copyTemplate: 'old', viewPreference: 'table' });
+ legacy.contents.set(legacy.file.path, legacyBlock);
+ legacy.settings.getSettings().importedConfigBlocks[legacy.file.path] = '{"viewPreference":"table","copyTemplate":"old"}';
+ await legacy.settings.saveCopyTemplateForFile(legacy.file.path, 'current');
+ assert.equal((await legacy.config.load(legacy.file)).copyTemplate, 'current');
+ assert.equal(legacy.settings.getSettings().importedConfigBlocks[legacy.file.path], legacy.config.getContentIdentity(legacyBlock));
+ console.log('PASS locale-independent ordering accepts old identity without reimport');
  service.dispose(); setPluginContext(null);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

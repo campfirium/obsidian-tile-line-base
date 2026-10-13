@@ -10,7 +10,7 @@ export function initializeGalleryFilters(view: TableView): void {
 		getAvailableColumns: () => getGalleryAvailableColumns(view),
 		getFilterColumnOptions: () => getGalleryFilterColumnOptions(view),
 		persist: () => persistGalleryFilterViews(view),
-		persistGenerated: () => view.persistenceService.saveConfig({ writeNote: false }),
+		persistPreferences: () => view.persistenceService.saveConfig({ writeNote: false }),
 		applyActiveFilterView: () => view.galleryFilterOrchestrator.applyActiveView(),
 		syncState: () => syncGalleryFilterViewState(view),
 		renderBar: () => {
@@ -50,6 +50,7 @@ export function initializeGalleryFilters(view: TableView): void {
 			}
 		},
 		persist: () => persistGalleryTagGroups(view),
+		persistPreferences: () => view.persistenceService.saveConfig({ writeNote: false }),
 		isStatusBaselineSeeded: () => view.galleryFilterStateStore.isStatusBaselineSeeded(),
 		markStatusBaselineSeeded: () => view.galleryFilterStateStore.markStatusBaselineSeeded(),
 		cloneFilterView: (filterView, options) => view.galleryFilterViewController.cloneFilterView(filterView.id, options)

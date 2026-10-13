@@ -24,6 +24,7 @@ interface TagGroupControllerOptions {
 	activateFilterView: (viewId: string | null) => void;
 	renderBar: () => void;
 	persist: () => Promise<void> | void;
+	persistPreferences: () => Promise<void> | void;
 	isStatusBaselineSeeded: () => boolean;
 	markStatusBaselineSeeded: () => void;
 	cloneFilterView: (view: FilterViewDefinition, options?: CloneFilterViewOptions) => FilterViewDefinition | null;
@@ -42,6 +43,7 @@ export class TagGroupController {
 	private readonly setActiveView: (viewId: string | null) => void;
 	private readonly renderBar: () => void;
 	private readonly persist: () => Promise<void> | void;
+	private readonly persistPreferences: () => Promise<void> | void;
 	private readonly isStatusBaselineSeeded: () => boolean;
 	private readonly markStatusBaselineSeeded: () => void;
 	private readonly cloneFilterView: (view: FilterViewDefinition, options?: CloneFilterViewOptions) => FilterViewDefinition | null;
@@ -59,6 +61,7 @@ export class TagGroupController {
 		this.setActiveView = options.activateFilterView;
 		this.renderBar = options.renderBar;
 		this.persist = options.persist;
+		this.persistPreferences = options.persistPreferences;
 		this.isStatusBaselineSeeded = options.isStatusBaselineSeeded;
 		this.markStatusBaselineSeeded = options.markStatusBaselineSeeded;
 		this.cloneFilterView = options.cloneFilterView;
@@ -271,7 +274,8 @@ export class TagGroupController {
 		// Reset active view to default when switching groups so the first tab is focused
 		this.setActiveView(null);
 		this.ensureVisibleFilterSelection();
-		void this.persistAndRender();
+		this.renderBar();
+		void this.persistPreferences();
 	}
 
 	private async promptRenameGroup(group: TagGroupDefinition): Promise<void> {

@@ -1,4 +1,5 @@
 import { Notice, setIcon } from 'obsidian';
+import { getPluginContext } from '../pluginContext';
 import { t } from '../i18n';
 import { KanbanFieldModal } from './kanban/KanbanFieldModal';
 import { DEFAULT_KANBAN_SORT_DIRECTION } from '../types/kanban';
@@ -94,10 +95,11 @@ export class ViewModeManager {
 		this.isSwitching = true;
 		try {
 			this.view.activeViewMode = mode;
+			this.view.requestedViewMode = mode;
+			if (this.view.file) await getPluginContext()?.getSettingsService().setFileViewPreference(this.view.file.path, mode);
 			this.view.refreshDisplayText();
 			this.updateButtons();
 			await this.view.render();
-			void this.view.persistenceService?.saveConfig();
 		} finally {
 			this.isSwitching = false;
 		}
@@ -124,7 +126,7 @@ export class ViewModeManager {
 			this.view.activeViewMode = 'table';
 			this.view.refreshDisplayText();
 			this.updateButtons();
-			void this.view.persistenceService?.saveConfig();
+			void this.view.persistenceService?.saveConfig({ writeNote: false });
 			return 'table';
 		}
 

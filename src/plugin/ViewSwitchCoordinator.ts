@@ -277,7 +277,7 @@ export class ViewSwitchCoordinator {
 			const file = tableView.file;
 
 			if (file) {
-				await tableView.restoreSessionBaselineIfEligible();
+				if (tableView.persistenceService.hasPendingSave()) await tableView.persistenceService.save();
 				this.suppressAutoSwitchUntil.set(file.path, Date.now() + 1000);
 				await this.settingsService.setFileViewPreference(file.path, 'markdown');
 				await leaf.setViewState({

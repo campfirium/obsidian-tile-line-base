@@ -4,6 +4,7 @@ import { getLogger } from '../utils/logger';
 import { t } from '../i18n';
 import type { TableConfigManager } from './TableConfigManager';
 import type { TablePersistenceService } from './TablePersistenceService';
+import { runConfigOperation } from './config/ConfigOperations';
 import { buildConfigCalloutBlock } from './config/ConfigBlockIO';
 
 interface TableFileDuplicationControllerOptions {
@@ -30,8 +31,12 @@ export class TableFileDuplicationController {
 		try {
 			const targetPath = this.buildTargetPath(sourceFile);
 			const content = await this.options.app.vault.read(sourceFile);
-			const duplicatedFile = await this.options.app.vault.create(targetPath, content);
-			await this.persistConfigForFile(duplicatedFile);
+			const duplicatedFile = await runConfigOperation(targetPath, async () => {
+				const created = await this.options.app.vault.create(targetPath, content);
+				await this.persistConfigForFile(created);
+				await this.options.configManager.acknowledgeContent(created, content);
+				return created;
+			});
 
 			new Notice(t('fileDuplication.successNotice', { fileName: duplicatedFile.basename }));
 			this.logger.info('duplicateCurrentFile:success', {

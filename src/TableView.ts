@@ -199,6 +199,8 @@ export class TableView extends ItemView {
 		if (this.refreshCoordinator) {
 			this.refreshCoordinator.finalizeRender(snapshot);
 		}
+		this.persistenceService.captureConfigBaseline();
+		this.requestedViewMode = null;
 		this.viewModeManager.updateButtons();
 		this.refreshDisplayText();
 	}
@@ -224,7 +226,6 @@ export class TableView extends ItemView {
 	}
 	async onClose(): Promise<void> {
 		if (this.persistenceService.hasPendingSave()) await this.persistenceService.save();
-		await this.restoreSessionBaselineIfEligible();
 		this.conversionSession.prepare(null);
 		if (this.markdownToggleButton) {
 			this.markdownToggleButton.remove();
@@ -388,5 +389,4 @@ export class TableView extends ItemView {
 	public replaceConversionBaseline(content: string): void { this.conversionSession.replaceBaseline(content); }
 	public markUserMutation(reason?: string): void { this.conversionSession.markUserMutation(reason); }
 	public hasUserMutations(): boolean { return this.conversionSession.hasUserMutations(); }
-	public async restoreSessionBaselineIfEligible(): Promise<boolean> { return this.conversionSession.restoreBaselineIfEligible(); }
 	}

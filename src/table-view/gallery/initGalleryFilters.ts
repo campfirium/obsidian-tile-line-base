@@ -10,6 +10,7 @@ export function initializeGalleryFilters(view: TableView): void {
 		getAvailableColumns: () => getGalleryAvailableColumns(view),
 		getFilterColumnOptions: () => getGalleryFilterColumnOptions(view),
 		persist: () => persistGalleryFilterViews(view),
+		persistGenerated: () => view.persistenceService.saveConfig({ writeNote: false }),
 		applyActiveFilterView: () => view.galleryFilterOrchestrator.applyActiveView(),
 		syncState: () => syncGalleryFilterViewState(view),
 		renderBar: () => {

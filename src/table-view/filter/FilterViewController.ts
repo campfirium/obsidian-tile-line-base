@@ -19,6 +19,7 @@ interface FilterViewControllerOptions {
 	getAvailableColumns: () => string[];
 	getFilterColumnOptions?: () => FilterColumnOption[];
 	persist: () => Promise<void> | void;
+	persistGenerated: () => Promise<void> | void;
 	applyActiveFilterView: () => void;
 	syncState: () => void;
 	renderBar: () => void;
@@ -54,6 +55,7 @@ export class FilterViewController {
 	private readonly getAvailableColumns: () => string[];
 	private readonly getFilterColumnOptions?: () => FilterColumnOption[];
 	private readonly persist: () => Promise<void> | void;
+	private readonly persistGenerated: () => Promise<void> | void;
 	private readonly applyActiveFilterView: () => void;
 	private readonly syncState: () => void;
 	private readonly renderBar: () => void;
@@ -70,6 +72,7 @@ export class FilterViewController {
 		this.getAvailableColumns = options.getAvailableColumns;
 		this.getFilterColumnOptions = options.getFilterColumnOptions;
 		this.persist = options.persist;
+		this.persistGenerated = options.persistGenerated;
 		this.applyActiveFilterView = options.applyActiveFilterView;
 		this.syncState = options.syncState;
 		this.renderBar = options.renderBar;
@@ -536,7 +539,8 @@ export class FilterViewController {
 			values,
 			generateId: () => this.generateFilterViewId()
 		});
-		this.runStateEffects({ persist: stateChanged, apply: false });
+		this.runStateEffects({ persist: false, apply: false });
+		if (stateChanged) void this.persistGenerated();
 		return resolved;
 	}
 

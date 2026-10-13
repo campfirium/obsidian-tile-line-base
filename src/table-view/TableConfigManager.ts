@@ -5,7 +5,9 @@ import type { FileTagGroupState } from '../types/tagGroup';
 import type { KanbanBoardState, KanbanViewPreferenceConfig } from '../types/kanban';
 import type { SlideViewConfig } from '../types/slide';
 import { getLogger } from '../utils/logger';
-import { readConfigCallout, stripExistingConfigBlock } from './config/ConfigBlockIO';
+import { readConfigCallout } from './config/ConfigBlockIO';
+
+import { runConfigOperation, stableConfigIdentity } from './config/ConfigOperations';
 
 const logger = getLogger('table-view:config');
 
@@ -42,7 +44,7 @@ export interface TableConfigData {
 	kanbanBoards?: KanbanBoardState | null;
 	slide?: SlideViewConfig | null;
 	gallery?: SlideViewConfig | null;
-	galleryViews?: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null }>; activeViewId: string | null } | null;
+	galleryViews?: { views: Array<{ id: string; name: string; template: SlideViewConfig; cardWidth?: number | null; cardHeight?: number | null; groupField?: string | null }>; activeViewId: string | null } | null;
 }
 
 export class TableConfigManager {
@@ -62,11 +64,14 @@ export class TableConfigManager {
 		const settingsService = plugin.getSettingsService();
 		await settingsService.ensureFileSettingsForPath(file.path);
 
-		const imported = await this.tryImportFromConfigBlock(file);
-		if (imported) {
-			return imported;
-		}
+		await runConfigOperation(file.path, () => this.tryImportFromConfigBlock(file));
+		return this.getStoredConfig(file);
+	}
 
+	getStoredConfig(file: TFile): TableConfigData | null {
+		const plugin = getPluginContext();
+		if (!plugin) return null;
+		const settingsService = plugin.getSettingsService();
 		const settings = settingsService.getSettings();
 		const filePath = file.path;
 		const snapshot: TableConfigData = {};
@@ -140,6 +145,7 @@ export class TableConfigManager {
 		const filePath = file.path;
 
 		const settingsService = plugin.getSettingsService();
+		const restore = settingsService.captureFileConfigState(filePath);
 		const tasks: Array<Promise<unknown>> = [];
 		const filterViews = data.filterViews ?? { views: [], activeViewId: null, metadata: {} };
 		tasks.push(plugin.saveFilterViewsForFile(filePath, filterViews));
@@ -182,46 +188,46 @@ export class TableConfigManager {
 		const galleryViews = data.galleryViews ?? null;
 		tasks.push(settingsService.saveGalleryViewsForFile(filePath, galleryViews));
 
-		await Promise.all(
-			tasks.map((task) =>
-				task.catch((error) => {
-					logger.error('Failed to persist table config payload', error);
-				})
-			)
-		);
+		const results = await Promise.allSettled(tasks);
+		for (const result of results) {
+			if (result.status === 'rejected') {
+				try { await restore(); } catch (error) { logger.error('Failed to persist config rollback', error); }
+				throw result.reason;
+			}
+		}
 	}
 
-	private async tryImportFromConfigBlock(file: TFile): Promise<TableConfigData | null> {
-		const plugin = getPluginContext();
-		if (!plugin) {
-			return null;
-		}
+	getContentIdentity(content: string): string | null {
+		const callout = readConfigCallout(content);
+		const normalized = callout?.data ? this.normalizeConfigData(callout.data) : null;
+		return normalized ? stableConfigIdentity(normalized) : null;
+	}
 
+	async acknowledgeContent(file: TFile, content: string): Promise<void> {
+		const identity = this.getContentIdentity(content);
+		if (identity !== null) {
+			await getPluginContext()?.getSettingsService().acknowledgeConfigBlock(file.path, identity);
+		}
+	}
+
+	private async tryImportFromConfigBlock(file: TFile): Promise<void> {
+		const plugin = getPluginContext();
+		if (!plugin) return;
+		const path = file.path;
 		try {
-			await plugin.getSettingsService().ensureFileSettingsForPath(file.path);
 			const content = await plugin.app.vault.read(file);
 			const callout = readConfigCallout(content);
-			if (!callout?.data) {
-				return null;
-			}
-			const normalized = this.normalizeConfigData(callout.data);
-			if (!normalized) {
-				return null;
-			}
+			const normalized = callout?.data ? this.normalizeConfigData(callout.data) : null;
+			if (!normalized) return;
+			const identity = stableConfigIdentity(normalized);
+			const service = plugin.getSettingsService();
+			if (service.getSettings().importedConfigBlocks[path] === identity) return;
+			if (file.path !== path || plugin.app.vault.getAbstractFileByPath(path) !== file) return;
 			await this.save(file, normalized);
-			if (plugin.getSettingsService().getSaveConfigBlockInNote()) {
-				return normalized;
-			}
-			const cleaned = stripExistingConfigBlock(content);
-			const finalContent =
-				cleaned.length === 0 ? '' : cleaned.endsWith('\n') ? cleaned : `${cleaned}\n`;
-			if (finalContent !== content) {
-				await plugin.app.vault.modify(file, finalContent);
-			}
-			return normalized;
+			if (file.path === path) await service.acknowledgeConfigBlock(path, identity);
 		} catch (error) {
 			logger.error('Failed to import config block', error);
-			return null;
+			throw error;
 		}
 	}
 
@@ -307,7 +313,8 @@ export class TableConfigManager {
 						name: typeof entryRecord.name === 'string' ? entryRecord.name : '',
 						template: entryRecord.template as SlideViewConfig,
 						cardWidth: width ?? fallback?.width ?? undefined,
-						cardHeight: height ?? fallback?.height ?? undefined
+						cardHeight: height ?? fallback?.height ?? undefined,
+						groupField: typeof entryRecord.groupField === 'string' ? entryRecord.groupField.trim() || undefined : undefined
 					};
 				})
 				: [];

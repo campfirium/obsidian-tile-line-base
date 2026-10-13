@@ -110,9 +110,7 @@ export class AgGridColumnService {
 			if (initResult.applied) {
 				this.columnLayoutInitialized = true;
 			}
-			if (initResult.autoSized.length > 0) {
-				this.handleAutoSizedColumns(initResult.autoSized);
-			}
+			// Initial layout is browsing, not a user resize or a persistence request.
 			return;
 		}
 

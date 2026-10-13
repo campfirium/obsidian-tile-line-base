@@ -89,6 +89,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 	};
 
 	const openTemplateModal = (viewId?: string) => {
+			const commitEdit = view.persistenceService.beginConfigEdit();
 		const active = ensureActiveGalleryConfig(viewId ?? view.activeGalleryViewId ?? undefined);
 		const modal = new SlideTemplateModal({
 			app: view.app,
@@ -105,6 +106,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 			buildBuiltInTemplate: (templateFields, templateConfigs, templateRows) =>
 				buildBuiltInGalleryTemplate(templateFields, templateConfigs, templateRows),
 			onCardSizeChange: (size) => {
+				commitEdit();
 				const width = normalizeSize(size.width, DEFAULT_CARD_WIDTH);
 				const height = normalizeSize(size.height, DEFAULT_CARD_HEIGHT);
 				view.galleryViewStore.updateCardSize(active.def.id, { width, height });
@@ -113,6 +115,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 				view.persistenceService.scheduleSave();
 			},
 			onSave: (nextTemplate, cardSize) => {
+				commitEdit();
 				const nextConfig = enforceSingleWithImageConfig(
 					normalizeSlideViewConfig({ ...active.config, template: nextTemplate })
 				);
@@ -166,8 +169,7 @@ export function renderGalleryMode(view: TableView, container: HTMLElement): void
 		const next = ensureActiveGalleryConfig(viewId);
 		view.galleryController?.updateConfig(next.config);
 		view.galleryController?.setCardSize({ width: next.cardWidth, height: next.cardHeight });
-		view.markUserMutation('gallery-template');
-		view.persistenceService.scheduleSave();
+		void view.persistenceService.saveConfig({ writeNote: false });
 	};
 
 	const createGalleryView = () => {

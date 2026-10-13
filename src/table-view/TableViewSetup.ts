@@ -136,6 +136,7 @@ export function initializeTableView(view: TableView): void {
 			view.copyTemplateLoaded = true;
 			view.copyTemplate = template;
 		},
+		beginEdit: () => view.persistenceService.beginConfigEdit(),
 		persistTemplate: () => view.persistenceService.saveConfig()
 	});
 	view.paragraphPromotionController = new ParagraphPromotionController({
@@ -197,6 +198,7 @@ export function initializeTableView(view: TableView): void {
 		getAvailableColumns: () => getAvailableColumns(view),
 		getFilterColumnOptions: () => getFilterColumnOptions(view),
 		persist: () => persistFilterViews(view),
+		persistGenerated: () => view.persistenceService.saveConfig({ writeNote: false }),
 		applyActiveFilterView: () => view.filterOrchestrator.applyActiveView(),
 		syncState: () => syncFilterViewState(view),
 		renderBar: () => {

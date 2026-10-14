@@ -177,11 +177,29 @@ async function main() {
    isStatusBaselineSeeded: () => true, markStatusBaselineSeeded() {}, cloneFilterView: () => null
   });
   groups.activateGroup(group);
+  controller.tagGroupSupport = {
+   onFilterViewRemoved: id => groups.handleFilterViewRemoval(id),
+   onFilterViewsUpdated: () => groups.syncWithAvailableViews()
+  };
   assert.equal(groupStore.getState().activeGroupId, group.id);
   assert.equal(writes, 0); assert.equal(backups, 0); assert.ok(selections >= 4);
+  for (const temporaryKey of ['value:status:todo', 'parent-group:entry']) {
+   const options = { name: 'Temporary', temporaryKey, filterRule: { combineMode: 'AND', conditions: [{ column: 'status', operator: 'equals', value: 'todo' }] } };
+   const temporary = controller.createTemporaryFilterView(options);
+   assert.equal(stateStore.getState().activeViewId, temporary.id);
+   assert.equal(controller.createTemporaryFilterView(options).id, temporary.id);
+   assert.equal(stateStore.getState().views.filter(view => view.temporaryKey === temporaryKey).length, 1);
+   controller.deleteFilterView(temporary.id);
+   assert.equal(stateStore.getState().views.some(view => view.id === temporary.id), false);
+   assert.equal(writes, 0); assert.equal(backups, 0);
+  }
+  const saved = controller.createTemporaryFilterView({ name: 'Saved', temporaryKey: 'saved', filterRule: { combineMode: 'AND', conditions: [] } });
+  controller.saveTemporaryView(saved.id);
+  assert.equal(stateStore.getState().views.find(view => view.id === saved.id).isTemporary, false);
+  assert.equal(writes, 1); assert.equal(backups, 1);
   // Deleting an existing definition still takes the explicit edit boundary.
   controller.deleteFilterView(tab.id); assert.ok(writes > 0);
-  console.log(`PASS ${scope} filter and tag-group selection stays read-only; definition deletion remains an edit`);
+  console.log(`PASS ${scope} filter/group selection and temporary creation/reuse/deletion stay read-only; saving/deleting definitions remain edits`);
  }
  const { stableConfigIdentity } = require('../../src/table-view/config/ConfigOperations');
  assert.equal(stableConfigIdentity({ z: 1, A: 2, a: 3 }), '{"A":2,"a":3,"z":1}');

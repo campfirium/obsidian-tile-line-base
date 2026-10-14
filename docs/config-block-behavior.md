@@ -6,7 +6,7 @@ A valid TLB configuration block is imported into plugin settings when it is firs
 
 Importing does not remove the configuration block from the note. Existing configuration import defaults still apply to partial blocks; import is not a field-by-field merge. Invalid blocks do not replace saved settings. If importing fails, the view uses saved settings and retries on a later load.
 
-Switching the displayed mode, active board, gallery view, filter tab, or tag group saves the necessary local preferences without updating the note. Automatic layout and default-filter initialization also do not write the note. These selections can therefore differ from the last configuration block carried to another device. Creating, editing, or deleting filter definitions remains an explicit edit.
+Switching the displayed mode, active board, gallery view, filter tab, or tag group saves the necessary local preferences without updating the note. Creating, reusing, or deleting a temporary filter also leaves the note untouched. Automatic layout and default-filter initialization do not write the note. These selections can therefore differ from the last configuration block carried to another device. Saving a temporary filter as a regular definition, or creating, editing, or deleting regular definitions, remains an explicit edit.
 
 When the user edits note content or explicitly saves configuration, the existing “Save config block in note” setting applies. With the setting enabled, the note carries the saved configuration; with it disabled, an existing block can be removed on that save. A configuration save with no change to the note leaves its content untouched.
 

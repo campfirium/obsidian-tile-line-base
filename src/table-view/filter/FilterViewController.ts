@@ -425,7 +425,8 @@ export class FilterViewController {
 			state.views.push(temporaryView);
 			state.activeViewId = temporaryView.id;
 		});
-		this.runStateEffects({ persist: true, apply: true });
+		this.runStateEffects({ persist: false, apply: true });
+		void this.persistPreferences();
 		return temporaryView;
 	}
 
@@ -453,11 +454,13 @@ export class FilterViewController {
 
 	deleteFilterView(viewId: string): void {
 		let removed = false;
+		let wasTemporary = false;
 		this.stateStore.updateState((state) => {
 			const index = state.views.findIndex((view) => view.id === viewId);
 			if (index === -1) {
 				return;
 			}
+			wasTemporary = state.views[index].isTemporary === true;
 			state.views.splice(index, 1);
 			if (state.activeViewId === viewId) {
 				state.activeViewId = null;
@@ -467,10 +470,11 @@ export class FilterViewController {
 		if (!removed) {
 			return;
 		}
-		if (this.tagGroupSupport) {
+		if (this.tagGroupSupport && !wasTemporary) {
 			this.tagGroupSupport.onFilterViewRemoved(viewId);
 		}
-		this.runStateEffects({ persist: true, apply: true });
+		this.runStateEffects({ persist: !wasTemporary, apply: true });
+		if (wasTemporary) void this.persistPreferences();
 	}
 
 	private saveFilterView(result: FilterViewEditorResult): void {

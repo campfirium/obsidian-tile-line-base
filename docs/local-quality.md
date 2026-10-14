@@ -14,4 +14,6 @@ To check tool freshness, query the published versions of `eslint-plugin-obsidian
 
 On 2026-10-14, the official lint plugin remained at 0.4.2. The TypeScript ESLint packages were updated together to 8.71.1. API types remain at 1.13.1 because 1.14.4 had not passed the configured seven-day release age; TypeScript ESLint 8.71.2 was also too recent. This limits claims of parity with newer API checks.
 
+The API type package pins Moment 2.29.4. An override selects Moment 2.31.0 to address the locale path traversal advisory without changing the API type version. Compatible brace-expansion patches are also recorded in the lockfile. These packages belong to development tooling. During release preparation, GitHub reported these advisories while npm audit reported zero vulnerabilities, so check both the installed lockfile versions and the repository alerts.
+
 Local checks catch covered behavior regressions before remote review. They do not certify the remote review service or replace final Obsidian UI acceptance. In a disposable Vault, repeatedly switch filters and tag groups, create a filter through the row context menu, reuse it, and delete it. Confirm that note bytes and modification time remain unchanged. Explicitly saving the temporary filter must still persist the definition under the configured note-block policy.

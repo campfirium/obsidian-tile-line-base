@@ -69,5 +69,10 @@
     "ag-grid-community": "34.2.0",
     "monkey-around": "3.0.0",
     "sortablejs": "1.15.6"
+  },
+  "overrides": {
+    "obsidian": {
+      "moment": "2.31.0"
+    }
   }
 }

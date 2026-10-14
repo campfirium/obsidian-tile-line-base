@@ -45,12 +45,12 @@ async function verifySave(phase, flushImmediately) {
 	const service = new TablePersistenceService({
 		app: { vault: {
 			getAbstractFileByPath: () => file,
-			modify: async (_, value) => { await pause('modify'); writes.push(value); }
+			process: async (_, change) => { await pause('modify'); writes.push(change('')); }
 		} },
 		getFile: () => file,
 		dataStore: { blocksToMarkdown: () => content },
 		getBackupManager: () => ({ ensureBackup: () => pause('backup') }),
-		configManager: { save: () => pause('config') },
+		configManager: { save: () => pause('config'), getContentIdentity: () => null, acknowledgeContent: async () => {} },
 		shouldAllowSave: () => dirty,
 		replaceConversionBaseline: value => { dirty = false; baselines.push(value); },
 		getSaveDelayMs: () => 5

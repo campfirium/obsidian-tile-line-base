@@ -46,6 +46,10 @@ export function readConfigCallout(content: string): ConfigCalloutPayload | null 
 	}
 }
 
+export function hasConfigBlock(content: string): boolean {
+	return CONFIG_CALLOUT_PATTERN.test(content) || CONFIG_COMMENT_PATTERN.test(content);
+}
+
 export function stripExistingConfigBlock(content: string): string {
 	let cleaned = content.replace(CALLOUT_STRIP_PATTERN, '\n');
 	cleaned = cleaned.replace(COMMENT_STRIP_PATTERN, '\n');

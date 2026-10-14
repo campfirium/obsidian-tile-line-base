@@ -130,7 +130,7 @@ export class KanbanBoardController {
 			setActive: true
 		});
 		await this.store.persist();
-		this.applyBoardContext(board, { persist: true, rerender: true });
+		this.applyBoardContext(board, { persist: true, rerender: true, writeNote: true });
 		this.refreshToolbar();
 	}
 	async editBoard(board: KanbanBoardDefinition): Promise<void> {
@@ -160,7 +160,7 @@ export class KanbanBoardController {
 		}
 		await this.store.persist();
 		if (this.store.getState().activeBoardId === board.id) {
-			this.applyBoardContext(updated, { persist: true, rerender: true });
+			this.applyBoardContext(updated, { persist: true, rerender: true, writeNote: true });
 		}
 		this.refreshToolbar();
 	}
@@ -192,7 +192,7 @@ export class KanbanBoardController {
 		setActive: true
 	});
 		await this.store.persist();
-		this.applyBoardContext(cloned, { persist: true, rerender: true });
+		this.applyBoardContext(cloned, { persist: true, rerender: true, writeNote: true });
 		this.refreshToolbar();
 		new Notice(t('kanbanView.toolbar.duplicateBoardNotice', { name: cloned.name }));
 	}
@@ -215,7 +215,7 @@ export class KanbanBoardController {
 			? nextState.boards.find((entry) => entry.id === nextState.activeBoardId) ?? null
 			: null;
 		await this.store.persist();
-		this.applyBoardContext(activeBoard, { persist: true, rerender: true });
+		this.applyBoardContext(activeBoard, { persist: true, rerender: true, writeNote: true });
 		this.refreshToolbar();
 	}
 	async selectBoard(boardId: string): Promise<void> {
@@ -278,7 +278,7 @@ export class KanbanBoardController {
 	}
 	private applyBoardContext(
 		board: KanbanBoardDefinition | null,
-		options?: { persist?: boolean; rerender?: boolean }
+		options?: { persist?: boolean; rerender?: boolean; writeNote?: boolean }
 	): void {
 	if (board) {
 		this.view.kanbanCardContentConfig = board.content ? cloneKanbanContentConfig(board.content) : null;
@@ -332,7 +332,7 @@ export class KanbanBoardController {
 		this.laneFieldRepair.reset();
 	}
 		if (options?.persist !== false) {
-			void this.view.persistenceService?.saveConfig();
+			void this.view.persistenceService?.saveConfig({ writeNote: options?.writeNote === true });
 		}
 		if (options?.rerender === true) {
 			void this.view.render();

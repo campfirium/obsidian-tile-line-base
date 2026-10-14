@@ -50,11 +50,22 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 		view.galleryTagGroupStore.setFilePath(view.file.path);
 		view.galleryTagGroupStore.resetState();
 		view.copyTemplate = null; view.copyTemplateLoaded = false;
-		const content = await view.app.vault.read(view.file);
+		const file = view.file;
+		const path = file.path;
+		const content = await view.app.vault.read(file);
+		if (view.file !== file || file.path !== path) return;
 		view.captureConversionBaseline(content);
-		const parsedFrontmatter = extractFrontmatter(content); const configBlock = await view.persistenceService.loadConfig();
+		const parsedFrontmatter = extractFrontmatter(content); const configBlock = await view.persistenceService.loadConfig(file);
+		if (view.file !== file || file.path !== path) return;
+		if (!view.persistenceService.hasPendingSave() && !view.hasUserMutations()) {
+			view.kanbanPreferencesLoaded = false;
+			view.slidePreferencesLoaded = false;
+			view.galleryPreferencesLoaded = false;
+			view.kanbanBoardsLoaded = false;
+		}
 		const plugin = getPluginContext();
 		view.pendingKanbanBoardState = configBlock?.kanbanBoards ?? null;
+		view.kanbanBoardController?.ensureInitialized();
 		if (configBlock) {
 			if (configBlock.filterViews) {
 				view.filterStateStore.setState(configBlock.filterViews);
@@ -232,8 +243,7 @@ import { extractFrontmatter } from './MarkdownFrontmatter';
 	const galleryTagGroupsChanged = view.galleryTagGroupController.syncWithAvailableViews();
 	syncGalleryTagGroupState(view);
 	if (tagGroupsChanged || galleryTagGroupsChanged) {
-		view.markUserMutation('tag-group-state-repair');
-		void view.persistenceService.saveConfig();
+		void view.persistenceService.saveConfig({ writeNote: false });
 	}
 	view.filterOrchestrator.refresh();
 	view.galleryFilterOrchestrator.refresh();

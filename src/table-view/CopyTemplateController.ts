@@ -17,6 +17,7 @@ interface CopyTemplateControllerDeps {
 	getTemplate: () => string | null;
 	setTemplate: (template: string | null) => void;
 	persistTemplate: () => Promise<void> | void;
+	beginEdit?: () => () => void;
 }
 
 export class CopyTemplateController {
@@ -27,6 +28,7 @@ export class CopyTemplateController {
 	private readonly getTemplate: () => string | null;
 	private readonly setTemplate: (template: string | null) => void;
 	private readonly persistTemplate: () => Promise<void> | void;
+	private readonly beginEdit?: () => () => void;
 
 	constructor(deps: CopyTemplateControllerDeps) {
 		this.app = deps.app;
@@ -36,15 +38,18 @@ export class CopyTemplateController {
 		this.getTemplate = deps.getTemplate;
 		this.setTemplate = deps.setTemplate;
 		this.persistTemplate = deps.persistTemplate;
+		this.beginEdit = deps.beginEdit;
 	}
 
 	openEditor(triggerElement?: HTMLElement | null, sampleIndexes?: number[]): void {
 		const initialTemplate = this.resolveInitialTemplate(sampleIndexes);
+		const commitEdit = this.beginEdit?.();
 		const modal = new CopyTemplateModal(this.app, {
 			initialTemplate,
 			availableFields: this.getAvailableFields(),
 			triggerElement: triggerElement ?? null,
 			onSubmit: (template) => {
+				commitEdit?.();
 				void this.applyTemplate(template);
 			},
 			onReset: () => this.handleReset(sampleIndexes),

@@ -66,7 +66,7 @@ const main = () => {
 			continue;
 		}
 
-		lines.push(`**${title}**`);
+		lines.push(`### ${title}`);
 		for (const item of items) {
 			lines.push(`- ${item}`);
 		}

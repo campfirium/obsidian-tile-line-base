@@ -18,7 +18,9 @@ import {
 } from '../types/kanban';
 import type { SlideViewConfig } from '../types/slide';
 import { isDefaultSlideViewConfig, normalizeSlideViewConfig } from '../types/slide';
-import { buildConfigCalloutBlock, stripExistingConfigBlock } from './config/ConfigBlockIO';
+import { buildConfigCalloutBlock, hasConfigBlock, stripExistingConfigBlock } from './config/ConfigBlockIO';
+
+import { mergeConfigEdits, runConfigOperation } from './config/ConfigOperations';
 
 const logger = getLogger('table-view:persistence');
 
@@ -69,11 +71,13 @@ export class TablePersistenceService {
 	private saveTask: Promise<void> | null = null;
 	private saveVersion = 0;
 	private disposed = false;
+	private configBaseline: TableConfigData | null = null;
+	private configBaselinePath: string | null = null;
+	private configTasks = new Set<Promise<void>>();
 
 	constructor(private readonly deps: TablePersistenceDeps) {}
 
-	async loadConfig(): Promise<TableConfigData | null> {
-		const file = this.deps.getFile();
+	async loadConfig(file: TFile | null = this.deps.getFile()): Promise<TableConfigData | null> {
 		if (!file) {
 			return null;
 		}
@@ -116,11 +120,12 @@ export class TablePersistenceService {
 	}
 
 	hasPendingSave(): boolean {
-		return this.pendingSave || this.saveTask !== null;
+		return this.pendingSave || this.saveTask !== null || this.configTasks.size > 0;
 	}
 
 	async save(): Promise<void> {
 		if (this.disposed) return;
+		await Promise.all([...this.configTasks]);
 		this.cancelScheduledSave({ resolvePending: false });
 		this.pendingSave = true;
 		this.saveVersion += 1;
@@ -157,7 +162,8 @@ export class TablePersistenceService {
 			this.cancelScheduledSave();
 			return;
 		}
-		const targetFile = this.deps.app.vault.getAbstractFileByPath(file.path);
+		const path = file.path;
+		const targetFile = this.deps.app.vault.getAbstractFileByPath(path);
 		if (!(targetFile instanceof TFile) || targetFile !== file) {
 			logger.warn('save:aborted file missing or replaced', { path: file.path });
 			this.cancelScheduledSave();
@@ -165,30 +171,37 @@ export class TablePersistenceService {
 		}
 
 		try {
+			const localPayload = this.getConfigPayload();
 			const markdown = this.deps.dataStore.blocksToMarkdown().trimEnd();
-			const configPayload = this.getConfigPayload();
-			const backupManager = this.deps.getBackupManager();
-			if (backupManager) {
-				try {
-					await backupManager.ensureBackup(
-						targetFile,
-						this.buildPersistedContent(markdown, configPayload, this.shouldPersistConfigBlockInNote())
-					);
-				} catch (error) {
-					logger.warn('Backup snapshot failed before save', error);
+			await runConfigOperation(path, async () => {
+				const configPayload = this.mergeLatestConfig(file, localPayload);
+				const backupManager = this.deps.getBackupManager();
+				if (backupManager) {
+					try {
+						await backupManager.ensureBackup(
+							targetFile,
+							this.buildPersistedContent(markdown, configPayload, this.shouldPersistConfigBlockInNote())
+						);
+					} catch (error) {
+						logger.warn('Backup snapshot failed before save', error);
+					}
 				}
-			}
-			if (this.disposed || this.deps.getFile() !== targetFile ||
-				this.deps.app.vault.getAbstractFileByPath(targetFile.path) !== targetFile) return;
-			this.deps.markSelfMutation?.(targetFile);
-			const nextContent = this.buildPersistedContent(markdown, configPayload, this.shouldPersistConfigBlockInNote());
-			await this.deps.app.vault.modify(targetFile, nextContent);
-			await this.saveConfigState(targetFile, configPayload);
-			// Replacing the baseline clears the session's dirty flag, so only the
-			// newest fully persisted snapshot may acknowledge user mutations.
-			if (version === this.saveVersion && this.deps.getFile() === targetFile && !this.disposed) {
-				this.deps.replaceConversionBaseline?.(nextContent);
-			}
+				if (this.disposed || file.path !== path || this.deps.getFile() !== targetFile ||
+					this.deps.app.vault.getAbstractFileByPath(targetFile.path) !== targetFile) return;
+				const nextContent = this.buildPersistedContent(markdown, configPayload, this.shouldPersistConfigBlockInNote());
+				await this.deps.app.vault.process(targetFile, current => {
+					if (current !== nextContent) this.deps.markSelfMutation?.(targetFile);
+					return nextContent;
+				});
+				await this.saveConfigState(targetFile, configPayload);
+				await this.deps.configManager.acknowledgeContent(targetFile, nextContent);
+				// Replacing the baseline clears the session's dirty flag, so only the
+				// newest fully persisted snapshot may acknowledge user mutations.
+				if (version === this.saveVersion && this.deps.getFile() === targetFile && !this.disposed) {
+					this.deps.replaceConversionBaseline?.(nextContent);
+					this.configBaseline = localPayload;
+				}
+			});
 		} catch (error) {
 			logger.error('Failed to save file', error);
 			new Notice(t('tablePersistence.saveFailed'));
@@ -298,31 +311,61 @@ export class TablePersistenceService {
 		};
 	}
 
-	async saveConfig(_options?: { beforeWrite?: (file: TFile) => void }): Promise<void> {
+	beginConfigEdit(): () => void {
+		const snapshot = structuredClone(this.getConfigPayload());
 		const file = this.deps.getFile();
-		if (!file) {
-			return;
+		return () => {
+			if (this.deps.getFile() === file) {
+				this.configBaseline = snapshot;
+				this.configBaselinePath = file?.path ?? null;
+			}
+		};
+	}
+
+	captureConfigBaseline(): void {
+		if (!this.hasPendingSave()) {
+			this.configBaseline = this.getConfigPayload();
+			this.configBaselinePath = this.deps.getFile()?.path ?? null;
 		}
-		const payload = this.getConfigPayload();
-		await this.saveConfigState(file, payload);
-		const persistConfigBlockInNote = this.shouldPersistConfigBlockInNote();
-		const targetFile = this.deps.app.vault.getAbstractFileByPath(file.path);
-		if (!(targetFile instanceof TFile) || targetFile !== file) {
-			logger.warn('saveConfig:aborted file missing or replaced', { path: file.path });
-			return;
-		}
-		_options?.beforeWrite?.(targetFile);
-		this.deps.markSelfMutation?.(targetFile);
-		let nextContentSnapshot: string | null = null;
-		await this.deps.app.vault.process(targetFile, (currentContent) => {
-			const nextContent = this.buildConfigOnlyPersistedContent(currentContent, payload, persistConfigBlockInNote);
-			nextContentSnapshot = nextContent;
-			return nextContent;
+	}
+
+	private mergeLatestConfig(file: TFile, local: TableConfigData): TableConfigData {
+		if (!this.configBaseline || this.configBaselinePath !== file.path) return local;
+		return mergeConfigEdits(this.configBaseline, local, this.deps.configManager.getStoredConfig(file) ?? {});
+	}
+
+	async saveConfig(options: { writeNote: boolean } = { writeNote: true }): Promise<void> {
+		const file = this.deps.getFile();
+		if (!file || this.disposed) return;
+		const path = file.path;
+		const local = this.getConfigPayload();
+		const task = runConfigOperation(path, async () => {
+			if (this.disposed || this.deps.getFile() !== file || file.path !== path ||
+				this.deps.app.vault.getAbstractFileByPath(path) !== file) return;
+			const payload = this.mergeLatestConfig(file, local);
+			await this.saveConfigState(file, payload);
+			if (options.writeNote && this.deps.getFile() === file && !this.disposed &&
+				this.deps.app.vault.getAbstractFileByPath(path) === file) {
+				let written = '';
+				await this.deps.app.vault.process(file, current => {
+					written = this.buildConfigOnlyPersistedContent(current, payload, this.shouldPersistConfigBlockInNote());
+					if (written !== current) this.deps.markSelfMutation?.(file);
+					return written;
+				});
+				await this.deps.configManager.acknowledgeContent(file, written);
+			}
+			if (this.deps.getFile() === file) this.configBaseline = local;
 		});
-		if (!nextContentSnapshot) {
-			return;
+		this.configTasks.add(task);
+		try {
+			await task;
+		} catch (error) {
+			logger.error('Failed to save config', error);
+			if (options.writeNote) new Notice(t('tablePersistence.saveFailed'));
+		} finally {
+			this.configTasks.delete(task);
+			this.deps.onSaveSettled?.();
 		}
-		this.deps.replaceConversionBaseline?.(nextContentSnapshot);
 	}
 
 	private async saveConfigState(file: TFile, payload: TableConfigData): Promise<void> {
@@ -346,11 +389,17 @@ export class TablePersistenceService {
 	}
 
 	private buildConfigOnlyPersistedContent(content: string, payload: TableConfigData, includeConfigBlock: boolean): string {
-		const base = stripExistingConfigBlock(content).trimEnd();
+		if (!includeConfigBlock && !hasConfigBlock(content)) return content;
+		const identity = this.deps.configManager.getContentIdentity(content);
+		const candidate = buildConfigCalloutBlock(payload);
+		if (includeConfigBlock && identity !== null && identity === this.deps.configManager.getContentIdentity(candidate)) return content;
+		const stripped = stripExistingConfigBlock(content);
+		if (!includeConfigBlock && stripped === content && identity === null) return content;
+		const base = stripped.trimEnd();
 		if (!includeConfigBlock) {
 			return `${base}\n`;
 		}
-		const configBlock = buildConfigCalloutBlock(payload);
+		const configBlock = candidate;
 		if (base.length === 0) {
 			return `${configBlock}\n`;
 		}

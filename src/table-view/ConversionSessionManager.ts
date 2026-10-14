@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import type { TFile } from 'obsidian';
 import { getLogger } from '../utils/logger';
 import { getPluginContext } from '../pluginContext';
 import type { TableView } from '../TableView';
@@ -19,8 +19,8 @@ export class ConversionSessionManager {
 			this.baseline = null;
 			this.baselinePersisted = false;
 		}
+		if (this.filePath !== nextPath) this.sessionHasMutations = false;
 		this.filePath = nextPath;
-		this.sessionHasMutations = false;
 	}
 
 	captureBaseline(content: string): void {
@@ -28,12 +28,11 @@ export class ConversionSessionManager {
 		if (!file) {
 			return;
 		}
-		if (this.baseline && this.filePath === file.path) {
+		if (this.sessionHasMutations) {
 			return;
 		}
 		this.baseline = content;
 		this.filePath = file.path;
-		this.sessionHasMutations = false;
 		this.baselinePersisted = false;
 		logger.debug('capture', { file: file.path });
 	}
@@ -63,42 +62,6 @@ export class ConversionSessionManager {
 		return this.sessionHasMutations;
 	}
 
-	async restoreBaselineIfEligible(): Promise<boolean> {
-		const file = this.view.file;
-		const baseline = this.baseline;
-		if (!file || !baseline || this.filePath !== file.path || this.sessionHasMutations) {
-			return false;
-		}
-		this.view.persistenceService?.cancelScheduledSave();
-		const liveFile = this.view.app.vault.getAbstractFileByPath(file.path);
-		if (!(liveFile instanceof TFile) || liveFile !== file) {
-			logger.info('restore:skipped missing file', { file: file.path });
-			this.baseline = null;
-			this.baselinePersisted = false;
-			return false;
-		}
-		try {
-			try {
-				const current = await this.view.app.vault.read(liveFile);
-				if (current === baseline) {
-					logger.debug('restore: skipped (content unchanged)', { file: file.path });
-					return false;
-				}
-			} catch (error) {
-				logger.warn('restore: failed to read current content, falling back to write', error);
-			}
-			logger.debug('restore', { file: file.path });
-			await this.view.app.vault.modify(liveFile, baseline);
-			return true;
-		} catch (error) {
-			logger.error('restore-failed', error);
-			return false;
-		} finally {
-			this.baseline = null;
-			this.baselinePersisted = false;
-		}
-	}
-
 	private async persistBaselineBackup(): Promise<void> {
 		const file = this.view.file;
 		if (this.baselinePersisted || !this.baseline || !file || this.filePath !== file.path) {
@@ -109,15 +72,16 @@ export class ConversionSessionManager {
 		if (!manager) {
 			return;
 		}
+		const baseline = this.baseline;
 		try {
 			this.baselinePersisted = true;
-			await manager.ensureInitialBackup(file, this.baseline);
+			await manager.ensureInitialBackup(file, baseline);
 			logger.debug('initial-backup-recorded', { file: file.path });
 		} catch (error) {
 			this.baselinePersisted = false;
 			logger.warn('backup-failed', error);
 		} finally {
-			this.baseline = null;
+			if (this.view.file === file && this.baseline === baseline) this.baseline = null;
 		}
 	}
 }

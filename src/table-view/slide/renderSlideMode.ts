@@ -53,6 +53,7 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 			return Promise.resolve(view.dataStore.extractRowData());
 		},
 		onEditTemplate: () => {
+			const commitEdit = view.persistenceService.beginConfigEdit();
 			const baseConfig = ensureLayoutDefaults(normalizeSlideViewConfig(view.slideConfig));
 			view.slideConfig = baseConfig;
 			const modal = new SlideTemplateModal({
@@ -62,6 +63,7 @@ export function renderSlideMode(view: TableView, container: HTMLElement): void {
 				sampleRows: slideRows,
 				initial: baseConfig.template,
 			onSave: (nextTemplate) => {
+					commitEdit();
 				const nextConfig = ensureLayoutDefaults(normalizeSlideViewConfig({ ...baseConfig, template: nextTemplate }));
 				const nextRenderState = buildRenderConfig({
 					config: nextConfig

@@ -19,6 +19,7 @@ interface FilterViewControllerOptions {
 	getAvailableColumns: () => string[];
 	getFilterColumnOptions?: () => FilterColumnOption[];
 	persist: () => Promise<void> | void;
+	persistPreferences: () => Promise<void> | void;
 	applyActiveFilterView: () => void;
 	syncState: () => void;
 	renderBar: () => void;
@@ -54,6 +55,7 @@ export class FilterViewController {
 	private readonly getAvailableColumns: () => string[];
 	private readonly getFilterColumnOptions?: () => FilterColumnOption[];
 	private readonly persist: () => Promise<void> | void;
+	private readonly persistPreferences: () => Promise<void> | void;
 	private readonly applyActiveFilterView: () => void;
 	private readonly syncState: () => void;
 	private readonly renderBar: () => void;
@@ -70,6 +72,7 @@ export class FilterViewController {
 		this.getAvailableColumns = options.getAvailableColumns;
 		this.getFilterColumnOptions = options.getFilterColumnOptions;
 		this.persist = options.persist;
+		this.persistPreferences = options.persistPreferences;
 		this.applyActiveFilterView = options.applyActiveFilterView;
 		this.syncState = options.syncState;
 		this.renderBar = options.renderBar;
@@ -129,7 +132,8 @@ export class FilterViewController {
 		this.stateStore.updateState((state) => {
 			state.activeViewId = viewId;
 		});
-		this.runStateEffects({ persist: true, apply: true });
+		this.runStateEffects({ persist: false, apply: true });
+		void this.persistPreferences();
 	}
 
 	reorderFilterViews(draggedId: string, targetId: string): void {
@@ -421,7 +425,8 @@ export class FilterViewController {
 			state.views.push(temporaryView);
 			state.activeViewId = temporaryView.id;
 		});
-		this.runStateEffects({ persist: true, apply: true });
+		this.runStateEffects({ persist: false, apply: true });
+		void this.persistPreferences();
 		return temporaryView;
 	}
 
@@ -449,11 +454,13 @@ export class FilterViewController {
 
 	deleteFilterView(viewId: string): void {
 		let removed = false;
+		let wasTemporary = false;
 		this.stateStore.updateState((state) => {
 			const index = state.views.findIndex((view) => view.id === viewId);
 			if (index === -1) {
 				return;
 			}
+			wasTemporary = state.views[index].isTemporary === true;
 			state.views.splice(index, 1);
 			if (state.activeViewId === viewId) {
 				state.activeViewId = null;
@@ -463,10 +470,11 @@ export class FilterViewController {
 		if (!removed) {
 			return;
 		}
-		if (this.tagGroupSupport) {
+		if (this.tagGroupSupport && !wasTemporary) {
 			this.tagGroupSupport.onFilterViewRemoved(viewId);
 		}
-		this.runStateEffects({ persist: true, apply: true });
+		this.runStateEffects({ persist: !wasTemporary, apply: true });
+		if (wasTemporary) void this.persistPreferences();
 	}
 
 	private saveFilterView(result: FilterViewEditorResult): void {
@@ -536,7 +544,8 @@ export class FilterViewController {
 			values,
 			generateId: () => this.generateFilterViewId()
 		});
-		this.runStateEffects({ persist: stateChanged, apply: false });
+		this.runStateEffects({ persist: false, apply: false });
+		if (stateChanged) void this.persistPreferences();
 		return resolved;
 	}
 

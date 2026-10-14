@@ -70,6 +70,7 @@ export interface OnboardingState {
 }
 
 export interface TileLineBaseSettings {
+	importedConfigBlocks: Record<string, string>;
 	fileViewPrefs: Record<string, 'markdown' | 'table' | 'kanban' | 'slide' | 'gallery'>;
 	columnLayouts: Record<string, Record<string, number>>;
 	filterViews: Record<string, FileFilterViewState>;
@@ -106,6 +107,7 @@ export interface TileLineBaseSettings {
 }
 
 export const DEFAULT_SETTINGS: TileLineBaseSettings = {
+	importedConfigBlocks: {},
 	fileViewPrefs: {},
 	columnLayouts: {},
 	filterViews: {},
@@ -164,6 +166,12 @@ export class SettingsService {
 		const data: unknown = await this.plugin.loadData();
 		const storedSettings = isRecord(data) ? data : {};
 		const merged = Object.assign({}, DEFAULT_SETTINGS, storedSettings) as TileLineBaseSettings & { rowStripeStrength?: unknown };
+		merged.importedConfigBlocks = {};
+		if (isRecord(storedSettings.importedConfigBlocks)) {
+			for (const [path, identity] of Object.entries(storedSettings.importedConfigBlocks)) {
+				if (typeof identity === 'string') merged.importedConfigBlocks[path] = identity;
+			}
+		}
 		merged.fileViewPrefs = { ...DEFAULT_SETTINGS.fileViewPrefs, ...(merged.fileViewPrefs ?? {}) };
 		merged.columnLayouts = { ...DEFAULT_SETTINGS.columnLayouts, ...(merged.columnLayouts ?? {}) };
 		merged.filterViews = { ...DEFAULT_SETTINGS.filterViews, ...(merged.filterViews ?? {}) };
@@ -686,6 +694,7 @@ export class SettingsService {
 				changed = true;
 			};
 
+			migrate(this.settings.importedConfigBlocks);
 			migrate(this.settings.fileViewPrefs);
 			migrate(this.settings.columnLayouts);
 			migrate(this.settings.filterViews);
@@ -838,6 +847,43 @@ export class SettingsService {
 		await Promise.all(tasks);
 	}
 
+	captureFileConfigState(path: string): () => Promise<void> {
+		const capture = <T>(store: Record<string, T>): (() => void) => {
+			const exists = Object.getOwnPropertyDescriptor(store, path) !== undefined;
+			const value = this.deepClone(store[path]);
+			return () => {
+				if (exists) store[path] = value;
+				else delete store[path];
+			};
+		};
+		const restore = [
+			capture(this.settings.fileViewPrefs), capture(this.settings.columnLayouts),
+			capture(this.settings.filterViews), capture(this.settings.tagGroups),
+			capture(this.settings.galleryFilterViews), capture(this.settings.galleryTagGroups),
+			capture(this.settings.kanbanBoards), capture(this.settings.columnConfigs),
+			capture(this.settings.copyTemplates), capture(this.settings.kanbanPreferences),
+			capture(this.settings.slidePreferences), capture(this.settings.galleryPreferences),
+			capture(this.settings.galleryViews)
+		];
+		return async () => {
+			for (const rollback of restore) rollback();
+			await this.persist();
+		};
+	}
+
+	async acknowledgeConfigBlock(filePath: string, identity: string): Promise<void> {
+		const previous = this.settings.importedConfigBlocks[filePath];
+		if (previous === identity) return;
+		this.settings.importedConfigBlocks[filePath] = identity;
+		try {
+			await this.persist();
+		} catch (error) {
+			if (previous === undefined) delete this.settings.importedConfigBlocks[filePath];
+			else this.settings.importedConfigBlocks[filePath] = previous;
+			throw error;
+		}
+	}
+
 	async ensureFileSettingsForPath(filePath: string): Promise<void> {
 		const target = typeof filePath === 'string' ? filePath.trim() : '';
 		if (!target) {
@@ -845,7 +891,7 @@ export class SettingsService {
 		}
 		const cleared = this.clearPendingDeletionForPath(target);
 		await this.waitForPendingMigration(target);
-		if (this.settings.columnConfigs[target]) {
+		if (this.settings.columnConfigs[target] || this.settings.importedConfigBlocks[target]) {
 			this.recentRenames.delete(target);
 			if (cleared) {
 				await this.persist();
@@ -962,6 +1008,7 @@ export class SettingsService {
 			}
 		};
 
+		pruneStore(this.settings.importedConfigBlocks);
 		pruneStore(this.settings.fileViewPrefs);
 		pruneStore(this.settings.columnLayouts);
 		pruneStore(this.settings.filterViews);

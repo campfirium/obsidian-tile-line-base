@@ -310,5 +310,15 @@
     "improved": [],
     "fixed": [],
     "changed": []
+  },
+  "0.9.23": {
+    "date": "2026-10-14",
+    "info": "",
+    "new": [],
+    "improved": [],
+    "fixed": [
+      "Browsing a note no longer modifies it, and external edits are preserved when the view is closed."
+    ],
+    "changed": []
   }
 }

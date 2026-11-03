@@ -193,7 +193,15 @@ function getPackageVersionTimes(packageName) {
 		encoding: 'utf8',
 		stdio: ['ignore', 'pipe', 'inherit']
 	});
-	return JSON.parse(output);
+	const result = JSON.parse(output);
+	// npm 12 wraps view results in an array, including a single package result.
+	if (Array.isArray(result)) {
+		if (result.length !== 1 || !result[0] || typeof result[0] !== 'object') {
+			throw new Error(`Unexpected npm view time result for ${packageName}`);
+		}
+		return result[0];
+	}
+	return result;
 }
 
 function isStableSemver(version) {
